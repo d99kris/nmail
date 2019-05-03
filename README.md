@@ -103,7 +103,7 @@ macOS
 Getting Started
 ===============
 
-GMail
+Gmail
 -----
 Use the setup wizard to set up nmail for the account. Example (replace
 example@gmail.com with your actual gmail address):
