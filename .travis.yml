@@ -8,6 +8,9 @@ os:
   - linux
   - osx
 
+dist:
+  - bionic
+
 addons:
   apt:
     packages:
