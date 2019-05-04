@@ -6,7 +6,7 @@ sudo:
 
 os:
   - linux
-  - osx
+#  - osx
 
 dist:
   - bionic
@@ -18,11 +18,15 @@ addons:
       - libssl-dev
       - libncurses-dev
       - libetpan-dev
+      - libetpan
 
 install:
   - if [ $TRAVIS_OS_NAME = osx ]; then brew update && brew bundle; fi
 
 script:
+  - lsb_release -a
+  - ls -l /usr/lib/x86_64-linux-gnu/libetpan*
+  - ls -l /usr/include/libetpan*
   - mkdir -p build
   - cd build
   - cmake ..
