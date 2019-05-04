@@ -9,7 +9,7 @@ os:
 #  - osx
 
 dist:
-  - bionic
+  - xenial
 
 addons:
   apt:
