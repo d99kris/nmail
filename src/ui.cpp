@@ -106,16 +106,19 @@ void Ui::InitWindows()
   wrefresh(stdscr);
   const int topHeight = 1;
   m_TopWin = newwin(topHeight, m_ScreenWidth, 0, 0);
+  leaveok(m_TopWin, true);
 
   int helpHeight = 0;
   if (m_HelpEnabled)
   {
     helpHeight = 2;
     m_HelpWin = newwin(2, m_ScreenWidth, m_ScreenHeight - helpHeight, 0);
+    leaveok(m_HelpWin, true);
   }
 
   const int dialogHeight = 1;
   m_DialogWin = newwin(1, m_ScreenWidth, m_ScreenHeight - helpHeight - dialogHeight, 0);
+  leaveok(m_DialogWin, true);
 
   bool listPad = true;
   if (listPad)
@@ -128,6 +131,8 @@ void Ui::InitWindows()
     m_MainWinHeight = m_ScreenHeight - topHeight - helpHeight;
     m_MainWin = newwin(m_MainWinHeight, m_ScreenWidth, topHeight, 0);
   }
+
+  leaveok(m_MainWin, true);
 }
 
 void Ui::CleanupWindows()
@@ -231,8 +236,11 @@ void Ui::DrawFolderListDialog()
   werase(m_DialogWin);
   const std::string& dispStr = Util::ToString(m_DialogEntryString);
   mvwprintw(m_DialogWin, 0, 0, "   Search: %s", dispStr.c_str());
+
+  leaveok(m_DialogWin, false);
   wmove(m_DialogWin, 0, 11 + m_DialogEntryStringPos);
   wrefresh(m_DialogWin);
+  leaveok(m_DialogWin, true);
 }
 
 void Ui::DrawDefaultDialog()
@@ -741,9 +749,10 @@ void Ui::DrawComposeMessage()
 
   cursY -= m_ComposeMessageOffsetY;
 
+  leaveok(m_MainWin, false);
   wmove(m_MainWin, cursY, cursX);
-
   wrefresh(m_MainWin);
+  leaveok(m_MainWin, true);
 }
 
 void Ui::AsyncDrawRequest(char p_DrawRequest)
