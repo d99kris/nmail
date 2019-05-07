@@ -546,7 +546,14 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
           }
           
           lines.push_back(linePart.substr(0, breakAt));
-          linePart = linePart.substr(breakAt + 1);
+          if (linePart.size() > (breakAt + 1))
+          {
+            linePart = linePart.substr(breakAt + 1);
+          }
+          else
+          {
+            linePart.clear();
+          }
         }
         else
         {
@@ -613,7 +620,14 @@ std::vector<std::string> Util::WordWrap(std::string p_Text, unsigned p_LineLengt
           }
 
           lines.push_back(linePart.substr(0, breakAt));
-          linePart = linePart.substr(breakAt + 1);
+          if (linePart.size() > (breakAt + 1))
+          {
+            linePart = linePart.substr(breakAt + 1);
+          }
+          else
+          {
+            linePart.clear();
+          }
         }
         else
         {
