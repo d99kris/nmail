@@ -87,6 +87,7 @@ private:
   std::string GetKeyDisplay(int p_Key);
   std::string GetStatusStr();
   std::string GetStateStr();
+  bool IsValidTextKey(int p_Key);
 
   void SendComposedMessage();
   bool DeleteMessage();
@@ -157,6 +158,7 @@ private:
   int m_KeyToggleTextHtml = 0;
   int m_KeyCancel = 0;
   int m_KeySend = 0;
+  int m_KeyDeleteLine = 0;
   int m_KeyOpen = 0;
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;

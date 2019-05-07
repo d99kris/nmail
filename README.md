@@ -190,6 +190,7 @@ file:
     key_cancel=KEY_CTRLC
     key_compose=c
     key_delete=d
+    key_delete_line=KEY_CTRLK
     key_forward=f
     key_goto_folder=g
     key_move=m

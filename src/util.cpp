@@ -705,3 +705,17 @@ std::string Util::Join(const std::vector<std::string>& p_Lines, const std::strin
   }
   return str;
 }
+
+std::string Util::ToHexString(int p_Val)
+{
+  std::stringstream stream;
+  stream << std::hex << std::uppercase << p_Val;
+  return "0x" + stream.str();
+}
+
+void Util::DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar)
+{
+  size_t endPos = p_Str.find(p_EndChar, p_StartPos);
+  p_Str.erase(p_StartPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_StartPos + 1));
+  return;
+}

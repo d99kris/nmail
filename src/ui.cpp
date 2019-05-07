@@ -59,6 +59,7 @@ void Ui::Init()
     {"key_toggle_text_html", "t"},
     {"key_cancel", "KEY_CTRLC"},
     {"key_send", "KEY_CTRLX"},
+    {"key_delete_line", "KEY_CTRLK"},
     {"key_open", "."},
     {"key_back", ","},
     {"key_goto_folder", "g"},
@@ -82,6 +83,7 @@ void Ui::Init()
   m_KeyToggleTextHtml = Util::GetKeyCode(m_Config.Get("key_toggle_text_html"));
   m_KeyCancel = Util::GetKeyCode(m_Config.Get("key_cancel"));
   m_KeySend = Util::GetKeyCode(m_Config.Get("key_send"));
+  m_KeyDeleteLine = Util::GetKeyCode(m_Config.Get("key_delete_line"));
   m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
@@ -318,6 +320,7 @@ void Ui::DrawHelp()
   {
     {
       GetKeyDisplay(m_KeySend), "Send",
+      GetKeyDisplay(m_KeyDeleteLine), "DelLine",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -1215,9 +1218,17 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeHeaderStr[m_ComposeHeaderLine].erase(--m_ComposeHeaderPos, 1);
       }
     }
-    else // @todo: can check validity of entered chars?
+    else if (p_Key == m_KeyDeleteLine)
+    {
+      Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
+    }
+    else if (IsValidTextKey(p_Key))
     {
       m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos++, 1, p_Key);
+    }
+    else
+    {
+      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
     }
   }
   else
@@ -1307,12 +1318,19 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeMessageStr.erase(--m_ComposeMessagePos, 1);
       }
     }
-    else // @todo: can check validity of entered chars?
+    else if (p_Key == m_KeyDeleteLine)
+    {
+      Util::DeleteToMatch(m_ComposeMessageStr, m_ComposeMessagePos, '\n');
+    }
+    else if (IsValidTextKey(p_Key))
     {
       m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, p_Key);
     }
+    else
+    {
+      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+    }
   }
-
 
   DrawAll();
 }
@@ -1614,6 +1632,11 @@ std::string Ui::GetStateStr()
     case StateForwardMessage: return "Forward";
     default: return "Unknown State";
   }
+}
+
+bool Ui::IsValidTextKey(int p_Key)
+{
+  return ((p_Key >= 0x20) || (p_Key == 0x9) || (p_Key == 0xA));
 }
 
 void Ui::SendComposedMessage()

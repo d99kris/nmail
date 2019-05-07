@@ -54,7 +54,7 @@ public:
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, size_t p_Len);
   static std::wstring TrimPadWString(const std::wstring& p_Str, size_t p_Len);
-
+  
   template <typename T>
   static inline T Bound(const T& p_Min, const T& p_Val, const T& p_Max)
   {
@@ -77,6 +77,9 @@ public:
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);
   static std::string Join(const std::vector<std::string>& p_Lines,
                           const std::string& p_Delim = "\n");
+
+  static std::string ToHexString(int p_Val);
+  static void DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar);
 
 private:
   static std::string m_HtmlConvertCmd;
