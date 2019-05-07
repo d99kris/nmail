@@ -1209,6 +1209,15 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_IsComposeHeader = false;
       }
     }
+    else if (p_Key == KEY_PPAGE)
+    {
+      m_ComposeHeaderLine = 0;
+      m_ComposeHeaderPos = 0;
+    }
+    else if (p_Key == KEY_NPAGE)
+    {
+      m_IsComposeHeader = false;
+    }
     else if (p_Key == KEY_LEFT)
     {
       m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos - 1,
@@ -1252,62 +1261,31 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == KEY_UP)
     {
-      if (m_ComposeMessageWrapLine > 0)
-      {
-        if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() >
-            m_ComposeMessageWrapPos)
-        {
-          int stepsBack = m_ComposeMessageWrapPos + 1 +
-            (m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() -
-             m_ComposeMessageWrapPos);
-          m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
-                                            (int)m_ComposeMessageStr.size());
-        }
-        else
-        {
-          int stepsBack = m_ComposeMessageWrapPos + 1;
-          m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
-                                            (int)m_ComposeMessageStr.size());
-        }
-      }
-      else
-      {
-        m_IsComposeHeader = true;
-      }
+      ComposeMessagePrevLine();
     }
     else if (p_Key == KEY_DOWN)
     {
-      if ((m_ComposeMessageWrapLine + 1) < (int)m_ComposeMessageLines.size())
-      {
-        int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
-          m_ComposeMessageWrapPos + 1;
-        if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size() >
-            m_ComposeMessageWrapPos)
-        {
-          stepsForward += m_ComposeMessageWrapPos;
-        }
-        else
-        {
-          stepsForward += m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
-        }
-        m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
-                                          (int)m_ComposeMessageStr.size());
-      }
-      else
-      {
-        int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
-          m_ComposeMessageWrapPos;
-        m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
-                                          (int)m_ComposeMessageStr.size());
-      }
+      ComposeMessageNextLine();
     }
     else if (p_Key == KEY_PPAGE)
     {
-      // @todo: handle page-up in compose
+      for (int i = 0; i < (m_MainWinHeight / 2); ++i)
+      {
+        ComposeMessagePrevLine();
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_ScreenWidth,
+                                               m_ComposeMessagePos, m_ComposeMessageWrapLine,
+                                               m_ComposeMessageWrapPos);
+      }
     }
     else if (p_Key == KEY_NPAGE)
     {
-      // @todo: handle page-down in compose
+      for (int i = 0; i < (m_MainWinHeight / 2); ++i)
+      {
+        ComposeMessageNextLine();
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_ScreenWidth,
+                                               m_ComposeMessagePos, m_ComposeMessageWrapLine,
+                                               m_ComposeMessageWrapPos);
+      }
     }
     else if (p_Key == KEY_LEFT)
     {
@@ -1799,4 +1777,57 @@ void Ui::UpdateMsgList(const std::string& p_Folder)
             });
   
   m_MsgList[p_Folder] = msgList;
+}
+
+void Ui::ComposeMessagePrevLine()
+{
+  if (m_ComposeMessageWrapLine > 0)
+  {
+    if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() >
+        m_ComposeMessageWrapPos)
+    {
+      int stepsBack = m_ComposeMessageWrapPos + 1 +
+        (m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() -
+         m_ComposeMessageWrapPos);
+      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
+                                        (int)m_ComposeMessageStr.size());
+    }
+    else
+    {
+      int stepsBack = m_ComposeMessageWrapPos + 1;
+      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
+                                        (int)m_ComposeMessageStr.size());
+    }
+  }
+  else
+  {
+    m_IsComposeHeader = true;
+  }
+}
+
+void Ui::ComposeMessageNextLine()
+{
+  if ((m_ComposeMessageWrapLine + 1) < (int)m_ComposeMessageLines.size())
+  {
+    int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
+      m_ComposeMessageWrapPos + 1;
+    if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size() >
+        m_ComposeMessageWrapPos)
+    {
+      stepsForward += m_ComposeMessageWrapPos;
+    }
+    else
+    {
+      stepsForward += m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
+    }
+    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
+                                      (int)m_ComposeMessageStr.size());
+  }
+  else if ((int)m_ComposeMessageLines.size() > 0)
+  {
+    int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
+      m_ComposeMessageWrapPos;
+    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
+                                      (int)m_ComposeMessageStr.size());
+  }
 }

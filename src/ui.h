@@ -95,6 +95,8 @@ private:
   void MarkSeen();
   void UpdateCurrentUid();
   void UpdateMsgList(const std::string& p_Folder);
+  void ComposeMessagePrevLine();
+  void ComposeMessageNextLine();
   
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
