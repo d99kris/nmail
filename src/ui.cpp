@@ -610,13 +610,13 @@ void Ui::DrawMessage()
 {
   werase(m_MainWin);
 
+  std::set<uint32_t> fetchBodyUids;
   bool markSeen = false;
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
 
-    std::set<uint32_t> fetchBodyUids;
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
 
     int uid = m_MessageListCurrentUid;
@@ -625,14 +625,6 @@ void Ui::DrawMessage()
     {
       requestedBodys.insert(uid);
       fetchBodyUids.insert(uid);
-    }
-
-    if (!fetchBodyUids.empty())
-    {
-      ImapManager::Request request;
-      request.m_Folder = m_CurrentFolder;
-      request.m_GetBodys = fetchBodyUids;
-      m_ImapManager->AsyncRequest(request);
     }
 
     std::string headerText;
@@ -674,6 +666,14 @@ void Ui::DrawMessage()
 
       markSeen = true;
     }
+  }
+
+  if (!fetchBodyUids.empty())
+  {
+    ImapManager::Request request;
+    request.m_Folder = m_CurrentFolder;
+    request.m_GetBodys = fetchBodyUids;
+    m_ImapManager->AsyncRequest(request);
   }
 
   if (markSeen)
