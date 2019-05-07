@@ -930,7 +930,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
     }
   }
-  else // @todo: can check validity of entered chars?
+  else if (IsValidTextKey(p_Key))
   {
     m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, p_Key);
   }
@@ -1049,6 +1049,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("Cannot toggle read/unread while offline");
     }
   }
+  else
+  {
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+  }
 
   DrawAll();
 }
@@ -1162,6 +1166,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     {
       SetDialogMessage("Cannot toggle read/unread while offline");
     }
+  }
+  else
+  {
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
   }
 
   DrawAll();
