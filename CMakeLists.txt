@@ -92,10 +92,8 @@ find_library(LIBETPAN_LIBRARY
   PATHS ${additional_lib_searchpath}
 )
 
-if(NOT LIBETPAN_INCLUDE_DIR)
-  message(FATAL_ERROR "ERROR: Could not find libetpan include dir")
-elseif(NOT LIBETPAN_LIBRARY)
-  message(FATAL_ERROR "ERROR: Could not find libetpan library path")  
+if(NOT LIBETPAN_INCLUDE_DIR OR NOT LIBETPAN_LIBRARY)
+  message(FATAL_ERROR "ERROR: Could not find libetpan")
 else()
   message(STATUS "Found libetpan")
 endif()

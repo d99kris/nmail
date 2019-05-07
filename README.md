@@ -70,7 +70,7 @@ Linux / Ubuntu
 
 **Dependencies**
 
-    sudo apt cmake libetpan-dev libssl-dev libncurses-dev help2man
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man
 
 **Source**
 
