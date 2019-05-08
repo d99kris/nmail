@@ -80,6 +80,9 @@ public:
 
   static std::string ToHexString(int p_Val);
   static void DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar);
+  static std::string GetAppVersion();
+  static std::string GetOs();
+  static std::string GetCompiler();
 
 private:
   static std::string m_HtmlConvertCmd;

@@ -80,6 +80,12 @@ int main(int argc, char* argv[])
   }
   
   Log::SetPath(Util::GetApplicationDir() + std::string("log.txt"));
+
+  const std::string version = Util::GetAppVersion();
+  const std::string os = Util::GetOs();
+  const std::string compiler = Util::GetCompiler();
+  LOG_INFO("starting nmail %s - %s/%s", version.c_str(), os.c_str(), compiler.c_str());
+
   Util::InitTempDir();
 
   const std::map<std::string, std::string> defaultConfig =
@@ -191,6 +197,8 @@ int main(int argc, char* argv[])
   config.Save();
   Util::CleanupTempDir();
 
+  LOG_INFO("exiting nmail");
+  
   return 0;  
 }
 
@@ -225,11 +233,7 @@ static void ShowHelp()
 static void ShowVersion()
 {
   std::cout <<
-#ifdef PROJECT_VERSION
-    "nmail v" PROJECT_VERSION "\n"
-#else
-    "nmail\n"
-#endif
+    "nmail " << Util::GetAppVersion() << "\n"
     "\n"
     "Copyright (c) 2019 Kristofer Berggren\n"
     "\n"

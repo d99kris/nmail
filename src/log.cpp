@@ -36,6 +36,14 @@ void Log::Debug(const char *p_Format, ...)
   }
 }
 
+void Log::Info(const char *p_Format, ...)
+{
+  va_list vaList;
+  va_start(vaList, p_Format);
+  Write("INFO ", p_Format, vaList);
+  va_end(vaList);
+}
+
 void Log::Warning(const char *p_Format, ...)
 {
   va_list vaList;

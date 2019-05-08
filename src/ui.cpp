@@ -198,12 +198,7 @@ void Ui::DrawTop()
   werase(m_TopWin);
   wattron(m_TopWin, A_REVERSE);
 
-#ifdef PROJECT_VERSION
-  std::string version = "v" PROJECT_VERSION;
-#else
-  std::string version = "";
-#endif
-
+  std::string version = Util::GetAppVersion();
   std::string topLeft = Util::TrimPadString("  nmail " + version, 32);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";

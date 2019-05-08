@@ -17,6 +17,7 @@ public:
   static void SetDebugEnabled(bool p_DebugEnabled);
 
   static void Debug(const char* p_Format, ...);
+  static void Info(const char* p_Format, ...);
   static void Warning(const char* p_Format, ...);
   static void Error(const char* p_Format, ...);
 
