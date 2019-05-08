@@ -47,6 +47,7 @@ public:
 
 private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);
+  bool SelectedFolderIsEmpty();
   uint32_t GetUidValidity();
   std::string GetCacheDir();
   void InitCacheDir();
@@ -77,6 +78,7 @@ private:
 	struct mailimap* m_Imap = NULL;
 
   std::string m_SelectedFolder;
+  bool m_SelectedFolderIsEmpty = true;
 
   std::mutex m_ConnectedMutex;
   bool m_Connected = false;

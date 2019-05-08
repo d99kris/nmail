@@ -131,6 +131,11 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
     return false;
   }
 
+  if (SelectedFolderIsEmpty())
+  {
+    return true;
+  }
+
   struct mailimap_set* set = mailimap_set_new_interval(1, 0);
   struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
   mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
@@ -216,6 +221,12 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
       return false;
     }
 
+    if (SelectedFolderIsEmpty())
+    {
+      mailimap_set_free(set);
+      return true;
+    }
+    
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
                                                mailimap_fetch_att_new_rfc822_header());
@@ -290,6 +301,12 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   {
     mailimap_set_free(set);
     return false;
+  }
+
+  if (SelectedFolderIsEmpty())
+  {
+    mailimap_set_free(set);
+    return true;
   }
 
   struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
@@ -408,6 +425,12 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     {
       mailimap_set_free(set);
       return false;
+    }
+
+    if (SelectedFolderIsEmpty())
+    {
+      mailimap_set_free(set);
+      return true;
     }
 
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
@@ -638,6 +661,7 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
     if (rv == MAILIMAP_NO_ERROR)
     {
       m_SelectedFolder = p_Folder;
+      m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_exists == 0);
       InitFolderCacheDir(p_Folder);
     }
 
@@ -647,6 +671,11 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
   {
     return true;
   }
+}
+
+bool Imap::SelectedFolderIsEmpty()
+{
+  return m_SelectedFolderIsEmpty;
 }
 
 uint32_t Imap::GetUidValidity()
