@@ -15,14 +15,9 @@
 
 #define __FILENAME__ (strrchr("/" __FILE__, '/') + 1)
 
-// @todo: unify logging macros with/without variable args
-#define LOG_DEBUG_MSG(EXPR) Log::Debug(EXPR "  (%s:%d)", __FILENAME__, __LINE__);
-#define LOG_WARNING_MSG(EXPR) Log::Warning(EXPR "  (%s:%d)", __FILENAME__, __LINE__);
-#define LOG_ERROR_MSG(EXPR) Log::Error(EXPR "  (%s:%d)", __FILENAME__, __LINE__);
-
-#define LOG_DEBUG(EXPR, ...) Log::Debug(EXPR "  (%s:%d)", __VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", __VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", __VA_ARGS__, __FILENAME__, __LINE__);
+#define LOG_DEBUG(EXPR, ...) Log::Debug(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
+#define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
+#define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
 
 #define LOG_IF_NULL(EXPR) LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_SMTP_ERR(EXPR) LogIfNotEqual(EXPR, MAILSMTP_NO_ERROR, #EXPR, __FILENAME__, __LINE__)

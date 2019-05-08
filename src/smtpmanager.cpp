@@ -52,7 +52,7 @@ void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)
   }
   else
   {
-    LOG_WARNING_MSG("action not permitted while offline");
+    LOG_WARNING("action not permitted while offline");
   }
 }
 
