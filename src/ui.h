@@ -34,7 +34,7 @@ public:
   enum DrawRequest
   {
     DrawRequestNone = 0,
-    DrawRequestAll = (1 << 0),
+    DrawRequestAll = 1,
   };
 
   Ui();

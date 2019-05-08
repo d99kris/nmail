@@ -226,31 +226,36 @@ void ImapManager::Process()
 void ImapManager::PerformRequest(const ImapManager::Request &p_Request, bool p_Cached)
 {
   Response response;
-
+  
   response.m_Folder = p_Request.m_Folder;
   if (p_Request.m_GetFolders)
   {
-    response.m_Folders = m_Imap.GetFolders(p_Cached);
+    const bool rv = m_Imap.GetFolders(p_Cached, response.m_Folders);
+    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFoldersFailed;
   }
 
   if (p_Request.m_GetUids)
   {
-    response.m_Uids = m_Imap.GetUids(p_Request.m_Folder, p_Cached);
+    const bool rv = m_Imap.GetUids(p_Request.m_Folder, p_Cached, response.m_Uids);
+    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetUidsFailed;
   }
 
   if (!p_Request.m_GetHeaders.empty())
   {
-    response.m_Headers = m_Imap.GetHeaders(p_Request.m_Folder, p_Request.m_GetHeaders, p_Cached);
+    const bool rv = m_Imap.GetHeaders(p_Request.m_Folder, p_Request.m_GetHeaders, p_Cached, response.m_Headers);
+    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetHeadersFailed;
   }
 
   if (!p_Request.m_GetFlags.empty())
   {
-    response.m_Flags = m_Imap.GetFlags(p_Request.m_Folder, p_Request.m_GetFlags, p_Cached);
+    const bool rv = m_Imap.GetFlags(p_Request.m_Folder, p_Request.m_GetFlags, p_Cached, response.m_Flags);
+    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFlagsFailed;
   }
 
   if (!p_Request.m_GetBodys.empty())
   {
-    response.m_Bodys = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached);
+    const bool rv = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached, response.m_Bodys);
+    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetBodysFailed;
   }
 
   if (m_ResponseHandler)

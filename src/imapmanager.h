@@ -26,19 +26,18 @@
 class ImapManager
 {
 public:
-  enum RequestStatus
+  enum ResponseStatus
   {
-    RequestStatusOk = 0,
-    RequestStatusGetFoldersFailed = (1 << 0),
-    RequestStatusGetUidsFailed = (1 << 1),
-    RequestStatusGetHeadersFailed = (1 << 2),
-    RequestStatusGetFlagsFailed = (1 << 3),
-    RequestStatusGetBodysFailed = (1 << 4),
+    ResponseStatusOk = 0,
+    ResponseStatusGetFoldersFailed = (1 << 0),
+    ResponseStatusGetUidsFailed = (1 << 1),
+    ResponseStatusGetHeadersFailed = (1 << 2),
+    ResponseStatusGetFlagsFailed = (1 << 3),
+    ResponseStatusGetBodysFailed = (1 << 4),
   };
   
   struct Request
   {
-    RequestStatus m_RequestStatus = RequestStatusOk;
     std::string m_Folder;
     bool m_GetFolders = false;
     bool m_GetUids = false;
@@ -49,6 +48,7 @@ public:
 
   struct Response
   {
+    uint32_t m_ResponseStatus = ResponseStatusOk;
     std::string m_Folder;
     std::set<std::string> m_Folders;
     std::set<uint32_t> m_Uids;

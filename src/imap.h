@@ -25,14 +25,14 @@ public:
   bool Login();
   bool Logout();
 
-  std::set<std::string> GetFolders(bool p_Cached);
-  std::set<uint32_t> GetUids(const std::string& p_Folder, bool p_Cached);
-  std::map<uint32_t, Header> GetHeaders(const std::string& p_Folder,
-                                        const std::set<uint32_t>& p_Uids, bool p_Cached);
-  std::map<uint32_t, uint32_t> GetFlags(const std::string& p_Folder,
-                                        const std::set<uint32_t>& p_Uids, bool p_Cached);
-  std::map<uint32_t, Body> GetBodys(const std::string& p_Folder,
-                                    const std::set<uint32_t>& p_Uids, bool p_Cached);
+  bool GetFolders(const bool p_Cached, std::set<std::string>& p_Folders);
+  bool GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids);
+  bool GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                  const bool p_Cached, std::map<uint32_t, Header>& p_Headers);
+  bool GetFlags(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                const bool p_Cached, std::map<uint32_t, uint32_t>& p_Flags);
+  bool GetBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                const bool p_Cached, std::map<uint32_t, Body>& p_Bodys);
 
   bool SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Value);
   bool SetFlagDeleted(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,

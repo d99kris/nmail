@@ -86,46 +86,49 @@ bool Imap::Logout()
   return ((rv == MAILIMAP_NO_ERROR) || (rv == MAILIMAP_ERROR_STREAM));
 }
 
-std::set<std::string> Imap::GetFolders(bool p_Cached)
+bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
 {
-  std::set<std::string> folders;
-
   if (p_Cached)
   {
-    folders = Deserialize<std::set<std::string>>(ReadCacheFile(GetFoldersCachePath()));
-    return folders;
+    p_Folders = Deserialize<std::set<std::string>>(ReadCacheFile(GetFoldersCachePath()));
+    return true;
   }
 
   clist* list = NULL;
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
-  LOG_IF_IMAP_ERR(mailimap_list(m_Imap, "", "*", &list));
-  for(clistiter* it = clist_begin(list); it != NULL; it = it->next)
+
+  int rv = LOG_IF_IMAP_ERR(mailimap_list(m_Imap, "", "*", &list));
+  if (rv == MAILIMAP_NO_ERROR)
   {
-    struct mailimap_mailbox_list* mblist = (struct mailimap_mailbox_list*)clist_content(it);
-    folders.insert(std::string(mblist->mb_name));
+    for(clistiter* it = clist_begin(list); it != NULL; it = it->next)
+    {
+      struct mailimap_mailbox_list* mblist = (struct mailimap_mailbox_list*)clist_content(it);
+      p_Folders.insert(std::string(mblist->mb_name));
+    }
+
+    mailimap_list_result_free(list);
+
+    WriteCacheFile(GetFoldersCachePath(), Serialize(p_Folders));
+
+    return true;
   }
-  mailimap_list_result_free(list);
 
-  WriteCacheFile(GetFoldersCachePath(), Serialize(folders));
-
-  return folders;
+  return false;
 }
 
-std::set<uint32_t> Imap::GetUids(const std::string &p_Folder, bool p_Cached)
+bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids)
 {
-  std::set<uint32_t> uids;
-
   if (p_Cached)
   {
-    uids = Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
-    return uids;
+    p_Uids = Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
+    return true;
   }
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
   if (!SelectFolder(p_Folder, true))
   {
-    return uids;
+    return false;
   }
 
   struct mailimap_set* set = mailimap_set_new_interval(1, 0);
@@ -133,38 +136,41 @@ std::set<uint32_t> Imap::GetUids(const std::string &p_Folder, bool p_Cached)
   mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
   clist* fetch_result = NULL;
   
-  LOG_IF_IMAP_ERR(mailimap_fetch(m_Imap, set, fetch_type, &fetch_result));
-  for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+  int rv = LOG_IF_IMAP_ERR(mailimap_fetch(m_Imap, set, fetch_type, &fetch_result));
+  if (rv == MAILIMAP_NO_ERROR)
   {
-    struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
-
-    for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+    for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
     {
-      struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
-      if (item->att_type != MAILIMAP_MSG_ATT_ITEM_STATIC) continue;
+      struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-      if (item->att_data.att_static->att_type != MAILIMAP_MSG_ATT_UID) continue;
+      for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+      {
+        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+        if (item->att_type != MAILIMAP_MSG_ATT_ITEM_STATIC) continue;
 
-      uids.insert(item->att_data.att_static->att_data.att_uid);
-      break;
+        if (item->att_data.att_static->att_type != MAILIMAP_MSG_ATT_UID) continue;
+
+        p_Uids.insert(item->att_data.att_static->att_data.att_uid);
+        break;
+      }
     }
+
+    mailimap_fetch_list_free(fetch_result);
+
+    WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
   }
 
-  mailimap_fetch_list_free(fetch_result);
   mailimap_fetch_type_free(fetch_type);
   mailimap_set_free(set);
 
-  WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(uids));
-
   // @todo: delete any cached messages from folder that is no longer present in uids set
 
-  return uids;
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
-std::map<uint32_t, Header> Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_Uids, bool p_Cached)
+bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+                      const bool p_Cached, std::map<uint32_t, Header>& p_Headers)
 {
-  std::map<uint32_t, Header> headers;
-
   bool needFetch = false;
   struct mailimap_set* set = mailimap_set_new_empty();
   for (auto& uid : p_Uids)
@@ -178,7 +184,7 @@ std::map<uint32_t, Header> Imap::GetHeaders(const std::string &p_Folder, const s
         Header header;
         header.SetData(cacheData);
         Util::Touch(cachePath);
-        headers[uid] = header;
+        p_Headers[uid] = header;
       }
     }
     else
@@ -194,79 +200,82 @@ std::map<uint32_t, Header> Imap::GetHeaders(const std::string &p_Folder, const s
   if (p_Cached)
   {
     mailimap_set_free(set);
-    return headers;
+    return true;
   }
+
+  int rv = MAILIMAP_NO_ERROR;
 
   if (needFetch)
   {
-    struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
-    mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
-                                               mailimap_fetch_att_new_rfc822_header());
-    mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
-
     clist* fetch_result = NULL;
     std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
     if (!SelectFolder(p_Folder))
     {
       mailimap_set_free(set);
-      mailimap_fetch_type_free(fetch_type);
-      return headers;
+      return false;
     }
 
-    LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
-
-    for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+    struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
+    mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
+                                               mailimap_fetch_att_new_rfc822_header());
+    mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
+    
+    rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
+    if (rv == MAILIMAP_NO_ERROR)
     {
-      struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
-
-      uint32_t uid = 0;
-      Header header;
-      for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+      for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
       {
-        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+        struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-        if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
-
-        if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
+        uint32_t uid = 0;
+        Header header;
+        for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
-          if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_RFC822_HEADER)
-          {
-            std::string data(item->att_data.att_static->att_data.att_rfc822_header.att_content,
-                             item->att_data.att_static->att_data.att_rfc822_header.att_length);
-            header.SetData(data);
-          }
+          struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
 
-          if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+          if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
+
+          if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
           {
-            uid = item->att_data.att_static->att_data.att_uid;
+            if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_RFC822_HEADER)
+            {
+              std::string data(item->att_data.att_static->att_data.att_rfc822_header.att_content,
+                               item->att_data.att_static->att_data.att_rfc822_header.att_length);
+              header.SetData(data);
+            }
+
+            if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+            {
+              uid = item->att_data.att_static->att_data.att_uid;
+            }
           }
         }
+
+        p_Headers[uid] = header;
+
+        const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
+        WriteCacheFile(cachePath, header.GetData());
       }
-
-      headers[uid] = header;
-
-      const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
-      WriteCacheFile(cachePath, header.GetData());
+    
+      mailimap_fetch_list_free(fetch_result);
     }
 
-    mailimap_fetch_list_free(fetch_result);
     mailimap_fetch_type_free(fetch_type);
   }
 
   mailimap_set_free(set);
-  
-  return headers;
+
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
-std::map<uint32_t, uint32_t> Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uids, bool p_Cached)
+bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+                    const bool p_Cached, std::map<uint32_t, uint32_t>& p_Flags)
 {
-  std::map<uint32_t, uint32_t> flags;
-
   if (p_Cached)
   {
-    flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
-    return flags;
+    p_Flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+    return true;
   }
 
   struct mailimap_set* set = mailimap_set_new_empty();
@@ -275,86 +284,88 @@ std::map<uint32_t, uint32_t> Imap::GetFlags(const std::string &p_Folder, const s
     mailimap_set_add_single(set, uid);
   }
 
-  struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
-  mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
-  mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_flags());
-
-  clist* fetch_result = NULL;
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
   if (!SelectFolder(p_Folder))
   {
     mailimap_set_free(set);
-    return flags;
+    return false;
   }
 
-  LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
+  struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
+  mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
+  mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_flags());
 
-  for (clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+  clist* fetch_result = NULL;
+
+  int rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
+  if (rv == MAILIMAP_NO_ERROR)
   {
-    struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
-
-    uint32_t uid = 0;
-    uint32_t flag = 0;
-    for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+    for (clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
     {
-      struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+      struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-      if (item->att_type==MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
+      uint32_t uid = 0;
+      uint32_t flag = 0;
+      for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
       {
-        if (item->att_data.att_dyn->att_list != NULL)
-        {
-          for (clistiter* dit = clist_begin(item->att_data.att_dyn->att_list); dit != NULL;
-               dit = clist_next(dit))
-          {
-            struct mailimap_flag_fetch* flag_fetch =
-              (struct mailimap_flag_fetch*) clist_content(dit);
-            if (flag_fetch)
-            {
-              switch (flag_fetch->fl_flag->fl_type)
-              {
-                case MAILIMAP_FLAG_SEEN:
-                  flag |= Flag::Seen;
-                  break;
+        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
 
-                default:
-                  break;
+        if (item->att_type==MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
+        {
+          if (item->att_data.att_dyn->att_list != NULL)
+          {
+            for (clistiter* dit = clist_begin(item->att_data.att_dyn->att_list); dit != NULL;
+                 dit = clist_next(dit))
+            {
+              struct mailimap_flag_fetch* flag_fetch =
+                (struct mailimap_flag_fetch*) clist_content(dit);
+              if (flag_fetch)
+              {
+                switch (flag_fetch->fl_flag->fl_type)
+                {
+                  case MAILIMAP_FLAG_SEEN:
+                    flag |= Flag::Seen;
+                    break;
+
+                  default:
+                    break;
+                }
               }
             }
           }
         }
-      }
-      else if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
-      {
-        if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+        else if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
         {
-          uid = item->att_data.att_static->att_data.att_uid;
+          if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+          {
+            uid = item->att_data.att_static->att_data.att_uid;
+          }
         }
       }
+
+      p_Flags[uid] = flag;
     }
 
-    flags[uid] = flag;
+    mailimap_fetch_list_free(fetch_result);
+
+    std::map<uint32_t, uint32_t> newFlags = p_Flags;
+    std::map<uint32_t, uint32_t> oldFlags;
+    oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+    newFlags.insert(oldFlags.begin(), oldFlags.end());
+
+    WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
   }
 
   mailimap_fetch_type_free(fetch_type);
-  mailimap_fetch_list_free(fetch_result);
   mailimap_set_free(set);
 
-  std::map<uint32_t, uint32_t> newFlags = flags;
-  std::map<uint32_t, uint32_t> oldFlags;
-  oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
-  newFlags.insert(oldFlags.begin(), oldFlags.end());
-
-  WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
-
-  return flags;
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
-std::map<uint32_t, Body> Imap::GetBodys(const std::string &p_Folder,
-                                        const std::set<uint32_t> &p_Uids, bool p_Cached)
+bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+                    const bool p_Cached, std::map<uint32_t, Body>& p_Bodys)
 {
-  std::map<uint32_t, Body> bodys;
-
   bool needFetch = false;
   struct mailimap_set* set = mailimap_set_new_empty();
   for (auto& uid : p_Uids)
@@ -368,7 +379,7 @@ std::map<uint32_t, Body> Imap::GetBodys(const std::string &p_Folder,
         Body body;
         body.SetData(cacheData);
         Util::Touch(cachePath);
-        bodys[uid] = body;
+        p_Bodys[uid] = body;
       }
     }
     else
@@ -384,11 +395,21 @@ std::map<uint32_t, Body> Imap::GetBodys(const std::string &p_Folder,
   if (p_Cached)
   {
     mailimap_set_free(set);
-    return bodys;
+    return true;
   }
 
+  int rv = MAILIMAP_NO_ERROR;
+  
   if (needFetch)
   {
+    std::lock_guard<std::mutex> imapLock(m_ImapMutex);
+
+    if (!SelectFolder(p_Folder))
+    {
+      mailimap_set_free(set);
+      return false;
+    }
+
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
     struct mailimap_fetch_att* body_att =
         mailimap_fetch_att_new_body_peek_section(mailimap_section_new(NULL));
@@ -396,59 +417,53 @@ std::map<uint32_t, Body> Imap::GetBodys(const std::string &p_Folder,
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
 
     clist* fetch_result = NULL;
-    std::lock_guard<std::mutex> imapLock(m_ImapMutex);
-
-    if (!SelectFolder(p_Folder))
+    
+    rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
+    if (rv == MAILIMAP_NO_ERROR)
     {
-      mailimap_fetch_type_free(fetch_type);
-      mailimap_set_free(set);
-      return bodys;
-    }
-
-    LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
-
-    for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
-    {
-      struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
-
-      uint32_t uid = 0;
-      Body body;
-      for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+      for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
       {
-        struct mailimap_msg_att_item* item =
-          (struct mailimap_msg_att_item *) clist_content(ait);
+        struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-        if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
-
-        if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
+        uint32_t uid = 0;
+        Body body;
+        for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
-          if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_BODY_SECTION)
-          {
-            std::string data(item->att_data.att_static->att_data.att_body_section->sec_body_part,
-                             item->att_data.att_static->att_data.att_body_section->sec_length);
-            body.SetData(data);
-          }
+          struct mailimap_msg_att_item* item =
+            (struct mailimap_msg_att_item *) clist_content(ait);
 
-          if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+          if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
+
+          if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC)
           {
-            uid = item->att_data.att_static->att_data.att_uid;
+            if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_BODY_SECTION)
+            {
+              std::string data(item->att_data.att_static->att_data.att_body_section->sec_body_part,
+                               item->att_data.att_static->att_data.att_body_section->sec_length);
+              body.SetData(data);
+            }
+
+            if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+            {
+              uid = item->att_data.att_static->att_data.att_uid;
+            }
           }
         }
+
+        p_Bodys[uid] = body;
+
+        const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
+        WriteCacheFile(cachePath, body.GetData());
       }
 
-      bodys[uid] = body;
-
-      const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
-      WriteCacheFile(cachePath, body.GetData());
+      mailimap_fetch_list_free(fetch_result);
     }
-
     mailimap_fetch_type_free(fetch_type);
-    mailimap_fetch_list_free(fetch_result);
   }
 
   mailimap_set_free(set);
   
-  return bodys;
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
 bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,

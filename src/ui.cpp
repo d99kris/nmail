@@ -1516,6 +1516,30 @@ void Ui::ResponseHandler(const ImapManager::Response &p_Response)
     drawRequest |= DrawRequestAll;
   }
 
+  if (p_Response.m_ResponseStatus != ImapManager::ResponseStatusOk)
+  {
+    if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed)
+    {
+      SetDialogMessage("Get folders failed");
+    }
+    else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed)
+    {
+      SetDialogMessage("Get message body failed");
+    }
+    else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed)
+    {
+      SetDialogMessage("Get message headers failed");
+    }
+    else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed)
+    {
+      SetDialogMessage("Get message ids failed");
+    }
+    else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed)
+    {
+      SetDialogMessage("Get message flags failed");
+    }
+  }
+
   AsyncDrawRequest(drawRequest);
 }
 
@@ -1523,7 +1547,7 @@ void Ui::ResultHandler(const ImapManager::Result &p_Result)
 {
   if (!p_Result.m_Result)
   {
-    SetDialogMessage("IMAP command failed");
+    SetDialogMessage("Update message failed");
   }
 }
 
@@ -1531,7 +1555,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result &p_Result)
 {
   if (!p_Result.m_Result)
   {
-    SetDialogMessage("SMTP command failed");
+    SetDialogMessage("Send message failed");
   }
 }
 
