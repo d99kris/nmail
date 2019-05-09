@@ -934,6 +934,13 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
     }
   }
+  else if (p_Key == KEY_DC)
+  {
+    if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+    {
+      m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+    }
+  }
   else if (IsValidTextKey(p_Key))
   {
     m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, p_Key);
@@ -1031,7 +1038,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("Cannot forward while offline");
     }
   }
-  else if (p_Key == m_KeyDelete)
+  else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
   {
     if (IsConnected())
     {
@@ -1149,7 +1156,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     m_Plaintext = !m_Plaintext;
   }
-  else if (p_Key == m_KeyDelete)
+  else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
   {
     if (IsConnected())
     {
@@ -1239,6 +1246,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeHeaderStr[m_ComposeHeaderLine].erase(--m_ComposeHeaderPos, 1);
       }
     }
+    else if (p_Key == KEY_DC)
+    {
+      if (m_ComposeHeaderPos < (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size())
+      {
+        m_ComposeHeaderStr[m_ComposeHeaderLine].erase(m_ComposeHeaderPos, 1);
+      }
+    }
     else if (p_Key == m_KeyDeleteLine)
     {
       Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
@@ -1306,6 +1320,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       if (m_ComposeMessagePos > 0)
       {
         m_ComposeMessageStr.erase(--m_ComposeMessagePos, 1);
+      }
+    }
+    else if (p_Key == KEY_DC)
+    {
+      if (m_ComposeMessagePos < (int)m_ComposeMessageStr.size())
+      {
+        m_ComposeMessageStr.erase(m_ComposeMessagePos, 1);
       }
     }
     else if (p_Key == m_KeyDeleteLine)
