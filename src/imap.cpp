@@ -181,6 +181,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
   struct mailimap_set* set = mailimap_set_new_empty();
   for (auto& uid : p_Uids)
   {
+    bool cacheFound = false;
     const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
     if (Util::Exists(cachePath))
     {
@@ -191,14 +192,18 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
         header.SetData(cacheData);
         Util::Touch(cachePath);
         p_Headers[uid] = header;
+        LOG_DEBUG("imap use cached header for uid %d", uid);
+        cacheFound = true;
       }
     }
-    else
+
+    if (!cacheFound)
     {
       if (!p_Cached)
       {
         mailimap_set_add_single(set, uid);
         needFetch = true;
+        LOG_DEBUG("imap prepare to fetch header for uid %d", uid);
       }
     }
   }
@@ -259,6 +264,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
         }
 
         p_Headers[uid] = header;
+        LOG_DEBUG("imap received header for uid %d", uid);
 
         WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
       }
@@ -380,6 +386,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   struct mailimap_set* set = mailimap_set_new_empty();
   for (auto& uid : p_Uids)
   {
+    bool cacheFound = false;
     const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
     if (Util::Exists(cachePath))
     {
@@ -390,14 +397,18 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
         body.SetData(cacheData);
         Util::Touch(cachePath);
         p_Bodys[uid] = body;
+        LOG_DEBUG("imap use cached body for uid %d", uid);
+        cacheFound = true;
       }
     }
-    else
+
+    if (!cacheFound)
     {
       if (!p_Cached)
       {
         mailimap_set_add_single(set, uid);
         needFetch = true;
+        LOG_DEBUG("imap prepare to fetch body for uid %d", uid);
       }
     }
   }

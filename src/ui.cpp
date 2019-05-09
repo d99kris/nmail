@@ -494,9 +494,10 @@ void Ui::DrawMessageList()
   std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
   for (auto& uid : uids)
   {
-    if ((headers.find(uid) == headers.end()) && (requestedHeaders.find(uid) ==
-                                                 requestedHeaders.end()))
+    if ((headers.find(uid) == headers.end()) &&
+        (requestedHeaders.find(uid) == requestedHeaders.end()))
     {
+      LOG_DEBUG("fetch header %d", uid);
       fetchHeaderUids.insert(uid);
       requestedHeaders.insert(uid);
     }
@@ -516,6 +517,8 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetHeaders = subsetFetchHeaderUids;
         request.m_GetFlags = subsetFetchHeaderUids;
+
+        LOG_DEBUG("fetch headers = %d", subsetFetchHeaderUids.size());
         m_ImapManager->AsyncRequest(request);
         
         subsetFetchHeaderUids.clear(); 
@@ -1516,6 +1519,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
   if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
   {
+    LOG_DEBUG("uids for \"%s\" = %d", p_Response.m_Folder.c_str(), p_Response.m_Uids.size());
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
     UpdateMsgList(p_Response.m_Folder);
@@ -1524,6 +1528,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
   if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
   {
+    LOG_DEBUG("headers for \"%s\" = %d", p_Response.m_Folder.c_str(), p_Response.m_Headers.size());
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
                                           p_Response.m_Headers.end());
