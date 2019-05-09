@@ -18,7 +18,8 @@
 #include "sethelp.h"
 #include "status.h"
 
-Ui::Ui()
+Ui::Ui(const std::string& p_Inbox)
+  : m_CurrentFolder(p_Inbox)
 {
   Init();
   InitWindows();
@@ -1612,6 +1613,10 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
 void Ui::SetImapManager(std::shared_ptr<ImapManager> p_ImapManager)
 {
   m_ImapManager = p_ImapManager;
+  if (m_ImapManager)
+  {
+    m_ImapManager->SetCurrentFolder(m_CurrentFolder);
+  }
 }
 
 void Ui::SetSmtpManager(std::shared_ptr<SmtpManager> p_SmtpManager)

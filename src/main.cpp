@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
     {"smtp_host", ""},
     {"smtp_port", "465"},
     {"save_pass", "0"},
+    {"inbox", "INBOX"},
     {"trash", ""},
     {"cache_encrypt", "1"},
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
@@ -129,6 +130,7 @@ int main(int argc, char* argv[])
   const std::string& imapHost = config.Get("imap_host");
   const std::string& smtpHost = config.Get("smtp_host");
   const bool savePass = (config.Get("save_pass") == "1");
+  const std::string& inbox = config.Get("inbox");
   std::string trash = config.Get("trash");
   const bool cacheEncrypt = (config.Get("cache_encrypt") == "1");
   Util::SetHtmlConvertCmd(config.Get("html_convert_cmd"));
@@ -173,7 +175,7 @@ int main(int argc, char* argv[])
   }
 
   LOG_DEBUG("initializing ui");
-  Ui ui;
+  Ui ui(inbox);
 
   LOG_DEBUG("starting imap manager");
   std::shared_ptr<ImapManager> imapManager =

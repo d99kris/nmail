@@ -37,7 +37,7 @@ public:
     DrawRequestAll = 1,
   };
 
-  Ui();
+  Ui(const std::string& p_Inbox);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);

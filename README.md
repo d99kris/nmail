@@ -133,12 +133,13 @@ and fill out the empty fields (except `pass`), example:
     html_convert_cmd=/usr/local/bin/lynx -dump
     imap_host=imap.example.com
     imap_port=993
+    inbox=INBOX
     name=Firstname Lastname
     pass=
     save_pass=1
     smtp_host=smtp.example.com
     smtp_port=465
-    trash=Deleted Items
+    trash=
     user=example@example.com
 
 The field `pass` shall be left empty. The next time nmail is started it will
