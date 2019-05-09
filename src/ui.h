@@ -119,6 +119,7 @@ private:
   std::map<std::string, bool> m_HasRequestedUids;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedHeaders;
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
+  std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;
   std::map<std::string, std::set<uint32_t>> m_RequestedBodys;
   
   WINDOW* m_TopWin = NULL;

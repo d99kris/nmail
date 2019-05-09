@@ -579,11 +579,13 @@ void Ui::DrawMessageList()
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+      std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
       std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
       if ((bodys.find(uid) == bodys.end()) &&
+          (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
           (requestedBodys.find(uid) == requestedBodys.end()))
       {
-        requestedBodys.insert(uid);
+        prefetchedBodys.insert(uid);
 
         std::set<uint32_t> fetchBodyUids;
         fetchBodyUids.insert(uid);
