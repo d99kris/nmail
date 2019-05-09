@@ -133,6 +133,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 
   if (SelectedFolderIsEmpty())
   {
+    WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
     return true;
   }
 
@@ -221,12 +222,6 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
       return false;
     }
 
-    if (SelectedFolderIsEmpty())
-    {
-      mailimap_set_free(set);
-      return true;
-    }
-    
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
                                                mailimap_fetch_att_new_rfc822_header());
@@ -265,8 +260,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
 
         p_Headers[uid] = header;
 
-        const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
-        WriteCacheFile(cachePath, header.GetData());
+        WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
       }
     
       mailimap_fetch_list_free(fetch_result);
@@ -289,6 +283,11 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     return true;
   }
 
+  if (p_Uids.empty())
+  {
+    return true;
+  }
+
   struct mailimap_set* set = mailimap_set_new_empty();
   for (auto& uid : p_Uids)
   {
@@ -301,12 +300,6 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   {
     mailimap_set_free(set);
     return false;
-  }
-
-  if (SelectedFolderIsEmpty())
-  {
-    mailimap_set_free(set);
-    return true;
   }
 
   struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
@@ -425,12 +418,6 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     {
       mailimap_set_free(set);
       return false;
-    }
-
-    if (SelectedFolderIsEmpty())
-    {
-      mailimap_set_free(set);
-      return true;
     }
 
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
