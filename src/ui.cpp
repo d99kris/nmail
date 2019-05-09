@@ -616,7 +616,8 @@ void Ui::DrawMessage()
 
     int uid = m_MessageListCurrentUid;
 
-    if (bodys.find(uid) == bodys.end())
+    if ((bodys.find(uid) == bodys.end()) &&
+        (requestedBodys.find(uid) == requestedBodys.end()))
     {
       requestedBodys.insert(uid);
       fetchBodyUids.insert(uid);
