@@ -44,7 +44,7 @@ bool Util::Exists(const std::string &p_Path)
 
 std::string Util::ReadFile(const std::string &p_Path)
 {
-  std::ifstream file(p_Path);
+  std::ifstream file(p_Path, std::ios::binary);
   std::stringstream ss;
   ss << file.rdbuf();
   return ss.str();
