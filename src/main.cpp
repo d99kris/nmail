@@ -175,8 +175,8 @@ int main(int argc, char* argv[])
   Ui ui;
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online, cacheEncrypt,
-                                  std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1),
-                                  std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1),
+                                  std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
+                                  std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
   std::shared_ptr<SmtpManager> smtpManager =

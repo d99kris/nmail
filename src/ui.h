@@ -48,8 +48,8 @@ public:
 
   void Run();
 
-  void ResponseHandler(const ImapManager::Response& p_Response);
-  void ResultHandler(const ImapManager::Result& p_Result);
+  void ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response);
+  void ResultHandler(const ImapManager::Action& p_Action, const ImapManager::Result& p_Result);
   void SmtpResultHandler(const SmtpManager::Result& p_Result);
   void StatusHandler(const StatusUpdate& p_StatusUpdate);
   

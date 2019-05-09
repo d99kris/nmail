@@ -74,8 +74,8 @@ public:
 public:
   ImapManager(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
               const uint16_t p_Port, const bool p_Connect, const bool p_CacheEncrypt,
-              const std::function<void(const ImapManager::Response&)>& p_ResponseHandler,
-              const std::function<void(const ImapManager::Result&)>& p_ResultHandler,
+              const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
+              const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~ImapManager();
 
@@ -95,8 +95,8 @@ private:
 private:
   Imap m_Imap;
   bool m_Connect;
-  std::function<void(const ImapManager::Response&)> m_ResponseHandler;
-  std::function<void(const ImapManager::Result&)> m_ResultHandler;
+  std::function<void(const ImapManager::Request&,const ImapManager::Response&)> m_ResponseHandler;
+  std::function<void(const ImapManager::Action&,const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;

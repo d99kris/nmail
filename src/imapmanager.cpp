@@ -11,12 +11,12 @@
 
 #include "loghelp.h"
 
-ImapManager::ImapManager(const std::string &p_User, const std::string &p_Pass,
-                         const std::string &p_Host, const uint16_t p_Port,
+ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
+                         const std::string& p_Host, const uint16_t p_Port,
                          const bool p_Connect, const bool p_CacheEncrypt,
-                         const std::function<void (const ImapManager::Response &)> &p_ResponseHandler,
-                         const std::function<void (const ImapManager::Result &)> &p_ResultHandler,
-                         const std::function<void (const StatusUpdate &)> &p_StatusHandler)
+                         const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
+                         const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
+                         const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_Imap(p_User, p_Pass, p_Host, p_Port, p_CacheEncrypt)
   , m_Connect(p_Connect)
   , m_ResponseHandler(p_ResponseHandler)
@@ -223,7 +223,7 @@ void ImapManager::Process()
   }
 }
 
-void ImapManager::PerformRequest(const ImapManager::Request &p_Request, bool p_Cached)
+void ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached)
 {
   Response response;
   
@@ -260,11 +260,11 @@ void ImapManager::PerformRequest(const ImapManager::Request &p_Request, bool p_C
 
   if (m_ResponseHandler)
   {
-    m_ResponseHandler(response);
+    m_ResponseHandler(p_Request, response);
   }
 }
 
-void ImapManager::PerformAction(const ImapManager::Action &p_Action)
+void ImapManager::PerformAction(const ImapManager::Action& p_Action)
 {
   Result result;
   result.m_Result = true;
@@ -286,7 +286,7 @@ void ImapManager::PerformAction(const ImapManager::Action &p_Action)
 
   if (m_ResultHandler)
   {
-    m_ResultHandler(result);
+    m_ResultHandler(p_Action, result);
   }
 }
 

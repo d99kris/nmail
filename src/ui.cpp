@@ -1472,18 +1472,18 @@ void Ui::SetState(Ui::State p_State)
 
 }
 
-void Ui::ResponseHandler(const ImapManager::Response &p_Response)
+void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
   char drawRequest = DrawRequestNone;
 
-  if (!p_Response.m_Folders.empty())
+  if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Folders = p_Response.m_Folders;
     drawRequest |= DrawRequestAll;
   }
 
-  if (!p_Response.m_Uids.empty())
+  if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
@@ -1491,7 +1491,7 @@ void Ui::ResponseHandler(const ImapManager::Response &p_Response)
     drawRequest |= DrawRequestAll;
   }
 
-  if (!p_Response.m_Headers.empty())
+  if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
@@ -1500,7 +1500,7 @@ void Ui::ResponseHandler(const ImapManager::Response &p_Response)
     drawRequest |= DrawRequestAll;
   }
 
-  if (!p_Response.m_Flags.empty())
+  if (!p_Request.m_GetFlags.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed))
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, uint32_t> newFlags = p_Response.m_Flags;
@@ -1509,7 +1509,7 @@ void Ui::ResponseHandler(const ImapManager::Response &p_Response)
     drawRequest |= DrawRequestAll;
   }
 
-  if (!p_Response.m_Bodys.empty())
+  if (!p_Request.m_GetBodys.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed))
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Bodys[p_Response.m_Folder].insert(p_Response.m_Bodys.begin(), p_Response.m_Bodys.end());
@@ -1543,15 +1543,22 @@ void Ui::ResponseHandler(const ImapManager::Response &p_Response)
   AsyncDrawRequest(drawRequest);
 }
 
-void Ui::ResultHandler(const ImapManager::Result &p_Result)
+void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::Result& p_Result)
 {
   if (!p_Result.m_Result)
   {
-    SetDialogMessage("Update message failed");
+    if (!p_Action.m_MoveDestination.empty())
+    {
+      SetDialogMessage("Move message failed");
+    }
+    else if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
+    {
+      SetDialogMessage("Update message flags failed");
+    }
   }
 }
 
-void Ui::SmtpResultHandler(const SmtpManager::Result &p_Result)
+void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
 {
   if (!p_Result.m_Result)
   {
@@ -1559,7 +1566,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result &p_Result)
   }
 }
 
-void Ui::StatusHandler(const StatusUpdate &p_StatusUpdate)
+void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Status.Update(p_StatusUpdate);
