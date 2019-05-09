@@ -34,11 +34,14 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
 
 ImapManager::~ImapManager()
 {
+  LOG_DEBUG("imap manager running flag set false");  
   m_Running = false;
   write(m_Pipe[1], "1", 1);
   m_Thread.join();
+  LOG_DEBUG("imap manager thread joined");  
   close(m_Pipe[0]);
   close(m_Pipe[1]);
+  LOG_DEBUG("imap manager destroyed");
 }
 
 void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
@@ -142,6 +145,7 @@ void ImapManager::Process()
     SetStatus(connected ? Status::FlagConnected : Status::FlagOffline);
   }
 
+  LOG_DEBUG("entering imap manager loop");
   while (m_Running)
   {
     fd_set fds;
@@ -217,9 +221,12 @@ void ImapManager::Process()
     }
   }
 
+  LOG_DEBUG("exiting imap manager loop");
+  
   if (m_Connect)
   {
     m_Imap.Logout();
+    LOG_DEBUG("imap manager logged out");
   }
 }
 

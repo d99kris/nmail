@@ -172,13 +172,17 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  LOG_DEBUG("initializing ui");
   Ui ui;
+
+  LOG_DEBUG("starting imap manager");
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online, cacheEncrypt,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
                                   std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
+  LOG_DEBUG("starting smtp manager");
   std::shared_ptr<SmtpManager> smtpManager =
     std::make_shared<SmtpManager>(user, pass, smtpHost, smtpPort, name, address, online,
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
@@ -187,14 +191,24 @@ int main(int argc, char* argv[])
   ui.SetImapManager(imapManager);
   ui.SetTrashFolder(trash);
   ui.SetSmtpManager(smtpManager);
+
+  LOG_DEBUG("entering ui run");
   ui.Run();
+  LOG_DEBUG("exited ui run");
 
   ui.ResetSmtpManager();
   ui.ResetImapManager();
+
+  LOG_DEBUG("stopping smtp manager");
   smtpManager.reset();
+
+  LOG_DEBUG("stopping imap manager");
   imapManager.reset();
 
+  LOG_DEBUG("saving main config");
   config.Save();
+
+  LOG_DEBUG("cleaning temp dir");
   Util::CleanupTempDir();
 
   LOG_INFO("exiting nmail");

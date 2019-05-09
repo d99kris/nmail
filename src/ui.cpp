@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include "flag.h"
+#include "loghelp.h"
 #include "maphelp.h"
 #include "sethelp.h"
 #include "status.h"
@@ -770,6 +771,8 @@ void Ui::Run()
 {
   DrawAll();
   m_Running = true;
+  LOG_DEBUG("entering ui loop");
+
   while (m_Running)
   {
     fd_set fds;
@@ -841,6 +844,8 @@ void Ui::Run()
     }
   }
 
+  LOG_DEBUG("exiting ui loop");
+  
   return;
 }
 
@@ -957,6 +962,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   if (p_Key == m_KeyQuit)
   {
     m_Running = false;
+    LOG_DEBUG("ui running flag set false");
   }
   else if (p_Key == m_KeyRefresh)
   {
@@ -1076,6 +1082,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   if (p_Key == m_KeyQuit)
   {
     m_Running = false;
+    LOG_DEBUG("running flag set false");
   }
   else if (p_Key == KEY_UP)
   {

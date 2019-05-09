@@ -36,11 +36,14 @@ SmtpManager::SmtpManager(const std::string &p_User, const std::string &p_Pass,
 
 SmtpManager::~SmtpManager()
 {
+  LOG_DEBUG("smtp manager running flag set false");  
   m_Running = false;
   write(m_Pipe[1], "1", 1);
   m_Thread.join();
+  LOG_DEBUG("smtp manager thread joined");  
   close(m_Pipe[0]);
   close(m_Pipe[1]);
+  LOG_DEBUG("smtp manager destroyed");
 }
 
 void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)
