@@ -347,8 +347,7 @@ mailmime *Smtp::GetMimeFilePart(const std::string &p_Path, const std::string &p_
   struct mailmime_fields* mimefields =
       mailmime_fields_new_with_data(encoding, NULL, NULL, disposition, NULL);
   struct mailmime * mime = GetMimePart(content, mimefields, 1);
-  const std::string& data = Util::ReadFile(p_Path);
-  mailmime_set_body_text(mime, const_cast<char*>(data.c_str()), data.size());
+  mailmime_set_body_file(mime, strdup(p_Path.c_str()));
 
   return mime;
 }
