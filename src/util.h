@@ -84,6 +84,10 @@ public:
   static std::string GetOs();
   static std::string GetCompiler();
 
+  static void RegisterSignalHandler();
+  static void SignalHandler(int p_Signal);
+  static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
+
 private:
   static std::string m_HtmlConvertCmd;
   static std::string m_ApplicationDir;

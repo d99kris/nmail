@@ -21,6 +21,8 @@ public:
   static void Warning(const char* p_Format, ...);
   static void Error(const char* p_Format, ...);
 
+  static void Dump(const char *p_Str);
+
 private:
   static void Write(const char* p_Level, const char* p_Format, va_list p_VaList);
   

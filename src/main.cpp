@@ -81,6 +81,8 @@ int main(int argc, char* argv[])
   
   Log::SetPath(Util::GetApplicationDir() + std::string("log.txt"));
 
+  Util::RegisterSignalHandler();
+  
   const std::string version = Util::GetAppVersion();
   const std::string os = Util::GetOs();
   const std::string compiler = Util::GetCompiler();

@@ -11,6 +11,9 @@
 #include <map>
 #include <set>
 
+#include <cxxabi.h>
+#include <dlfcn.h>
+#include <execinfo.h>
 #include <libgen.h>
 #include <termios.h>
 
@@ -772,4 +775,65 @@ std::string Util::GetCompiler()
 #else
   return "Unknown Compiler";
 #endif
+}
+
+void Util::RegisterSignalHandler()
+{
+  signal(SIGABRT, SignalHandler);
+  signal(SIGSEGV, SignalHandler);
+  signal(SIGBUS, SignalHandler);
+  signal(SIGILL, SignalHandler);
+  signal(SIGFPE, SignalHandler);
+  signal(SIGPIPE, SignalHandler); 
+}
+
+void Util::SignalHandler(int p_Signal)
+{
+  void *callstack[64];
+  int size = backtrace(callstack, sizeof(callstack));
+  const std::string& callstackStr = "\n" + BacktraceSymbolsStr(callstack, size) + "\n";
+  const std::string& logMsg = "unexpected termination - signal " + std::to_string(p_Signal);
+  LOG_ERROR("%s", logMsg.c_str());
+  LOG_DUMP(callstackStr.c_str());
+  system("reset");
+  std::cerr << logMsg << "\n" << callstackStr;
+  exit(1);
+}
+
+std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)
+{
+  std::stringstream ss;
+  for (int i = 0; i < p_Size; ++i)
+  {
+    ss << std::left << std::setw(2) << std::setfill(' ') << i << "  ";
+    ss << "0x" << std::hex << std::setw(16) << std::setfill('0') << std::right
+       << (unsigned long long) p_Callstack[i] << "  ";
+    
+    Dl_info dlinfo;
+    if (dladdr(p_Callstack[i], &dlinfo) && dlinfo.dli_sname)
+    {
+      if (dlinfo.dli_sname[0] == '_')
+      {
+        int status = -1;
+        char* demangled = NULL;
+        demangled = abi::__cxa_demangle(dlinfo.dli_sname, NULL, 0, &status);
+        if (demangled && (status == 0))
+        {
+          ss << demangled;
+          free(demangled);
+        }
+        else
+        {
+          ss << dlinfo.dli_sname;
+        }
+      }
+      else
+      {
+        ss << dlinfo.dli_sname;
+      }
+    }
+    ss << "\n";
+  }
+
+  return ss.str();
 }

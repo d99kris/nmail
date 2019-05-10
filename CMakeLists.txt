@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "0.28" LANGUAGES CXX)
+project(nmail VERSION "0.29" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Build type
@@ -102,7 +102,7 @@ endif()
 include_directories(${LIBETPAN_INCLUDE_DIR})
 
 # Linking
-target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL ${LIBETPAN_LIBRARY}  pthread)
+target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL ${LIBETPAN_LIBRARY} pthread ${CMAKE_DL_LIBS})
 
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)

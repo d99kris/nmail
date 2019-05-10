@@ -60,6 +60,22 @@ void Log::Error(const char *p_Format, ...)
   va_end(vaList);
 }
 
+void Log::Dump(const char *p_Str)
+{
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_Path.empty())
+  {
+    SetPath("log.txt");
+  }
+
+  FILE* file = fopen(m_Path.c_str(), "a");
+  if (file != NULL)
+  {
+    fprintf(file, "%s", p_Str);
+    fclose(file);
+  }
+}
+
 void Log::Write(const char *p_Level, const char *p_Format, va_list p_VaList)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);

@@ -19,6 +19,7 @@
 #define LOG_INFO(EXPR, ...) Log::Info(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
 #define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
 #define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
+#define LOG_DUMP(STR) Log::Dump(STR);
 
 #define LOG_IF_NULL(EXPR) LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_SMTP_ERR(EXPR) LogIfNotEqual(EXPR, MAILSMTP_NO_ERROR, #EXPR, __FILENAME__, __LINE__)
