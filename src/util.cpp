@@ -792,7 +792,7 @@ void Util::SignalHandler(int p_Signal)
   void *callstack[64];
   int size = backtrace(callstack, sizeof(callstack));
   const std::string& callstackStr = "\n" + BacktraceSymbolsStr(callstack, size) + "\n";
-  const std::string& logMsg = "unexpected termination - signal " + std::to_string(p_Signal);
+  const std::string& logMsg = "unexpected termination: " + std::to_string(p_Signal);
   LOG_ERROR("%s", logMsg.c_str());
   LOG_DUMP(callstackStr.c_str());
   system("reset");
