@@ -29,19 +29,19 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   m_Connecting = m_Connect;
   SetStatus(m_Connecting ? Status::FlagConnecting : Status::FlagOffline);
   m_Running = true;
+  LOG_DEBUG("start thread");
   m_Thread = std::thread(&ImapManager::Process, this);
 }
 
 ImapManager::~ImapManager()
 {
-  LOG_DEBUG("imap manager running flag set false");  
+  LOG_DEBUG("stop thread");
   m_Running = false;
   write(m_Pipe[1], "1", 1);
   m_Thread.join();
-  LOG_DEBUG("imap manager thread joined");  
+  LOG_DEBUG("thread joined");
   close(m_Pipe[0]);
   close(m_Pipe[1]);
-  LOG_DEBUG("imap manager destroyed");
 }
 
 void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
@@ -96,6 +96,8 @@ void ImapManager::ProcessIdle()
   }
 
   int rv = 0;
+
+  LOG_DEBUG("entering idle");
   while (m_Running && (rv == 0))
   {
     int idlefd = m_Imap.IdleStart(currentFolder);
@@ -108,31 +110,31 @@ void ImapManager::ProcessIdle()
     FD_SET(m_Pipe[0], &fds);
     FD_SET(idlefd, &fds);
     int maxfd = std::max(m_Pipe[0], idlefd);
-    struct timeval idletv = {(29*60), 0};
+    struct timeval idletv = {(29 * 60), 0};
     rv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
-
-    bool newMail = false;
-    if (rv != 0)
-    {
-      if (FD_ISSET(idlefd, &fds))
-      {
-        newMail = true;
-      }
-    }
 
     m_Imap.IdleDone();
     ClearStatus(Status::FlagIdle);
-
-    if (newMail)
+    
+    if ((rv != 0) && FD_ISSET(idlefd, &fds))
     {
+      LOG_DEBUG("idle notification");
+
       ImapManager::Request request;
       m_Mutex.lock();
       request.m_Folder = m_CurrentFolder;
       m_Mutex.unlock();
       request.m_GetUids = true;
       AsyncRequest(request);
+      break;
+    }
+    else
+    {
+      LOG_DEBUG("idle timeout/restart");
     }
   }
+
+  LOG_DEBUG("exiting idle");
 }
 
 void ImapManager::Process()
@@ -145,7 +147,7 @@ void ImapManager::Process()
     SetStatus(connected ? Status::FlagConnected : Status::FlagOffline);
   }
 
-  LOG_DEBUG("entering imap manager loop");
+  LOG_DEBUG("entering loop");
   while (m_Running)
   {
     fd_set fds;
@@ -221,12 +223,13 @@ void ImapManager::Process()
     }
   }
 
-  LOG_DEBUG("exiting imap manager loop");
+  LOG_DEBUG("exiting loop");
   
   if (m_Connect)
   {
+    LOG_DEBUG("logout start");
     m_Imap.Logout();
-    LOG_DEBUG("imap manager logged out");
+    LOG_DEBUG("logout complete");
   }
 }
 

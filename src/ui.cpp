@@ -498,7 +498,6 @@ void Ui::DrawMessageList()
     if ((headers.find(uid) == headers.end()) &&
         (requestedHeaders.find(uid) == requestedHeaders.end()))
     {
-      LOG_DEBUG("fetch header %d", uid);
       fetchHeaderUids.insert(uid);
       requestedHeaders.insert(uid);
     }
@@ -519,7 +518,6 @@ void Ui::DrawMessageList()
         request.m_GetHeaders = subsetFetchHeaderUids;
         request.m_GetFlags = subsetFetchHeaderUids;
 
-        LOG_DEBUG("fetch headers = %d", subsetFetchHeaderUids.size());
         m_ImapManager->AsyncRequest(request);
         
         subsetFetchHeaderUids.clear(); 
@@ -775,7 +773,7 @@ void Ui::Run()
 {
   DrawAll();
   m_Running = true;
-  LOG_DEBUG("entering ui loop");
+  LOG_DEBUG("entering loop");
 
   while (m_Running)
   {
@@ -848,7 +846,7 @@ void Ui::Run()
     }
   }
 
-  LOG_DEBUG("exiting ui loop");
+  LOG_DEBUG("exiting loop");
   
   return;
 }
@@ -966,7 +964,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   if (p_Key == m_KeyQuit)
   {
     m_Running = false;
-    LOG_DEBUG("ui running flag set false");
+    LOG_DEBUG("stop thread");
   }
   else if (p_Key == m_KeyRefresh)
   {
@@ -1086,7 +1084,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   if (p_Key == m_KeyQuit)
   {
     m_Running = false;
-    LOG_DEBUG("running flag set false");
+    LOG_DEBUG("stop thread");
   }
   else if (p_Key == KEY_UP)
   {
@@ -1520,7 +1518,6 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
   if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
   {
-    LOG_DEBUG("uids for \"%s\" = %d", p_Response.m_Folder.c_str(), p_Response.m_Uids.size());
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
     UpdateMsgList(p_Response.m_Folder);
@@ -1529,7 +1526,6 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
   if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
   {
-    LOG_DEBUG("headers for \"%s\" = %d", p_Response.m_Folder.c_str(), p_Response.m_Headers.size());
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
                                           p_Response.m_Headers.end());

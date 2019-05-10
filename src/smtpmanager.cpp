@@ -31,19 +31,19 @@ SmtpManager::SmtpManager(const std::string &p_User, const std::string &p_Pass,
 {
   pipe(m_Pipe);
   m_Running = true;
+  LOG_DEBUG("start thread");
   m_Thread = std::thread(&SmtpManager::Process, this);
 }
 
 SmtpManager::~SmtpManager()
 {
-  LOG_DEBUG("smtp manager running flag set false");  
+  LOG_DEBUG("stop thread");
   m_Running = false;
   write(m_Pipe[1], "1", 1);
   m_Thread.join();
-  LOG_DEBUG("smtp manager thread joined");  
+  LOG_DEBUG("thread joined");
   close(m_Pipe[0]);
   close(m_Pipe[1]);
-  LOG_DEBUG("smtp manager destroyed");
 }
 
 void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)
@@ -66,6 +66,7 @@ std::string SmtpManager::GetAddress()
 
 void SmtpManager::Process()
 {
+  LOG_DEBUG("entering loop");
   while (m_Running)
   {
     fd_set fds;
@@ -107,6 +108,8 @@ void SmtpManager::Process()
       m_QueueMutex.unlock();
     }
   }
+
+  LOG_DEBUG("exiting loop");
 }
 
 void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
