@@ -33,7 +33,7 @@ Command-line Options:
         run in offline mode
 
     -s, --setup <SERV>
-        setup wizard for specified service, supported services: gmail
+        setup wizard for specified service, supported services: gmail, outlook
 
     -v, --version
         output version information and exit
@@ -114,6 +114,17 @@ example@gmail.com with your actual gmail address):
 
     $ nmail -s gmail
     Email: example@gmail.com
+    Name: Firstname Lastname
+    Save password (y/n): y
+    Password: 
+
+Outlook (and Hotmail)
+---------------------
+Use the setup wizard to set up nmail for the account. Example (replace
+example@hotmail.com with your actual outlook / hotmail address):
+
+    $ nmail -s outlook
+    Email: example@hotmail.com
     Name: Firstname Lastname
     Save password (y/n): y
     Password: 

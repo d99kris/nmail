@@ -6,6 +6,7 @@
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include <iostream>
+#include <memory>
 
 #include "apathy/path.hpp"
 
@@ -26,7 +27,9 @@ static bool ValidatePass(const std::string& p_Pass);
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
-static void SetupGmail(Config& p_Config);
+static void SetupCommon(std::shared_ptr<Config> p_Config);
+static void SetupGmail(std::shared_ptr<Config> p_Config);
+static void SetupOutlook(std::shared_ptr<Config> p_Config);
 
 int main(int argc, char* argv[])
 {
@@ -109,14 +112,23 @@ int main(int argc, char* argv[])
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
-  Config config(configPath, defaultConfig);
+
+  std::shared_ptr<Config> config = std::make_shared<Config>(configPath, defaultConfig);
 
   if (!setup.empty())
   {
+    remove(configPath.c_str());
+    config = std::make_shared<Config>(configPath, defaultConfig);
+    
     if (setup == "gmail")
     {
       SetupGmail(config);
-      config.Save();
+      config->Save();
+    }
+    else if (setup == "outlook")
+    {
+      SetupOutlook(config);
+      config->Save();
     }
     else
     {
@@ -127,24 +139,24 @@ int main(int argc, char* argv[])
   }
 
   // Read config
-  const std::string& name = config.Get("name");
-  const std::string& address = config.Get("address");
-  const std::string& user = config.Get("user");
-  std::string encpass = config.Get("pass");
-  const std::string& imapHost = config.Get("imap_host");
-  const std::string& smtpHost = config.Get("smtp_host");
-  const bool savePass = (config.Get("save_pass") == "1");
-  const std::string& inbox = config.Get("inbox");
-  std::string trash = config.Get("trash");
-  const bool cacheEncrypt = (config.Get("cache_encrypt") == "1");
-  Util::SetHtmlConvertCmd(config.Get("html_convert_cmd"));
+  const std::string& name = config->Get("name");
+  const std::string& address = config->Get("address");
+  const std::string& user = config->Get("user");
+  std::string encpass = config->Get("pass");
+  const std::string& imapHost = config->Get("imap_host");
+  const std::string& smtpHost = config->Get("smtp_host");
+  const bool savePass = (config->Get("save_pass") == "1");
+  const std::string& inbox = config->Get("inbox");
+  std::string trash = config->Get("trash");
+  const bool cacheEncrypt = (config->Get("cache_encrypt") == "1");
+  Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
 
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
   try
   {
-    imapPort = std::stoi(config.Get("imap_port"));
-    smtpPort = std::stoi(config.Get("smtp_port"));
+    imapPort = std::stoi(config->Get("imap_port"));
+    smtpPort = std::stoi(config->Get("smtp_port"));
   }
   catch (...)
   {
@@ -164,7 +176,7 @@ int main(int argc, char* argv[])
     if (savePass)
     {
       encpass = Serialized::ToHex(AES::Encrypt(pass, user));
-      config.Set("pass", encpass);
+      config->Set("pass", encpass);
     }
   }
   else
@@ -201,10 +213,10 @@ int main(int argc, char* argv[])
   ui.ResetImapManager();
 
   smtpManager.reset();
-
   imapManager.reset();
 
-  config.Save();
+  config->Save();
+  config.reset();
 
   Util::CleanupTempDir();
 
@@ -227,7 +239,7 @@ static void ShowHelp()
     "   -h, --help           display this help and exit\n"
     "   -o, --offline        run in offline mode\n"
     "   -s, --setup <SERV>   setup wizard for specified service, supported\n"
-    "                        services: gmail\n"
+    "                        services: gmail, outlook\n"
     "   -v, --version        output version information and exit\n"
     "\n"
     "Examples:\n"
@@ -253,8 +265,10 @@ static void ShowVersion()
     "Written by Kristofer Berggren.\n";
 }
 
-static void SetupGmail(Config& p_Config)
+static void SetupCommon(std::shared_ptr<Config> p_Config)
 {
+  Util::RmDir(Util::GetApplicationDir() + std::string("cache"));
+
   std::string email;
   std::cout << "Email: ";
   std::getline(std::cin, email);
@@ -265,16 +279,35 @@ static void SetupGmail(Config& p_Config)
   std::string savepass;
   std::getline(std::cin, savepass);
 
-  p_Config.Set("name", name);
-  p_Config.Set("address", email);
-  p_Config.Set("user", email);
-  p_Config.Set("imap_host", "imap.gmail.com");
-  p_Config.Set("imap_port", "993");
-  p_Config.Set("smtp_host", "smtp.gmail.com");
-  p_Config.Set("smtp_port", "465");
-  p_Config.Set("save_pass", std::to_string((int)(savepass == "y")));
-  p_Config.Set("trash", "[Gmail]/Trash");  
-  p_Config.Set("cache_encrypt", "1");  
+  p_Config->Set("name", name);
+  p_Config->Set("address", email);
+  p_Config->Set("user", email);
+  p_Config->Set("cache_encrypt", "1");  
+  p_Config->Set("save_pass", std::to_string((int)(savepass == "y")));
+}
+
+static void SetupGmail(std::shared_ptr<Config> p_Config)
+{
+  SetupCommon(p_Config);
+  
+  p_Config->Set("imap_host", "imap.gmail.com");
+  p_Config->Set("imap_port", "993");
+  p_Config->Set("smtp_host", "smtp.gmail.com");
+  p_Config->Set("smtp_port", "465");
+  p_Config->Set("inbox", "INBOX");  
+  p_Config->Set("trash", "[Gmail]/Trash");  
+}
+
+static void SetupOutlook(std::shared_ptr<Config> p_Config)
+{
+  SetupCommon(p_Config);
+
+  p_Config->Set("imap_host", "imap-mail.outlook.com");
+  p_Config->Set("imap_port", "993");
+  p_Config->Set("smtp_host", "smtp-mail.outlook.com");
+  p_Config->Set("smtp_port", "465");
+  p_Config->Set("inbox", "Inbox");  
+  p_Config->Set("trash", "Deleted");  
 }
 
 bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
