@@ -200,8 +200,8 @@ void Ui::DrawTop()
   werase(m_TopWin);
   wattron(m_TopWin, A_REVERSE);
 
-  std::string version = Util::GetAppVersion();
-  std::string topLeft = Util::TrimPadString("  nmail " + version, 32);
+  std::string version = "  nmail " + Util::GetAppVersion();
+  std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";
   std::string topCenter = Util::TrimPadString(GetStateStr(),
