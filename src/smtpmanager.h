@@ -8,6 +8,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -68,6 +69,9 @@ private:
   std::atomic<bool> m_Running;
   std::thread m_Thread;
   
+  std::condition_variable m_ExitedCond;
+  std::mutex m_ExitedCondMutex;
+
   std::deque<Action> m_Actions;
   std::mutex m_QueueMutex;
   

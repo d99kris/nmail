@@ -8,6 +8,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <deque>
 #include <functional>
 #include <set>
@@ -106,6 +107,9 @@ private:
   std::deque<Request> m_PrefetchRequests;
   std::deque<Action> m_Actions;
   std::mutex m_QueueMutex;
+
+  std::condition_variable m_ExitedCond;
+  std::mutex m_ExitedCondMutex;
 
   std::string m_CurrentFolder = "INBOX";
   std::mutex m_Mutex;

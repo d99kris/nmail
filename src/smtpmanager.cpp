@@ -40,8 +40,18 @@ SmtpManager::~SmtpManager()
   LOG_DEBUG("stop thread");
   m_Running = false;
   write(m_Pipe[1], "1", 1);
-  m_Thread.join();
-  LOG_DEBUG("thread joined");
+
+  std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
+  if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
+  {
+    m_Thread.join();
+    LOG_DEBUG("thread joined");
+  }
+  else
+  {
+    LOG_WARNING("thread exit timeout");
+  }
+
   close(m_Pipe[0]);
   close(m_Pipe[1]);
 }
@@ -110,6 +120,9 @@ void SmtpManager::Process()
   }
 
   LOG_DEBUG("exiting loop");
+
+  std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
+  m_ExitedCond.notify_one();
 }
 
 void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
