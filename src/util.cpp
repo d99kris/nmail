@@ -69,12 +69,31 @@ std::string Util::BaseName(const std::string &p_Path)
   return rv;
 }
 
+std::string Util::RemoveFileExt(const std::string& p_Path)
+{
+  size_t lastPeriod = p_Path.find_last_of(".");
+  if (lastPeriod == std::string::npos) return p_Path;
+
+  return p_Path.substr(0, lastPeriod);
+}
+
 std::string Util::DirName(const std::string &p_Path)
 {
   char *buf = strdup(p_Path.c_str());
   std::string rv = std::string(dirname(buf));
   free(buf);
   return rv;
+}
+
+std::vector<std::string> Util::ListDir(const std::string& p_Folder)
+{
+  std::vector<std::string> files;
+  const std::vector<apathy::Path>& paths = apathy::Path::listdir(p_Folder);
+  for (auto& path : paths)
+  {
+    files.push_back(path.filename());
+  }
+  return files;
 }
 
 void Util::MkDir(const std::string &p_Path)
@@ -836,4 +855,14 @@ std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)
   }
 
   return ss.str();
+}
+
+bool Util::IsInteger(const std::string& p_Str)
+{
+  return (p_Str.find_first_not_of("0123456789") == std::string::npos);
+}
+
+long Util::ToInteger(const std::string& p_Str)
+{
+  return strtol(p_Str.c_str(), NULL, 10);
 }

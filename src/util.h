@@ -28,7 +28,9 @@ public:
   static std::string ReadFile(const std::string& p_Path);
   static void WriteFile(const std::string& p_Path, const std::string& p_Str);
   static std::string BaseName(const std::string& p_Path); 
+  static std::string RemoveFileExt(const std::string& p_Path); 
   static std::string DirName(const std::string& p_Path);
+  static std::vector<std::string> ListDir(const std::string& p_Folder);
   static void MkDir(const std::string& p_Path);
   static void RmDir(const std::string& p_Path);
   static void Touch(const std::string& p_Path);
@@ -87,6 +89,9 @@ public:
   static void RegisterSignalHandler();
   static void SignalHandler(int p_Signal);
   static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
+
+  static bool IsInteger(const std::string& p_Str);
+  static long ToInteger(const std::string& p_Str);
 
 private:
   static std::string m_HtmlConvertCmd;

@@ -164,12 +164,25 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
     mailimap_fetch_list_free(fetch_result);
 
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
+
+    const std::vector<std::string>& cacheFiles = Util::ListDir(GetFolderCacheDir(p_Folder));
+    for (auto& cacheFile : cacheFiles)
+    {
+      const std::string& fileName = Util::RemoveFileExt(Util::BaseName(cacheFile));
+      if (Util::IsInteger(fileName))
+      {
+        uint32_t uid = Util::ToInteger(fileName);
+        if (p_Uids.find(uid) == p_Uids.end())
+        {
+          const std::string& filePath = GetFolderCacheDir(p_Folder) + cacheFile;
+          Util::DeleteFile(filePath);
+        }
+      }
+    }
   }
 
   mailimap_fetch_type_free(fetch_type);
   mailimap_set_free(set);
-
-  // @todo: delete any cached messages from folder that is no longer present in uids set
 
   return (rv == MAILIMAP_NO_ERROR);
 }
