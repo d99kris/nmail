@@ -10,6 +10,7 @@
 
 #include "apathy/path.hpp"
 
+#include "addressbook.h"
 #include "aes.h"
 #include "config.h"
 #include "imapmanager.h"
@@ -189,7 +190,9 @@ int main(int argc, char* argv[])
     ShowHelp();
     return 1;
   }
-
+  
+  AddressBook::Init(cacheEncrypt, pass);
+  
   Ui ui(inbox);
 
   std::shared_ptr<ImapManager> imapManager =
@@ -218,6 +221,8 @@ int main(int argc, char* argv[])
   config->Save();
   config.reset();
 
+  AddressBook::Cleanup();
+  
   Util::CleanupTempDir();
 
   LOG_INFO("exiting nmail");

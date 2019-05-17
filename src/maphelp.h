@@ -16,3 +16,17 @@ std::map<T, U> operator-(std::map<T, U> p_Lhs, const std::set<T>& p_Rhs)
   }
   return p_Lhs;
 }
+
+template<typename T, typename U>
+std::pair<U, T> FlipPair(const std::pair<T, U> &p)
+{
+  return std::pair<U,T>(p.second, p.first);
+}
+
+template<typename T, typename U>
+std::multimap<U, T> FlipMap(const std::map<T, U> &src)
+{
+  std::multimap<U, T> dst;
+  std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()), FlipPair<T, U>);
+  return dst;
+}

@@ -7,40 +7,48 @@
 
 #pragma once
 
+#include <set>
 #include <string>
+#include <vector>
 
 class Header
 {
 public:
   void SetData(const std::string& p_Data);
   std::string GetData() const;
-  std::string GetDate() const;
-  std::string GetShortDate() const;
-  std::string GetFrom() const;
-  std::string GetShortFrom() const;
-  std::string GetTo() const;
-  std::string GetCc() const;
-  std::string GetSubject() const;
+  std::string GetDate();
+  std::string GetShortDate();
+  std::string GetFrom();
+  std::string GetShortFrom();
+  std::string GetTo();
+  std::string GetCc();
+  std::string GetSubject();
+  std::string GetUniqueId();
+  std::set<std::string> GetAddresses();
 
 private:
-  void Parse() const;
-  std::string MailboxListToString(struct mailimf_mailbox_list* p_MailboxList,
-                                  const bool p_Short = false) const;
-  std::string AddressListToString(struct mailimf_address_list* p_AddrList) const;
+  void Parse();
+  std::vector<std::string> MailboxListToStrings(struct mailimf_mailbox_list* p_MailboxList,
+                                                const bool p_Short = false);
+  std::vector<std::string> AddressListToStrings(struct mailimf_address_list* p_AddrList);
   std::string MailboxToString(struct mailimf_mailbox* p_Mailbox,
-                              const bool p_Short = false) const;
-  std::string GroupToString(struct mailimf_group* p_Group) const;
-  std::string MimeToUtf8(const std::string& p_Str) const;
+                              const bool p_Short = false);
+  std::string GroupToString(struct mailimf_group* p_Group);
+  std::string MimeToUtf8(const std::string& p_Str);
+  std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
 
 private:
   std::string m_Data;
 
-  mutable bool m_Parsed = false;
-  mutable std::string m_Date;
-  mutable std::string m_ShortDate;
-  mutable std::string m_From;
-  mutable std::string m_ShortFrom;
-  mutable std::string m_To;
-  mutable std::string m_Cc;
-  mutable std::string m_Subject;
+  bool m_Parsed = false;
+  std::string m_Date;
+  std::string m_ShortDate;
+  std::string m_From;
+  std::string m_ShortFrom;
+  std::string m_To;
+  std::string m_Cc;
+  std::string m_Subject;
+  std::string m_MessageId;
+  std::string m_UniqueId;
+  std::set<std::string> m_Addresses;
 };

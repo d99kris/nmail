@@ -12,6 +12,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 class Serialized
@@ -151,7 +152,7 @@ public:
       while ((issl >> firstWord) && (issl >> secondWord))
       {
         T firstValue;
-        T secondValue;
+        U secondValue;
         ToVal(FromHex(firstWord), firstValue);
         ToVal(FromHex(secondWord), secondValue);
         p_Map.insert(std::pair<T, U>(firstValue, secondValue));

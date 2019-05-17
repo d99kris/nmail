@@ -8,11 +8,13 @@
 #include "header.h"
 
 #include <cstring>
+#include <set>
 
 #include <libetpan/libetpan.h>
 
 #include "log.h"
 #include "loghelp.h"
+#include "sethelp.h"
 #include "util.h"
 
 void Header::SetData(const std::string &p_Data)
@@ -25,49 +27,61 @@ std::string Header::GetData() const
   return m_Data;
 }
 
-std::string Header::GetDate() const
+std::string Header::GetDate()
 {
   Parse();
   return m_Date;
 }
 
-std::string Header::GetShortDate() const
+std::string Header::GetShortDate()
 {
   Parse();
   return m_ShortDate;
 }
 
-std::string Header::GetFrom() const
+std::string Header::GetFrom()
 {
   Parse();
   return m_From;
 }
 
-std::string Header::GetShortFrom() const
+std::string Header::GetShortFrom()
 {
   Parse();
   return m_ShortFrom;
 }
 
-std::string Header::GetTo() const
+std::string Header::GetTo()
 {
   Parse();
   return m_To;
 }
 
-std::string Header::GetCc() const
+std::string Header::GetCc()
 {
   Parse();
   return m_Cc;
 }
 
-std::string Header::GetSubject() const
+std::string Header::GetSubject()
 {
   Parse();
   return m_Subject;
 }
 
-void Header::Parse() const
+std::string Header::GetUniqueId()
+{
+  Parse();
+  return m_UniqueId;
+}
+
+std::set<std::string> Header::GetAddresses()
+{
+  Parse();
+  return m_Addresses;;
+}
+
+void Header::Parse()
 {
   if (!m_Parsed)
   {
@@ -86,6 +100,7 @@ void Header::Parse() const
             struct mailimf_fields* fields = mime->mm_data.mm_message.mm_fields;
             for (clistiter* it = clist_begin(fields->fld_list); it != NULL; it = clist_next(it))
             {
+              std::vector<std::string> addrs;
               struct mailimf_field* field = (struct mailimf_field*)clist_content(it);
               switch (field->fld_type)
               {
@@ -118,28 +133,39 @@ void Header::Parse() const
                   break;
 
                 case MAILIMF_FIELD_FROM:
-                  m_From =
-                    MimeToUtf8(MailboxListToString(field->fld_data.fld_from->frm_mb_list));
-                  m_ShortFrom =
-                    MimeToUtf8(MailboxListToString(field->fld_data.fld_from->frm_mb_list, true));
+                  addrs = MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
+                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                  m_From = Util::Join(addrs, ", ");
+                  addrs = MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
+                  m_ShortFrom = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_TO:
-                  m_To = MimeToUtf8(AddressListToString(field->fld_data.fld_to->to_addr_list));
+                  addrs = MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
+                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                  m_To = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_CC:
-                  m_Cc = MimeToUtf8(AddressListToString(field->fld_data.fld_cc->cc_addr_list));
+                  addrs = MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
+                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                  m_Cc = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_SUBJECT:
                   m_Subject = MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
                   break;
 
+                case MAILIMF_FIELD_MESSAGE_ID:
+                  m_MessageId = std::string(field->fld_data.fld_message_id->mid_value);
+                  break;
+
                 default:
                   break;
               }
             }
+
+            m_UniqueId = Util::SHA256(m_From + m_Date + m_MessageId);
           }
         }
       }
@@ -151,26 +177,22 @@ void Header::Parse() const
   }
 }
 
-std::string Header::MailboxListToString(mailimf_mailbox_list *p_MailboxList,
-                                        const bool p_Short) const
+std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list *p_MailboxList,
+                                                      const bool p_Short)
 {
-  std::string str;
+  std::vector<std::string> strs;
   for (clistiter* it = clist_begin(p_MailboxList->mb_list); it != NULL; it = clist_next(it))
   {
     struct mailimf_mailbox* mb = (struct mailimf_mailbox*)clist_content(it);
-    str += MailboxToString(mb, p_Short);
-    if (clist_next(it) != NULL)
-    {
-      str += std::string(", ");
-    }
+    strs.push_back(MailboxToString(mb, p_Short));
   }
 
-  return str;
+  return strs;
 }
 
-std::string Header::AddressListToString(mailimf_address_list *p_AddrList) const
+std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_AddrList)
 {
-  std::string str;
+  std::vector<std::string> strs;
   for (clistiter* it = clist_begin(p_AddrList->ad_list); it != NULL; it = clist_next(it))
   {
     struct mailimf_address* addr = (struct mailimf_address*)clist_content(it);
@@ -178,27 +200,22 @@ std::string Header::AddressListToString(mailimf_address_list *p_AddrList) const
     switch (addr->ad_type)
     {
       case MAILIMF_ADDRESS_GROUP:
-        str += GroupToString(addr->ad_data.ad_group);
+        strs.push_back(GroupToString(addr->ad_data.ad_group));
         break;
 
       case MAILIMF_ADDRESS_MAILBOX:
-        str += MailboxToString(addr->ad_data.ad_mailbox);
+        strs.push_back(MailboxToString(addr->ad_data.ad_mailbox));
         break;
 
       default:
         break;
     }
-
-    if (clist_next(it) != NULL)
-    {
-      str += std::string(", ");
-    }
   }
 
-  return str;
+  return strs;
 }
 
-std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Short) const
+std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Short)
 {
   std::string str;
   if (p_Short)
@@ -228,7 +245,7 @@ std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Sho
   return str;
 }
 
-std::string Header::GroupToString(mailimf_group *p_Group) const
+std::string Header::GroupToString(mailimf_group *p_Group)
 {
   std::string str;
   str += std::string(p_Group->grp_display_name) + std::string(": ");
@@ -245,7 +262,7 @@ std::string Header::GroupToString(mailimf_group *p_Group) const
   return str;
 }
 
-std::string Header::MimeToUtf8(const std::string &p_Str) const
+std::string Header::MimeToUtf8(const std::string &p_Str)
 {
   const char* charset = "UTF-8";
   char* cdecoded = NULL;
@@ -262,4 +279,14 @@ std::string Header::MimeToUtf8(const std::string &p_Str) const
   {
     return p_Str;
   }
+}
+
+std::vector<std::string> Header::MimeToUtf8(const std::vector<std::string>& p_Strs)
+{
+  std::vector<std::string> strs;
+  for (auto& str : p_Strs)
+  {
+    strs.push_back(MimeToUtf8(str));
+  }
+  return strs;
 }

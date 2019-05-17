@@ -29,6 +29,7 @@ public:
     StateComposeMessage = 4,
     StateReplyMessage = 5,
     StateForwardMessage = 6,
+    StateAddressList = 7,
   };
 
   enum DrawRequest
@@ -63,11 +64,12 @@ private:
   void DrawAll();
   void DrawTop();
   void DrawDialog();
-  void DrawFolderListDialog();
+  void DrawSearchDialog();
   void DrawDefaultDialog();
   void DrawHelp();
   void DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText);
   void DrawFolderList();
+  void DrawAddressList();
   void DrawMessageList();
   void DrawMessage();
   void DrawComposeMessage();
@@ -77,6 +79,7 @@ private:
   void SetDialogMessage(const std::string& p_DialogMessage);
 
   void ViewFolderListKeyHandler(int p_Key);
+  void ViewAddressListKeyHandler(int p_Key);
   void ViewMessageListKeyHandler(int p_Key);
   void ViewMessageKeyHandler(int p_Key);
   void ComposeMessageKeyHandler(int p_Key);
@@ -124,6 +127,8 @@ private:
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;
   std::map<std::string, std::set<uint32_t>> m_RequestedBodys;
+
+  std::vector<std::string> m_Addresses;
   
   WINDOW* m_TopWin = NULL;
   WINDOW* m_MainWin = NULL;
@@ -139,6 +144,9 @@ private:
   
   int m_MessageListCurrentIndex = 0;
   uint32_t m_MessageListCurrentUid = 0;
+
+  int m_AddressListCurrentIndex = 0;
+  std::string m_AddressListCurrentAddress;
 
   int m_MessageViewLineOffset = 0;
   bool m_PersistFolderFilter = true;
@@ -168,6 +176,7 @@ private:
   int m_KeyOpen = 0;
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;
+  int m_KeyAddressBook = 0;
   
   int m_DialogEntryStringPos = 0;
   std::wstring m_DialogEntryString;
@@ -186,6 +195,7 @@ private:
   
   State m_State = StateViewMessageList;
   State m_LastState = StateViewMessageList;
+  State m_LastMessageState = StateComposeMessage;
 
   int m_Pipe[2] = {-1, -1};
 };

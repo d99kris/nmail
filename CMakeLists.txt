@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "0.38" LANGUAGES CXX)
+project(nmail VERSION "0.39" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Build type
@@ -18,6 +18,8 @@ endif()
 # Application
 add_executable(nmail
   ext/apathy/path.hpp
+  src/addressbook.cpp
+  src/addressbook.h
   src/aes.cpp
   src/aes.h
   src/body.cpp

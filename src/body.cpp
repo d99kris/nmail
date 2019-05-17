@@ -23,7 +23,7 @@ std::string Body::GetData() const
   return m_Data;
 }
 
-std::string Body::GetTextPlain() const
+std::string Body::GetTextPlain()
 {
   Parse();
 
@@ -37,7 +37,7 @@ std::string Body::GetTextPlain() const
   }
 }
 
-std::string Body::GetTextHtml() const
+std::string Body::GetTextHtml()
 {
   Parse();
 
@@ -51,14 +51,14 @@ std::string Body::GetTextHtml() const
   }
 }
 
-std::string Body::GetTextFromHtml() const
+std::string Body::GetTextFromHtml()
 {
   Parse();
 
   return m_TextFromHtml;
 }
 
-std::string Body::GetText() const
+std::string Body::GetText()
 {
   Parse();
 
@@ -72,7 +72,7 @@ std::string Body::GetText() const
   }
 }
 
-void Body::Parse() const
+void Body::Parse()
 {
   if (!m_Parsed)
   {
@@ -92,7 +92,7 @@ void Body::Parse() const
   }
 }
 
-void Body::ParseHtml() const
+void Body::ParseHtml()
 {
   if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
   {
@@ -115,7 +115,7 @@ void Body::ParseHtml() const
   }
 }
 
-void Body::ParseMime(mailmime *p_Mime) const
+void Body::ParseMime(mailmime *p_Mime)
 {
   struct mailmime_content* content_type = p_Mime->mm_content_type;
   struct mailmime_type* type = content_type->ct_type;
@@ -214,7 +214,7 @@ void Body::ParseMime(mailmime *p_Mime) const
   }
 }
 
-void Body::ParseMimeData(mailmime_data *p_Data, std::string p_MimeType) const
+void Body::ParseMimeData(mailmime_data *p_Data, std::string p_MimeType)
 {
   switch (p_Data->dt_type)
   {

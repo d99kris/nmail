@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <sstream>
 
+#include "addressbook.h"
 #include "flag.h"
 #include "loghelp.h"
 #include "maphelp.h"
@@ -65,6 +66,7 @@ void Ui::Init()
     {"key_open", "."},
     {"key_back", ","},
     {"key_goto_folder", "g"},
+    {"key_address_book", "KEY_CTRLT"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -89,6 +91,7 @@ void Ui::Init()
   m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
+  m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
 }
 
 void Ui::Cleanup()
@@ -187,6 +190,13 @@ void Ui::DrawAll()
       DrawComposeMessage();
       break;
 
+    case StateAddressList:
+      DrawTop();
+      DrawAddressList();
+      DrawHelp();
+      DrawDialog();
+      break;      
+
     default:
       werase(m_MainWin);
       mvwprintw(m_MainWin, 0, 0, "Unimplemented state %d", m_State);
@@ -219,7 +229,8 @@ void Ui::DrawDialog()
   {
     case StateGotoFolder:
     case StateMoveToFolder:
-      DrawFolderListDialog();
+    case StateAddressList:
+      DrawSearchDialog();
       break;
 
     default:
@@ -228,7 +239,7 @@ void Ui::DrawDialog()
   }
 }
 
-void Ui::DrawFolderListDialog()
+void Ui::DrawSearchDialog()
 {
   werase(m_DialogWin);
   const std::string& dispStr = Util::ToString(m_DialogEntryString);
@@ -329,6 +340,7 @@ void Ui::DrawHelp()
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
+      GetKeyDisplay(m_KeyAddressBook), "AddrBk",
     },
   };
 
@@ -347,6 +359,7 @@ void Ui::DrawHelp()
 
       case StateGotoFolder:
       case StateMoveToFolder:
+      case StateAddressList:
         DrawHelpText(viewFoldersHelp);
         break;
 
@@ -468,6 +481,60 @@ void Ui::DrawFolderList()
   wrefresh(m_MainWin);
 }
 
+void Ui::DrawAddressList()
+{
+  werase(m_MainWin);
+
+  std::vector<std::string> addresses;
+
+  if (m_DialogEntryString.empty())
+  {
+    addresses = m_Addresses;
+  }
+  else
+  {
+    for (const auto& address : m_Addresses)
+    {
+      if (Util::ToLower(address).find(Util::ToLower(Util::ToString(m_DialogEntryString)))
+          != std::string::npos)
+      {
+        addresses.push_back(address);
+      }
+    }
+  }
+
+  int count = addresses.size();
+  if (count > 0)
+  {
+    m_AddressListCurrentIndex = Util::Bound(0, m_AddressListCurrentIndex, (int)addresses.size() - 1);
+
+    int itemsMax = m_MainWinHeight - 1;
+    int idxOffs = Util::Bound(0, (int)(m_AddressListCurrentIndex - ((itemsMax - 1) / 2)),
+                              std::max(0, (int)addresses.size() - (int)itemsMax));
+    int idxMax = idxOffs + std::min(itemsMax, (int)addresses.size());
+
+    for (int i = idxOffs; i < idxMax; ++i)
+    {
+      const std::string& address = *std::next(addresses.begin(), i);
+
+      if (i == m_AddressListCurrentIndex)
+      {
+        wattron(m_MainWin, A_REVERSE);
+        m_AddressListCurrentAddress = address;
+      }
+
+      mvwprintw(m_MainWin, i - idxOffs, 2, "%s", address.c_str());
+
+      if (i == m_AddressListCurrentIndex)
+      {
+        wattroff(m_MainWin, A_REVERSE);
+      }
+    }
+  }
+
+  wrefresh(m_MainWin);
+}
+
 void Ui::DrawMessageList()
 {
   if (!m_HasRequestedUids[m_CurrentFolder])
@@ -479,27 +546,101 @@ void Ui::DrawMessageList()
     m_HasRequestedUids[m_CurrentFolder] = true;
   }
 
-  std::set<uint32_t> uids;
-  std::map<uint32_t, Header> headers;
-  std::map<uint32_t, uint32_t> flags;
-  std::vector<std::pair<uint32_t, Header>> msgList;
+  std::set<uint32_t> fetchHeaderUids;
+  
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    uids = m_Uids[m_CurrentFolder];
-    headers = m_Headers[m_CurrentFolder];
-    flags = m_Flags[m_CurrentFolder];
-    msgList = m_MsgList[m_CurrentFolder];
-  }
+    std::set<uint32_t>& uids = m_Uids[m_CurrentFolder];
+    std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
+    std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
+    std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
 
-  std::set<uint32_t> fetchHeaderUids;
-  std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
-  for (auto& uid : uids)
-  {
-    if ((headers.find(uid) == headers.end()) &&
-        (requestedHeaders.find(uid) == requestedHeaders.end()))
+    std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
+    for (auto& uid : uids)
     {
-      fetchHeaderUids.insert(uid);
-      requestedHeaders.insert(uid);
+      if ((headers.find(uid) == headers.end()) &&
+          (requestedHeaders.find(uid) == requestedHeaders.end()))
+      {
+        fetchHeaderUids.insert(uid);
+        requestedHeaders.insert(uid);
+      }
+    }
+
+    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex - ((m_MainWinHeight - 1) / 2)),
+                              std::max(0, (int)msgList.size() - (int)m_MainWinHeight));
+    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgList.size());
+
+    werase(m_MainWin);
+
+    for (int i = idxOffs; i < idxMax; ++i)
+    {
+      uint32_t uid = std::prev(msgList.end(), i + 1)->first;
+
+      std::string seenFlag;
+      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
+      {
+        seenFlag = std::string("N");
+      }
+
+      std::string shortDate;
+      std::string shortFrom;
+      std::string subject;
+      if (headers.find(uid) != headers.end())
+      {
+        Header& header = headers.at(uid);
+        shortDate = header.GetShortDate();
+        shortFrom = header.GetShortFrom();
+        subject = header.GetSubject();
+      }
+
+      seenFlag = Util::TrimPadString(seenFlag, 1);
+      shortDate = Util::TrimPadString(shortDate, 10);
+      shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
+      std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      int subjectWidth = m_ScreenWidth - headerLeft.size() - 1;
+      subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
+      std::string header = headerLeft + subject + " ";
+
+      if (i == m_MessageListCurrentIndex)
+      {
+        wattron(m_MainWin, A_REVERSE);
+      }
+
+      mvwprintw(m_MainWin, i - idxOffs, 0, "%s", header.c_str());
+
+      if (i == m_MessageListCurrentIndex)
+      {
+        wattroff(m_MainWin, A_REVERSE);
+      }
+
+      if (i == m_MessageListCurrentIndex)
+      {
+        m_MessageListCurrentUid = uid;
+      }
+
+      // @todo: consider add option for prefetching of all bodys of listed messages.
+      if (i == m_MessageListCurrentIndex)
+      {
+        const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+        std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
+        std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
+        if ((bodys.find(uid) == bodys.end()) &&
+            (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
+        {
+          prefetchedBodys.insert(uid);
+
+          std::set<uint32_t> fetchBodyUids;
+          fetchBodyUids.insert(uid);
+
+          ImapManager::Request request;
+          request.m_Folder = m_CurrentFolder;
+          request.m_GetBodys = fetchBodyUids;
+
+          m_ImapManager->PrefetchRequest(request);
+        }
+
+      }
     }
   }
 
@@ -524,85 +665,7 @@ void Ui::DrawMessageList()
       }
     }
   }
-
-  int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex - ((m_MainWinHeight - 1) / 2)),
-                            std::max(0, (int)msgList.size() - (int)m_MainWinHeight));
-  int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgList.size());
-
-  werase(m_MainWin);
-
-  for (int i = idxOffs; i < idxMax; ++i)
-  {
-    uint32_t uid = std::prev(msgList.end(), i + 1)->first;
-
-    std::string seenFlag;
-    if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
-    {
-      seenFlag = std::string("N");
-    }
-
-    std::string shortDate;
-    std::string shortFrom;
-    std::string subject;
-    if (headers.find(uid) != headers.end())
-    {
-      const Header& header = headers.at(uid);
-      shortDate = header.GetShortDate();
-      shortFrom = header.GetShortFrom();
-      subject = header.GetSubject();
-    }
-
-    seenFlag = Util::TrimPadString(seenFlag, 1);
-    shortDate = Util::TrimPadString(shortDate, 10);
-    shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-    std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
-    int subjectWidth = m_ScreenWidth - headerLeft.size() - 1;
-    subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
-    std::string header = headerLeft + subject + " ";
-
-    if (i == m_MessageListCurrentIndex)
-    {
-      wattron(m_MainWin, A_REVERSE);
-    }
-
-    mvwprintw(m_MainWin, i - idxOffs, 0, "%s", header.c_str());
-
-    if (i == m_MessageListCurrentIndex)
-    {
-      wattroff(m_MainWin, A_REVERSE);
-    }
-
-    if (i == m_MessageListCurrentIndex)
-    {
-      m_MessageListCurrentUid = uid;
-    }
-
-    // @todo: consider add option for prefetching of all bodys of listed messages.
-    if (i == m_MessageListCurrentIndex)
-    {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
-      std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
-      std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
-      if ((bodys.find(uid) == bodys.end()) &&
-          (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
-          (requestedBodys.find(uid) == requestedBodys.end()))
-      {
-        prefetchedBodys.insert(uid);
-
-        std::set<uint32_t> fetchBodyUids;
-        fetchBodyUids.insert(uid);
-
-        ImapManager::Request request;
-        request.m_Folder = m_CurrentFolder;
-        request.m_GetBodys = fetchBodyUids;
-
-        m_ImapManager->PrefetchRequest(request);
-      }
-
-    }
-  }
-
+  
   wrefresh(m_MainWin);
 }
 
@@ -629,11 +692,11 @@ void Ui::DrawMessage()
     }
 
     std::string headerText;
-    std::map<uint32_t, Header>::const_iterator headerIt = headers.find(uid);
+    std::map<uint32_t, Header>::iterator headerIt = headers.find(uid);
     std::stringstream ss;
     if (headerIt != headers.end())
     {
-      const Header& header = headerIt->second;
+      Header& header = headerIt->second;
       ss << "Date: " << header.GetDate() << "\n";
       ss << "From: " << header.GetFrom() << "\n";
       ss << "To: " << header.GetTo() << "\n";
@@ -648,10 +711,10 @@ void Ui::DrawMessage()
 
     headerText = ss.str();
 
-    std::map<uint32_t, Body>::const_iterator bodyIt = bodys.find(uid);
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
     if (bodyIt != bodys.end())
     {
-      const Body& body = bodyIt->second;
+      Body& body = bodyIt->second;
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       const std::string text = headerText + bodyText;
       const std::vector<std::string>& lines = Util::WordWrap(text, m_ScreenWidth);
@@ -839,6 +902,10 @@ void Ui::Run()
           ComposeMessageKeyHandler(key);
           break;
 
+        case StateAddressList:
+          ViewAddressListKeyHandler(key);
+          break;
+
         default:
           break;
       }
@@ -926,6 +993,78 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
         SetState(m_LastState);
       }
     }
+  }
+  else if (p_Key == KEY_LEFT)
+  {
+    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos - 1,
+                                         (int)m_DialogEntryString.size());
+  }
+  else if (p_Key == KEY_RIGHT)
+  {
+    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos + 1,
+                                         (int)m_DialogEntryString.size());
+  }
+  else if (p_Key == KEY_SYS_BACKSPACE)
+  {
+    if (m_DialogEntryStringPos > 0)
+    {
+      m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
+    }
+  }
+  else if (p_Key == KEY_DC)
+  {
+    if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+    {
+      m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+    }
+  }
+  else if (IsValidTextKey(p_Key))
+  {
+    m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, p_Key);
+  }
+
+  DrawAll();
+}
+
+void Ui::ViewAddressListKeyHandler(int p_Key)
+{
+  if (p_Key == m_KeyCancel)
+  {
+    SetState(m_LastMessageState);
+  }
+  else if (p_Key == KEY_UP)
+  {
+    --m_AddressListCurrentIndex;
+  }
+  else if (p_Key == KEY_DOWN)
+  {
+    ++m_AddressListCurrentIndex;
+  }
+  else if (p_Key == KEY_PPAGE)
+  {
+    m_AddressListCurrentIndex = m_AddressListCurrentIndex - m_MainWinHeight;
+  }
+  else if (p_Key == KEY_NPAGE)
+  {
+    m_AddressListCurrentIndex = m_AddressListCurrentIndex + m_MainWinHeight;
+  }
+  else if (p_Key == KEY_RETURN)
+  {
+    std::wstring address;
+    const std::string& oldAddress =
+      Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine].substr(0, m_ComposeHeaderPos)));
+    if (!oldAddress.empty() && (oldAddress[oldAddress.size() - 1] != ','))
+    {
+      address = Util::ToWString(", " + m_AddressListCurrentAddress);
+    }
+    else
+    {
+      address = Util::ToWString(m_AddressListCurrentAddress);
+    }
+
+    m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos, address);
+    m_ComposeHeaderPos += address.size();
+    SetState(m_LastMessageState);
   }
   else if (p_Key == KEY_LEFT)
   {
@@ -1242,6 +1381,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       SendComposedMessage();
       SetState(m_LastState);
     }
+    else if (p_Key == m_KeyAddressBook)
+    {
+      if (m_ComposeHeaderLine < 2)
+      {
+        SetState(StateAddressList);
+      }
+    }
     else if (p_Key == KEY_UP)
     {
       m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine - 1,
@@ -1394,9 +1540,25 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
 
 void Ui::SetState(Ui::State p_State)
 {
-  m_LastState = m_State;
-  m_State = p_State;
-
+  if (p_State == StateAddressList)
+  {
+    // going to address list
+    m_LastMessageState = m_State;
+    m_State = p_State;
+  }
+  else if (m_State != StateAddressList)
+  {
+    // normal state transition
+    m_LastState = m_State;
+    m_State = p_State;
+  }
+  else
+  {
+    // exiting address list
+    m_State = p_State;
+    return;
+  }
+  
   if (m_State == StateGotoFolder)
   {
     curs_set(1);
@@ -1451,21 +1613,17 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
-    // m_MessageListCurrentUid
-    std::map<uint32_t, Header> headers;
-    std::map<uint32_t, Body> bodys;
-    {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      headers = m_Headers[m_CurrentFolder];
-      bodys = m_Bodys[m_CurrentFolder];
-    }
 
-    std::map<uint32_t, Header>::const_iterator hit = headers.find(m_MessageListCurrentUid);
-    std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid);
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
+    std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+
+    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid);
+    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid);
     if ((hit != headers.end()) && (bit != bodys.end()))
     {
-      const Header& header = hit->second;
-      const Body& body = bit->second;
+      Header& header = hit->second;
+      Body& body = bit->second;
 
       m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDate() + " " +
                                             header.GetFrom() +
@@ -1503,20 +1661,17 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
-    std::map<uint32_t, Header> headers;
-    std::map<uint32_t, Body> bodys;
-    {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      headers = m_Headers[m_CurrentFolder];
-      bodys = m_Bodys[m_CurrentFolder];
-    }
 
-    std::map<uint32_t, Header>::const_iterator hit = headers.find(m_MessageListCurrentUid);
-    std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid);
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
+    std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+
+    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid);
+    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid);
     if ((hit != headers.end()) && (bit != bodys.end()))
     {
-      const Header& header = hit->second;
-      const Body& body = bit->second;
+      Header& header = hit->second;
+      Body& body = bit->second;
 
       m_ComposeMessageStr =
         Util::ToWString("\n\n---------- Forwarded message ---------\n"
@@ -1535,6 +1690,15 @@ void Ui::SetState(Ui::State p_State)
     }
 
     m_IsComposeHeader = true;
+  }
+  else if (m_State == StateAddressList)
+  {
+    curs_set(1);
+    m_DialogEntryStringPos = 0;
+    m_DialogEntryString.clear();
+    m_Addresses = AddressBook::Get();
+    m_AddressListCurrentIndex = 0;
+    m_AddressListCurrentAddress = "";
   }
 
 }
@@ -1565,6 +1729,12 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
                                           p_Response.m_Headers.end());
     UpdateMsgList(p_Response.m_Folder);
     drawRequest |= DrawRequestAll;
+
+    for (auto& header : p_Response.m_Headers)
+    {
+      AddressBook::Add(m_Headers[p_Response.m_Folder][header.first].GetUniqueId(),
+                       m_Headers[p_Response.m_Folder][header.first].GetAddresses());
+    }
   }
 
   if (!p_Request.m_GetFlags.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed))
@@ -1857,10 +2027,8 @@ void Ui::UpdateCurrentUid()
 void Ui::UpdateMsgList(const std::string& p_Folder)
 {
   // called with lock held
-  std::set<uint32_t> uids;
-  std::map<uint32_t, Header> headers;
-  uids = m_Uids[p_Folder];
-  headers = m_Headers[p_Folder];
+  std::set<uint32_t> uids = m_Uids[p_Folder];
+  std::map<uint32_t, Header>& headers = m_Headers[p_Folder];
 
   // remove all uids not present in headers
   for (auto it = uids.begin(); it != uids.end(); /* incremented in loop */)
@@ -1872,12 +2040,13 @@ void Ui::UpdateMsgList(const std::string& p_Folder)
   std::vector<std::pair<uint32_t, Header>> msgList;
   for (auto it = uids.begin(); it != uids.end(); ++it)
   {
+    headers.at(*it).GetDate();
     msgList.push_back(std::make_pair(*it, headers.at(*it)));
   }
 
   // sort based on date
   std::sort(msgList.begin(), msgList.end(),
-            [](const std::pair<uint32_t, Header>& m1, const std::pair<uint32_t, Header>& m2)
+            [](std::pair<uint32_t, Header>& m1, std::pair<uint32_t, Header>& m2)
             {
               return m1.second.GetDate() < m2.second.GetDate();
             });
