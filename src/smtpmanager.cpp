@@ -38,10 +38,11 @@ SmtpManager::SmtpManager(const std::string &p_User, const std::string &p_Pass,
 SmtpManager::~SmtpManager()
 {
   LOG_DEBUG("stop thread");
+  std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
+
   m_Running = false;
   write(m_Pipe[1], "1", 1);
 
-  std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
   if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
   {
     m_Thread.join();
