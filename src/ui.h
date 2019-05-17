@@ -99,6 +99,7 @@ private:
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
   bool PromptConfirmCancelCompose();
+  bool CurrentMessageBodyAvailable();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;

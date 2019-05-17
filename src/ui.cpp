@@ -1031,7 +1031,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      SetState(StateReplyMessage);
+      if (CurrentMessageBodyAvailable())
+      {
+        SetState(StateReplyMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot reply message not fetched");
+      }
     }
     else
     {
@@ -1042,7 +1049,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      SetState(StateForwardMessage);
+      if (CurrentMessageBodyAvailable())
+      {
+        SetState(StateForwardMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot forward message not fetched");
+      }
     }
     else
     {
@@ -1146,7 +1160,14 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      SetState(StateReplyMessage);
+      if (CurrentMessageBodyAvailable())
+      {
+        SetState(StateReplyMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot reply message not fetched");
+      }
     }
     else
     {
@@ -1157,7 +1178,14 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      SetState(StateForwardMessage);
+      if (CurrentMessageBodyAvailable())
+      {
+        SetState(StateForwardMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot forward message not fetched");
+      }
     }
     else
     {
@@ -1948,4 +1976,12 @@ bool Ui::PromptConfirmCancelCompose()
   int key = ReadKeyBlocking();
 
   return ((key == 'y') || (key == 'Y'));
+}
+
+bool Ui::CurrentMessageBodyAvailable()
+{
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+  std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid);
+  return (bit != bodys.end());
 }
