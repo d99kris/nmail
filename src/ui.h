@@ -97,7 +97,9 @@ private:
   void UpdateMsgList(const std::string& p_Folder);
   void ComposeMessagePrevLine();
   void ComposeMessageNextLine();
-  
+  int ReadKeyBlocking();
+  bool PromptConfirmCancelCompose();
+
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
   std::shared_ptr<SmtpManager> m_SmtpManager;

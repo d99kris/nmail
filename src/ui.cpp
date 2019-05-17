@@ -1204,7 +1204,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   {
     if (p_Key == m_KeyCancel)
     {
-      SetState(m_LastState);
+      if (Ui::PromptConfirmCancelCompose())
+      {
+        SetState(m_LastState);
+      }
     }
     else if (p_Key == m_KeySend)
     {
@@ -1282,7 +1285,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   {
     if (p_Key == m_KeyCancel)
     {
-      SetState(m_LastState);
+      if (Ui::PromptConfirmCancelCompose())
+      {
+        SetState(m_LastState);
+      }
     }
     else if (p_Key == m_KeySend)
     {
@@ -1902,4 +1908,44 @@ void Ui::ComposeMessageNextLine()
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
                                       (int)m_ComposeMessageStr.size());
   }
+}
+
+int Ui::ReadKeyBlocking()
+{
+  while (true)
+  {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    int maxfd = STDIN_FILENO;
+    struct timeval tv = {1, 0};
+    int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+
+    if (rv == 0) continue;
+
+    if (FD_ISSET(STDIN_FILENO, &fds))
+    {
+      wint_t key = 0;
+      get_wch(&key);
+
+      return key;
+    }
+  }
+}
+
+bool Ui::PromptConfirmCancelCompose()
+{
+  werase(m_DialogWin);
+
+  const std::string& dispStr = "Cancel message (y/n)?";
+  int x = std::max((m_ScreenWidth - (int)dispStr.size() - 1) / 2, 0);
+  wattron(m_DialogWin, A_REVERSE);
+  mvwprintw(m_DialogWin, 0, x, " %s ", dispStr.c_str());
+  wattroff(m_DialogWin, A_REVERSE);
+
+  wrefresh(m_DialogWin);
+
+  int key = ReadKeyBlocking();
+
+  return ((key == 'y') || (key == 'Y'));
 }
