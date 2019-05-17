@@ -66,7 +66,7 @@ public:
   static std::string ToLower(const std::string& p_Str);
   static std::vector<std::string> Split(const std::string& p_Str, char p_Sep = ',');
   static std::string Trim(const std::string& p_Str);
-  static std::string GetConfigDir();
+  static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
   static int GetKeyCode(const std::string& p_KeyName);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength);

@@ -360,9 +360,15 @@ std::string Util::Trim(const std::string &p_Str)
   return p_Str.substr(strBegin, strRange);
 }
 
-std::string Util::GetConfigDir()
+std::vector<std::string> Util::Trim(const std::vector<std::string>& p_Strs)
 {
-  return std::string(getenv("HOME")) + std::string("/.nchat");
+  std::vector<std::string> trimStrs;
+  for (auto& str : p_Strs)
+  {
+    trimStrs.push_back(Trim(str));
+  }
+
+  return trimStrs;
 }
 
 int Util::GetKeyCode(const std::string& p_KeyName)

@@ -132,10 +132,10 @@ void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
 
   SetStatus(Status::FlagSending);
 
-  const std::vector<Contact> to = Contact::FromStrings(Util::Split(p_Action.m_To));
-  const std::vector<Contact> cc = Contact::FromStrings(Util::Split(p_Action.m_Cc));
+  const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_To)));
+  const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Cc)));
   const std::vector<Contact> bcc; // @todo: = Contact::FromStrings(Util::Split(p_Action.m_Bcc));
-  const std::vector<std::string> att = Util::Split(p_Action.m_Att);
+  const std::vector<std::string> att = Util::Trim(Util::Split(p_Action.m_Att));
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address);
   result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, att);
