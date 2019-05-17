@@ -231,7 +231,7 @@ following third-party libraries:
 
 License
 =======
-nmail is distributed under the MIT license. See LICENSE file.
+nmail is distributed under the MIT license. See [LICENSE](/LICENSE) file.
 
 
 Keywords
