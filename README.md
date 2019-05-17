@@ -198,6 +198,7 @@ This configuration file controls the UI aspects of nmail. Default configuration
 file:
 
     help_enabled=1
+    key_address_book=KEY_CTRLT
     key_back=,
     key_cancel=KEY_CTRLC
     key_compose=c
