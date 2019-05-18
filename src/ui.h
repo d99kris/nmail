@@ -189,6 +189,9 @@ private:
   int m_DialogEntryStringPos = 0;
   std::wstring m_DialogEntryString;
 
+  int m_FilenameEntryStringPos = 0;
+  std::wstring m_FilenameEntryString;
+  
   std::map<uint32_t, std::wstring> m_ComposeHeaderStr;
   int m_ComposeHeaderLine = 0;
   int m_ComposeHeaderPos = 0;

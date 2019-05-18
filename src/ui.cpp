@@ -889,7 +889,7 @@ void Ui::DrawPartList()
         std::string leftPad = "    ";
         std::string sizeStr = std::to_string(part.m_Data.size()) + " bytes"; 
         std::string sizeStrPadded = Util::TrimPadString(sizeStr, 18);
-        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 18);
+        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 30);
         std::string line = leftPad + sizeStrPadded + mimeTypePadded;
         std::string filenamePadded =
           Util::TrimPadString(part.m_Filename, m_ScreenWidth - line.size());
@@ -1855,6 +1855,29 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
+      int idx = 0;
+      std::string tmppath = Util::GetTempDir() + "forward/";
+      Util::MkDir(tmppath);
+      for (auto& part : body.GetParts())
+      {
+        if (!part.second.m_Filename.empty())
+        {
+          std::string tmpfiledir = tmppath + std::to_string(idx++) + "/";
+          Util::MkDir(tmpfiledir);
+          std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
+
+          Util::WriteFile(tmpfilepath, part.second.m_Data);
+          if (m_ComposeHeaderStr[2].empty())
+          {
+            m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + Util::ToWString(tmpfilepath);
+          }
+          else
+          {
+            m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + L", " + Util::ToWString(tmpfilepath);
+          }
+        }
+      }
+
       m_ComposeMessageStr =
         Util::ToWString("\n\n---------- Forwarded message ---------\n"
                         "From: " + header.GetFrom() + "\n"
@@ -1987,6 +2010,9 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
   {
     SetDialogMessage("Send message failed");
   }
+
+  std::string tmppath = Util::GetTempDir() + "forward/";
+  Util::RmDir(tmppath); 
 }
 
 void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
@@ -2357,19 +2383,19 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
 
   curs_set(1);
 
-  m_DialogEntryString = Util::ToWString(p_Entry);
-  m_DialogEntryStringPos = m_DialogEntryString.size();
+  m_FilenameEntryString = Util::ToWString(p_Entry);
+  m_FilenameEntryStringPos = m_FilenameEntryString.size();
 
   bool rv = false;
   while (true)
   {
     werase(m_DialogWin);
 
-    const std::string& dispStr = p_Prompt + Util::ToString(m_DialogEntryString);
+    const std::string& dispStr = p_Prompt + Util::ToString(m_FilenameEntryString);
     mvwprintw(m_DialogWin, 0, 3, "%s", dispStr.c_str());
     
     leaveok(m_DialogWin, false);
-    wmove(m_DialogWin, 0, 3 + p_Prompt.size() + m_DialogEntryStringPos);
+    wmove(m_DialogWin, 0, 3 + p_Prompt.size() + m_FilenameEntryStringPos);
     wrefresh(m_DialogWin);
     leaveok(m_DialogWin, true);
 
@@ -2381,19 +2407,19 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
     }
     else if (key == KEY_RETURN)
     {
-      p_Entry = Util::ToString(m_DialogEntryString);
+      p_Entry = Util::ToString(m_FilenameEntryString);
       rv = true;
       break;
     }
     else if (key == KEY_LEFT)
     {
-      m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos - 1,
-                                           (int)m_DialogEntryString.size());
+      m_FilenameEntryStringPos = Util::Bound(0, m_FilenameEntryStringPos - 1,
+                                             (int)m_FilenameEntryString.size());
     }
     else if (key == KEY_RIGHT)
     {
-      m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos + 1,
-                                           (int)m_DialogEntryString.size());
+      m_FilenameEntryStringPos = Util::Bound(0, m_FilenameEntryStringPos + 1,
+                                           (int)m_FilenameEntryString.size());
     }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
              (key == KEY_PPAGE) || (key == KEY_NPAGE))
@@ -2402,21 +2428,21 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
     }
     else if (key == KEY_SYS_BACKSPACE)
     {
-      if (m_DialogEntryStringPos > 0)
+      if (m_FilenameEntryStringPos > 0)
       {
-        m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
+        m_FilenameEntryString.erase(--m_FilenameEntryStringPos, 1);
       }
     }
     else if (key == KEY_DC)
     {
-      if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+      if (m_FilenameEntryStringPos < (int)m_FilenameEntryString.size())
       {
-        m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+        m_FilenameEntryString.erase(m_FilenameEntryStringPos, 1);
       }
     }
     else if (IsValidTextKey(key))
     {
-      m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, key);
+      m_FilenameEntryString.insert(m_FilenameEntryStringPos++, 1, key);
     }
   }
 

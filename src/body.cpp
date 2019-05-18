@@ -74,6 +74,7 @@ std::string Body::GetText()
 
 std::map<ssize_t, Part> Body::GetParts()
 {
+  Parse();
   return m_Parts;
 }
 
