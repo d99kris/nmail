@@ -67,6 +67,7 @@ void Ui::Init()
     {"key_back", ","},
     {"key_goto_folder", "g"},
     {"key_address_book", "KEY_CTRLT"},
+    {"key_save_file", "s"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -92,6 +93,7 @@ void Ui::Init()
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
+  m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
 }
 
 void Ui::Cleanup()
@@ -196,6 +198,13 @@ void Ui::DrawAll()
       DrawHelp();
       DrawDialog();
       break;      
+
+    case StateViewPartList:
+      DrawTop();
+      DrawPartList();
+      DrawHelp();
+      DrawDialog();
+      break;
 
     default:
       werase(m_MainWin);
@@ -313,7 +322,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
     },
     {
-      "",  "",
+      GetKeyDisplay(m_KeyOpen), "MsgParts",
       GetKeyDisplay(m_KeyNextMsg), "NextMsg",
       GetKeyDisplay(m_KeyForward), "Forward",
       GetKeyDisplay(m_KeyCompose), "Compose",
@@ -344,6 +353,26 @@ void Ui::DrawHelp()
     },
   };
 
+  static std::vector<std::vector<std::string>> viewPartListHelp =
+  {
+    {
+      GetKeyDisplay(m_KeyBack), "ViewMsg",
+      GetKeyDisplay(m_KeyPrevMsg), "PrevPart",
+      GetKeyDisplay(m_KeySaveFile), "Save",
+      "", "",
+      "", "",
+      "", "",
+    },
+    {
+      GetKeyDisplay(m_KeyOpen), "ViewPart",
+      GetKeyDisplay(m_KeyNextMsg), "NextPart",
+      GetKeyDisplay(m_KeyQuit), "Quit",
+      "", "",
+      "", "",
+      "", "",
+    },
+  };
+
   if (m_HelpEnabled)
   {
     werase(m_HelpWin);
@@ -367,6 +396,10 @@ void Ui::DrawHelp()
       case StateReplyMessage:
       case StateForwardMessage:
         DrawHelpText(composeMessageHelp);
+        break;
+
+      case StateViewPartList:
+        DrawHelpText(viewPartListHelp);
         break;
 
       default:
@@ -819,6 +852,62 @@ void Ui::DrawComposeMessage()
   leaveok(m_MainWin, true);
 }
 
+void Ui::DrawPartList()
+{
+  werase(m_MainWin);
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  int uid = m_MessageListCurrentUid;
+  std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+  std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+  if (bodyIt != bodys.end())
+  {
+    Body& body = bodyIt->second;
+    const std::map<ssize_t, Part>& parts = body.GetParts();
+
+    int count = parts.size();
+    if (count > 0)
+    {
+      m_PartListCurrentIndex = Util::Bound(0, m_PartListCurrentIndex, (int)parts.size() - 1);
+
+      int itemsMax = m_MainWinHeight - 1;
+      int idxOffs = Util::Bound(0, (int)(m_PartListCurrentIndex - ((itemsMax - 1) / 2)),
+                                std::max(0, (int)parts.size() - (int)itemsMax));
+      int idxMax = idxOffs + std::min(itemsMax, (int)parts.size());
+
+      for (int i = idxOffs; i < idxMax; ++i)
+      {
+        auto it = std::next(parts.begin(), i);
+        const Part& part = it->second;
+
+        if (i == m_PartListCurrentIndex)
+        {
+          wattron(m_MainWin, A_REVERSE);
+          m_PartListCurrentPart = part;
+        }
+
+        std::string leftPad = "    ";
+        std::string sizeStr = std::to_string(part.m_Data.size()) + " bytes"; 
+        std::string sizeStrPadded = Util::TrimPadString(sizeStr, 18);
+        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 18);
+        std::string line = leftPad + sizeStrPadded + mimeTypePadded;
+        std::string filenamePadded =
+          Util::TrimPadString(part.m_Filename, m_ScreenWidth - line.size());
+        line = line + filenamePadded;
+
+        mvwprintw(m_MainWin, i - idxOffs, 0, "%s", line.c_str());
+        
+        if (i == m_PartListCurrentIndex)
+        {
+          wattroff(m_MainWin, A_REVERSE);
+        }
+      }
+    }
+  }
+
+  wrefresh(m_MainWin);
+}
+
 void Ui::AsyncDrawRequest(char p_DrawRequest)
 {
   write(m_Pipe[1], &p_DrawRequest, 1);
@@ -904,6 +993,10 @@ void Ui::Run()
 
         case StateAddressList:
           ViewAddressListKeyHandler(key);
+          break;
+
+        case StateViewPartList:
+          ViewPartListKeyHandler(key);
           break;
 
         default:
@@ -1269,6 +1362,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     SetState(StateViewMessageList);
   }
+  else if (p_Key == m_KeyOpen)
+  {
+    SetState(StateViewPartList);
+  }
   else if (p_Key == m_KeyGotoFolder)
   {
     SetState(StateGotoFolder);
@@ -1538,6 +1635,91 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   DrawAll();
 }
 
+void Ui::ViewPartListKeyHandler(int p_Key)
+{
+  if (p_Key == m_KeyQuit)
+  {
+    m_Running = false;
+    LOG_DEBUG("stop thread");
+  }
+  else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
+  {
+    --m_PartListCurrentIndex;
+  }
+  else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
+  {
+    ++m_PartListCurrentIndex;
+  }
+  else if (p_Key == KEY_PPAGE)
+  {
+    m_PartListCurrentIndex = m_PartListCurrentIndex - m_MainWinHeight;
+  }
+  else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
+  {
+    m_PartListCurrentIndex = m_MessageListCurrentIndex + m_MainWinHeight;
+  }
+  else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
+  {
+    SetState(StateViewMessage);
+  }
+  else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
+  {
+    std::string ext;
+    std::string err;
+    if (!m_PartListCurrentPart.m_Filename.empty())
+    {
+      ext = Util::GetFileExt(m_PartListCurrentPart.m_Filename);
+      err = "Cannot determine file extension for " + m_PartListCurrentPart.m_Filename;
+    }
+    else
+    {
+      ext = Util::ExtensionForMimeType(m_PartListCurrentPart.m_MimeType);
+      err = "Unknown MIME type " + m_PartListCurrentPart.m_MimeType;
+    }
+
+    if (!ext.empty())
+    {
+      const std::string& tempFilename = Util::GetTempFilename(ext);
+      Util::WriteFile(tempFilename, m_PartListCurrentPart.m_Data);
+      SetDialogMessage("Waiting for external viewer to exit");
+      DrawDialog();
+      Util::OpenInExtViewer(tempFilename);
+      Util::DeleteFile(tempFilename);
+      SetDialogMessage("");
+    }
+    else
+    {
+      SetDialogMessage(err);
+    }
+  }
+  else if (p_Key == m_KeySaveFile)
+  {
+    std::string filename = m_PartListCurrentPart.m_Filename;
+    if (PromptString("Save Filename: ", filename))
+    {
+      if (!filename.empty())
+      {
+        Util::WriteFile(filename, m_PartListCurrentPart.m_Data);
+        SetDialogMessage("File saved");
+      }
+      else
+      {
+        SetDialogMessage("Save cancelled (empty filename)");
+      }
+    }
+    else
+    {
+      SetDialogMessage("Save cancelled");
+    }
+  }
+  else
+  {
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+  }
+
+  DrawAll();
+}
+
 void Ui::SetState(Ui::State p_State)
 {
   if (p_State == StateAddressList)
@@ -1700,7 +1882,11 @@ void Ui::SetState(Ui::State p_State)
     m_AddressListCurrentIndex = 0;
     m_AddressListCurrentAddress = "";
   }
-
+  else if (m_State == StateViewPartList)
+  {
+    curs_set(0);
+    m_PartListCurrentIndex = 0;
+  }
 }
 
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
@@ -1892,6 +2078,8 @@ std::string Ui::GetStateStr()
     case StateComposeMessage: return "Compose";
     case StateReplyMessage: return "Reply";
     case StateForwardMessage: return "Forward";
+    case StateAddressList: return "Address Book";
+    case StateViewPartList: return "Message Parts";
     default: return "Unknown State";
   }
 }
@@ -2145,6 +2333,95 @@ bool Ui::PromptConfirmCancelCompose()
   int key = ReadKeyBlocking();
 
   return ((key == 'y') || (key == 'Y'));
+}
+
+bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
+{
+  if (m_HelpEnabled)
+  {
+    werase(m_HelpWin);
+    static std::vector<std::vector<std::string>> savePartHelp =
+      {
+       {
+        GetKeyDisplay(KEY_RETURN), "Save",
+       },
+       {
+        GetKeyDisplay(m_KeyCancel), "Cancel",
+       }
+      };
+
+    DrawHelpText(savePartHelp);
+
+    wrefresh(m_HelpWin);
+  }
+
+  curs_set(1);
+
+  m_DialogEntryString = Util::ToWString(p_Entry);
+  m_DialogEntryStringPos = m_DialogEntryString.size();
+
+  bool rv = false;
+  while (true)
+  {
+    werase(m_DialogWin);
+
+    const std::string& dispStr = p_Prompt + Util::ToString(m_DialogEntryString);
+    mvwprintw(m_DialogWin, 0, 3, "%s", dispStr.c_str());
+    
+    leaveok(m_DialogWin, false);
+    wmove(m_DialogWin, 0, 3 + p_Prompt.size() + m_DialogEntryStringPos);
+    wrefresh(m_DialogWin);
+    leaveok(m_DialogWin, true);
+
+    int key = ReadKeyBlocking();
+    if (key == m_KeyCancel)
+    {
+      rv = false;
+      break;
+    }
+    else if (key == KEY_RETURN)
+    {
+      p_Entry = Util::ToString(m_DialogEntryString);
+      rv = true;
+      break;
+    }
+    else if (key == KEY_LEFT)
+    {
+      m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos - 1,
+                                           (int)m_DialogEntryString.size());
+    }
+    else if (key == KEY_RIGHT)
+    {
+      m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos + 1,
+                                           (int)m_DialogEntryString.size());
+    }
+    else if ((key == KEY_UP) || (key == KEY_DOWN) ||
+             (key == KEY_PPAGE) || (key == KEY_NPAGE))
+    {
+      // ignore
+    }
+    else if (key == KEY_SYS_BACKSPACE)
+    {
+      if (m_DialogEntryStringPos > 0)
+      {
+        m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
+      }
+    }
+    else if (key == KEY_DC)
+    {
+      if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+      {
+        m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+      }
+    }
+    else if (IsValidTextKey(key))
+    {
+      m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, key);
+    }
+  }
+
+  curs_set(0);
+  return rv;
 }
 
 bool Ui::CurrentMessageBodyAvailable()

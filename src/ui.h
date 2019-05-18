@@ -30,6 +30,7 @@ public:
     StateReplyMessage = 5,
     StateForwardMessage = 6,
     StateAddressList = 7,
+    StateViewPartList = 8,
   };
 
   enum DrawRequest
@@ -73,6 +74,7 @@ private:
   void DrawMessageList();
   void DrawMessage();
   void DrawComposeMessage();
+  void DrawPartList();
 
   void AsyncDrawRequest(char p_DrawRequest);
   void PerformDrawRequest(char p_DrawRequest);
@@ -83,6 +85,7 @@ private:
   void ViewMessageListKeyHandler(int p_Key);
   void ViewMessageKeyHandler(int p_Key);
   void ComposeMessageKeyHandler(int p_Key);
+  void ViewPartListKeyHandler(int p_Key);
 
   void SetState(State p_State);
   bool IsConnected();
@@ -102,6 +105,7 @@ private:
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
   bool PromptConfirmCancelCompose();
+  bool PromptString(const std::string& p_Prompt, std::string& p_Entry);
   bool CurrentMessageBodyAvailable();
 
 private:
@@ -148,6 +152,9 @@ private:
   int m_AddressListCurrentIndex = 0;
   std::string m_AddressListCurrentAddress;
 
+  int m_PartListCurrentIndex = 0;
+  Part m_PartListCurrentPart;
+  
   int m_MessageViewLineOffset = 0;
   bool m_PersistFolderFilter = true;
   bool m_Plaintext = true;
@@ -177,6 +184,7 @@ private:
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;
   int m_KeyAddressBook = 0;
+  int m_KeySaveFile = 0;
   
   int m_DialogEntryStringPos = 0;
   std::wstring m_DialogEntryString;

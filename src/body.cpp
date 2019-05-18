@@ -72,6 +72,11 @@ std::string Body::GetText()
   }
 }
 
+std::map<ssize_t, Part> Body::GetParts()
+{
+  return m_Parts;
+}
+
 void Body::Parse()
 {
   if (!m_Parsed)
@@ -188,7 +193,7 @@ void Body::ParseMime(mailmime *p_Mime)
   switch (p_Mime->mm_type)
   {
     case MAILMIME_SINGLE:
-      ParseMimeData(p_Mime->mm_data.mm_single, mimeType);
+      ParseMimeData(p_Mime, mimeType);
       break;
 
     case MAILMIME_MULTIPLE:
@@ -214,25 +219,48 @@ void Body::ParseMime(mailmime *p_Mime)
   }
 }
 
-void Body::ParseMimeData(mailmime_data *p_Data, std::string p_MimeType)
+void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 {
-  switch (p_Data->dt_type)
+  mailmime_data* data = p_Mime->mm_data.mm_single;
+  mailmime_single_fields fields;
+  std::string filename;
+
+  memset(&fields, 0, sizeof(mailmime_single_fields));
+  if (p_Mime->mm_mime_fields != NULL)
+  {
+    mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
+
+    char* cfilename = fields.fld_disposition_filename;
+
+    if (cfilename == NULL)
+    {
+      cfilename = fields.fld_content_name;
+    }
+
+    if (cfilename != NULL)
+    {
+      filename = std::string(cfilename);
+    }
+  }
+  
+  switch (data->dt_type)
   {
     case MAILMIME_DATA_TEXT:
       {
         size_t index = 0;
         char* result = NULL;
         size_t resultLen = 0;
-        int rv = mailmime_part_parse(p_Data->dt_data.dt_text.dt_data,
-                                     p_Data->dt_data.dt_text.dt_length, &index,
-                                     p_Data->dt_encoding, &result, &resultLen);
+        int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data,
+                                     data->dt_data.dt_text.dt_length, &index,
+                                     data->dt_encoding, &result, &resultLen);
         if (rv == MAILIMF_NO_ERROR)
         {
           Part part;
           part.m_MimeType = p_MimeType;
           part.m_Data = std::string(result, resultLen);
+          part.m_Filename = filename;
           m_Parts[index] = part;
-
+          
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
             m_TextPlainIndex = index;

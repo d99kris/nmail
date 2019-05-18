@@ -28,7 +28,8 @@ public:
   static std::string ReadFile(const std::string& p_Path);
   static void WriteFile(const std::string& p_Path, const std::string& p_Str);
   static std::string BaseName(const std::string& p_Path); 
-  static std::string RemoveFileExt(const std::string& p_Path); 
+  static std::string RemoveFileExt(const std::string& p_Path);
+  static std::string GetFileExt(const std::string& p_Path);
   static std::string DirName(const std::string& p_Path);
   static std::vector<std::string> ListDir(const std::string& p_Folder);
   static void MkDir(const std::string& p_Path);
@@ -45,6 +46,9 @@ public:
   static std::string GetHtmlConvertCmd();
   static void SetHtmlConvertCmd(const std::string& p_HtmlConvertCmd);
   static std::string GetDefaultHtmlConvertCmd();
+  static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
+  static std::string GetDefaultExtViewerCmd();
+  static void OpenInExtViewer(const std::string& p_Path);
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static std::string ReduceIndent(const std::string& p_Str, int p_Cnt);
@@ -92,8 +96,10 @@ public:
 
   static bool IsInteger(const std::string& p_Str);
   static long ToInteger(const std::string& p_Str);
+  static std::string ExtensionForMimeType(const std::string& p_MimeType);
 
 private:
   static std::string m_HtmlConvertCmd;
+  static std::string m_ExtViewerCmd;
   static std::string m_ApplicationDir;
 };

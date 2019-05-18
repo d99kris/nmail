@@ -27,6 +27,7 @@
 #include "serialized.h"
 
 std::string Util::m_HtmlConvertCmd;
+std::string Util::m_ExtViewerCmd;
 std::string Util::m_ApplicationDir;
 
 std::string Util::SHA256(const std::string &p_Str)
@@ -56,7 +57,7 @@ std::string Util::ReadFile(const std::string &p_Path)
 void Util::WriteFile(const std::string &p_Path, const std::string &p_Str)
 {
   MkDir(DirName(p_Path));
-  std::ofstream file(p_Path);
+  std::ofstream file(p_Path, std::ios::binary);
   file << p_Str;
 }
 
@@ -75,6 +76,14 @@ std::string Util::RemoveFileExt(const std::string& p_Path)
   if (lastPeriod == std::string::npos) return p_Path;
 
   return p_Path.substr(0, lastPeriod);
+}
+
+std::string Util::GetFileExt(const std::string& p_Path)
+{
+  size_t lastPeriod = p_Path.find_last_of(".");
+  if (lastPeriod == std::string::npos) return "";
+
+  return p_Path.substr(lastPeriod);
 }
 
 std::string Util::DirName(const std::string &p_Path)
@@ -208,6 +217,28 @@ std::string Util::GetDefaultHtmlConvertCmd()
   Util::DeleteFile(commandOutPath);
 
   return result;
+}
+
+void Util::SetExtViewerCmd(const std::string& p_ExtViewerCmd)
+{
+  m_ExtViewerCmd = p_ExtViewerCmd;
+}
+
+std::string Util::GetDefaultExtViewerCmd()
+{
+#if defined(__APPLE__)
+  return "open -Wn";
+#elif defined(__linux__)
+  return "xdg-open";
+#else
+  return "";
+#endif
+}
+
+void Util::OpenInExtViewer(const std::string& p_Path)
+{
+  std::string cmd = m_ExtViewerCmd + " " + p_Path;
+  system(cmd.c_str());
 }
 
 void Util::ReplaceString(std::string &p_Str, const std::string &p_Search,
@@ -871,4 +902,21 @@ bool Util::IsInteger(const std::string& p_Str)
 long Util::ToInteger(const std::string& p_Str)
 {
   return strtol(p_Str.c_str(), NULL, 10);
+}
+
+std::string Util::ExtensionForMimeType(const std::string& p_MimeType)
+{
+  static const std::map<std::string, std::string> typeToExt =
+  {
+    { "text/html", ".html" },
+    { "text/plain", ".txt" },
+  };
+
+  auto it = typeToExt.find(p_MimeType);
+  if (it != typeToExt.end())
+  {
+    return it->second;
+  }
+
+  return "";
 }

@@ -141,6 +141,7 @@ and fill out the empty fields (except `pass`), example:
 
     address=example@example.com
     cache_encrypt=1
+    ext_viewer_cmd=open -Wn
     html_convert_cmd=/usr/local/bin/lynx -dump
     imap_host=imap.example.com
     imap_port=993
@@ -150,7 +151,7 @@ and fill out the empty fields (except `pass`), example:
     save_pass=1
     smtp_host=smtp.example.com
     smtp_port=465
-    trash=
+    trash=Trash
     user=example@example.com
 
 The field `pass` shall be left empty. The next time nmail is started it will
@@ -213,6 +214,7 @@ file:
     key_quit=q
     key_refresh=l
     key_reply=r
+    key_save_file=s
     key_send=KEY_CTRLX
     key_toggle_text_html=t
     key_toggle_unread=u

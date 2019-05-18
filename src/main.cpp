@@ -111,6 +111,7 @@ int main(int argc, char* argv[])
     {"trash", ""},
     {"cache_encrypt", "1"},
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
+    {"ext_viewer_cmd", Util::GetDefaultExtViewerCmd()},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
 
@@ -151,6 +152,7 @@ int main(int argc, char* argv[])
   std::string trash = config->Get("trash");
   const bool cacheEncrypt = (config->Get("cache_encrypt") == "1");
   Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
+  Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
 
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
