@@ -729,6 +729,8 @@ void Ui::DrawMessage()
 
     std::string headerText;
     std::map<uint32_t, Header>::iterator headerIt = headers.find(uid);
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+
     std::stringstream ss;
     if (headerIt != headers.end())
     {
@@ -741,13 +743,33 @@ void Ui::DrawMessage()
         ss << "Cc: " << header.GetCc() << "\n";
       }
 
+      if (bodyIt != bodys.end())
+      {
+        Body& body = bodyIt->second;
+        std::map<ssize_t, Part> parts = body.GetParts();
+        std::vector<std::string> attnames;
+        for (auto it = parts.begin(); it != parts.end(); ++it)
+        {
+          if (!it->second.m_Filename.empty())
+          {
+            attnames.push_back(it->second.m_Filename);
+          }
+        }
+
+        if (!attnames.empty())
+        {
+          ss << "Attc: ";
+          ss << Util::Join(attnames, ", ");
+          ss << "\n";
+        }
+      }
+      
       ss << "Subject: " << header.GetSubject() << "\n";
       ss << "\n";
     }
 
     headerText = ss.str();
 
-    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
     if (bodyIt != bodys.end())
     {
       Body& body = bodyIt->second;
