@@ -796,11 +796,6 @@ void Ui::DrawComposeMessage()
       cursY = m_ComposeHeaderLine;
       cursX = m_ComposeHeaderPos + 10;
     }
-    else
-    {
-      cursY = m_ComposeHeaderLine + 1;
-      cursX = m_ComposeHeaderPos;
-    }
   }
   else
   {
@@ -811,11 +806,41 @@ void Ui::DrawComposeMessage()
   werase(m_MainWin);
 
   std::vector<std::wstring> composeLines;
-  composeLines.push_back(std::wstring(L"To      : ") + m_ComposeHeaderStr.at(0));
-  composeLines.push_back(std::wstring(L"Cc      : ") + m_ComposeHeaderStr.at(1));
-  composeLines.push_back(std::wstring(L"Attchmnt: ") + m_ComposeHeaderStr.at(2));
-  composeLines.push_back(std::wstring(L"Subject : ") + m_ComposeHeaderStr.at(3));
+
+  std::vector<std::wstring> headerLines =
+  {
+    L"To      : ",
+    L"Cc      : ",
+    L"Attchmnt: ",
+    L"Subject : ",
+  };
+
+  for (int i = 0; i < (int)m_ComposeHeaderStr.size(); ++i)
+  {
+    if (i != m_ComposeHeaderLine)
+    {
+      std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
+      composeLines.push_back(line.substr(0, m_ScreenWidth));
+    }
+    else
+    {
+      if (cursX >= m_ScreenWidth)
+      {
+        std::wstring line = headerLines.at(i) +
+          m_ComposeHeaderStr.at(i).substr(cursX - m_ScreenWidth + 1);
+        composeLines.push_back(line.substr(0, m_ScreenWidth));
+        cursX = m_ScreenWidth - 1;
+      }
+      else
+      {
+        std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
+        composeLines.push_back(line.substr(0, m_ScreenWidth));
+      }
+    }
+  }
+
   composeLines.push_back(L"");
+
   for (auto line = m_ComposeMessageLines.begin(); line != m_ComposeMessageLines.end(); ++line)
   {
     composeLines.push_back(*line);
