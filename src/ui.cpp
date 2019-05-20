@@ -19,9 +19,11 @@
 #include "sethelp.h"
 #include "status.h"
 
-Ui::Ui(const std::string& p_Inbox)
-  : m_CurrentFolder(p_Inbox)
+Ui::Ui(const std::string& p_Inbox, const std::string& p_Address)
+  : m_Inbox(p_Inbox)
+  , m_Address(p_Address)
 {
+  m_CurrentFolder = p_Inbox;
   Init();
   InitWindows();
 }
@@ -2034,6 +2036,29 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
   if (!p_Result.m_Result)
   {
     SetDialogMessage("Send message failed");
+  }
+  else
+  {
+    const SmtpManager::Action& action = p_Result.m_Action;
+    const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(action.m_To)));
+    const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(action.m_Cc)));
+
+    std::vector<Contact> contacts;
+    std::move(to.begin(), to.end(), std::back_inserter(contacts));
+    std::move(cc.begin(), cc.end(), std::back_inserter(contacts));
+
+    for (auto& contact : contacts)
+    {
+      const std::string& address = contact.GetAddress();
+
+      if (address == m_Address)
+      {
+        sleep(1);
+        m_HasRequestedUids[m_Inbox] = false;
+        AsyncDrawRequest(DrawRequestAll);
+        break;
+      }
+    }
   }
 
   std::string tmppath = Util::GetTempDir() + "forward/";

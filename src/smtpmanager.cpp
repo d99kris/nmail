@@ -139,6 +139,7 @@ void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address);
   result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, att);
+  result.m_Action = p_Action;
 
   ClearStatus(Status::FlagSending);
 

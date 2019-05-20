@@ -39,7 +39,7 @@ public:
     DrawRequestAll = 1,
   };
 
-  Ui(const std::string& p_Inbox);
+  Ui(const std::string& p_Inbox, const std::string& p_Address);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
@@ -114,8 +114,11 @@ private:
   std::string m_TrashFolder;
   bool m_Running = false;
 
-  std::string m_CurrentFolder = "INBOX";
+  std::string m_Inbox;
+  std::string m_Address;
 
+  std::string m_CurrentFolder = "INBOX";
+    
   std::mutex m_Mutex;
   Status m_Status;  
   std::set<std::string> m_Folders;

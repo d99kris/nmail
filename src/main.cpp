@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
   
   AddressBook::Init(cacheEncrypt, pass);
   
-  Ui ui(inbox);
+  Ui ui(inbox, address);
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online, cacheEncrypt,

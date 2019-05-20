@@ -37,6 +37,7 @@ public:
   struct Result
   {
     bool m_Result;
+    Action m_Action;
   };
 
 public:
