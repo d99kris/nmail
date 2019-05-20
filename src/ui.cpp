@@ -742,6 +742,8 @@ void Ui::DrawMessage()
       {
         ss << "Cc: " << header.GetCc() << "\n";
       }
+      
+      ss << "Subject: " << header.GetSubject() << "\n";
 
       if (bodyIt != bodys.end())
       {
@@ -758,13 +760,12 @@ void Ui::DrawMessage()
 
         if (!attnames.empty())
         {
-          ss << "Attc: ";
+          ss << "Attachments: ";
           ss << Util::Join(attnames, ", ");
           ss << "\n";
         }
       }
-      
-      ss << "Subject: " << header.GetSubject() << "\n";
+
       ss << "\n";
     }
 
