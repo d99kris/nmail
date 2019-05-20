@@ -601,7 +601,8 @@ void Ui::DrawMessageList()
       }
     }
 
-    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex - ((m_MainWinHeight - 1) / 2)),
+    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
+                                       ((m_MainWinHeight - 1) / 2)),
                               std::max(0, (int)msgList.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgList.size());
 
@@ -636,25 +637,25 @@ void Ui::DrawMessageList()
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
-      if (i == m_MessageListCurrentIndex)
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         wattron(m_MainWin, A_REVERSE);
       }
 
       mvwprintw(m_MainWin, i - idxOffs, 0, "%s", header.c_str());
 
-      if (i == m_MessageListCurrentIndex)
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         wattroff(m_MainWin, A_REVERSE);
       }
 
-      if (i == m_MessageListCurrentIndex)
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         m_MessageListCurrentUid = uid;
       }
 
       // @todo: consider add option for prefetching of all bodys of listed messages.
-      if (i == m_MessageListCurrentIndex)
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
         std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
@@ -1238,22 +1239,24 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
   {
-    --m_MessageListCurrentIndex;
+    --m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateCurrentUid();
   }
   else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
   {
-    ++m_MessageListCurrentIndex;
+    ++m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateCurrentUid();
   }
   else if (p_Key == KEY_PPAGE)
   {
-    m_MessageListCurrentIndex = m_MessageListCurrentIndex - m_MainWinHeight;
+    m_MessageListCurrentIndex[m_CurrentFolder] =
+      m_MessageListCurrentIndex[m_CurrentFolder] - m_MainWinHeight;
     UpdateCurrentUid();
   }
   else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
   {
-    m_MessageListCurrentIndex = m_MessageListCurrentIndex + m_MainWinHeight;
+    m_MessageListCurrentIndex[m_CurrentFolder] =
+      m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
     UpdateCurrentUid();
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
@@ -1369,12 +1372,12 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyPrevMsg)
   {
-    --m_MessageListCurrentIndex;
+    --m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateCurrentUid();
   }
   else if (p_Key == m_KeyNextMsg)
   {
-    ++m_MessageListCurrentIndex;
+    ++m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateCurrentUid();
   }
   else if (p_Key == KEY_PPAGE)
@@ -1683,7 +1686,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
   {
-    m_PartListCurrentIndex = m_MessageListCurrentIndex + m_MainWinHeight;
+    m_PartListCurrentIndex = m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
   }
   else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
   {
@@ -2280,10 +2283,12 @@ void Ui::UpdateCurrentUid()
     msgList = m_MsgList[m_CurrentFolder];
   }
   
-  m_MessageListCurrentIndex = Util::Bound(0, m_MessageListCurrentIndex, (int)msgList.size() - 1);
+  m_MessageListCurrentIndex[m_CurrentFolder] =
+    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgList.size() - 1);
   if (msgList.size() > 0)
   {
-    uint32_t uid = std::prev(msgList.end(), m_MessageListCurrentIndex + 1)->first;
+    uint32_t uid =
+      std::prev(msgList.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->first;
     m_MessageListCurrentUid = uid;
   }
 }

@@ -149,7 +149,7 @@ private:
   std::string m_DialogMessage;
   std::chrono::time_point<std::chrono::system_clock> m_DialogMessageTime;
   
-  int m_MessageListCurrentIndex = 0;
+  std::map<std::string, int> m_MessageListCurrentIndex;
   uint32_t m_MessageListCurrentUid = 0;
 
   int m_AddressListCurrentIndex = 0;
