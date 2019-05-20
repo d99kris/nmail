@@ -107,6 +107,7 @@ private:
   bool PromptConfirmCancelCompose();
   bool PromptString(const std::string& p_Prompt, std::string& p_Entry);
   bool CurrentMessageBodyAvailable();
+  void InvalidateUiCache(const std::string& p_Folder);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -134,6 +135,7 @@ private:
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;
   std::map<std::string, std::set<uint32_t>> m_RequestedBodys;
+  std::map<std::string, std::set<uint32_t>> m_RequestedFlags;
 
   std::vector<std::string> m_Addresses;
   

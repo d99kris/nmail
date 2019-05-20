@@ -580,9 +580,10 @@ void Ui::DrawMessageList()
     m_ImapManager->AsyncRequest(request);
     m_HasRequestedUids[m_CurrentFolder] = true;
   }
-
-  std::set<uint32_t> fetchHeaderUids;
   
+  std::set<uint32_t> fetchHeaderUids;  
+  std::set<uint32_t> fetchFlagUids;  
+
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::set<uint32_t>& uids = m_Uids[m_CurrentFolder];
@@ -591,6 +592,8 @@ void Ui::DrawMessageList()
     std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
 
     std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
+    std::set<uint32_t>& requestedFlags = m_RequestedFlags[m_CurrentFolder];
+
     for (auto& uid : uids)
     {
       if ((headers.find(uid) == headers.end()) &&
@@ -598,6 +601,13 @@ void Ui::DrawMessageList()
       {
         fetchHeaderUids.insert(uid);
         requestedHeaders.insert(uid);
+      }
+
+      if ((flags.find(uid) == flags.end()) &&
+          (requestedFlags.find(uid) == requestedFlags.end()))
+      {
+        fetchFlagUids.insert(uid);
+        requestedFlags.insert(uid);
       }
     }
 
@@ -693,7 +703,6 @@ void Ui::DrawMessageList()
         ImapManager::Request request;
         request.m_Folder = m_CurrentFolder;
         request.m_GetHeaders = subsetFetchHeaderUids;
-        request.m_GetFlags = subsetFetchHeaderUids;
 
         m_ImapManager->AsyncRequest(request);
         
@@ -702,6 +711,15 @@ void Ui::DrawMessageList()
     }
   }
   
+  if (!fetchFlagUids.empty())
+  {
+    ImapManager::Request request;
+    request.m_Folder = m_CurrentFolder;
+    request.m_GetFlags = fetchFlagUids;
+    
+    m_ImapManager->AsyncRequest(request);
+  }
+
   wrefresh(m_MainWin);
 }
 
@@ -1253,7 +1271,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      m_HasRequestedUids[m_CurrentFolder] = false;
+      InvalidateUiCache(m_CurrentFolder);
     }
     else
     {
@@ -2080,7 +2098,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
       if (address == m_Address)
       {
         sleep(1);
-        m_HasRequestedUids[m_Inbox] = false;
+        InvalidateUiCache(m_Inbox);
         AsyncDrawRequest(DrawRequestAll);
         break;
       }
@@ -2213,7 +2231,6 @@ bool Ui::DeleteMessage()
     action.m_MoveDestination = m_TrashFolder;
     m_ImapManager->AsyncAction(action);
 
-    //m_HasRequestedUids[m_CurrentFolder] = false;
     m_HasRequestedUids[m_TrashFolder] = false;
 
     {
@@ -2534,4 +2551,15 @@ bool Ui::CurrentMessageBodyAvailable()
   const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
   std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid);
   return (bit != bodys.end());
+}
+
+void Ui::InvalidateUiCache(const std::string& p_Folder)
+{
+  m_HasRequestedUids[p_Folder] = false;
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  std::map<uint32_t, uint32_t>& flags = m_Flags[p_Folder];
+  flags.clear();
+  std::set<uint32_t>& requestedFlags = m_RequestedFlags[p_Folder];
+  requestedFlags.clear();
 }
