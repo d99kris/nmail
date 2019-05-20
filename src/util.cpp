@@ -210,7 +210,18 @@ std::string Util::GetDefaultHtmlConvertCmd()
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
     if (!output.empty())
     {
-      result = output + " -dump";
+      if (output.find("/lynx") != std::string::npos)
+      {
+        result = output + " -assume_charset=utf-8 -display_charset=utf-8 -dump";
+      }
+      else if (output.find("/elinks") != std::string::npos)
+      {
+        result = output + " -dump-charset utf-8 -dump";
+      }
+      else if (output.find("/links") != std::string::npos)
+      {
+        result = output + " -codepage utf-8 -dump";
+      }
     }
   }
 
