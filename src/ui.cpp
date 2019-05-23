@@ -1414,11 +1414,13 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyPrevMsg)
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
+    m_MessageViewLineOffset = 0;
     UpdateCurrentUid();
   }
   else if (p_Key == m_KeyNextMsg)
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
+    m_MessageViewLineOffset = 0;
     UpdateCurrentUid();
   }
   else if (p_Key == KEY_PPAGE)
@@ -2242,6 +2244,7 @@ bool Ui::DeleteMessage()
       UpdateMsgList(m_TrashFolder);
     }
 
+    m_MessageViewLineOffset = 0;
     UpdateCurrentUid();    
 
     std::vector<std::pair<uint32_t, Header>> msgList;
