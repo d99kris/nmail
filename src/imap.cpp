@@ -346,7 +346,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
             {
               struct mailimap_flag_fetch* flag_fetch =
                 (struct mailimap_flag_fetch*) clist_content(dit);
-              if (flag_fetch)
+              if (flag_fetch && flag_fetch->fl_flag)
               {
                 switch (flag_fetch->fl_flag->fl_type)
                 {
