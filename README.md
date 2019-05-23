@@ -70,7 +70,7 @@ Linux / Ubuntu
 
 **Dependencies**
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man lynx
 
 **Source**
 
@@ -89,7 +89,7 @@ macOS
 
 **Dependencies**
 
-    brew install cmake libetpan openssl ncurses help2man
+    brew install cmake libetpan openssl ncurses help2man lynx
 
 **Source**
 
