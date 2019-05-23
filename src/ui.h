@@ -39,7 +39,7 @@ public:
     DrawRequestAll = 1,
   };
 
-  Ui(const std::string& p_Inbox, const std::string& p_Address);
+  Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
@@ -117,6 +117,7 @@ private:
 
   std::string m_Inbox;
   std::string m_Address;
+  uint32_t m_PrefetchLevel = 0;
 
   std::string m_CurrentFolder = "INBOX";
     

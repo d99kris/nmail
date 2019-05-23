@@ -39,6 +39,7 @@ public:
   
   struct Request
   {
+    bool m_Prefetch = false;
     std::string m_Folder;
     bool m_GetFolders = false;
     bool m_GetUids = false;

@@ -148,6 +148,7 @@ and fill out the empty fields (except `pass`), example:
     inbox=INBOX
     name=Firstname Lastname
     pass=
+    prefetch_level=2
     save_pass=1
     smtp_host=smtp.example.com
     smtp_port=465
@@ -158,6 +159,17 @@ The field `pass` shall be left empty. The next time nmail is started it will
 prompt for password. If having configured nmail to save the password
 `save_pass=1` the field `pass` will be automatically populated with the
 password encrypted (refer to Security section below for details).
+
+
+Pre-fetching
+============
+
+nmail pre-fetches messages from server based on the `prefetch_level` config
+setting. The following levels are supported:
+
+    0 = no pre-fetching, messages are retrieved when viewed
+    1 = pre-fetching of currently selected message
+    2 = pre-fetching of all messages in current folder view
 
 
 Troubleshooting

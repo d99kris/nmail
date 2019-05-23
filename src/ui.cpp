@@ -19,9 +19,10 @@
 #include "sethelp.h"
 #include "status.h"
 
-Ui::Ui(const std::string& p_Inbox, const std::string& p_Address)
+Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel)
   : m_Inbox(p_Inbox)
   , m_Address(p_Address)
+  , m_PrefetchLevel(p_PrefetchLevel)
 {
   m_CurrentFolder = p_Inbox;
   Init();
@@ -611,6 +612,11 @@ void Ui::DrawMessageList()
       }
     }
 
+    const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+    std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
+    std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
+    std::set<uint32_t> fetchBodyUidsSecond;
+    
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
                                        ((m_MainWinHeight - 1) / 2)),
                               std::max(0, (int)msgList.size() - (int)m_MainWinHeight));
@@ -664,29 +670,47 @@ void Ui::DrawMessageList()
         m_MessageListCurrentUid = uid;
       }
 
-      // @todo: consider add option for prefetching of all bodys of listed messages.
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      if ((bodys.find(uid) == bodys.end()) &&
+          (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
+          (requestedBodys.find(uid) == requestedBodys.end()))
       {
-        const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
-        std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
-        std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
-        if ((bodys.find(uid) == bodys.end()) &&
-            (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
-            (requestedBodys.find(uid) == requestedBodys.end()))
+        if (i == m_MessageListCurrentIndex[m_CurrentFolder])
         {
-          prefetchedBodys.insert(uid);
+          if (m_PrefetchLevel >= 1)
+          {
+            prefetchedBodys.insert(uid);
 
-          std::set<uint32_t> fetchBodyUids;
-          fetchBodyUids.insert(uid);
+            std::set<uint32_t> fetchBodyUidsFirst;
+            fetchBodyUidsFirst.insert(uid);
 
-          ImapManager::Request request;
-          request.m_Folder = m_CurrentFolder;
-          request.m_GetBodys = fetchBodyUids;
+            ImapManager::Request request;
+            request.m_Prefetch = true;
+            request.m_Folder = m_CurrentFolder;
+            request.m_GetBodys = fetchBodyUidsFirst;
 
-          m_ImapManager->PrefetchRequest(request);
+            m_ImapManager->PrefetchRequest(request);
+          }
         }
-
+        else
+        {
+          if (m_PrefetchLevel >= 2)
+          {
+            prefetchedBodys.insert(uid);
+            
+            fetchBodyUidsSecond.insert(uid);
+          }
+        }
       }
+    }
+
+    if (!fetchBodyUidsSecond.empty())
+    {
+      ImapManager::Request request;
+      request.m_Prefetch = true;
+      request.m_Folder = m_CurrentFolder;
+      request.m_GetBodys = fetchBodyUidsSecond;
+
+      m_ImapManager->PrefetchRequest(request);
     }
   }
 
@@ -1989,50 +2013,53 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 {
   char drawRequest = DrawRequestNone;
 
-  if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
+  if (!p_Request.m_Prefetch)
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Folders = p_Response.m_Folders;
-    drawRequest |= DrawRequestAll;
-  }
-
-  if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
-    UpdateMsgList(p_Response.m_Folder);
-    drawRequest |= DrawRequestAll;
-  }
-
-  if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
-                                          p_Response.m_Headers.end());
-    UpdateMsgList(p_Response.m_Folder);
-    drawRequest |= DrawRequestAll;
-
-    for (auto& header : p_Response.m_Headers)
+    if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
     {
-      AddressBook::Add(m_Headers[p_Response.m_Folder][header.first].GetUniqueId(),
-                       m_Headers[p_Response.m_Folder][header.first].GetAddresses());
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_Folders = p_Response.m_Folders;
+      drawRequest |= DrawRequestAll;
     }
-  }
 
-  if (!p_Request.m_GetFlags.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed))
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    std::map<uint32_t, uint32_t> newFlags = p_Response.m_Flags;
-    newFlags.insert(m_Flags[p_Response.m_Folder].begin(), m_Flags[p_Response.m_Folder].end());
-    m_Flags[p_Response.m_Folder] = newFlags;
-    drawRequest |= DrawRequestAll;
-  }
+    if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
+      UpdateMsgList(p_Response.m_Folder);
+      drawRequest |= DrawRequestAll;
+    }
 
-  if (!p_Request.m_GetBodys.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed))
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Bodys[p_Response.m_Folder].insert(p_Response.m_Bodys.begin(), p_Response.m_Bodys.end());
-    drawRequest |= DrawRequestAll;
+    if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
+                                            p_Response.m_Headers.end());
+      UpdateMsgList(p_Response.m_Folder);
+      drawRequest |= DrawRequestAll;
+
+      for (auto& header : p_Response.m_Headers)
+      {
+        AddressBook::Add(m_Headers[p_Response.m_Folder][header.first].GetUniqueId(),
+                         m_Headers[p_Response.m_Folder][header.first].GetAddresses());
+      }
+    }
+
+    if (!p_Request.m_GetFlags.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      std::map<uint32_t, uint32_t> newFlags = p_Response.m_Flags;
+      newFlags.insert(m_Flags[p_Response.m_Folder].begin(), m_Flags[p_Response.m_Folder].end());
+      m_Flags[p_Response.m_Folder] = newFlags;
+      drawRequest |= DrawRequestAll;
+    }
+
+    if (!p_Request.m_GetBodys.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_Bodys[p_Response.m_Folder].insert(p_Response.m_Bodys.begin(), p_Response.m_Bodys.end());
+      drawRequest |= DrawRequestAll;
+    }
   }
 
   if (p_Response.m_ResponseStatus != ImapManager::ResponseStatusOk)

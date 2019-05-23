@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
     {"cache_encrypt", "1"},
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
     {"ext_viewer_cmd", Util::GetDefaultExtViewerCmd()},
+    {"prefetch_level", "2"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
 
@@ -156,10 +157,12 @@ int main(int argc, char* argv[])
 
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
+  uint32_t prefetchLevel = 0;
   try
   {
     imapPort = std::stoi(config->Get("imap_port"));
     smtpPort = std::stoi(config->Get("smtp_port"));
+    prefetchLevel = std::stoi(config->Get("prefetch_level"));
   }
   catch (...)
   {
@@ -195,7 +198,7 @@ int main(int argc, char* argv[])
   
   AddressBook::Init(cacheEncrypt, pass);
   
-  Ui ui(inbox, address);
+  Ui ui(inbox, address, prefetchLevel);
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online, cacheEncrypt,
