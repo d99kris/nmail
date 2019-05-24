@@ -684,7 +684,7 @@ void Ui::DrawMessageList()
             fetchBodyUidsFirst.insert(uid);
 
             ImapManager::Request request;
-            request.m_Prefetch = true;
+            request.m_PrefetchLevel = 1;
             request.m_Folder = m_CurrentFolder;
             request.m_GetBodys = fetchBodyUidsFirst;
 
@@ -705,12 +705,18 @@ void Ui::DrawMessageList()
 
     if (!fetchBodyUidsSecond.empty())
     {
-      ImapManager::Request request;
-      request.m_Prefetch = true;
-      request.m_Folder = m_CurrentFolder;
-      request.m_GetBodys = fetchBodyUidsSecond;
+      for (auto& uid : fetchBodyUidsSecond)
+      {
+        ImapManager::Request request;
+        request.m_PrefetchLevel = 2;
+        request.m_Folder = m_CurrentFolder;
 
-      m_ImapManager->PrefetchRequest(request);
+        std::set<uint32_t> fetchBodyUids;
+        fetchBodyUids.insert(uid);
+        request.m_GetBodys = fetchBodyUids;
+
+        m_ImapManager->PrefetchRequest(request);
+      }
     }
   }
 
@@ -2013,7 +2019,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 {
   char drawRequest = DrawRequestNone;
 
-  if (!p_Request.m_Prefetch)
+  if (p_Request.m_PrefetchLevel == 0)
   {
     if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
     {

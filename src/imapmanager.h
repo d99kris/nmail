@@ -39,7 +39,7 @@ public:
   
   struct Request
   {
-    bool m_Prefetch = false;
+    uint32_t m_PrefetchLevel = 0;
     std::string m_Folder;
     bool m_GetFolders = false;
     bool m_GetUids = false;
@@ -105,7 +105,7 @@ private:
   std::thread m_Thread;
   
   std::deque<Request> m_Requests;
-  std::deque<Request> m_PrefetchRequests;
+  std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
   std::mutex m_QueueMutex;
 

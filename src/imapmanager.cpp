@@ -67,7 +67,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
-  m_PrefetchRequests.push_front(p_Request);
+  m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
   write(m_Pipe[1], "1", 1);
 }
 
@@ -216,8 +216,13 @@ void ImapManager::Process()
 
         if (!m_PrefetchRequests.empty())
         {
-          const Request request = m_PrefetchRequests.front();
-          m_PrefetchRequests.pop_front();
+          const Request request = m_PrefetchRequests.begin()->second.front();
+          m_PrefetchRequests.begin()->second.pop_front();
+          if (m_PrefetchRequests.begin()->second.empty())
+          {
+            m_PrefetchRequests.erase(m_PrefetchRequests.begin());
+          }
+
           m_QueueMutex.unlock();
 
           SetStatus(Status::FlagPrefetching);
