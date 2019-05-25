@@ -131,7 +131,9 @@ private:
   std::map<std::string, std::vector<std::pair<uint32_t, Header>>> m_MsgList;
 
   bool m_HasRequestedFolders = false;
+  bool m_HasPrefetchRequestedFolders = false;
   std::map<std::string, bool> m_HasRequestedUids;
+  std::map<std::string, bool> m_HasPrefetchRequestedUids;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedHeaders;
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;

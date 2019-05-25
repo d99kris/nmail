@@ -100,10 +100,21 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   int rv = LOG_IF_IMAP_ERR(mailimap_list(m_Imap, "", "*", &list));
   if (rv == MAILIMAP_NO_ERROR)
   {
-    for(clistiter* it = clist_begin(list); it != NULL; it = it->next)
+    for (clistiter* it = clist_begin(list); it != NULL; it = it->next)
     {
       struct mailimap_mailbox_list* mblist = (struct mailimap_mailbox_list*)clist_content(it);
-      p_Folders.insert(std::string(mblist->mb_name));
+      if (mblist)
+      {
+        mailimap_mbx_list_flags* bflags = mblist->mb_flag;
+        if (bflags)
+        {
+          if (!((bflags->mbf_type == MAILIMAP_MBX_LIST_FLAGS_SFLAG) &&
+                (bflags->mbf_sflag == MAILIMAP_MBX_LIST_SFLAG_NOSELECT)))
+          {
+            p_Folders.insert(std::string(mblist->mb_name));
+          }
+        }
+      }
     }
 
     mailimap_list_result_free(list);

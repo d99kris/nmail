@@ -169,7 +169,8 @@ setting. The following levels are supported:
 
     0 = no pre-fetching, messages are retrieved when viewed
     1 = pre-fetching of currently selected message
-    2 = pre-fetching of all messages in current folder view
+    2 = pre-fetching of all messages in current folder view (default)
+    3 = pre-fetching of all messages in all folders, i.e. full sync
 
 
 Troubleshooting

@@ -38,6 +38,14 @@ ImapManager::~ImapManager()
   LOG_DEBUG("stop thread");
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
 
+  if (m_QueueMutex.try_lock())
+  {
+    m_Requests.clear();
+    m_PrefetchRequests.clear();
+    m_Actions.clear();
+    m_QueueMutex.unlock();
+  }
+  
   m_Running = false;
   write(m_Pipe[1], "1", 1);
 
@@ -60,6 +68,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
   PerformRequest(p_Request, true);
   if (m_Imap.GetConnected() || m_Connecting)
   {
+    std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
     write(m_Pipe[1], "1", 1);
   }
@@ -67,6 +76,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
+  std::lock_guard<std::mutex> lock(m_QueueMutex);
   m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
   write(m_Pipe[1], "1", 1);
 }
@@ -75,6 +85,7 @@ void ImapManager::AsyncAction(const ImapManager::Action &p_Action)
 {
   if (m_Imap.GetConnected())
   {
+    std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Actions.push_front(p_Action);
     write(m_Pipe[1], "1", 1);
   }

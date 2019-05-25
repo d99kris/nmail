@@ -2067,7 +2067,55 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       drawRequest |= DrawRequestAll;
     }
   }
+  
+  if (m_PrefetchLevel == 3)
+  {
+    if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      for (auto& folder : p_Response.m_Folders)
+      {
+        if (!m_HasRequestedUids[folder] && !m_HasPrefetchRequestedUids[folder])
+        {
+          ImapManager::Request request;
+          request.m_PrefetchLevel = 3;
+          request.m_Folder = folder;
+          request.m_GetUids = true;
+          m_ImapManager->PrefetchRequest(request);
+          m_HasPrefetchRequestedUids[folder] = true;
+        }
+      }
+    }
 
+    if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      const int maxMessagesFetchRequest = 5;
+      const std::set<uint32_t>& fetchHeaderUids = p_Response.m_Uids;
+      if (!fetchHeaderUids.empty())
+      {
+        std::set<uint32_t> subsetFetchHeaderUids;
+        for (auto it = fetchHeaderUids.begin(); it != fetchHeaderUids.end(); ++it)
+        {
+          subsetFetchHeaderUids.insert(*it);
+          if ((subsetFetchHeaderUids.size() == maxMessagesFetchRequest) ||
+              (std::next(it) == fetchHeaderUids.end()))
+          {
+            ImapManager::Request request;
+            request.m_PrefetchLevel = 3;
+            request.m_Folder = p_Response.m_Folder;;
+            request.m_GetHeaders = subsetFetchHeaderUids;
+            request.m_GetBodys = subsetFetchHeaderUids;
+
+            m_ImapManager->PrefetchRequest(request);
+        
+            subsetFetchHeaderUids.clear(); 
+          }
+        }
+      }      
+    }
+  }
+  
   if (p_Response.m_ResponseStatus != ImapManager::ResponseStatusOk)
   {
     if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed)
@@ -2148,6 +2196,17 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Status.Update(p_StatusUpdate);
+
+  if (!m_HasRequestedFolders && !m_HasPrefetchRequestedFolders && (m_PrefetchLevel >= 3) &&
+      (p_StatusUpdate.SetFlags & Status::FlagConnected))
+  {
+    ImapManager::Request request;
+    request.m_PrefetchLevel = 3;
+    request.m_GetFolders = true;
+    m_ImapManager->PrefetchRequest(request);
+    m_HasPrefetchRequestedFolders = true;
+  }
+  
   AsyncDrawRequest(DrawRequestAll);
 }
 
