@@ -1921,10 +1921,11 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
+      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDate() + " " +
                                             header.GetFrom() +
                                             " wrote:\n\n" +
-                                            Util::AddIndent(body.GetTextPlain(), "> "));
+                                            Util::AddIndent(bodyText, "> "));
 
       // @todo: handle quoted commas in address name
       std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
@@ -2004,7 +2005,8 @@ void Ui::SetState(Ui::State p_State)
           Util::ToWString("Cc: " + header.GetCc());
       }
 
-      m_ComposeMessageStr += Util::ToWString("\n" + body.GetTextPlain() + "\n");
+      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      m_ComposeMessageStr += Util::ToWString("\n" + bodyText + "\n");
       m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeForwardSubject(header.GetSubject()));
     }
 
