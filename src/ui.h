@@ -193,6 +193,7 @@ private:
   int m_KeyGotoFolder = 0;
   int m_KeyAddressBook = 0;
   int m_KeySaveFile = 0;
+  bool m_ShowProgress = false;
   
   int m_DialogEntryStringPos = 0;
   std::wstring m_DialogEntryString;

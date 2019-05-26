@@ -91,7 +91,7 @@ private:
   void Process();
   void PerformRequest(const Request& p_Request, bool p_Cached);
   void PerformAction(const Action& p_Action);
-  void SetStatus(uint32_t p_Flags);
+  void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
   void ClearStatus(uint32_t p_Flags);
 
 private:
@@ -107,6 +107,10 @@ private:
   std::deque<Request> m_Requests;
   std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
+  uint32_t m_RequestsTotal = 0;
+  uint32_t m_RequestsDone = 0;
+  uint32_t m_PrefetchRequestsTotal = 0;
+  uint32_t m_PrefetchRequestsDone = 0;
   std::mutex m_QueueMutex;
 
   std::condition_variable m_ExitedCond;

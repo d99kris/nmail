@@ -71,6 +71,8 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
     write(m_Pipe[1], "1", 1);
+    m_RequestsTotal = m_Requests.size();
+    m_RequestsDone = 0;
   }
 }
 
@@ -79,6 +81,13 @@ void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
   std::lock_guard<std::mutex> lock(m_QueueMutex);
   m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
   write(m_Pipe[1], "1", 1);
+  m_PrefetchRequestsTotal = 0;
+  for (auto it = m_PrefetchRequests.begin(); it != m_PrefetchRequests.end(); ++it)
+  {
+    m_PrefetchRequestsTotal += it->second.size();
+  }
+       
+  m_PrefetchRequestsDone = 0;
 }
 
 void ImapManager::AsyncAction(const ImapManager::Action &p_Action)
@@ -214,15 +223,21 @@ void ImapManager::Process()
         {
           const Request request = m_Requests.front();
           m_Requests.pop_front();
+
+          uint32_t progress = (m_RequestsTotal > 0) ?
+            ((m_RequestsDone * 100) / m_RequestsTotal) : 0;
+
           m_QueueMutex.unlock();
 
-          SetStatus(Status::FlagFetching);
+          SetStatus(Status::FlagFetching, progress);
 
           PerformRequest(request, false);
 
           ClearStatus(Status::FlagFetching);
 
           m_QueueMutex.lock();
+
+          ++m_RequestsDone;
         }
 
         if (!m_PrefetchRequests.empty())
@@ -234,17 +249,27 @@ void ImapManager::Process()
             m_PrefetchRequests.erase(m_PrefetchRequests.begin());
           }
 
+          uint32_t progress = (m_PrefetchRequestsTotal > 0) ?
+            ((m_PrefetchRequestsDone * 100) / m_PrefetchRequestsTotal) : 0;
+
           m_QueueMutex.unlock();
 
-          SetStatus(Status::FlagPrefetching);
+          SetStatus(Status::FlagPrefetching, progress);
 
           PerformRequest(request, false);
 
           ClearStatus(Status::FlagPrefetching);
 
           m_QueueMutex.lock();
+
+          ++m_PrefetchRequestsDone;
         }
       }
+
+      m_RequestsTotal = 0;
+      m_RequestsDone = 0;
+      m_PrefetchRequestsTotal = 0;
+      m_PrefetchRequestsDone = 0;
 
       m_QueueMutex.unlock();
     }
@@ -330,10 +355,11 @@ void ImapManager::PerformAction(const ImapManager::Action& p_Action)
   }
 }
 
-void ImapManager::SetStatus(uint32_t p_Flags)
+void ImapManager::SetStatus(uint32_t p_Flags, uint32_t p_Progress /* = 0 */)
 {
   StatusUpdate statusUpdate;
   statusUpdate.SetFlags = p_Flags;
+  statusUpdate.Progress = p_Progress;
   if (m_StatusHandler)
   {
     m_StatusHandler(statusUpdate);

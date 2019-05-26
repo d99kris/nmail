@@ -52,6 +52,7 @@ void Ui::Init()
     {"help_enabled", "1"},
     {"persist_folder_filter", "1"},
     {"plain_text", "1"},
+    {"show_progress", "0"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -97,6 +98,7 @@ void Ui::Init()
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
+  m_ShowProgress = m_Config.Get("show_progress") == "1";
 }
 
 void Ui::Cleanup()
@@ -2291,7 +2293,7 @@ std::string Ui::GetKeyDisplay(int p_Key)
 std::string Ui::GetStatusStr()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_Status.ToString();
+  return m_Status.ToString(m_ShowProgress);
 }
 
 std::string Ui::GetStateStr()
