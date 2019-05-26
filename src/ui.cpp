@@ -615,7 +615,8 @@ void Ui::DrawMessageList()
     const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
     std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
-    std::set<uint32_t> fetchBodyUidsSecond;
+    std::set<uint32_t> fetchBodyUids;
+    std::set<uint32_t> prefetchBodyUids;
     
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
                                        ((m_MainWinHeight - 1) / 2)),
@@ -670,50 +671,60 @@ void Ui::DrawMessageList()
         m_MessageListCurrentUid = uid;
       }
 
-      if ((bodys.find(uid) == bodys.end()) &&
-          (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
-          (requestedBodys.find(uid) == requestedBodys.end()))
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+        if ((bodys.find(uid) == bodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
         {
           if (m_PrefetchLevel >= 1)
           {
-            prefetchedBodys.insert(uid);
-
-            std::set<uint32_t> fetchBodyUidsFirst;
-            fetchBodyUidsFirst.insert(uid);
-
-            ImapManager::Request request;
-            request.m_PrefetchLevel = 1;
-            request.m_Folder = m_CurrentFolder;
-            request.m_GetBodys = fetchBodyUidsFirst;
-
-            m_ImapManager->PrefetchRequest(request);
+            requestedBodys.insert(uid);
+            fetchBodyUids.insert(uid);
           }
         }
-        else
+      }
+      else
+      {
+        if ((bodys.find(uid) == bodys.end()) &&
+            (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
         {
           if (m_PrefetchLevel >= 2)
           {
             prefetchedBodys.insert(uid);
-            
-            fetchBodyUidsSecond.insert(uid);
+            prefetchBodyUids.insert(uid);
           }
         }
       }
     }
 
-    if (!fetchBodyUidsSecond.empty())
+    if (!fetchBodyUids.empty())
     {
-      for (auto& uid : fetchBodyUidsSecond)
+      for (auto& uid : fetchBodyUids)
+      {
+        ImapManager::Request request;
+        request.m_Folder = m_CurrentFolder;
+
+        std::set<uint32_t> fetchUids;
+        request.m_PrefetchLevel = 0;
+        fetchUids.insert(uid);
+        request.m_GetBodys = fetchUids;
+
+        m_ImapManager->PrefetchRequest(request);
+      }
+    }
+    
+    if (!prefetchBodyUids.empty())
+    {
+      for (auto& uid : prefetchBodyUids)
       {
         ImapManager::Request request;
         request.m_PrefetchLevel = 2;
         request.m_Folder = m_CurrentFolder;
 
-        std::set<uint32_t> fetchBodyUids;
-        fetchBodyUids.insert(uid);
-        request.m_GetBodys = fetchBodyUids;
+        std::set<uint32_t> fetchUids;
+        fetchUids.insert(uid);
+        request.m_GetBodys = fetchUids;
 
         m_ImapManager->PrefetchRequest(request);
       }
