@@ -78,16 +78,20 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
-  std::lock_guard<std::mutex> lock(m_QueueMutex);
-  m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
-  write(m_Pipe[1], "1", 1);
-  m_PrefetchRequestsTotal = 0;
-  for (auto it = m_PrefetchRequests.begin(); it != m_PrefetchRequests.end(); ++it)
+  PerformRequest(p_Request, true);
+  if (m_Imap.GetConnected() || m_Connecting)
   {
-    m_PrefetchRequestsTotal += it->second.size();
-  }
+    std::lock_guard<std::mutex> lock(m_QueueMutex);
+    m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
+    write(m_Pipe[1], "1", 1);
+    m_PrefetchRequestsTotal = 0;
+    for (auto it = m_PrefetchRequests.begin(); it != m_PrefetchRequests.end(); ++it)
+    {
+      m_PrefetchRequestsTotal += it->second.size();
+    }
        
-  m_PrefetchRequestsDone = 0;
+    m_PrefetchRequestsDone = 0;
+  }
 }
 
 void ImapManager::AsyncAction(const ImapManager::Action &p_Action)

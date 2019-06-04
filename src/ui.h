@@ -39,6 +39,14 @@ public:
     DrawRequestAll = 1,
   };
 
+  enum PrefetchLevel
+  {
+    PrefetchLevelNone = 0,
+    PrefetchLevelCurrentMessage = 1,
+    PrefetchLevelCurrentView = 2,
+    PrefetchLevelFullSync = 3,
+  };
+
   Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel);
   virtual ~Ui();
 

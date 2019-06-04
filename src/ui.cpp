@@ -586,6 +586,8 @@ void Ui::DrawMessageList()
   
   std::set<uint32_t> fetchHeaderUids;  
   std::set<uint32_t> fetchFlagUids;  
+  std::set<uint32_t> prefetchBodyUidsPrimary;
+  std::set<uint32_t> prefetchBodyUidsSecondary;
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -617,8 +619,6 @@ void Ui::DrawMessageList()
     const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
     std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
-    std::set<uint32_t> fetchBodyUids;
-    std::set<uint32_t> prefetchBodyUids;
     
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
                                        ((m_MainWinHeight - 1) / 2)),
@@ -676,12 +676,13 @@ void Ui::DrawMessageList()
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         if ((bodys.find(uid) == bodys.end()) &&
+            (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
-          if (m_PrefetchLevel >= 1)
+          if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
           {
-            requestedBodys.insert(uid);
-            fetchBodyUids.insert(uid);
+            prefetchedBodys.insert(uid);
+            prefetchBodyUidsPrimary.insert(uid);
           }
         }
       }
@@ -691,45 +692,45 @@ void Ui::DrawMessageList()
             (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
-          if (m_PrefetchLevel >= 2)
+          if (m_PrefetchLevel >= PrefetchLevelCurrentView)
           {
             prefetchedBodys.insert(uid);
-            prefetchBodyUids.insert(uid);
+            prefetchBodyUidsSecondary.insert(uid);
           }
         }
       }
     }
+  }
 
-    if (!fetchBodyUids.empty())
+  if (!prefetchBodyUidsPrimary.empty())
+  {
+    for (auto& uid : prefetchBodyUidsPrimary)
     {
-      for (auto& uid : fetchBodyUids)
-      {
-        ImapManager::Request request;
-        request.m_Folder = m_CurrentFolder;
+      ImapManager::Request request;
+      request.m_Folder = m_CurrentFolder;
 
-        std::set<uint32_t> fetchUids;
-        request.m_PrefetchLevel = 0;
-        fetchUids.insert(uid);
-        request.m_GetBodys = fetchUids;
+      std::set<uint32_t> fetchUids;
+      request.m_PrefetchLevel = PrefetchLevelCurrentMessage;
+      fetchUids.insert(uid);
+      request.m_GetBodys = fetchUids;
 
-        m_ImapManager->PrefetchRequest(request);
-      }
+      m_ImapManager->PrefetchRequest(request);
     }
+  }
     
-    if (!prefetchBodyUids.empty())
+  if (!prefetchBodyUidsSecondary.empty())
+  {
+    for (auto& uid : prefetchBodyUidsSecondary)
     {
-      for (auto& uid : prefetchBodyUids)
-      {
-        ImapManager::Request request;
-        request.m_PrefetchLevel = 2;
-        request.m_Folder = m_CurrentFolder;
+      ImapManager::Request request;
+      request.m_PrefetchLevel = PrefetchLevelCurrentView;
+      request.m_Folder = m_CurrentFolder;
 
-        std::set<uint32_t> fetchUids;
-        fetchUids.insert(uid);
-        request.m_GetBodys = fetchUids;
+      std::set<uint32_t> fetchUids;
+      fetchUids.insert(uid);
+      request.m_GetBodys = fetchUids;
 
-        m_ImapManager->PrefetchRequest(request);
-      }
+      m_ImapManager->PrefetchRequest(request);
     }
   }
 
@@ -2034,7 +2035,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 {
   char drawRequest = DrawRequestNone;
 
-  if (p_Request.m_PrefetchLevel == 0)
+  if (p_Request.m_PrefetchLevel < PrefetchLevelFullSync)
   {
     if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
     {
@@ -2083,7 +2084,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     }
   }
   
-  if (m_PrefetchLevel == 3)
+  if (m_PrefetchLevel == PrefetchLevelFullSync)
   {
     if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
     {
@@ -2093,7 +2094,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         if (!m_HasRequestedUids[folder] && !m_HasPrefetchRequestedUids[folder])
         {
           ImapManager::Request request;
-          request.m_PrefetchLevel = 3;
+          request.m_PrefetchLevel = PrefetchLevelFullSync;
           request.m_Folder = folder;
           request.m_GetUids = true;
           m_ImapManager->PrefetchRequest(request);
@@ -2117,7 +2118,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
               (std::next(it) == fetchHeaderUids.end()))
           {
             ImapManager::Request request;
-            request.m_PrefetchLevel = 3;
+            request.m_PrefetchLevel = PrefetchLevelFullSync;
             request.m_Folder = p_Response.m_Folder;;
             request.m_GetHeaders = subsetFetchHeaderUids;
             request.m_GetBodys = subsetFetchHeaderUids;
@@ -2212,11 +2213,11 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Status.Update(p_StatusUpdate);
 
-  if (!m_HasRequestedFolders && !m_HasPrefetchRequestedFolders && (m_PrefetchLevel >= 3) &&
+  if (!m_HasRequestedFolders && !m_HasPrefetchRequestedFolders && (m_PrefetchLevel >= PrefetchLevelFullSync) &&
       (p_StatusUpdate.SetFlags & Status::FlagConnected))
   {
     ImapManager::Request request;
-    request.m_PrefetchLevel = 3;
+    request.m_PrefetchLevel = PrefetchLevelFullSync;
     request.m_GetFolders = true;
     m_ImapManager->PrefetchRequest(request);
     m_HasPrefetchRequestedFolders = true;
