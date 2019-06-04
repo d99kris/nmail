@@ -26,12 +26,14 @@ public:
             const std::vector<Contact>& p_To,
             const std::vector<Contact>& p_Cc = std::vector<Contact>(),
             const std::vector<Contact>& p_Bcc = std::vector<Contact>(),
+            const std::string& p_RefMsgId = std::string(),
             const std::vector<std::string>& p_AttachmentPaths = std::vector<std::string>());
 
 private:
   bool SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients);
   std::string GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
-                        const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
+                        const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
+                        const std::string& p_RefMsgId);
   std::string GetBody(const std::string& p_Message,
                       const std::vector<std::string>& p_AttachmentPaths);
   struct mailmime* GetMimeTextPart(const char * p_MimeType, int p_EncodingType,

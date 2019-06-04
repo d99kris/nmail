@@ -1896,6 +1896,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeHeaderStr[3] = L"";
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
+    m_ComposeHeaderRef.clear();
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
     m_IsComposeHeader = true;
@@ -1940,11 +1941,13 @@ void Ui::SetState(Ui::State p_State)
         it = ((it->find(selfAddress) == std::string::npos) &&
               (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
       }
-      
+
       m_ComposeHeaderStr[0] = Util::ToWString(header.GetFrom());
       m_ComposeHeaderStr[1] = Util::ToWString(Util::Join(ccs, ", "));
       m_ComposeHeaderStr[2] = L"";
       m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeReplySubject(header.GetSubject()));
+
+      m_ComposeHeaderRef = header.GetMessageId();
     }
 
     m_IsComposeHeader = false;
@@ -2011,6 +2014,8 @@ void Ui::SetState(Ui::State p_State)
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText + "\n");
       m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeForwardSubject(header.GetSubject()));
+
+      m_ComposeHeaderRef = header.GetMessageId();
     }
 
     m_IsComposeHeader = true;
@@ -2327,6 +2332,7 @@ void Ui::SendComposedMessage()
   action.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
   action.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
   action.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
+  action.m_RefMsgId = m_ComposeHeaderRef;
 
   m_SmtpManager->AsyncAction(action);
 }

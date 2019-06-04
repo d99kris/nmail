@@ -24,6 +24,7 @@ public:
   std::string GetCc();
   std::string GetSubject();
   std::string GetUniqueId();
+  std::string GetMessageId();
   std::set<std::string> GetAddresses();
 
 private:

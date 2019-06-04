@@ -214,6 +214,8 @@ private:
   int m_ComposeHeaderPos = 0;
   bool m_IsComposeHeader = true;
 
+  std::string m_ComposeHeaderRef;
+
   std::wstring m_ComposeMessageStr;
   int m_ComposeMessagePos = 0;
   std::vector<std::wstring> m_ComposeMessageLines;

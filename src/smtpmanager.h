@@ -32,6 +32,7 @@ public:
     std::string m_Att;
     std::string m_Subject;
     std::string m_Body;
+    std::string m_RefMsgId;
   };
 
   struct Result

@@ -29,12 +29,13 @@ Smtp::~Smtp()
 {
 }
 
-bool Smtp::Send(const std::string &p_Subject, const std::string &p_Message,
-                const std::vector<Contact> &p_To, const std::vector<Contact> &p_Cc,
-                const std::vector<Contact> &p_Bcc,
+bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
+                const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
+                const std::vector<Contact>& p_Bcc,
+                const std::string& p_RefMsgId,
                 const std::vector<std::string> &p_AttachmentPaths)
 {
-  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc);
+  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
   const std::string& body = GetBody(p_Message, p_AttachmentPaths);
   const std::string& data = header + body;
   std::vector<Contact> recipients;
@@ -184,7 +185,9 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   return true;
 }
 
-std::string Smtp::GetHeader(const std::string &p_Subject, const std::vector<Contact> &p_To, const std::vector<Contact> &p_Cc, const std::vector<Contact> &p_Bcc)
+std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
+                            const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
+                            const std::string& p_RefMsgId)
 {
   std::string name = MimeEncodeStr(m_Name);
   struct mailimf_mailbox* mbfrom = mailimf_mailbox_new(strdup(name.c_str()),
@@ -261,6 +264,14 @@ std::string Smtp::GetHeader(const std::string &p_Subject, const std::vector<Cont
 
   clist* clist_inreplyto = NULL;
   clist* clist_references = NULL;
+  if (!p_RefMsgId.empty())
+  {
+    clist_inreplyto = clist_new();
+    clist_append(clist_inreplyto, strdup(p_RefMsgId.c_str()));
+
+    clist_references = clist_new();
+    clist_append(clist_references, strdup(p_RefMsgId.c_str()));
+  }
 
   struct mailimf_fields* fields =
       mailimf_fields_new_with_data_all(datenow,

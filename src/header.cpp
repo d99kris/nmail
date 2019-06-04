@@ -75,6 +75,12 @@ std::string Header::GetUniqueId()
   return m_UniqueId;
 }
 
+std::string Header::GetMessageId()
+{
+  Parse();
+  return m_MessageId;
+}
+
 std::set<std::string> Header::GetAddresses()
 {
   Parse();
