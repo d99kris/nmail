@@ -26,6 +26,7 @@ Imap::Imap(const std::string &p_User, const std::string &p_Pass, const std::stri
 {
   m_Imap = mailimap_new(0, NULL);
   InitCacheDir();
+  InitImapCacheDir();
 }
 
 Imap::~Imap()
@@ -715,6 +716,13 @@ void Imap::InitCacheDir()
 std::string Imap::GetImapCacheDir()
 {
   return GetCacheDir() + std::string("imap/");
+}
+
+void Imap::InitImapCacheDir()
+{
+  static const int version = 1;
+  const std::string imapCacheDir = GetImapCacheDir();
+  CommonInitCacheDir(imapCacheDir, version);
 }
 
 std::string Imap::GetFolderCacheDir(const std::string &p_Folder)

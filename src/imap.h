@@ -52,6 +52,7 @@ private:
   std::string GetCacheDir();
   void InitCacheDir();
   std::string GetImapCacheDir();
+  void InitImapCacheDir();
   std::string GetFolderCacheDir(const std::string& p_Folder);
   std::string GetFolderUidsCachePath(const std::string& p_Folder);
   std::string GetFolderFlagsCachePath(const std::string& p_Folder);

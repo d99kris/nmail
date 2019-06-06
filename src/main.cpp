@@ -199,8 +199,6 @@ int main(int argc, char* argv[])
   }
   
   Util::InitStdErrRedirect(logPath);
-
-  AddressBook::Init(cacheEncrypt, pass);
   
   Ui ui(inbox, address, prefetchLevel);
 
@@ -214,6 +212,8 @@ int main(int argc, char* argv[])
     std::make_shared<SmtpManager>(user, pass, smtpHost, smtpPort, name, address, online,
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
+
+  AddressBook::Init(cacheEncrypt, pass);
 
   ui.SetImapManager(imapManager);
   ui.SetTrashFolder(trash);
