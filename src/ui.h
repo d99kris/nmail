@@ -107,7 +107,7 @@ private:
   bool DeleteMessage();
   void ToggleUnseen();
   void MarkSeen();
-  void UpdateUidFromIndex();
+  void UpdateUidFromIndex(bool p_UserTriggered);
   void UpdateIndexFromUid();
   void UpdateMsgList(const std::string& p_Folder);
   void ComposeMessagePrevLine();
@@ -165,6 +165,7 @@ private:
   
   std::map<std::string, int32_t> m_MessageListCurrentIndex;
   std::map<std::string, int32_t> m_MessageListCurrentUid;
+  std::map<std::string, bool> m_MessageListUidSet;
 
   int m_AddressListCurrentIndex = 0;
   std::string m_AddressListCurrentAddress;

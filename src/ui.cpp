@@ -1177,7 +1177,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
           msgList = m_MsgList[m_CurrentFolder];
         }
 
-        UpdateUidFromIndex();
+        UpdateUidFromIndex(true /* p_UserTriggered */);
         if (msgList.empty())
         {
           SetState(StateViewMessageList);
@@ -1190,7 +1190,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       else
       {
         SetDialogMessage("Move to same folder ignored");
-        UpdateUidFromIndex();
+        UpdateUidFromIndex(true /* p_UserTriggered */);
         SetState(m_LastState);
       }
     }
@@ -1320,24 +1320,24 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if (p_Key == KEY_PPAGE)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] - m_MainWinHeight;
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
   {
@@ -1489,13 +1489,13 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if (p_Key == m_KeyNextMsg)
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
   else if (p_Key == KEY_PPAGE)
   {
@@ -2405,7 +2405,7 @@ bool Ui::DeleteMessage()
     }
 
     m_MessageViewLineOffset = 0;
-    UpdateUidFromIndex();    
+    UpdateUidFromIndex(true /* p_UserTriggered */);    
 
     std::vector<std::pair<uint32_t, Header>> msgList;
     {
@@ -2478,7 +2478,7 @@ void Ui::MarkSeen()
   }
 }
 
-void Ui::UpdateUidFromIndex()
+void Ui::UpdateUidFromIndex(bool p_UserTriggered)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
@@ -2493,30 +2493,36 @@ void Ui::UpdateUidFromIndex()
   {
     m_MessageListCurrentUid[m_CurrentFolder] = -1;
   }
+
+  m_MessageListUidSet[m_CurrentFolder] = p_UserTriggered;
 }
 
 void Ui::UpdateIndexFromUid()
 {
   bool found = false;
-  
+
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
 
-    for (auto it = msgList.rbegin(); it != msgList.rend(); ++it)
+    if (m_MessageListUidSet[m_CurrentFolder])
     {
-      if ((int32_t)it->first == m_MessageListCurrentUid[m_CurrentFolder])
+      const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+
+      for (auto it = msgList.rbegin(); it != msgList.rend(); ++it)
       {
-        m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgList.rbegin(), it);
-        found = true;
-        break;
+        if ((int32_t)it->first == m_MessageListCurrentUid[m_CurrentFolder])
+        {
+          m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgList.rbegin(), it);
+          found = true;
+          break;
+        }
       }
     }
   }
 
   if (!found)
   {
-    UpdateUidFromIndex();
+    UpdateUidFromIndex(false /* p_UserTriggered */);
   }
 }
 
