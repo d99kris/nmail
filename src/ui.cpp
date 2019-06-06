@@ -670,11 +670,6 @@ void Ui::DrawMessageList()
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        m_MessageListCurrentUid = uid;
-      }
-
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
-      {
         if ((bodys.find(uid) == bodys.end()) &&
             (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
@@ -780,7 +775,7 @@ void Ui::DrawMessage()
 
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
 
-    int uid = m_MessageListCurrentUid;
+    int uid = m_MessageListCurrentUid[m_CurrentFolder];
 
     if ((bodys.find(uid) == bodys.end()) &&
         (requestedBodys.find(uid) == requestedBodys.end()))
@@ -970,7 +965,7 @@ void Ui::DrawPartList()
   werase(m_MainWin);
 
   std::lock_guard<std::mutex> lock(m_Mutex);
-  int uid = m_MessageListCurrentUid;
+  int uid = m_MessageListCurrentUid[m_CurrentFolder];
   std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
   std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
   if (bodyIt != bodys.end())
@@ -1153,7 +1148,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       m_CurrentFolder = m_FolderListCurrentFolder;
       m_ImapManager->SetCurrentFolder(m_CurrentFolder);
       SetState(StateViewMessageList);
-      UpdateCurrentUid();
+      UpdateIndexFromUid();
     }
     else if (m_State == StateMoveToFolder)
     {
@@ -1161,7 +1156,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       {
         ImapManager::Action action;
         action.m_Folder = m_CurrentFolder;
-        action.m_Uids.insert(m_MessageListCurrentUid);
+        action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
         action.m_MoveDestination = m_FolderListCurrentFolder;
         m_ImapManager->AsyncAction(action);
 
@@ -1182,7 +1177,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
           msgList = m_MsgList[m_CurrentFolder];
         }
 
-        UpdateCurrentUid();
+        UpdateUidFromIndex();
         if (msgList.empty())
         {
           SetState(StateViewMessageList);
@@ -1195,7 +1190,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       else
       {
         SetDialogMessage("Move to same folder ignored");
-        UpdateCurrentUid();
+        UpdateUidFromIndex();
         SetState(m_LastState);
       }
     }
@@ -1325,24 +1320,24 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if (p_Key == KEY_PPAGE)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] - m_MainWinHeight;
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
   {
@@ -1356,7 +1351,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      SetState(StateMoveToFolder);
+      if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
+      {
+        SetState(StateMoveToFolder);
+      }
+      else
+      {
+        SetDialogMessage("No message to move");
+      }
     }
     else
     {
@@ -1378,13 +1380,20 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      if (CurrentMessageBodyAvailable())
+      if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
       {
-        SetState(StateReplyMessage);
+        if (CurrentMessageBodyAvailable())
+        {
+          SetState(StateReplyMessage);
+        }
+        else
+        {
+          SetDialogMessage("Cannot reply message not fetched");
+        }
       }
       else
       {
-        SetDialogMessage("Cannot reply message not fetched");
+        SetDialogMessage("No message to reply");
       }
     }
     else
@@ -1396,13 +1405,20 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      if (CurrentMessageBodyAvailable())
+      if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
       {
-        SetState(StateForwardMessage);
+        if (CurrentMessageBodyAvailable())
+        {
+          SetState(StateForwardMessage);
+        }
+        else
+        {
+          SetDialogMessage("Cannot forward message not fetched");
+        }
       }
       else
       {
-        SetDialogMessage("Cannot forward message not fetched");
+        SetDialogMessage("No message to forward");
       }
     }
     else
@@ -1414,7 +1430,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      DeleteMessage();
+      if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
+      {
+        DeleteMessage();
+      }
+      else
+      {
+        SetDialogMessage("No message to delete");
+      }
     }
     else
     {
@@ -1425,7 +1448,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      ToggleUnseen();
+      if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
+      {
+        ToggleUnseen();
+      }
+      else
+      {
+        SetDialogMessage("No message to toggle read/unread");
+      }
     }
     else
     {
@@ -1459,13 +1489,13 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if (p_Key == m_KeyNextMsg)
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
-    UpdateCurrentUid();
+    UpdateUidFromIndex();
   }
   else if (p_Key == KEY_PPAGE)
   {
@@ -1918,8 +1948,8 @@ void Ui::SetState(Ui::State p_State)
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
 
-    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid);
-    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid);
+    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid[m_CurrentFolder]);
+    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid[m_CurrentFolder]);
     if ((hit != headers.end()) && (bit != bodys.end()))
     {
       Header& header = hit->second;
@@ -1969,8 +1999,8 @@ void Ui::SetState(Ui::State p_State)
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
 
-    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid);
-    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid);
+    std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid[m_CurrentFolder]);
+    std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid[m_CurrentFolder]);
     if ((hit != headers.end()) && (bit != bodys.end()))
     {
       Header& header = hit->second;
@@ -2039,6 +2069,7 @@ void Ui::SetState(Ui::State p_State)
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
   char drawRequest = DrawRequestNone;
+  bool updateIndex = false;
 
   if (p_Request.m_PrefetchLevel < PrefetchLevelFullSync)
   {
@@ -2055,6 +2086,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
       UpdateMsgList(p_Response.m_Folder);
       drawRequest |= DrawRequestAll;
+
+      if (p_Response.m_Folder == m_CurrentFolder)
+      {
+        updateIndex = true;
+      }
     }
 
     if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
@@ -2064,6 +2100,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
                                             p_Response.m_Headers.end());
       UpdateMsgList(p_Response.m_Folder);
       drawRequest |= DrawRequestAll;
+
+      if (p_Response.m_Folder == m_CurrentFolder)
+      {
+        updateIndex = true;
+      }
 
       for (auto& header : p_Response.m_Headers)
       {
@@ -2161,6 +2202,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     }
   }
 
+  if (updateIndex)
+  {
+    UpdateIndexFromUid();
+  }
+  
   AsyncDrawRequest(drawRequest);
 }
 
@@ -2343,7 +2389,7 @@ bool Ui::DeleteMessage()
   {
     ImapManager::Action action;
     action.m_Folder = m_CurrentFolder;
-    action.m_Uids.insert(m_MessageListCurrentUid);
+    action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
     action.m_MoveDestination = m_TrashFolder;
     m_ImapManager->AsyncAction(action);
 
@@ -2359,7 +2405,7 @@ bool Ui::DeleteMessage()
     }
 
     m_MessageViewLineOffset = 0;
-    UpdateCurrentUid();    
+    UpdateUidFromIndex();    
 
     std::vector<std::pair<uint32_t, Header>> msgList;
     {
@@ -2388,13 +2434,13 @@ void Ui::ToggleUnseen()
     std::lock_guard<std::mutex> lock(m_Mutex);
     flags = m_Flags[m_CurrentFolder];
   }
-  uint32_t uid = m_MessageListCurrentUid;
+  uint32_t uid = m_MessageListCurrentUid[m_CurrentFolder];
   bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
   bool newSeen = !oldSeen;
 
   ImapManager::Action action;
   action.m_Folder = m_CurrentFolder;
-  action.m_Uids.insert(m_MessageListCurrentUid);
+  action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
   action.m_SetSeen = newSeen;
   action.m_SetUnseen = !newSeen;
   m_ImapManager->AsyncAction(action);
@@ -2412,7 +2458,7 @@ void Ui::MarkSeen()
     std::lock_guard<std::mutex> lock(m_Mutex);
     flags = m_Flags[m_CurrentFolder];
   }
-  uint32_t uid = m_MessageListCurrentUid;
+  uint32_t uid = m_MessageListCurrentUid[m_CurrentFolder];
   bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
 
   if (oldSeen) return;
@@ -2421,7 +2467,7 @@ void Ui::MarkSeen()
 
   ImapManager::Action action;
   action.m_Folder = m_CurrentFolder;
-  action.m_Uids.insert(m_MessageListCurrentUid);
+  action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
   action.m_SetSeen = newSeen;
   action.m_SetUnseen = !newSeen;
   m_ImapManager->AsyncAction(action);
@@ -2432,21 +2478,45 @@ void Ui::MarkSeen()
   }
 }
 
-void Ui::UpdateCurrentUid()
+void Ui::UpdateUidFromIndex()
 {
-  std::vector<std::pair<uint32_t, Header>> msgList;
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    msgList = m_MsgList[m_CurrentFolder];
-  }
-  
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+
   m_MessageListCurrentIndex[m_CurrentFolder] =
     Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgList.size() - 1);
   if (msgList.size() > 0)
   {
-    uint32_t uid =
-      std::prev(msgList.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->first;
-    m_MessageListCurrentUid = uid;
+    m_MessageListCurrentUid[m_CurrentFolder] = std::prev(msgList.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->first;
+  }
+  else
+  {
+    m_MessageListCurrentUid[m_CurrentFolder] = -1;
+  }
+}
+
+void Ui::UpdateIndexFromUid()
+{
+  bool found = false;
+  
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+
+    for (auto it = msgList.rbegin(); it != msgList.rend(); ++it)
+    {
+      if ((int32_t)it->first == m_MessageListCurrentUid[m_CurrentFolder])
+      {
+        m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgList.rbegin(), it);
+        found = true;
+        break;
+      }
+    }
+  }
+
+  if (!found)
+  {
+    UpdateUidFromIndex();
   }
 }
 
@@ -2666,7 +2736,7 @@ bool Ui::CurrentMessageBodyAvailable()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
-  std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid);
+  std::map<uint32_t, Body>::const_iterator bit = bodys.find(m_MessageListCurrentUid[m_CurrentFolder]);
   return (bit != bodys.end());
 }
 

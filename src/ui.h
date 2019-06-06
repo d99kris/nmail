@@ -107,7 +107,8 @@ private:
   bool DeleteMessage();
   void ToggleUnseen();
   void MarkSeen();
-  void UpdateCurrentUid();
+  void UpdateUidFromIndex();
+  void UpdateIndexFromUid();
   void UpdateMsgList(const std::string& p_Folder);
   void ComposeMessagePrevLine();
   void ComposeMessageNextLine();
@@ -162,8 +163,8 @@ private:
   std::string m_DialogMessage;
   std::chrono::time_point<std::chrono::system_clock> m_DialogMessageTime;
   
-  std::map<std::string, int> m_MessageListCurrentIndex;
-  uint32_t m_MessageListCurrentUid = 0;
+  std::map<std::string, int32_t> m_MessageListCurrentIndex;
+  std::map<std::string, int32_t> m_MessageListCurrentUid;
 
   int m_AddressListCurrentIndex = 0;
   std::string m_AddressListCurrentAddress;
