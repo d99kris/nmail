@@ -97,9 +97,13 @@ public:
   static bool IsInteger(const std::string& p_Str);
   static long ToInteger(const std::string& p_Str);
   static std::string ExtensionForMimeType(const std::string& p_MimeType);
+  static void InitStdErrRedirect(const std::string& p_Path);
+  static void CleanupStdErrRedirect();
 
 private:
   static std::string m_HtmlConvertCmd;
   static std::string m_ExtViewerCmd;
   static std::string m_ApplicationDir;
+  static int m_OrgStdErr;
+  static int m_NewStdErr;
 };

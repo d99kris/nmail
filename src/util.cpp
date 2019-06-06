@@ -29,6 +29,8 @@
 std::string Util::m_HtmlConvertCmd;
 std::string Util::m_ExtViewerCmd;
 std::string Util::m_ApplicationDir;
+int Util::m_OrgStdErr = -1;
+int Util::m_NewStdErr = -1;
 
 std::string Util::SHA256(const std::string &p_Str)
 {
@@ -930,4 +932,25 @@ std::string Util::ExtensionForMimeType(const std::string& p_MimeType)
   }
 
   return "";
+}
+
+void Util::InitStdErrRedirect(const std::string& p_Path)
+{
+  m_NewStdErr = open(p_Path.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+  if (m_NewStdErr != -1)
+  {
+    m_OrgStdErr = dup(fileno(stderr));
+    dup2(m_NewStdErr, fileno(stderr));
+  }
+}
+
+void Util::CleanupStdErrRedirect()
+{
+  if (m_NewStdErr != -1)
+  {
+    fflush(stderr);
+    close(m_NewStdErr);
+    dup2(m_OrgStdErr, fileno(stderr));
+    close(m_OrgStdErr);
+  }
 }

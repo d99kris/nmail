@@ -35,6 +35,7 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config);
 int main(int argc, char* argv[])
 {
   // Defaults
+  umask(S_IRWXG | S_IRWXO);
   Util::SetApplicationDir(std::string(getenv("HOME")) + std::string("/.nmail"));
   bool online = true;
   std::string setup;
@@ -82,8 +83,9 @@ int main(int argc, char* argv[])
   {
     apathy::Path::makedirs(Util::GetApplicationDir());
   }
-  
-  Log::SetPath(Util::GetApplicationDir() + std::string("log.txt"));
+
+  const std::string& logPath = Util::GetApplicationDir() + std::string("log.txt");
+  Log::SetPath(logPath);
 
   Util::RegisterSignalHandler();
   
@@ -196,6 +198,8 @@ int main(int argc, char* argv[])
     return 1;
   }
   
+  Util::InitStdErrRedirect(logPath);
+
   AddressBook::Init(cacheEncrypt, pass);
   
   Ui ui(inbox, address, prefetchLevel);
@@ -230,6 +234,8 @@ int main(int argc, char* argv[])
   
   Util::CleanupTempDir();
 
+  Util::CleanupStdErrRedirect();
+  
   LOG_INFO("exiting nmail");
   
   return 0;  
