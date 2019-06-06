@@ -864,6 +864,8 @@ void Util::SignalHandler(int p_Signal)
   const std::string& logMsg = "unexpected termination: " + std::to_string(p_Signal);
   LOG_ERROR("%s", logMsg.c_str());
   LOG_DUMP(callstackStr.c_str());
+
+  CleanupStdErrRedirect();
   system("reset");
   std::cerr << logMsg << "\n" << callstackStr;
   exit(1);
