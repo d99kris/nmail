@@ -44,6 +44,11 @@ ImapManager::~ImapManager()
     m_PrefetchRequests.clear();
     m_Actions.clear();
     m_QueueMutex.unlock();
+    LOG_DEBUG("queues cleared");
+  }
+  else
+  {
+    LOG_DEBUG("queues not cleared");
   }
   
   m_Running = false;
