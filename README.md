@@ -247,6 +247,7 @@ nmail is implemented in C++. Its source tree includes the source code of the
 following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) - MIT License
+- [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) - Boost License
 
 
 License
