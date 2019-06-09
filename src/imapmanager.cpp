@@ -228,12 +228,13 @@ void ImapManager::Process()
           m_QueueMutex.lock();
         }
 
+        const int progressReportMinTasks = 2;
         while (!m_Requests.empty())
         {
           const Request request = m_Requests.front();
           m_Requests.pop_front();
 
-          uint32_t progress = (m_RequestsTotal > 0) ?
+          uint32_t progress = (m_RequestsTotal >= progressReportMinTasks) ?
             ((m_RequestsDone * 100) / m_RequestsTotal) : 0;
 
           m_QueueMutex.unlock();
@@ -258,7 +259,7 @@ void ImapManager::Process()
             m_PrefetchRequests.erase(m_PrefetchRequests.begin());
           }
 
-          uint32_t progress = (m_PrefetchRequestsTotal > 0) ?
+          uint32_t progress = (m_PrefetchRequestsTotal >= progressReportMinTasks) ?
             ((m_PrefetchRequestsDone * 100) / m_PrefetchRequestsTotal) : 0;
 
           m_QueueMutex.unlock();

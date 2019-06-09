@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "0.66" LANGUAGES CXX)
+project(nmail VERSION "0.67" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Build type

@@ -237,7 +237,7 @@ file:
     key_toggle_unread=u
     persist_folder_filter=1
     plain_text=1
-    show_progress=0
+    show_progress=1
 
 
 Technical Details

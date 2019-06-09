@@ -52,7 +52,7 @@ void Ui::Init()
     {"help_enabled", "1"},
     {"persist_folder_filter", "1"},
     {"plain_text", "1"},
-    {"show_progress", "0"},
+    {"show_progress", "1"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
