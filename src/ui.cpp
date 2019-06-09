@@ -1016,14 +1016,25 @@ void Ui::DrawPartList()
   wrefresh(m_MainWin);
 }
 
-void Ui::AsyncDrawRequest(char p_DrawRequest)
+void Ui::AsyncUiRequest(char p_UiRequest)
 {
-  write(m_Pipe[1], &p_DrawRequest, 1);
+  write(m_Pipe[1], &p_UiRequest, 1);
 }
 
-void Ui::PerformDrawRequest(char p_DrawRequest)
+void Ui::PerformUiRequest(char p_UiRequest)
 {
-  if (p_DrawRequest & DrawRequestAll)
+  if (p_UiRequest & UiRequestUpdateMsgList)
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    UpdateMsgList(m_CurrentFolder);
+  }
+
+  if (p_UiRequest & UiRequestUpdateIndexFromUid)
+  {
+    UpdateIndexFromUid();
+  }
+
+  if (p_UiRequest & UiRequestDrawAll)
   {
     DrawAll();
   }
@@ -1046,25 +1057,6 @@ void Ui::Run()
     int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
     if (rv == 0) continue;
-
-    if (FD_ISSET(m_Pipe[0], &fds))
-    {
-      int len = 0;
-      ioctl(m_Pipe[0], FIONREAD, &len);
-      if (len > 0)
-      {
-        len = std::min(len, 256);
-        std::vector<char> buf(len);
-        read(m_Pipe[0], &buf[0], len);
-        char drawRequest = DrawRequestNone;
-        for (int i = 0; i < len; ++i)
-        {
-          drawRequest |= buf[i];
-        }
-
-        PerformDrawRequest(drawRequest);
-      }
-    }
 
     if (FD_ISSET(STDIN_FILENO, &fds))
     {
@@ -1110,8 +1102,27 @@ void Ui::Run()
         default:
           break;
       }
-
     }
+
+    if (FD_ISSET(m_Pipe[0], &fds))
+    {
+      int len = 0;
+      ioctl(m_Pipe[0], FIONREAD, &len);
+      if (len > 0)
+      {
+        len = std::min(len, 256);
+        std::vector<char> buf(len);
+        read(m_Pipe[0], &buf[0], len);
+        char uiRequest = UiRequestNone;
+        for (int i = 0; i < len; ++i)
+        {
+          uiRequest |= buf[i];
+        }
+
+        PerformUiRequest(uiRequest);
+      }
+    }
+
   }
 
   LOG_DEBUG("exiting loop");
@@ -1148,6 +1159,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       m_CurrentFolder = m_FolderListCurrentFolder;
       m_ImapManager->SetCurrentFolder(m_CurrentFolder);
       SetState(StateViewMessageList);
+      UpdateMsgList(m_CurrentFolder);
       UpdateIndexFromUid();
     }
     else if (m_State == StateMoveToFolder)
@@ -1168,7 +1180,6 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
           m_Uids[m_FolderListCurrentFolder] = m_Uids[m_FolderListCurrentFolder] + action.m_Uids;
           m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
           UpdateMsgList(m_CurrentFolder);
-          UpdateMsgList(m_FolderListCurrentFolder);
         }
 
         std::vector<std::pair<uint32_t, Header>> msgList;
@@ -2068,8 +2079,7 @@ void Ui::SetState(Ui::State p_State)
 
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
-  char drawRequest = DrawRequestNone;
-  bool updateIndex = false;
+  char uiRequest = UiRequestNone;
 
   if (p_Request.m_PrefetchLevel < PrefetchLevelFullSync)
   {
@@ -2077,33 +2087,32 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Folders = p_Response.m_Folders;
-      drawRequest |= DrawRequestAll;
+      uiRequest |= UiRequestDrawAll;
     }
 
     if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
-      UpdateMsgList(p_Response.m_Folder);
-      drawRequest |= DrawRequestAll;
+      uiRequest |= UiRequestDrawAll;
 
       if (p_Response.m_Folder == m_CurrentFolder)
       {
-        updateIndex = true;
+        uiRequest |= UiRequestUpdateMsgList;
+        uiRequest |= UiRequestUpdateIndexFromUid;
       }
     }
 
     if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
-      m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(),
-                                            p_Response.m_Headers.end());
-      UpdateMsgList(p_Response.m_Folder);
-      drawRequest |= DrawRequestAll;
+      m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(), p_Response.m_Headers.end());
+      uiRequest |= UiRequestDrawAll;
 
       if (p_Response.m_Folder == m_CurrentFolder)
       {
-        updateIndex = true;
+        uiRequest |= UiRequestUpdateMsgList;
+        uiRequest |= UiRequestUpdateIndexFromUid;
       }
 
       for (auto& header : p_Response.m_Headers)
@@ -2119,14 +2128,14 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       std::map<uint32_t, uint32_t> newFlags = p_Response.m_Flags;
       newFlags.insert(m_Flags[p_Response.m_Folder].begin(), m_Flags[p_Response.m_Folder].end());
       m_Flags[p_Response.m_Folder] = newFlags;
-      drawRequest |= DrawRequestAll;
+      uiRequest |= UiRequestDrawAll;
     }
 
     if (!p_Request.m_GetBodys.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Bodys[p_Response.m_Folder].insert(p_Response.m_Bodys.begin(), p_Response.m_Bodys.end());
-      drawRequest |= DrawRequestAll;
+      uiRequest |= UiRequestDrawAll;
     }
   }
   
@@ -2202,12 +2211,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     }
   }
 
-  if (updateIndex)
-  {
-    UpdateIndexFromUid();
-  }
-  
-  AsyncDrawRequest(drawRequest);
+  AsyncUiRequest(uiRequest);
 }
 
 void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::Result& p_Result)
@@ -2249,7 +2253,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
       {
         sleep(1);
         InvalidateUiCache(m_Inbox);
-        AsyncDrawRequest(DrawRequestAll);
+        AsyncUiRequest(UiRequestDrawAll);
         break;
       }
     }
@@ -2274,7 +2278,7 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
     m_HasPrefetchRequestedFolders = true;
   }
   
-  AsyncDrawRequest(DrawRequestAll);
+  AsyncUiRequest(UiRequestDrawAll);
 }
 
 void Ui::SetImapManager(std::shared_ptr<ImapManager> p_ImapManager)
@@ -2401,7 +2405,6 @@ bool Ui::DeleteMessage()
       m_Uids[m_TrashFolder] = m_Uids[m_TrashFolder] + action.m_Uids;
       m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
       UpdateMsgList(m_CurrentFolder);
-      UpdateMsgList(m_TrashFolder);
     }
 
     m_MessageViewLineOffset = 0;

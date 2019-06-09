@@ -33,10 +33,12 @@ public:
     StateViewPartList = 8,
   };
 
-  enum DrawRequest
+  enum UiRequest
   {
-    DrawRequestNone = 0,
-    DrawRequestAll = 1,
+    UiRequestNone = 0,
+    UiRequestDrawAll = (1 << 0),
+    UiRequestUpdateMsgList = (1 << 1),
+    UiRequestUpdateIndexFromUid = (1 << 2),
   };
 
   enum PrefetchLevel
@@ -84,8 +86,8 @@ private:
   void DrawComposeMessage();
   void DrawPartList();
 
-  void AsyncDrawRequest(char p_DrawRequest);
-  void PerformDrawRequest(char p_DrawRequest);
+  void AsyncUiRequest(char p_UiRequest);
+  void PerformUiRequest(char p_UiRequest);
   void SetDialogMessage(const std::string& p_DialogMessage);
 
   void ViewFolderListKeyHandler(int p_Key);
