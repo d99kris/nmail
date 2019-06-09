@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
     {"ext_viewer_cmd", Util::GetDefaultExtViewerCmd()},
     {"prefetch_level", "2"},
+    {"verbose_logging", "0"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
 
@@ -157,6 +158,11 @@ int main(int argc, char* argv[])
   Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
   Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
 
+  if (config->Get("verbose_logging") == "1")
+  {
+    Log::SetDebugEnabled(true);
+  }
+  
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
   uint32_t prefetchLevel = 0;

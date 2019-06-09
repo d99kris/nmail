@@ -154,6 +154,7 @@ and fill out the empty fields (except `pass`), example:
     smtp_port=465
     trash=Trash
     user=example@example.com
+    verbose_logging=0
 
 The field `pass` shall be left empty. The next time nmail is started it will
 prompt for password. If having configured nmail to save the password
@@ -182,7 +183,10 @@ If any issues are observed, try running nmail with verbose logging
 
 and provide a copy of ~/.nmail/log.txt when reporting the issue. The
 preferred way of reporting issues and asking questions is by opening 
-[a Github issue](https://github.com/d99kris/nmail/issues/new). 
+[a Github issue](https://github.com/d99kris/nmail/issues/new).
+
+Verbose logging can also be enabled by setting `verbose_logging=1` in
+`~/.nmail/main.conf`.
 
 
 Security
