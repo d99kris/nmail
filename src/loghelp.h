@@ -8,18 +8,22 @@
 #pragma once
 
 #include <cstring>
+#include <sstream>
 
 #include <libetpan/libetpan.h>
+
+#include "cxx-prettyprint/prettyprint.hpp"
 
 #include "log.h"
 
 #define __FILENAME__ (strrchr("/" __FILE__, '/') + 1)
 
-#define LOG_DEBUG(EXPR, ...) Log::Debug(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_INFO(EXPR, ...) Log::Info(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__);
-#define LOG_DUMP(STR) Log::Dump(STR);
+#define LOG_DEBUG(EXPR, ...) Log::Debug(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+#define LOG_INFO(EXPR, ...) Log::Info(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+#define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+#define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+#define LOG_DUMP(STR) Log::Dump(STR)
+#define LOG_DEBUG_VAR(MSG, VAR) do { const std::string& str = PrettyPrint(VAR); LOG_DEBUG(MSG " %s", str.c_str()); } while (0)
 
 #define LOG_IF_NULL(EXPR) LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_SMTP_ERR(EXPR) LogIfNotEqual(EXPR, MAILSMTP_NO_ERROR, #EXPR, __FILENAME__, __LINE__)
@@ -72,4 +76,12 @@ static inline T LogIfEqual(T p_Rv, typename identity<T>::type p_Expect, const ch
   }
 
   return p_Rv;
+}
+
+template <typename T>
+static inline std::string PrettyPrint(const T& p_Container)
+{
+  std::stringstream sstream;
+  sstream << p_Container;
+  return sstream.str();
 }
