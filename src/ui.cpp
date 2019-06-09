@@ -729,7 +729,7 @@ void Ui::DrawMessageList()
     }
   }
 
-  const int maxHeadersFetchRequest = 20;
+  const int maxHeadersFetchRequest = 10;
   if (!fetchHeaderUids.empty())
   {
     std::set<uint32_t> subsetFetchHeaderUids;
