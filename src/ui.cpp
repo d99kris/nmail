@@ -449,8 +449,9 @@ void Ui::DrawFolderList()
   {
     ImapManager::Request request;
     request.m_GetFolders = true;
-    m_ImapManager->AsyncRequest(request);
+    LOG_DEBUG("request folders");
     m_HasRequestedFolders = true;
+    m_ImapManager->AsyncRequest(request);
   }
 
   werase(m_MainWin);
@@ -580,8 +581,9 @@ void Ui::DrawMessageList()
     ImapManager::Request request;
     request.m_Folder = m_CurrentFolder;
     request.m_GetUids = true;
-    m_ImapManager->AsyncRequest(request);
+    LOG_DEBUG_VAR("request uids =", m_CurrentFolder);
     m_HasRequestedUids[m_CurrentFolder] = true;
+    m_ImapManager->AsyncRequest(request);
   }
   
   std::set<uint32_t> fetchHeaderUids;  
@@ -591,29 +593,34 @@ void Ui::DrawMessageList()
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    std::set<uint32_t>& uids = m_Uids[m_CurrentFolder];
+    std::set<uint32_t>& newUids = m_NewUids[m_CurrentFolder];
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
-    std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+    auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
 
     std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
     std::set<uint32_t>& requestedFlags = m_RequestedFlags[m_CurrentFolder];
 
-    for (auto& uid : uids)
+    if (!newUids.empty())
     {
-      if ((headers.find(uid) == headers.end()) &&
-          (requestedHeaders.find(uid) == requestedHeaders.end()))
+      for (auto& uid : newUids)
       {
-        fetchHeaderUids.insert(uid);
-        requestedHeaders.insert(uid);
+        if ((headers.find(uid) == headers.end()) &&
+            (requestedHeaders.find(uid) == requestedHeaders.end()))
+        {
+          fetchHeaderUids.insert(uid);
+          requestedHeaders.insert(uid);
+        }
+
+        if ((flags.find(uid) == flags.end()) &&
+            (requestedFlags.find(uid) == requestedFlags.end()))
+        {
+          fetchFlagUids.insert(uid);
+          requestedFlags.insert(uid);
+        }
       }
 
-      if ((flags.find(uid) == flags.end()) &&
-          (requestedFlags.find(uid) == requestedFlags.end()))
-      {
-        fetchFlagUids.insert(uid);
-        requestedFlags.insert(uid);
-      }
+      newUids.clear();
     }
 
     const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
@@ -622,14 +629,14 @@ void Ui::DrawMessageList()
     
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
                                        ((m_MainWinHeight - 1) / 2)),
-                              std::max(0, (int)msgList.size() - (int)m_MainWinHeight));
-    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgList.size());
+                              std::max(0, (int)msgDateUids.size() - (int)m_MainWinHeight));
+    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgDateUids.size());
 
     werase(m_MainWin);
 
     for (int i = idxOffs; i < idxMax; ++i)
     {
-      uint32_t uid = std::prev(msgList.end(), i + 1)->first;
+      uint32_t uid = std::prev(msgDateUids.end(), i + 1)->second;
 
       std::string seenFlag;
       if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
@@ -709,6 +716,7 @@ void Ui::DrawMessageList()
       fetchUids.insert(uid);
       request.m_GetBodys = fetchUids;
 
+      LOG_DEBUG_VAR("request bodys =", fetchUids);
       m_ImapManager->PrefetchRequest(request);
     }
   }
@@ -725,11 +733,12 @@ void Ui::DrawMessageList()
       fetchUids.insert(uid);
       request.m_GetBodys = fetchUids;
 
+      LOG_DEBUG_VAR("request bodys =", fetchUids);
       m_ImapManager->PrefetchRequest(request);
     }
   }
 
-  const int maxHeadersFetchRequest = 10;
+  const int maxHeadersFetchRequest = 25;
   if (!fetchHeaderUids.empty())
   {
     std::set<uint32_t> subsetFetchHeaderUids;
@@ -743,6 +752,7 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetHeaders = subsetFetchHeaderUids;
 
+        LOG_DEBUG_VAR("request headers =", subsetFetchHeaderUids);
         m_ImapManager->AsyncRequest(request);
         
         subsetFetchHeaderUids.clear(); 
@@ -756,6 +766,7 @@ void Ui::DrawMessageList()
     request.m_Folder = m_CurrentFolder;
     request.m_GetFlags = fetchFlagUids;
     
+    LOG_DEBUG_VAR("request flags =", fetchFlagUids);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -777,7 +788,8 @@ void Ui::DrawMessage()
 
     int uid = m_MessageListCurrentUid[m_CurrentFolder];
 
-    if ((bodys.find(uid) == bodys.end()) &&
+    if ((uid != -1) &&
+        (bodys.find(uid) == bodys.end()) &&
         (requestedBodys.find(uid) == requestedBodys.end()))
     {
       requestedBodys.insert(uid);
@@ -853,6 +865,7 @@ void Ui::DrawMessage()
     ImapManager::Request request;
     request.m_Folder = m_CurrentFolder;
     request.m_GetBodys = fetchBodyUids;
+    LOG_DEBUG_VAR("request bodys =", fetchBodyUids);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -1023,17 +1036,6 @@ void Ui::AsyncUiRequest(char p_UiRequest)
 
 void Ui::PerformUiRequest(char p_UiRequest)
 {
-  if (p_UiRequest & UiRequestUpdateMsgList)
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    UpdateMsgList(m_CurrentFolder);
-  }
-
-  if (p_UiRequest & UiRequestUpdateIndexFromUid)
-  {
-    UpdateIndexFromUid();
-  }
-
   if (p_UiRequest & UiRequestDrawAll)
   {
     DrawAll();
@@ -1102,6 +1104,8 @@ void Ui::Run()
         default:
           break;
       }
+
+      continue;
     }
 
     if (FD_ISSET(m_Pipe[0], &fds))
@@ -1159,7 +1163,6 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       m_CurrentFolder = m_FolderListCurrentFolder;
       m_ImapManager->SetCurrentFolder(m_CurrentFolder);
       SetState(StateViewMessageList);
-      UpdateMsgList(m_CurrentFolder);
       UpdateIndexFromUid();
     }
     else if (m_State == StateMoveToFolder)
@@ -1176,20 +1179,20 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
 
         {
           std::lock_guard<std::mutex> lock(m_Mutex);
+          RemoveUidDate(m_CurrentFolder, action.m_Uids);
           m_Uids[m_CurrentFolder] = m_Uids[m_CurrentFolder] - action.m_Uids;
           m_Uids[m_FolderListCurrentFolder] = m_Uids[m_FolderListCurrentFolder] + action.m_Uids;
           m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
-          UpdateMsgList(m_CurrentFolder);
         }
 
-        std::vector<std::pair<uint32_t, Header>> msgList;
+        bool isMsgDateUidsEmpty = false;
         {
           std::lock_guard<std::mutex> lock(m_Mutex);
-          msgList = m_MsgList[m_CurrentFolder];
+          isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
         }
 
         UpdateUidFromIndex(true /* p_UserTriggered */);
-        if (msgList.empty())
+        if (isMsgDateUidsEmpty)
         {
           SetState(StateViewMessageList);
         }
@@ -2081,6 +2084,8 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 {
   char uiRequest = UiRequestNone;
 
+  bool updateIndexFromUid = false;
+  
   if (p_Request.m_PrefetchLevel < PrefetchLevelFullSync)
   {
     if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
@@ -2088,19 +2093,33 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Folders = p_Response.m_Folders;
       uiRequest |= UiRequestDrawAll;
+      LOG_DEBUG_VAR("new folders =", p_Response.m_Folders);
     }
 
     if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
+      if (m_Uids[p_Response.m_Folder].empty())
+      {
+        m_NewUids[p_Response.m_Folder] = p_Response.m_Uids;
+      }
+      else
+      {
+        const std::set<uint32_t>& uids = m_Uids[p_Response.m_Folder];
+        std::set<uint32_t>& newUids = m_NewUids[p_Response.m_Folder];
+        for (auto& uid : p_Response.m_Uids)
+        {
+          if (uids.find(uid) == uids.end())
+          {
+            newUids.insert(uid);
+          }
+        }
+      }
+      
       m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
       uiRequest |= UiRequestDrawAll;
-
-      if (p_Response.m_Folder == m_CurrentFolder)
-      {
-        uiRequest |= UiRequestUpdateMsgList;
-        uiRequest |= UiRequestUpdateIndexFromUid;
-      }
+      updateIndexFromUid = true;
+      LOG_DEBUG_VAR("new uids =", p_Response.m_Uids);
     }
 
     if (!p_Request.m_GetHeaders.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
@@ -2109,17 +2128,16 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(), p_Response.m_Headers.end());
       uiRequest |= UiRequestDrawAll;
 
-      if (p_Response.m_Folder == m_CurrentFolder)
-      {
-        uiRequest |= UiRequestUpdateMsgList;
-        uiRequest |= UiRequestUpdateIndexFromUid;
-      }
+      AddUidDate(p_Response.m_Folder, p_Response.m_Headers);
 
       for (auto& header : p_Response.m_Headers)
       {
         AddressBook::Add(m_Headers[p_Response.m_Folder][header.first].GetUniqueId(),
                          m_Headers[p_Response.m_Folder][header.first].GetAddresses());
       }
+
+      updateIndexFromUid = true;
+      LOG_DEBUG_VAR("new headers =", MapKey(p_Response.m_Headers));
     }
 
     if (!p_Request.m_GetFlags.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed))
@@ -2129,6 +2147,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       newFlags.insert(m_Flags[p_Response.m_Folder].begin(), m_Flags[p_Response.m_Folder].end());
       m_Flags[p_Response.m_Folder] = newFlags;
       uiRequest |= UiRequestDrawAll;
+      LOG_DEBUG_VAR("new flags =", MapKey(p_Response.m_Flags));
     }
 
     if (!p_Request.m_GetBodys.empty() && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed))
@@ -2136,6 +2155,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Bodys[p_Response.m_Folder].insert(p_Response.m_Bodys.begin(), p_Response.m_Bodys.end());
       uiRequest |= UiRequestDrawAll;
+      LOG_DEBUG_VAR("new bodys =", MapKey(p_Response.m_Bodys));
     }
   }
   
@@ -2152,8 +2172,9 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           request.m_PrefetchLevel = PrefetchLevelFullSync;
           request.m_Folder = folder;
           request.m_GetUids = true;
-          m_ImapManager->PrefetchRequest(request);
+          LOG_DEBUG_VAR("request uids =", folder);
           m_HasPrefetchRequestedUids[folder] = true;
+          m_ImapManager->PrefetchRequest(request);
         }
       }
     }
@@ -2178,6 +2199,8 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             request.m_GetHeaders = subsetFetchHeaderUids;
             request.m_GetBodys = subsetFetchHeaderUids;
 
+            LOG_DEBUG_VAR("request headers =", subsetFetchHeaderUids);
+            LOG_DEBUG_VAR("request bodys =", subsetFetchHeaderUids);
             m_ImapManager->PrefetchRequest(request);
         
             subsetFetchHeaderUids.clear(); 
@@ -2211,6 +2234,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     }
   }
 
+  if (updateIndexFromUid)
+  {
+    UpdateIndexFromUid();
+  }
+  
   AsyncUiRequest(uiRequest);
 }
 
@@ -2274,8 +2302,9 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
     ImapManager::Request request;
     request.m_PrefetchLevel = PrefetchLevelFullSync;
     request.m_GetFolders = true;
-    m_ImapManager->PrefetchRequest(request);
+    LOG_DEBUG("request folders");
     m_HasPrefetchRequestedFolders = true;
+    m_ImapManager->PrefetchRequest(request);
   }
   
   AsyncUiRequest(UiRequestDrawAll);
@@ -2401,22 +2430,22 @@ bool Ui::DeleteMessage()
 
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
+      RemoveUidDate(m_CurrentFolder, action.m_Uids);
       m_Uids[m_CurrentFolder] = m_Uids[m_CurrentFolder] - action.m_Uids;
       m_Uids[m_TrashFolder] = m_Uids[m_TrashFolder] + action.m_Uids;
       m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
-      UpdateMsgList(m_CurrentFolder);
     }
 
     m_MessageViewLineOffset = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);    
 
-    std::vector<std::pair<uint32_t, Header>> msgList;
+    bool isMsgDateUidsEmpty = false;
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
-      msgList = m_MsgList[m_CurrentFolder];
+      isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
     }
 
-    if (msgList.empty())
+    if (isMsgDateUidsEmpty)
     {
       SetState(StateViewMessageList);
     }
@@ -2484,13 +2513,14 @@ void Ui::MarkSeen()
 void Ui::UpdateUidFromIndex(bool p_UserTriggered)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+  auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
 
   m_MessageListCurrentIndex[m_CurrentFolder] =
-    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgList.size() - 1);
-  if (msgList.size() > 0)
+    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgDateUids.size() - 1);
+  if (msgDateUids.size() > 0)
   {
-    m_MessageListCurrentUid[m_CurrentFolder] = std::prev(msgList.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->first;
+    m_MessageListCurrentUid[m_CurrentFolder] =
+      std::prev(msgDateUids.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->second;
   }
   else
   {
@@ -2498,6 +2528,8 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
   }
 
   m_MessageListUidSet[m_CurrentFolder] = p_UserTriggered;
+
+  LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 
 void Ui::UpdateIndexFromUid()
@@ -2509,13 +2541,13 @@ void Ui::UpdateIndexFromUid()
 
     if (m_MessageListUidSet[m_CurrentFolder])
     {
-      const std::vector<std::pair<uint32_t, Header>>& msgList = m_MsgList[m_CurrentFolder];
+      auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
 
-      for (auto it = msgList.rbegin(); it != msgList.rend(); ++it)
+      for (auto it = msgDateUids.rbegin(); it != msgDateUids.rend(); ++it)
       {
-        if ((int32_t)it->first == m_MessageListCurrentUid[m_CurrentFolder])
+        if ((int32_t)it->second == m_MessageListCurrentUid[m_CurrentFolder])
         {
-          m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgList.rbegin(), it);
+          m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgDateUids.rbegin(), it);
           found = true;
           break;
         }
@@ -2527,36 +2559,52 @@ void Ui::UpdateIndexFromUid()
   {
     UpdateUidFromIndex(false /* p_UserTriggered */);
   }
+
+  LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 
-void Ui::UpdateMsgList(const std::string& p_Folder)
+void Ui::AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders)
 {
-  // called with lock held
-  std::set<uint32_t> uids = m_Uids[p_Folder];
-  std::map<uint32_t, Header>& headers = m_Headers[p_Folder];
+  auto& msgDateUids = m_MsgDateUids[p_Folder];
+  auto& msgUidDates = m_MsgUidDates[p_Folder];
 
-  // remove all uids not present in headers
-  for (auto it = uids.begin(); it != uids.end(); /* incremented in loop */)
+  for (auto it = p_UidHeaders.begin(); it != p_UidHeaders.end(); ++it)
   {
-    it = (headers.find(*it) == headers.end()) ? uids.erase(it) : std::next(it);
-  }
+    const uint32_t uid = it->first;
+    const std::string& date = m_Headers[p_Folder][uid].GetDate();
+    std::string dateUid = date + std::to_string(uid);
 
-  // create list
-  std::vector<std::pair<uint32_t, Header>> msgList;
-  for (auto it = uids.begin(); it != uids.end(); ++it)
+    auto ret = msgDateUids.insert(std::pair<std::string, uint32_t>(dateUid, uid));
+    if (ret.second)
+    {
+      msgUidDates.insert(std::pair<uint32_t, std::string>(uid, dateUid));
+    }
+  }  
+}
+
+void Ui::RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  auto& msgDateUids = m_MsgDateUids[p_Folder];
+  auto& msgUidDates = m_MsgUidDates[p_Folder];
+
+  for (auto it = p_Uids.begin(); it != p_Uids.end(); ++it)
   {
-    headers.at(*it).GetDate();
-    msgList.push_back(std::make_pair(*it, headers.at(*it)));
-  }
+    const uint32_t uid = *it;
+    const std::string& date = m_Headers[p_Folder][uid].GetDate();
+    std::string dateUid = date + std::to_string(uid);
 
-  // sort based on date
-  std::sort(msgList.begin(), msgList.end(),
-            [](std::pair<uint32_t, Header>& m1, std::pair<uint32_t, Header>& m2)
-            {
-              return m1.second.GetDate() < m2.second.GetDate();
-            });
-  
-  m_MsgList[p_Folder] = msgList;
+    auto msgDateUid = msgDateUids.find(dateUid);
+    if (msgDateUid != msgDateUids.end())
+    {
+      msgDateUids.erase(msgDateUid);
+    }
+
+    auto msgUidDate = msgUidDates.find(uid);
+    if (msgUidDate != msgUidDates.end())
+    {
+      msgUidDates.erase(msgUidDate);
+    }
+  }
 }
 
 void Ui::ComposeMessagePrevLine()

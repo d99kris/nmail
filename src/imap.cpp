@@ -391,7 +391,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     std::map<uint32_t, uint32_t> oldFlags;
     oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
     newFlags.insert(oldFlags.begin(), oldFlags.end());
-
+    // cache combined flags of previously cached and newly fetched, in case requesting flags for not all messages
     WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
   }
 
@@ -679,8 +679,10 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
     if (rv == MAILIMAP_NO_ERROR)
     {
       m_SelectedFolder = p_Folder;
-      m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_exists == 0);
+      m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_has_exists == 1) && (m_Imap->imap_selection_info->sel_exists == 0);
       InitFolderCacheDir(p_Folder);
+      LOG_DEBUG("folder %s = %d", p_Folder.c_str(),
+                (m_Imap->imap_selection_info->sel_has_exists == 1) ? m_Imap->imap_selection_info->sel_exists : -1);
     }
 
     return (rv == MAILIMAP_NO_ERROR);

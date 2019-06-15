@@ -24,53 +24,83 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_StatusHandler(p_StatusHandler)
   , m_Connecting(false)
   , m_Running(false)
+  , m_CacheRunning(false)
 {
   pipe(m_Pipe);
+  pipe(m_CachePipe);
   m_Connecting = m_Connect;
   SetStatus(m_Connecting ? Status::FlagConnecting : Status::FlagOffline);
   m_Running = true;
-  LOG_DEBUG("start thread");
+  m_CacheRunning = true;
+  LOG_DEBUG("start threads");
   m_Thread = std::thread(&ImapManager::Process, this);
+  m_CacheThread = std::thread(&ImapManager::CacheProcess, this);
 }
 
 ImapManager::~ImapManager()
 {
-  LOG_DEBUG("stop thread");
-  std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
+  LOG_DEBUG("stop threads");
+  {
+    std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
 
-  if (m_QueueMutex.try_lock())
-  {
-    m_Requests.clear();
-    m_PrefetchRequests.clear();
-    m_Actions.clear();
-    m_QueueMutex.unlock();
-    LOG_DEBUG("queues cleared");
+    if (m_QueueMutex.try_lock())
+    {
+      m_Requests.clear();
+      m_PrefetchRequests.clear();
+      m_Actions.clear();
+      m_QueueMutex.unlock();
+      LOG_DEBUG("queues cleared");
+    }
+    else
+    {
+      LOG_DEBUG("queues not cleared");
+    }
+  
+    m_Running = false;
+    write(m_Pipe[1], "1", 1);
+
+    if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
+    {
+      m_Thread.join();
+      LOG_DEBUG("process thread joined");
+    }
+    else
+    {
+      LOG_WARNING("process thread exit timeout");
+    }
   }
-  else
+
   {
-    LOG_DEBUG("queues not cleared");
+    std::unique_lock<std::mutex> lock(m_ExitedCacheCondMutex);
+
+    m_CacheRunning = false;
+    write(m_CachePipe[1], "1", 1);
+    
+    if (m_ExitedCacheCond.wait_for(lock, std::chrono::seconds(2)) != std::cv_status::timeout)
+    {
+      m_CacheThread.join();
+      LOG_DEBUG("cache thread joined");
+    }
+    else
+    {
+      LOG_WARNING("cache thread exit timeout");
+    }
   }
   
-  m_Running = false;
-  write(m_Pipe[1], "1", 1);
-
-  if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
-  {
-    m_Thread.join();
-    LOG_DEBUG("thread joined");
-  }
-  else
-  {
-    LOG_WARNING("thread exit timeout");
-  }
-
   close(m_Pipe[0]);
   close(m_Pipe[1]);
+  close(m_CachePipe[0]);
+  close(m_CachePipe[1]);
 }
 
 void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 {
-  PerformRequest(p_Request, true);
+  {
+    std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
+    m_CacheRequests.push_front(p_Request);
+    write(m_CachePipe[1], "1", 1);
+  }
+
   if (m_Imap.GetConnected() || m_Connecting)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
@@ -83,7 +113,12 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
-  PerformRequest(p_Request, true);
+  {
+    std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
+    m_CacheRequests.push_front(p_Request);
+    write(m_CachePipe[1], "1", 1);
+  }
+
   if (m_Imap.GetConnected() || m_Connecting)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
@@ -243,12 +278,12 @@ void ImapManager::Process()
 
           PerformRequest(request, false);
 
-          ClearStatus(Status::FlagFetching);
-
           m_QueueMutex.lock();
 
           ++m_RequestsDone;
         }
+
+        ClearStatus(Status::FlagFetching);        
 
         if (!m_PrefetchRequests.empty())
         {
@@ -268,12 +303,12 @@ void ImapManager::Process()
 
           PerformRequest(request, false);
 
-          ClearStatus(Status::FlagPrefetching);
-
           m_QueueMutex.lock();
 
           ++m_PrefetchRequestsDone;
         }
+
+        ClearStatus(Status::FlagPrefetching);
       }
 
       m_RequestsTotal = 0;
@@ -296,6 +331,56 @@ void ImapManager::Process()
 
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
   m_ExitedCond.notify_one();
+}
+
+void ImapManager::CacheProcess()
+{
+  LOG_DEBUG("entering cache loop");
+  while (m_CacheRunning)
+  {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(m_CachePipe[0], &fds);
+    int maxfd = m_CachePipe[0];
+    struct timeval tv = {60, 0};
+    int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+
+    if ((rv != 0) && FD_ISSET(m_CachePipe[0], &fds))
+    {
+      int len = 0;
+      ioctl(m_CachePipe[0], FIONREAD, &len);
+      if (len > 0)
+      {
+        len = std::min(len, 256);
+        std::vector<char> buf(len);
+        read(m_CachePipe[0], &buf[0], len);
+      }
+
+      m_CacheQueueMutex.lock();
+
+      while (m_CacheRunning && !m_CacheRequests.empty())
+      {
+        while (!m_CacheRequests.empty())
+        {
+          const Request request = m_CacheRequests.front();
+          m_CacheRequests.pop_front();
+
+          m_CacheQueueMutex.unlock();
+
+          PerformRequest(request, true);
+
+          m_CacheQueueMutex.lock();
+        }
+      }
+
+      m_CacheQueueMutex.unlock();
+    }
+  }
+
+  LOG_DEBUG("exiting cache loop");
+  
+  std::unique_lock<std::mutex> lock(m_ExitedCacheCondMutex);
+  m_ExitedCacheCond.notify_one();
 }
 
 void ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached)

@@ -89,6 +89,7 @@ public:
 private:
   void ProcessIdle();
   void Process();
+  void CacheProcess();
   void PerformRequest(const Request& p_Request, bool p_Cached);
   void PerformAction(const Action& p_Action);
   void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
@@ -102,9 +103,12 @@ private:
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
+  std::atomic<bool> m_CacheRunning;
   std::thread m_Thread;
-  
+  std::thread m_CacheThread;
+
   std::deque<Request> m_Requests;
+  std::deque<Request> m_CacheRequests;
   std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
   uint32_t m_RequestsTotal = 0;
@@ -112,12 +116,17 @@ private:
   uint32_t m_PrefetchRequestsTotal = 0;
   uint32_t m_PrefetchRequestsDone = 0;
   std::mutex m_QueueMutex;
+  std::mutex m_CacheQueueMutex;
 
   std::condition_variable m_ExitedCond;
   std::mutex m_ExitedCondMutex;
+
+  std::condition_variable m_ExitedCacheCond;
+  std::mutex m_ExitedCacheCondMutex;
 
   std::string m_CurrentFolder = "INBOX";
   std::mutex m_Mutex;
 
   int m_Pipe[2] = {-1, -1};
+  int m_CachePipe[2] = {-1, -1};
 };

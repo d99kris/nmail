@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
   }
   
   Util::InitStdErrRedirect(logPath);
-  
+
   Ui ui(inbox, address, prefetchLevel);
 
   std::shared_ptr<ImapManager> imapManager =

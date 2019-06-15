@@ -37,8 +37,6 @@ public:
   {
     UiRequestNone = 0,
     UiRequestDrawAll = (1 << 0),
-    UiRequestUpdateMsgList = (1 << 1),
-    UiRequestUpdateIndexFromUid = (1 << 2),
   };
 
   enum PrefetchLevel
@@ -111,7 +109,8 @@ private:
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);
   void UpdateIndexFromUid();
-  void UpdateMsgList(const std::string& p_Folder);
+  void AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders);
+  void RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
   void ComposeMessagePrevLine();
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
@@ -139,7 +138,9 @@ private:
   std::map<std::string, std::map<uint32_t, Header>> m_Headers;
   std::map<std::string, std::map<uint32_t, uint32_t>> m_Flags;
   std::map<std::string, std::map<uint32_t, Body>> m_Bodys;
-  std::map<std::string, std::vector<std::pair<uint32_t, Header>>> m_MsgList;
+  std::map<std::string, std::map<std::string, uint32_t>> m_MsgDateUids;
+  std::map<std::string, std::map<uint32_t, std::string>> m_MsgUidDates;
+  std::map<std::string, std::set<uint32_t>> m_NewUids;
 
   bool m_HasRequestedFolders = false;
   bool m_HasPrefetchRequestedFolders = false;
