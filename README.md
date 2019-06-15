@@ -198,6 +198,11 @@ using OpenSSL AES256-CBC with a key derived from a random salt and the
 email account password. Folder names are hashed using SHA256 (thus
 not encrypted).
 
+Using the command line tool `openssl` it is possible to decrypt locally
+cached messages / headers. Example (enter email account password at prompt):
+
+    openssl enc -d -aes-256-cbc -md sha1 -in ~/.nmail/cache/imap/B5/152.eml
+
 Storing the account password (`save_pass=1` in main.conf) is *not* secure.
 While nmail encrypts the password, the key is trivial to determine from
 the source code. Only store the password if measurements are taken to ensure
