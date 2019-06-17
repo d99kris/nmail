@@ -2115,6 +2115,13 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           }
         }
       }
+
+      const std::set<uint32_t>& removedUids = m_Uids[p_Response.m_Folder] - p_Response.m_Uids;
+      if (!removedUids.empty())
+      {
+        LOG_DEBUG_VAR("del uids =", removedUids);
+        RemoveUidDate(p_Response.m_Folder, removedUids);
+      }
       
       m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
       uiRequest |= UiRequestDrawAll;
