@@ -16,6 +16,7 @@
 void Body::SetData(const std::string &p_Data)
 {
   m_Data = p_Data;
+  RemoveInvalidHeaders();
 }
 
 std::string Body::GetData() const
@@ -190,6 +191,7 @@ void Body::ParseMime(mailmime *p_Mime)
   }
 
   mimeType = mimeType + std::string("/") + std::string(content_type->ct_subtype);
+  mimeType = Util::ToLower(mimeType);
 
   switch (p_Mime->mm_type)
   {
@@ -225,6 +227,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   mailmime_data* data = p_Mime->mm_data.mm_single;
   mailmime_single_fields fields;
   std::string filename;
+  std::string charset;
 
   memset(&fields, 0, sizeof(mailmime_single_fields));
   if (p_Mime->mm_mime_fields != NULL)
@@ -242,6 +245,12 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
     {
       filename = std::string(cfilename);
     }
+
+    char* ccharset = fields.fld_content_charset;
+    if (ccharset != NULL)
+    {
+      charset = Util::ToLower(std::string(ccharset));
+    }
   }
   
   switch (data->dt_type)
@@ -249,16 +258,43 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
     case MAILMIME_DATA_TEXT:
       {
         size_t index = 0;
-        char* result = NULL;
-        size_t resultLen = 0;
+        char* parsedStr = NULL;
+        size_t parsedLen = 0;
         int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data,
                                      data->dt_data.dt_text.dt_length, &index,
-                                     data->dt_encoding, &result, &resultLen);
+                                     data->dt_encoding, &parsedStr, &parsedLen);
+        
         if (rv == MAILIMF_NO_ERROR)
         {
           Part part;
+
+          if (!charset.empty() && (charset != "utf-8"))
+          {
+            char* convStr = NULL;
+            size_t convLen = 0;
+            if ((charconv_buffer("utf-8", charset.c_str(), parsedStr, parsedLen, &convStr, &convLen) == MAIL_CHARCONV_NO_ERROR) &&
+                (convStr != NULL))
+            {
+              part.m_Data = std::string(convStr, convLen);
+              charconv_buffer_free(convStr);
+            }
+            else
+            {
+              LOG_ERROR("cannot convert %s to utf-8", charset.c_str());
+            }
+          }
+
+          if (parsedStr != NULL)
+          {
+            if (part.m_Data.empty())
+            {
+              part.m_Data = std::string(parsedStr, parsedLen);
+            }
+
+            mmap_string_unref(parsedStr);
+          }
+
           part.m_MimeType = p_MimeType;
-          part.m_Data = std::string(result, resultLen);
           part.m_Filename = filename;
           m_Parts[index] = part;
           
@@ -280,5 +316,17 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
     default:
       break;
+  }
+}
+
+void Body::RemoveInvalidHeaders()
+{
+  if (m_Data.find("From ", 0) == 0)
+  {
+    size_t firstLinefeed = m_Data.find("\n");
+    if (firstLinefeed != std::string::npos)
+    {
+      m_Data.erase(0, firstLinefeed + 1);
+    }
   }
 }

@@ -33,6 +33,7 @@ private:
   void ParseHtml();
   void ParseMime(struct mailmime* p_Mime);
   void ParseMimeData(struct mailmime* p_Mime, std::string p_MimeType);
+  void RemoveInvalidHeaders();
   
 private:
   std::string m_Data;
