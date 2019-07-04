@@ -1355,7 +1355,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
   {
-    SetState(StateViewMessage);
+    if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
+    {
+      SetState(StateViewMessage);
+    }
   }
   else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack))
   {
