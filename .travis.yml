@@ -11,10 +11,13 @@ dist:
 addons:
   apt:
     packages:
-      - cmake
-      - libssl-dev
-      - libncurses-dev
+#    - cmake
+#    - libssl-dev
+#    - libncurses-dev
+      - libncursesw5-dev
       - libetpan-dev
+      - libetpan
+      - gellivare
 
 install:
   - if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then brew update && brew bundle; fi
