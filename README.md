@@ -1,7 +1,7 @@
 nmail - ncurses mail
 ====================
 
-| **Mac** |
+| **Linux + Mac** |
 |---------|
 | [![Build status](https://travis-ci.org/d99kris/nmail.svg?branch=master)](https://travis-ci.org/d99kris/nmail) |
 

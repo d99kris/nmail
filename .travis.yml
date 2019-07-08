@@ -1,26 +1,23 @@
 language:
   - cpp
 
-sudo:
-  - false
-
-os:
-#  - linux  @todo: re-enable when bionic is available
-  - osx
+compiler:
+  - clang
 
 dist:
   - bionic
 
-addons:
-  apt:
-    packages:
-      - cmake
-      - libssl-dev
-      - libncurses-dev
-      - libetpan-dev
-
-install:
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew update && brew bundle; fi
+matrix:
+  include:
+    - os: linux
+      install:
+        - sudo apt update
+        - sudo apt install -y libssl-dev libncurses5-dev libetpan-dev
+        - lsb_release -a
+    - os: osx
+      install:
+        - brew update && brew bundle
+        - sw_vers
 
 script:
   - mkdir -p build
