@@ -283,7 +283,9 @@ void ImapManager::Process()
           ++m_RequestsDone;
         }
 
+        m_QueueMutex.unlock();
         ClearStatus(Status::FlagFetching);        
+        m_QueueMutex.lock();
 
         if (!m_PrefetchRequests.empty())
         {
@@ -308,7 +310,9 @@ void ImapManager::Process()
           ++m_PrefetchRequestsDone;
         }
 
+        m_QueueMutex.unlock();
         ClearStatus(Status::FlagPrefetching);
+        m_QueueMutex.lock();
       }
 
       m_RequestsTotal = 0;
