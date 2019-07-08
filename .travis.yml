@@ -10,7 +10,6 @@ dist:
 
 addons:
   apt:
-    update: true
     packages:
       - cmake
       - libssl-dev
