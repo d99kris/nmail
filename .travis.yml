@@ -25,6 +25,7 @@ install:
 script:
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then lsb_release -a; fi
   - if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then sw_vers; fi
+  - mkdir -p build
   - cd build
   - cmake ..
   - make
