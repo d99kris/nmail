@@ -6,13 +6,14 @@ sudo:
 
 os:
   - linux
-  - osx
+#temp disable  - osx
 
 dist:
   - bionic
 
 addons:
   apt:
+    update: true
     packages:
       - cmake
       - libssl-dev
