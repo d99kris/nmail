@@ -1,7 +1,13 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "0.76" LANGUAGES CXX)
+project(nmail VERSION "0.77" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
+
+# Ccache
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+endif()
 
 # Build type
 set(DEFAULT_BUILD_TYPE "Release")
