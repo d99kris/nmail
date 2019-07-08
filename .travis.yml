@@ -5,7 +5,7 @@ sudo:
   - false
 
 os:
-#  - linux  @todo: re-enable when bionic is available
+  - linux
   - osx
 
 dist:
@@ -20,10 +20,11 @@ addons:
       - libetpan-dev
 
 install:
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew update && brew bundle; fi
+  - if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then brew update && brew bundle; fi
 
 script:
-  - mkdir -p build
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then lsb_release -a; fi
+  - if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then sw_vers; fi
   - cd build
   - cmake ..
   - make
