@@ -9,7 +9,8 @@ dist:
   - bionic
 
 before_install:
-  - sudo apt install -y cmake libssl-dev libncurses-dev libetpan-dev
+  - sudo apt update
+  - sudo apt install -y libssl-dev libncurses5-dev libetpan-dev
 
 install:
   - if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then brew update && brew bundle; fi
