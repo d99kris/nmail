@@ -4,25 +4,22 @@ language:
 compiler:
   - clang
 
-os:
-  - linux
-  - osx
-
 dist:
   - bionic
 
-before_install:
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; sudo apt update; fi
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; sudo apt install -y libssl-dev; fi
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; sudo apt install -y libncurses5-dev; fi
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; sudo apt install -y libetpan-dev; fi
-
-install:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew update && brew bundle; fi
+matrix:
+  include:
+    - os: linux
+      install:
+        - sudo apt update
+        - sudo apt install -y libssl-dev libncurses5-dev libetpan-dev
+        - lsb_release -a
+    - os: osx
+      install:
+        - brew update && brew bundle
+        - sw_vers
 
 script:
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then lsb_release -a; fi
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then sw_vers; fi
   - mkdir -p build
   - cd build
   - cmake ..
