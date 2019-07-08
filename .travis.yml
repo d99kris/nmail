@@ -3,7 +3,7 @@ language:
 
 os:
   - linux
-#temp disable  - osx
+  - osx
 
 dist:
   - bionic
