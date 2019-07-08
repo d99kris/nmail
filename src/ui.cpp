@@ -508,7 +508,8 @@ void Ui::DrawFolderList()
         m_FolderListCurrentFolder = folder;
       }
 
-      mvwprintw(m_MainWin, i - idxOffs, 2, "%s", folder.c_str());
+      std::wstring wfolder = Util::ToWString(folder);
+      mvwaddnwstr(m_MainWin, i - idxOffs, 2, wfolder.c_str(), wfolder.size());
 
       if (i == m_FolderListCurrentIndex)
       {
@@ -562,7 +563,8 @@ void Ui::DrawAddressList()
         m_AddressListCurrentAddress = address;
       }
 
-      mvwprintw(m_MainWin, i - idxOffs, 2, "%s", address.c_str());
+      std::wstring waddress = Util::ToWString(address);
+      mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), waddress.size());
 
       if (i == m_AddressListCurrentIndex)
       {
@@ -668,7 +670,8 @@ void Ui::DrawMessageList()
         wattron(m_MainWin, A_REVERSE);
       }
 
-      mvwprintw(m_MainWin, i - idxOffs, 0, "%s", header.c_str());
+      std::wstring wheader = Util::ToWString(header);
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
@@ -1016,7 +1019,8 @@ void Ui::DrawPartList()
           Util::TrimPadString(part.m_Filename, m_ScreenWidth - line.size());
         line = line + filenamePadded;
 
-        mvwprintw(m_MainWin, i - idxOffs, 0, "%s", line.c_str());
+        std::wstring wline = Util::ToWString(line);
+        mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(), wline.size());
         
         if (i == m_PartListCurrentIndex)
         {
