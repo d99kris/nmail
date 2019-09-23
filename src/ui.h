@@ -208,8 +208,11 @@ private:
   int m_KeySaveFile = 0;
   bool m_ShowProgress = false;
   
-  int m_DialogEntryStringPos = 0;
-  std::wstring m_DialogEntryString;
+  int m_FolderListFilterPos = 0;
+  std::wstring m_FolderListFilterStr;
+
+  int m_AddressListFilterPos = 0;
+  std::wstring m_AddressListFilterStr;
 
   int m_FilenameEntryStringPos = 0;
   std::wstring m_FilenameEntryString;

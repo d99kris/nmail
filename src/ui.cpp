@@ -255,12 +255,32 @@ void Ui::DrawDialog()
 
 void Ui::DrawSearchDialog()
 {
+  int filterPos = 0;
+  std::wstring filterStr;
+  
+  switch (m_State)
+  {
+    case StateGotoFolder:
+    case StateMoveToFolder:
+      filterPos = m_FolderListFilterPos;
+      filterStr = m_FolderListFilterStr;
+      break;
+
+    case StateAddressList:
+      filterPos = m_AddressListFilterPos;
+      filterStr = m_AddressListFilterStr;
+      break;
+
+    default:
+      break;
+  }
+  
   werase(m_DialogWin);
-  const std::string& dispStr = Util::ToString(m_DialogEntryString);
+  const std::string& dispStr = Util::ToString(filterStr);
   mvwprintw(m_DialogWin, 0, 0, "   Search: %s", dispStr.c_str());
 
   leaveok(m_DialogWin, false);
-  wmove(m_DialogWin, 0, 11 + m_DialogEntryStringPos);
+  wmove(m_DialogWin, 0, 11 + filterPos);
   wrefresh(m_DialogWin);
   leaveok(m_DialogWin, true);
 }
@@ -458,7 +478,7 @@ void Ui::DrawFolderList()
 
   std::set<std::string> folders;
 
-  if (m_DialogEntryString.empty())
+  if (m_FolderListFilterStr.empty())
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     folders = m_Folders;
@@ -468,7 +488,7 @@ void Ui::DrawFolderList()
     std::lock_guard<std::mutex> lock(m_Mutex);
     for (const auto& folder : m_Folders)
     {
-      if (Util::ToLower(folder).find(Util::ToLower(Util::ToString(m_DialogEntryString)))
+      if (Util::ToLower(folder).find(Util::ToLower(Util::ToString(m_FolderListFilterStr)))
           != std::string::npos)
       {
         folders.insert(folder);
@@ -527,7 +547,7 @@ void Ui::DrawAddressList()
 
   std::vector<std::string> addresses;
 
-  if (m_DialogEntryString.empty())
+  if (m_AddressListFilterStr.empty())
   {
     addresses = m_Addresses;
   }
@@ -535,7 +555,7 @@ void Ui::DrawAddressList()
   {
     for (const auto& address : m_Addresses)
     {
-      if (Util::ToLower(address).find(Util::ToLower(Util::ToString(m_DialogEntryString)))
+      if (Util::ToLower(address).find(Util::ToLower(Util::ToString(m_AddressListFilterStr)))
           != std::string::npos)
       {
         addresses.push_back(address);
@@ -1215,31 +1235,31 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   }
   else if (p_Key == KEY_LEFT)
   {
-    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos - 1,
-                                         (int)m_DialogEntryString.size());
+    m_FolderListFilterPos = Util::Bound(0, m_FolderListFilterPos - 1,
+                                        (int)m_FolderListFilterStr.size());
   }
   else if (p_Key == KEY_RIGHT)
   {
-    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos + 1,
-                                         (int)m_DialogEntryString.size());
+    m_FolderListFilterPos = Util::Bound(0, m_FolderListFilterPos + 1,
+                                        (int)m_FolderListFilterStr.size());
   }
   else if (p_Key == KEY_SYS_BACKSPACE)
   {
-    if (m_DialogEntryStringPos > 0)
+    if (m_FolderListFilterPos > 0)
     {
-      m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
+      m_FolderListFilterStr.erase(--m_FolderListFilterPos, 1);
     }
   }
   else if (p_Key == KEY_DC)
   {
-    if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+    if (m_FolderListFilterPos < (int)m_FolderListFilterStr.size())
     {
-      m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+      m_FolderListFilterStr.erase(m_FolderListFilterPos, 1);
     }
   }
   else if (IsValidTextKey(p_Key))
   {
-    m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, p_Key);
+    m_FolderListFilterStr.insert(m_FolderListFilterPos++, 1, p_Key);
   }
 
   DrawAll();
@@ -1287,31 +1307,31 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   }
   else if (p_Key == KEY_LEFT)
   {
-    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos - 1,
-                                         (int)m_DialogEntryString.size());
+    m_AddressListFilterPos = Util::Bound(0, m_AddressListFilterPos - 1,
+                                         (int)m_AddressListFilterStr.size());
   }
   else if (p_Key == KEY_RIGHT)
   {
-    m_DialogEntryStringPos = Util::Bound(0, m_DialogEntryStringPos + 1,
-                                         (int)m_DialogEntryString.size());
+    m_AddressListFilterPos = Util::Bound(0, m_AddressListFilterPos + 1,
+                                         (int)m_AddressListFilterStr.size());
   }
   else if (p_Key == KEY_SYS_BACKSPACE)
   {
-    if (m_DialogEntryStringPos > 0)
+    if (m_AddressListFilterPos > 0)
     {
-      m_DialogEntryString.erase(--m_DialogEntryStringPos, 1);
+      m_AddressListFilterStr.erase(--m_AddressListFilterPos, 1);
     }
   }
   else if (p_Key == KEY_DC)
   {
-    if (m_DialogEntryStringPos < (int)m_DialogEntryString.size())
+    if (m_AddressListFilterPos < (int)m_AddressListFilterStr.size())
     {
-      m_DialogEntryString.erase(m_DialogEntryStringPos, 1);
+      m_AddressListFilterStr.erase(m_AddressListFilterPos, 1);
     }
   }
   else if (IsValidTextKey(p_Key))
   {
-    m_DialogEntryString.insert(m_DialogEntryStringPos++, 1, p_Key);
+    m_AddressListFilterStr.insert(m_AddressListFilterPos++, 1, p_Key);
   }
 
   DrawAll();
@@ -1912,8 +1932,8 @@ void Ui::SetState(Ui::State p_State)
   if (m_State == StateGotoFolder)
   {
     curs_set(1);
-    m_DialogEntryStringPos = 0;
-    m_DialogEntryString.clear();
+    m_FolderListFilterPos = 0;
+    m_FolderListFilterStr.clear();
     m_FolderListCurrentFolder = m_CurrentFolder;
     m_FolderListCurrentIndex = INT_MAX;
   }
@@ -1922,8 +1942,8 @@ void Ui::SetState(Ui::State p_State)
     curs_set(1);
     if (!m_PersistFolderFilter)
     {
-      m_DialogEntryStringPos = 0;
-      m_DialogEntryString.clear();
+      m_FolderListFilterPos = 0;
+      m_FolderListFilterStr.clear();
       m_FolderListCurrentFolder = m_CurrentFolder;
       m_FolderListCurrentIndex = INT_MAX;
     }
@@ -2074,8 +2094,8 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateAddressList)
   {
     curs_set(1);
-    m_DialogEntryStringPos = 0;
-    m_DialogEntryString.clear();
+    m_AddressListFilterPos = 0;
+    m_AddressListFilterStr.clear();
     m_Addresses = AddressBook::Get();
     m_AddressListCurrentIndex = 0;
     m_AddressListCurrentAddress = "";
