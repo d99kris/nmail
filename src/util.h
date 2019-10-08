@@ -76,9 +76,6 @@ public:
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength);
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                             int p_Pos, int& p_WrapLine, int& p_WrapPos);
-  static std::vector<std::string> WordWrap(std::string p_Text, unsigned p_LineLength);
-  static std::vector<std::string> WordWrap(std::string p_Text, unsigned p_LineLength,
-                                           int p_Pos, int& p_WrapLine, int& p_WrapPos);
   static std::string GetPass();
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);
   static std::string Join(const std::vector<std::string>& p_Lines,
