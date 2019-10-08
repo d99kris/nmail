@@ -48,7 +48,7 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
 
 bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_Recipients)
 {
-  const bool enableSsl = true;
+  const bool enableSsl = (m_Port == 465);
   const bool enableTls = !enableSsl;
   const bool enableEsmtp = true;
   const bool enableLmtp = !enableEsmtp;
@@ -56,6 +56,8 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   mailsmtp *smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return false;
 
+  mailsmtp_set_logger(smtp, Logger, NULL);
+  
   int rv = MAILSMTP_NO_ERROR;
   if (enableSsl)
   {
@@ -95,13 +97,13 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
     {
       rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, hostname.c_str()));
     }
-    else if (enableEsmtp && (rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo(smtp)) == MAILSMTP_NO_ERROR))
+    else if (enableEsmtp && ((rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo(smtp))) == MAILSMTP_NO_ERROR))
     {
-      esmtpMode = 1;
+      esmtpMode = true;
     }
     else if (!enableEsmtp || rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
     {
-      rv = mailsmtp_helo(smtp);
+      rv = LOG_IF_SMTP_ERR(mailsmtp_helo(smtp));
     }
 
     if (rv != MAILSMTP_NO_ERROR) return false;
@@ -181,6 +183,8 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
 
   clist_free(recipients);
   mailsmtp_free(smtp);
+
+  LOG_DEBUG("send success");
 
   return true;
 }
@@ -487,4 +491,16 @@ std::string Smtp::MimeEncodeStr(const std::string &p_In)
     std::string("?=");
   mmap_string_free(mmstr);
   return out;
+}
+
+void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
+                  void* p_UserData)
+{
+  (void)p_Smtp;
+  (void)p_UserData;
+  char* buffer = (char*)malloc(p_Size + 1);
+  memcpy(buffer, p_Buffer, p_Size);
+  buffer[p_Size] = 0;
+  LOG_DEBUG("smtp %i: %s", p_LogType, buffer);
+  free(buffer);
 }

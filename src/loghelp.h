@@ -36,6 +36,10 @@ static inline int LogImapHelper(int p_Rv, const char* p_Expr, const char* p_File
   {
     Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
   }
+  else
+  {
+    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+  }
 
   return p_Rv;
 }
@@ -46,6 +50,10 @@ static inline int LogImapLogoutHelper(int p_Rv, const char* p_Expr, const char* 
   if ((p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED) && (p_Rv != MAILIMAP_ERROR_STREAM))
   {
     Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+  }
+  else
+  {
+    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
   }
 
   return p_Rv;
@@ -62,6 +70,10 @@ static inline T LogIfNotEqual(T p_Rv, typename identity<T>::type p_Expect, const
   {
     Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
   }
+  else
+  {
+    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+  }
 
   return p_Rv;
 }
@@ -73,6 +85,10 @@ static inline T LogIfEqual(T p_Rv, typename identity<T>::type p_Expect, const ch
   if (p_Rv == p_Expect)
   {
     Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+  }
+  else
+  {
+    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
   }
 
   return p_Rv;

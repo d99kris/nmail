@@ -327,7 +327,7 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config)
   p_Config->Set("imap_host", "imap-mail.outlook.com");
   p_Config->Set("imap_port", "993");
   p_Config->Set("smtp_host", "smtp-mail.outlook.com");
-  p_Config->Set("smtp_port", "465");
+  p_Config->Set("smtp_port", "587");
   p_Config->Set("inbox", "Inbox");  
   p_Config->Set("trash", "Deleted");  
 }
