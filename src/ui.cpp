@@ -868,14 +868,16 @@ void Ui::DrawMessage()
       Body& body = bodyIt->second;
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       const std::string text = headerText + bodyText;
-      const std::vector<std::string>& lines = Util::WordWrap(text, m_ScreenWidth);
-      int countLines = lines.size();
+      const std::wstring wtext = Util::ToWString(text);
+      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_ScreenWidth);
+      int countLines = wlines.size();
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
                                             countLines - m_MainWinHeight);
       for (int i = 0; ((i < m_MainWinHeight) && (i < countLines)); ++i)
       {
-        const std::string& dispStr = lines.at(i + m_MessageViewLineOffset);
+        const std::wstring& wdispStr = wlines.at(i + m_MessageViewLineOffset);
+        const std::string& dispStr = Util::ToString(wdispStr);
         mvwprintw(m_MainWin, i, 0, "%s", dispStr.c_str());
       }
 

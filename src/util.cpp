@@ -326,19 +326,35 @@ std::string Util::GetHostname()
 std::string Util::ToString(const std::wstring& p_WStr)
 {
   size_t len = std::wcstombs(nullptr, p_WStr.c_str(), 0);
-  std::vector<char> cstr(len + 1);
-  std::wcstombs(&cstr[0], p_WStr.c_str(), len);
-  std::string str(&cstr[0], len);
-  return str;
+  if (len != static_cast<std::size_t>(-1))
+  {  
+    std::vector<char> cstr(len + 1);
+    std::wcstombs(&cstr[0], p_WStr.c_str(), len);
+    std::string str(&cstr[0], len);
+    return str;
+  }
+  else
+  {
+    std::string str = std::string(p_WStr.begin(), p_WStr.end());
+    return str;
+  }
 }
 
 std::wstring Util::ToWString(const std::string& p_Str)
 {
   size_t len = mbstowcs(nullptr, p_Str.c_str(), 0);
-  std::vector<wchar_t> wcstr(len + 1);
-  std::mbstowcs(&wcstr[0], p_Str.c_str(), len);
-  std::wstring wstr(&wcstr[0], len);
-  return wstr;
+  if (len != static_cast<std::size_t>(-1))
+  {
+    std::vector<wchar_t> wcstr(len + 1);
+    std::mbstowcs(&wcstr[0], p_Str.c_str(), len);
+    std::wstring wstr(&wcstr[0], len);
+    return wstr;
+  }
+  else
+  {
+    std::wstring wstr = std::wstring(p_Str.begin(), p_Str.end());
+    return wstr;
+  }
 }
 
 std::string Util::TrimPadString(const std::string &p_Str, size_t p_Len)
@@ -617,80 +633,6 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
             breakAt = p_LineLength;
           }
           
-          lines.push_back(linePart.substr(0, breakAt));
-          if (linePart.size() > (breakAt + 1))
-          {
-            linePart = linePart.substr(breakAt + 1);
-          }
-          else
-          {
-            linePart.clear();
-          }
-        }
-        else
-        {
-          lines.push_back(linePart);
-          linePart.clear();
-          break;
-        }
-      }
-    }
-  }
-
-  for (auto& line : lines)
-  {
-    if (p_Pos > 0)
-    {
-      int lineLength = line.size() + 1;
-      if (lineLength <= p_Pos)
-      {
-        p_Pos -= lineLength;
-        ++p_WrapLine;
-      }
-      else
-      {
-        p_WrapPos = p_Pos;
-        p_Pos = 0;
-      }
-    }
-  }
-
-  return lines;
-}
-
-std::vector<std::string> Util::WordWrap(std::string p_Text, unsigned p_LineLength)
-{
-  int pos = 0;
-  int wrapLine = 0;
-  int wrapPos = 0;
-  return WordWrap(p_Text, p_LineLength, pos, wrapLine, wrapPos);
-}
-
-std::vector<std::string> Util::WordWrap(std::string p_Text, unsigned p_LineLength, int p_Pos,
-                                        int &p_WrapLine, int &p_WrapPos)
-{
-  std::ostringstream wrapped;
-  std::vector<std::string> lines;
-
-  p_WrapLine = 0;
-  p_WrapPos = 0;
-
-  {
-    std::string line;
-    std::istringstream textss(p_Text);
-    while (std::getline(textss, line))
-    {
-      std::string linePart = line;
-      while (true)
-      {
-        if (linePart.size() >= p_LineLength)
-        {
-          size_t breakAt = linePart.rfind(' ', p_LineLength);
-          if (breakAt == std::string::npos)
-          {
-            breakAt = p_LineLength;
-          }
-
           lines.push_back(linePart.substr(0, breakAt));
           if (linePart.size() > (breakAt + 1))
           {
