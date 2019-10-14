@@ -641,12 +641,13 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
     for (auto& uid : p_Uids)
     {
       uids.erase(uid);
+
+      Util::DeleteFile(GetBodyCachePath(p_Folder, uid));
+      Util::DeleteFile(GetHeaderCachePath(p_Folder, uid));
     }
     
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(uids));
   }
-  
-  // @todo: delete cached message from source folder
 
   return (rv == MAILIMAP_NO_ERROR);
 }
