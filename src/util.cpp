@@ -627,20 +627,30 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
       {
         if (linePart.size() >= p_LineLength)
         {
-          size_t breakAt = linePart.rfind(L' ', p_LineLength);
-          if (breakAt == std::wstring::npos)
+          size_t spacePos = linePart.rfind(L' ', p_LineLength);
+          if (spacePos != std::wstring::npos)
           {
-            breakAt = p_LineLength;
-          }
-          
-          lines.push_back(linePart.substr(0, breakAt));
-          if (linePart.size() > (breakAt + 1))
-          {
-            linePart = linePart.substr(breakAt + 1);
+            lines.push_back(linePart.substr(0, spacePos));
+            if (linePart.size() > (spacePos + 1))
+            {
+              linePart = linePart.substr(spacePos + 1);
+            }
+            else
+            {
+              linePart.clear();
+            }
           }
           else
           {
-            linePart.clear();
+            lines.push_back(linePart.substr(0, p_LineLength));
+            if (linePart.size() > p_LineLength)
+            {
+              linePart = linePart.substr(p_LineLength);
+            }
+            else
+            {
+              linePart.clear();
+            }
           }
         }
         else
@@ -657,7 +667,7 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
   {
     if (p_Pos > 0)
     {
-      int lineLength = line.size() + 1;
+      int lineLength = (line.size() < p_LineLength) ? (line.size() + 1) : line.size();
       if (lineLength <= p_Pos)
       {
         p_Pos -= lineLength;
