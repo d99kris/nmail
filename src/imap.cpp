@@ -146,6 +146,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   if (SelectedFolderIsEmpty())
   {
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
+    DeleteCacheExceptUids(p_Folder, p_Uids);
     return true;
   }
 
@@ -176,21 +177,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
     mailimap_fetch_list_free(fetch_result);
 
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
-
-    const std::vector<std::string>& cacheFiles = Util::ListDir(GetFolderCacheDir(p_Folder));
-    for (auto& cacheFile : cacheFiles)
-    {
-      const std::string& fileName = Util::RemoveFileExt(Util::BaseName(cacheFile));
-      if (Util::IsInteger(fileName))
-      {
-        uint32_t uid = Util::ToInteger(fileName);
-        if (p_Uids.find(uid) == p_Uids.end())
-        {
-          const std::string& filePath = GetFolderCacheDir(p_Folder) + cacheFile;
-          Util::DeleteFile(filePath);
-        }
-      }
-    }
+    DeleteCacheExceptUids(p_Folder, p_Uids);
   }
 
   mailimap_fetch_type_free(fetch_type);
@@ -842,4 +829,22 @@ void Imap::WriteCacheFile(const std::string &p_Path, const std::string &p_Str)
   {
     Util::WriteFile(p_Path, p_Str);
   }
+}
+
+void Imap::DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  const std::vector<std::string>& cacheFiles = Util::ListDir(GetFolderCacheDir(p_Folder));
+  for (auto& cacheFile : cacheFiles)
+  {
+    const std::string& fileName = Util::RemoveFileExt(Util::BaseName(cacheFile));
+    if (Util::IsInteger(fileName))
+    {
+      uint32_t uid = Util::ToInteger(fileName);
+      if (p_Uids.find(uid) == p_Uids.end())
+      {
+        const std::string& filePath = GetFolderCacheDir(p_Folder) + cacheFile;
+        Util::DeleteFile(filePath);
+      }
+    }
+  }  
 }

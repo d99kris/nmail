@@ -68,6 +68,8 @@ private:
   std::string ReadCacheFile(const std::string& p_Path);
   void WriteCacheFile(const std::string& p_Path, const std::string& p_Str);
 
+  void DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids);
+
 private:
   std::string m_User;
   std::string m_Pass;
