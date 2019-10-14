@@ -286,6 +286,12 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
           }
         }
 
+        if (uid == 0)
+        {
+          LOG_WARNING("skip header uid = %d", uid);
+          continue;
+        }
+        
         p_Headers[uid] = header;
 
         WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
@@ -380,6 +386,12 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
             uid = item->att_data.att_static->att_data.att_uid;
           }
         }
+      }
+
+      if (uid == 0)
+      {
+        LOG_WARNING("skip flag uid = %d", uid);
+        continue;
       }
 
       p_Flags[uid] = flag;
@@ -489,6 +501,12 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
               uid = item->att_data.att_static->att_data.att_uid;
             }
           }
+        }
+
+        if (uid == 0)
+        {
+          LOG_WARNING("skip body uid = %d", uid);
+          continue;
         }
 
         p_Bodys[uid] = body;
