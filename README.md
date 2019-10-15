@@ -13,7 +13,7 @@ similar to alpine / pine.
 Features
 --------
 - Support for IMAP and SMTP protocols
-- Local cache using AES256-encrypted custom mailbox format
+- Local cache using AES256-encrypted custom Maildir format
 - Multi-threaded (email fetch and send done in background)
 - Address book auto-generated based on email messages
 - Viewing HTML emails
