@@ -2610,7 +2610,7 @@ void Ui::AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header
     const std::string& date = m_Headers[p_Folder][uid].GetDate();
     std::string dateUid = date + std::to_string(uid);
 
-    if (date.empty() || (uid == 0))
+    if (uid == 0)
     {
       LOG_WARNING("skip add date = %s, uid = %d pair", date.c_str(), uid);
       continue;
@@ -2637,7 +2637,7 @@ void Ui::RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_
     const std::string& date = m_Headers[p_Folder][uid].GetDate();
     std::string dateUid = date + std::to_string(uid);
 
-    if (date.empty() || (uid == 0))
+    if (uid == 0)
     {
       LOG_WARNING("skip del date = %s, uid = %d pair", date.c_str(), uid);
       continue;
