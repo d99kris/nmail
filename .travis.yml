@@ -7,17 +7,23 @@ compiler:
 dist:
   - bionic
 
-matrix:
-  include:
-    - os: linux
-      install:
-        - sudo apt update
-        - sudo apt install -y libssl-dev libncurses5-dev libetpan-dev
-        - lsb_release -a
-    - os: osx
-      install:
-        - brew update && brew bundle
-        - sw_vers
+osx_image:
+  - xcode11
+
+addons:
+  apt:
+    packages:
+      - cmake
+      - libssl-dev
+      - libreadline-dev
+      - libncurses5-dev
+      - libetpan-dev
+  homebrew:
+    packages:
+      - cmake
+      - openssl
+      - ncurses
+      - libetpan
 
 script:
   - mkdir -p build
