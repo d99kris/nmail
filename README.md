@@ -10,6 +10,28 @@ similar to alpine / pine.
 
 ![screenshot](/doc/screenshot.png) 
 
+Features
+--------
+- Support for IMAP and SMTP protocols
+- Local cache using AES256-encrypted custom mailbox format
+- Multi-threaded (email fetch and send done in background)
+- Address book auto-generated based on email messages
+- Viewing HTML emails
+- Opening/viewing attachments in external program
+- Simple setup wizard for GMail and Outlook/Hotmail
+- Familiar UI for alpine / pine users
+
+Planned features
+----------------
+- Compose message using external editor
+- Draft or dead.letter support
+- Email search
+
+Not planned
+-----------
+- Threaded view
+- Special handling for GMail labels
+
 
 Usage
 =====
