@@ -1182,7 +1182,15 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   {
     m_FolderListCurrentIndex = m_FolderListCurrentIndex + m_MainWinHeight;
   }
-  else if (p_Key == KEY_RETURN)
+  else if (p_Key == KEY_HOME)
+  {
+    m_FolderListCurrentIndex = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_FolderListCurrentIndex = std::numeric_limits<int>::max();
+  }
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
   {
     if (m_State == StateGotoFolder)
     {
@@ -1289,7 +1297,15 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   {
     m_AddressListCurrentIndex = m_AddressListCurrentIndex + m_MainWinHeight;
   }
-  else if (p_Key == KEY_RETURN)
+  else if (p_Key == KEY_HOME)
+  {
+    m_AddressListCurrentIndex = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_AddressListCurrentIndex = std::numeric_limits<int>::max();
+  }
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
   {
     std::wstring address;
     const std::string& oldAddress =
@@ -1379,7 +1395,17 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
+  else if (p_Key == KEY_HOME)
+  {
+    m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_MessageListCurrentIndex[m_CurrentFolder] = std::numeric_limits<int>::max();
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+  }
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen))
   {
     if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
     {
@@ -1548,6 +1574,14 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     m_MessageViewLineOffset = m_MessageViewLineOffset + m_MainWinHeight;
   }
+  else if (p_Key == KEY_HOME)
+  {
+    m_MessageViewLineOffset = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_MessageViewLineOffset = std::numeric_limits<int>::max();
+  }
   else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
   {
     SetState(StateViewMessageList);
@@ -1682,7 +1716,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                        (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
     }
-    else if ((p_Key == KEY_DOWN) || (p_Key == KEY_RETURN) || (p_Key == KEY_TAB))
+    else if ((p_Key == KEY_DOWN) || (p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == KEY_TAB))
     {
       if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
       {
@@ -1848,11 +1882,19 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     m_PartListCurrentIndex = m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
   }
+  else if (p_Key == KEY_HOME)
+  {
+    m_PartListCurrentIndex = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_PartListCurrentIndex = std::numeric_limits<int>::max();
+  }
   else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
   {
     SetState(StateViewMessage);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == m_KeyOpen))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen))
   {
     std::string ext;
     std::string err;
@@ -2796,7 +2838,7 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
       rv = false;
       break;
     }
-    else if (key == KEY_RETURN)
+    else if ((key == KEY_RETURN) || (key == KEY_ENTER))
     {
       p_Entry = Util::ToString(m_FilenameEntryString);
       rv = true;
@@ -2813,7 +2855,8 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
                                            (int)m_FilenameEntryString.size());
     }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
-             (key == KEY_PPAGE) || (key == KEY_NPAGE))
+             (key == KEY_PPAGE) || (key == KEY_NPAGE) ||
+             (key == KEY_HOME) || (key == KEY_END))
     {
       // ignore
     }
