@@ -4,6 +4,10 @@ language:
 compiler:
   - clang
 
+os:
+  - linux
+  - osx
+
 dist:
   - bionic
 
