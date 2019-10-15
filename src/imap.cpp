@@ -846,5 +846,20 @@ void Imap::DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uin
         Util::DeleteFile(filePath);
       }
     }
-  }  
+  }
+
+  std::map<uint32_t, uint32_t> flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+  for (auto flag = flags.begin(); flag != flags.end(); /* increment in loop */)
+  {
+    uint32_t uid = flag->first;
+    if (p_Uids.find(uid) == p_Uids.end())
+    {
+      flag = flags.erase(flag);
+    }
+    else
+    {
+      ++flag;
+    }
+  }
+  WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(flags));
 }
