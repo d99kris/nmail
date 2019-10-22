@@ -53,6 +53,7 @@ void Ui::Init()
     {"persist_folder_filter", "1"},
     {"plain_text", "1"},
     {"show_progress", "1"},
+    {"new_msg_bell", "1"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -99,6 +100,7 @@ void Ui::Init()
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
+  m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
 }
 
 void Ui::Cleanup()
@@ -2170,6 +2172,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
+      size_t orgNewUidsSize = m_NewUids[p_Response.m_Folder].size();
       if (m_Uids[p_Response.m_Folder].empty())
       {
         m_NewUids[p_Response.m_Folder] = p_Response.m_Uids;
@@ -2184,6 +2187,16 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           {
             newUids.insert(uid);
           }
+        }
+      }
+
+      if (!p_Response.m_Cached && (p_Response.m_Folder == m_Inbox) &&
+          (m_NewUids[p_Response.m_Folder].size() > orgNewUidsSize))
+      {
+        if (m_NewMsgBell)
+        {
+          LOG_DEBUG("bell");
+          beep();
         }
       }
 

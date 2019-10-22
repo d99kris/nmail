@@ -207,6 +207,7 @@ private:
   int m_KeyAddressBook = 0;
   int m_KeySaveFile = 0;
   bool m_ShowProgress = false;
+  bool m_NewMsgBell = false;
   
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

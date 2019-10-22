@@ -392,6 +392,7 @@ void ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_C
   Response response;
   
   response.m_Folder = p_Request.m_Folder;
+  response.m_Cached = p_Cached;
   if (p_Request.m_GetFolders)
   {
     const bool rv = m_Imap.GetFolders(p_Cached, response.m_Folders);

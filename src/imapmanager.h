@@ -52,6 +52,7 @@ public:
   {
     uint32_t m_ResponseStatus = ResponseStatusOk;
     std::string m_Folder;
+    bool m_Cached = false;
     std::set<std::string> m_Folders;
     std::set<uint32_t> m_Uids;
     std::map<uint32_t, Header> m_Headers;
