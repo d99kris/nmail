@@ -211,6 +211,18 @@ Verbose logging can also be enabled by setting `verbose_logging=1` in
 `~/.nmail/main.conf`.
 
 
+Email List
+==========
+An email list is available for users to discuss nmail usage and related topics.
+Feel free to [subscribe](http://www.freelists.org/list/nmail-users) and send
+messages to [nmail-users@freelists.org](mailto:nmail-users@freelists.org).
+
+Bug reports, feature requests and usage questions directed at the nmail
+maintainer(s) should however be reported using
+[Github issues](https://github.com/d99kris/nmail/issues/new) to ensure they
+are properly tracked and get addressed.
+
+
 Security
 ========
 
