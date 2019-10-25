@@ -29,8 +29,9 @@ Planned features
 
 Not planned
 -----------
-- Threaded view
+- Multiple email accounts in a single session
 - Special handling for GMail labels
+- Threaded view
 
 
 Usage
@@ -182,6 +183,19 @@ The field `pass` shall be left empty. The next time nmail is started it will
 prompt for password. If having configured nmail to save the password
 `save_pass=1` the field `pass` will be automatically populated with the
 password encrypted (refer to Security section below for details).
+
+
+Multiple Email Accounts
+=======================
+
+nmail does currently not support multiple email accounts (in a single session).
+It is however possible to run multiple nmail instances in parallel with
+different config directories (and thus different email accounts), but it will
+be just that - multiple instances - each in its own terminal. To facilitate
+such usage one can set up aliases for accessing different accounts, e.g.:
+
+    alias gm='nmail -d ${HOME}/.nmail-gm' # gmail
+    alias hm='nmail -d ${HOME}/.nmail-hm' # hotmail
 
 
 Pre-fetching
