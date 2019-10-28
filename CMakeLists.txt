@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "0.88" LANGUAGES CXX)
+project(nmail VERSION "0.89" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -43,6 +43,8 @@ add_executable(nmail
   src/imap.h
   src/imapmanager.cpp
   src/imapmanager.h
+  src/lockfile.cpp
+  src/lockfile.h
   src/log.cpp
   src/log.h
   src/main.cpp

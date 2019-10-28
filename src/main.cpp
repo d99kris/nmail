@@ -14,6 +14,7 @@
 #include "aes.h"
 #include "config.h"
 #include "imapmanager.h"
+#include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
 #include "serialized.h"
@@ -82,6 +83,15 @@ int main(int argc, char* argv[])
   if (!apathy::Path(Util::GetApplicationDir()).exists())
   {
     apathy::Path::makedirs(Util::GetApplicationDir());
+  }
+
+  DirLock dirLock(Util::GetApplicationDir());
+  if (!dirLock.IsLocked())
+  {
+    std::cout <<
+      "error: unable to acquire lock for " << Util::GetApplicationDir() << "\n" <<
+      "       only one nmail session per account/confdir is supported.\n";
+    return 1;
   }
 
   const std::string& logPath = Util::GetApplicationDir() + std::string("log.txt");
