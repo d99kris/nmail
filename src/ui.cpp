@@ -2370,7 +2370,6 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
 
       if (address == m_Address)
       {
-        sleep(1);
         InvalidateUiCache(m_Inbox);
         AsyncUiRequest(UiRequestDrawAll);
         break;
@@ -2907,11 +2906,8 @@ bool Ui::CurrentMessageBodyAvailable()
 
 void Ui::InvalidateUiCache(const std::string& p_Folder)
 {
-  m_HasRequestedUids[p_Folder] = false;
-
   std::lock_guard<std::mutex> lock(m_Mutex);
-  std::map<uint32_t, uint32_t>& flags = m_Flags[p_Folder];
-  flags.clear();
+  m_HasRequestedUids[p_Folder] = false;
   std::set<uint32_t>& requestedFlags = m_RequestedFlags[p_Folder];
   requestedFlags.clear();
 }

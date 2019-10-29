@@ -278,6 +278,12 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
           LOG_WARNING("skip header uid = %d", uid);
           continue;
         }
+
+        if (header.GetData().empty())
+        {
+          LOG_WARNING("skip header = \"\"");
+          continue;
+        }
         
         p_Headers[uid] = header;
 
@@ -342,7 +348,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
       {
         struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
 
-        if (item->att_type==MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
+        if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
         {
           if (item->att_data.att_dyn->att_list != NULL)
           {
@@ -493,6 +499,12 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
         if (uid == 0)
         {
           LOG_WARNING("skip body uid = %d", uid);
+          continue;
+        }
+
+        if (body.GetData().empty())
+        {
+          LOG_WARNING("skip body = \"\"");
           continue;
         }
 
