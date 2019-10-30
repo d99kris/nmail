@@ -27,16 +27,16 @@ std::string Header::GetData() const
   return m_Data;
 }
 
-std::string Header::GetDate()
+std::string Header::GetDateTime()
 {
   Parse();
-  return m_Date;
+  return m_DateTime;
 }
 
-std::string Header::GetShortDate()
+std::string Header::GetDateOrTime(const std::string& p_CurrentDate)
 {
   Parse();
-  return m_ShortDate;
+  return (m_Date == p_CurrentDate) ? m_Time : m_Date;
 }
 
 std::string Header::GetFrom()
@@ -87,6 +87,15 @@ std::set<std::string> Header::GetAddresses()
   return m_Addresses;;
 }
 
+std::string Header::GetCurrentDate()
+{
+  time_t nowtime = time(NULL);
+  struct tm* nowtimeinfo = localtime(&nowtime);
+  char nowdatestr[64];
+  strftime(nowdatestr, sizeof(nowdatestr), "%Y-%m-%d", nowtimeinfo);
+  return std::string(nowdatestr);
+}
+
 void Header::Parse()
 {
   if (!m_Parsed)
@@ -124,17 +133,9 @@ void Header::Parse()
                     strftime(sentdatestr, sizeof(sentdatestr), "%Y-%m-%d", timeinfo);
                     std::string sentdate(sentdatestr);
 
-                    time_t nowtime = time(NULL);
-                    struct tm* nowtimeinfo = localtime(&nowtime);
-                    char nowdatestr[64];
-                    strftime(nowdatestr, sizeof(nowdatestr), "%Y-%m-%d", nowtimeinfo);
-                    std::string nowdate(nowdatestr);
-
-                    std::string fulltimestr = sentdate + std::string(" ") + senttime;
-                    std::string shorttimestr = (sentdate == nowdate) ? senttime : sentdate;
-
-                    m_Date = fulltimestr;
-                    m_ShortDate = shorttimestr;
+                    m_Date = sentdate;
+                    m_DateTime = sentdate + std::string(" ") + senttime;
+                    m_Time = senttime;
                   }
                   break;
 
@@ -173,7 +174,7 @@ void Header::Parse()
               }
             }
 
-            m_UniqueId = Util::SHA256(m_From + m_Date + m_MessageId);
+            m_UniqueId = Util::SHA256(m_From + m_DateTime + m_MessageId);
           }
         }
       }

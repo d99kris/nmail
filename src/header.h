@@ -16,8 +16,8 @@ class Header
 public:
   void SetData(const std::string& p_Data);
   std::string GetData() const;
-  std::string GetDate();
-  std::string GetShortDate();
+  std::string GetDateTime();
+  std::string GetDateOrTime(const std::string& p_CurrentDate);
   std::string GetFrom();
   std::string GetShortFrom();
   std::string GetTo();
@@ -26,6 +26,8 @@ public:
   std::string GetUniqueId();
   std::string GetMessageId();
   std::set<std::string> GetAddresses();
+
+  static std::string GetCurrentDate();
 
 private:
   void Parse();
@@ -43,7 +45,8 @@ private:
 
   bool m_Parsed = false;
   std::string m_Date;
-  std::string m_ShortDate;
+  std::string m_DateTime;
+  std::string m_Time;
   std::string m_From;
   std::string m_ShortFrom;
   std::string m_To;

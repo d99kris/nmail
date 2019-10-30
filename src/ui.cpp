@@ -314,6 +314,11 @@ void Ui::SetDialogMessage(const std::string &p_DialogMessage)
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_DialogMessage = p_DialogMessage;
   m_DialogMessageTime = std::chrono::system_clock::now();
+  if (!p_DialogMessage.empty())
+  {
+    const std::string& logMessage = Util::ToLower(p_DialogMessage);
+    LOG_DEBUG("%s", logMessage.c_str());
+  }
 }
 
 void Ui::DrawHelp()
@@ -656,6 +661,8 @@ void Ui::DrawMessageList()
                               std::max(0, (int)msgDateUids.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgDateUids.size());
 
+    const std::string& currentDate = Header::GetCurrentDate();
+
     werase(m_MainWin);
 
     for (int i = idxOffs; i < idxMax; ++i)
@@ -674,7 +681,7 @@ void Ui::DrawMessageList()
       if (headers.find(uid) != headers.end())
       {
         Header& header = headers.at(uid);
-        shortDate = header.GetShortDate();
+        shortDate = header.GetDateOrTime(currentDate);
         shortFrom = header.GetShortFrom();
         subject = header.GetSubject();
       }
@@ -829,7 +836,7 @@ void Ui::DrawMessage()
     if (headerIt != headers.end())
     {
       Header& header = headerIt->second;
-      ss << "Date: " << header.GetDate() << "\n";
+      ss << "Date: " << header.GetDateTime() << "\n";
       ss << "From: " << header.GetFrom() << "\n";
       ss << "To: " << header.GetTo() << "\n";
       if (!header.GetCc().empty())
@@ -1074,6 +1081,7 @@ void Ui::Run()
 {
   DrawAll();
   m_Running = true;
+  int64_t uiIdleTime = 0;
   LOG_DEBUG("entering loop");
 
   while (m_Running)
@@ -1083,10 +1091,21 @@ void Ui::Run()
     FD_SET(STDIN_FILENO, &fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = std::max(STDIN_FILENO, m_Pipe[0]);
-    struct timeval tv = {1, 0};
+    struct timeval tv = {1, 0}; // uiIdleTime logic below is dependent on timeout value
     int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
-    if (rv == 0) continue;
+    if (rv == 0)
+    {
+      if (++uiIdleTime >= 600) // ui idle refresh every 10 minutes
+      {
+        PerformUiRequest(UiRequestDrawAll);
+        uiIdleTime = 0;
+      }
+      
+      continue;
+    }
+
+    uiIdleTime = 0;
 
     if (FD_ISSET(STDIN_FILENO, &fds))
     {
@@ -2043,7 +2062,7 @@ void Ui::SetState(Ui::State p_State)
       Body& body = bit->second;
 
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
-      m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDate() + " " +
+      m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
                                             header.GetFrom() +
                                             " wrote:\n\n" +
                                             Util::AddIndent(bodyText, "> "));
@@ -2119,7 +2138,7 @@ void Ui::SetState(Ui::State p_State)
       m_ComposeMessageStr =
         Util::ToWString("\n\n---------- Forwarded message ---------\n"
                         "From: " + header.GetFrom() + "\n"
-                        "Date: " + header.GetDate() + "\n"
+                        "Date: " + header.GetDateTime() + "\n"
                         "Subject: " + header.GetSubject() + "\n"
                         "To: " + header.GetTo() + "\n");
       if (!header.GetCc().empty())
@@ -2661,7 +2680,7 @@ void Ui::AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header
   for (auto it = p_UidHeaders.begin(); it != p_UidHeaders.end(); ++it)
   {
     const uint32_t uid = it->first;
-    const std::string& date = m_Headers[p_Folder][uid].GetDate();
+    const std::string& date = m_Headers[p_Folder][uid].GetDateTime();
     std::string dateUid = date + std::to_string(uid);
 
     if (uid == 0)
@@ -2688,7 +2707,7 @@ void Ui::RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_
   for (auto it = p_Uids.begin(); it != p_Uids.end(); ++it)
   {
     const uint32_t uid = *it;
-    const std::string& date = m_Headers[p_Folder][uid].GetDate();
+    const std::string& date = m_Headers[p_Folder][uid].GetDateTime();
     std::string dateUid = date + std::to_string(uid);
 
     if (uid == 0)
