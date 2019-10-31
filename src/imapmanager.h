@@ -88,11 +88,11 @@ public:
   void SetCurrentFolder(const std::string& p_Folder);
   
 private:
-  void ProcessIdle();
+  bool ProcessIdle();
   void Process();
   void CacheProcess();
-  void PerformRequest(const Request& p_Request, bool p_Cached);
-  void PerformAction(const Action& p_Action);
+  bool PerformRequest(const Request& p_Request, bool p_Cached);
+  bool PerformAction(const Action& p_Action);
   void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
   void ClearStatus(uint32_t p_Flags);
 

@@ -31,7 +31,11 @@ Imap::Imap(const std::string &p_User, const std::string &p_Pass, const std::stri
 
 Imap::~Imap()
 {
-  mailimap_free(m_Imap);
+  if (m_Imap != NULL)
+  {
+    mailimap_free(m_Imap);
+    m_Imap = NULL;
+  }
 }
 
 bool Imap::Login()
@@ -656,6 +660,13 @@ bool Imap::DeleteMessages(const std::string &p_Folder, const std::set<uint32_t> 
   bool rv = true;
   rv &= SetFlagDeleted(p_Folder, p_Uids, true);
   rv &= (LOG_IF_IMAP_ERR(mailimap_expunge(m_Imap)) == MAILIMAP_NO_ERROR);
+  return rv;
+}
+
+bool Imap::CheckConnection()
+{
+  bool rv = true;
+  rv &= (LOG_IF_IMAP_ERR(mailimap_noop(m_Imap)) == MAILIMAP_NO_ERROR);
   return rv;
 }
 

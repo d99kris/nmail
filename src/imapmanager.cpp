@@ -155,11 +155,13 @@ void ImapManager::SetCurrentFolder(const std::string& p_Folder)
   m_Mutex.unlock();
 }
 
-void ImapManager::ProcessIdle()
+bool ImapManager::ProcessIdle()
 {
   m_Mutex.lock();
   const std::string currentFolder = m_CurrentFolder;
   m_Mutex.unlock();
+
+  bool rv = true;
 
   if (true)
   {
@@ -167,16 +169,25 @@ void ImapManager::ProcessIdle()
     ImapManager::Request request;
     request.m_Folder = currentFolder;
     request.m_GetUids = true;
-    PerformRequest(request, false);
+    rv = PerformRequest(request, false);
+
+    if (!rv)
+    {
+      return rv;
+    }
   }
 
-  int rv = 0;
+  int selrv = 0;
 
   LOG_DEBUG("entering idle");
-  while (m_Running && (rv == 0))
+  while (m_Running && (selrv == 0))
   {
     int idlefd = m_Imap.IdleStart(currentFolder);
-    if (idlefd == -1) break;
+    if (idlefd == -1)
+    {
+      rv = false;
+      break;
+    }
 
     SetStatus(Status::FlagIdle);
 
@@ -186,12 +197,12 @@ void ImapManager::ProcessIdle()
     FD_SET(idlefd, &fds);
     int maxfd = std::max(m_Pipe[0], idlefd);
     struct timeval idletv = {(29 * 60), 0};
-    rv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
+    selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
 
     m_Imap.IdleDone();
     ClearStatus(Status::FlagIdle);
     
-    if ((rv != 0) && FD_ISSET(idlefd, &fds))
+    if ((selrv != 0) && FD_ISSET(idlefd, &fds))
     {
       LOG_DEBUG("idle notification");
 
@@ -210,16 +221,20 @@ void ImapManager::ProcessIdle()
   }
 
   LOG_DEBUG("exiting idle");
+
+  return rv;
 }
 
 void ImapManager::Process()
 {
   if (m_Connect)
   {
-    bool connected = m_Imap.Login();
-    m_Connecting = false;
-    ClearStatus(Status::FlagConnecting);
-    SetStatus(connected ? Status::FlagConnected : Status::FlagOffline);
+    if (m_Imap.Login())
+    {
+      m_Connecting = false;
+      SetStatus(Status::FlagConnected);
+      ClearStatus(Status::FlagConnecting);
+    }
   }
 
   LOG_DEBUG("entering loop");
@@ -230,11 +245,12 @@ void ImapManager::Process()
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
     struct timeval tv = {60, 0};
-    int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+    int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+    bool rv = true;
 
-    if ((rv == 0) && m_Imap.GetConnected())
+    if ((selrv == 0) && m_Imap.GetConnected())
     {
-      ProcessIdle();
+      rv &= ProcessIdle();
     }
     else if (FD_ISSET(m_Pipe[0], &fds))
     {
@@ -258,7 +274,7 @@ void ImapManager::Process()
           m_Actions.pop_front();
           m_QueueMutex.unlock();
 
-          PerformAction(action);
+          rv &= PerformAction(action);
 
           m_QueueMutex.lock();
         }
@@ -276,7 +292,7 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagFetching, progress);
 
-          PerformRequest(request, false);
+          rv &= PerformRequest(request, false);
 
           m_QueueMutex.lock();
 
@@ -303,7 +319,7 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagPrefetching, progress);
 
-          PerformRequest(request, false);
+          rv &= PerformRequest(request, false);
 
           m_QueueMutex.lock();
 
@@ -321,6 +337,42 @@ void ImapManager::Process()
       m_PrefetchRequestsDone = 0;
 
       m_QueueMutex.unlock();
+    }
+
+    if (!rv)
+    {
+      LOG_DEBUG("checking connectivity");
+
+      if (!m_Imap.CheckConnection())
+      {
+        m_Connecting = true;
+        SetStatus(Status::FlagConnecting);
+        ClearStatus(Status::FlagConnected);
+        LOG_WARNING("connection lost");
+
+        m_Imap.Logout();
+        bool connected = false;
+        while (m_Running)
+        {
+          LOG_DEBUG("retry connect");
+          connected = m_Imap.Login();
+          
+          if (connected && m_Running)
+          {            
+            m_Connecting = false;
+            SetStatus(Status::FlagConnected);
+            ClearStatus(Status::FlagConnecting);
+            LOG_INFO("connected");
+            break;
+          }
+
+          int retryDelay = 15;
+          while (m_Running && (retryDelay-- > 0))
+          {
+            sleep(1);
+          }
+        }
+      }
     }
   }
 
@@ -347,9 +399,9 @@ void ImapManager::CacheProcess()
     FD_SET(m_CachePipe[0], &fds);
     int maxfd = m_CachePipe[0];
     struct timeval tv = {60, 0};
-    int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+    int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
-    if ((rv != 0) && FD_ISSET(m_CachePipe[0], &fds))
+    if ((selrv != 0) && FD_ISSET(m_CachePipe[0], &fds))
     {
       int len = 0;
       ioctl(m_CachePipe[0], FIONREAD, &len);
@@ -387,10 +439,11 @@ void ImapManager::CacheProcess()
   m_ExitedCacheCond.notify_one();
 }
 
-void ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached)
+bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached)
 {
   Response response;
-  
+
+  response.m_ResponseStatus = ResponseStatusOk;
   response.m_Folder = p_Request.m_Folder;
   response.m_Cached = p_Cached;
   if (p_Request.m_GetFolders)
@@ -427,9 +480,11 @@ void ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_C
   {
     m_ResponseHandler(p_Request, response);
   }
+
+  return (response.m_ResponseStatus == ResponseStatusOk);
 }
 
-void ImapManager::PerformAction(const ImapManager::Action& p_Action)
+bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
 {
   Result result;
   result.m_Result = true;
@@ -445,7 +500,7 @@ void ImapManager::PerformAction(const ImapManager::Action& p_Action)
   if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
   {
     SetStatus(Status::FlagUpdatingFlags);
-    result.m_Result = m_Imap.SetFlagSeen(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_SetSeen);
+    result.m_Result &= m_Imap.SetFlagSeen(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_SetSeen);
     ClearStatus(Status::FlagUpdatingFlags);
   }
 
@@ -453,6 +508,8 @@ void ImapManager::PerformAction(const ImapManager::Action& p_Action)
   {
     m_ResultHandler(p_Action, result);
   }
+
+  return (result.m_Result);
 }
 
 void ImapManager::SetStatus(uint32_t p_Flags, uint32_t p_Progress /* = 0 */)
