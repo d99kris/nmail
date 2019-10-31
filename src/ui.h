@@ -118,6 +118,7 @@ private:
   bool PromptString(const std::string& p_Prompt, std::string& p_Entry);
   bool CurrentMessageBodyAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
+  void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -206,6 +207,7 @@ private:
   int m_KeyGotoFolder = 0;
   int m_KeyAddressBook = 0;
   int m_KeySaveFile = 0;
+  int m_KeyExternalEditor = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   

@@ -20,10 +20,10 @@ Features
 - Opening/viewing attachments in external program
 - Simple setup wizard for GMail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
+- Compose message using external editor ($EDITOR)
 
 Planned features
 ----------------
-- Compose message using external editor
 - Draft or dead.letter support
 - Email search
 
@@ -275,6 +275,7 @@ file:
     key_compose=c
     key_delete=d
     key_delete_line=KEY_CTRLK
+    key_external_editor=KEY_CTRLE
     key_forward=f
     key_goto_folder=g
     key_move=m
@@ -288,6 +289,7 @@ file:
     key_send=KEY_CTRLX
     key_toggle_text_html=t
     key_toggle_unread=u
+    new_msg_bell=1
     persist_folder_filter=1
     plain_text=1
     show_progress=1

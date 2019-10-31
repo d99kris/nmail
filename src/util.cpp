@@ -63,6 +63,23 @@ void Util::WriteFile(const std::string &p_Path, const std::string &p_Str)
   file << p_Str;
 }
 
+std::wstring Util::ReadWFile(const std::string &p_Path)
+{
+  std::locale::global(std::locale(""));
+  std::wifstream file(p_Path, std::ios::binary);
+  std::wstringstream wss;
+  wss << file.rdbuf();
+  return wss.str();
+}
+
+void Util::WriteWFile(const std::string &p_Path, const std::wstring &p_WStr)
+{
+  MkDir(DirName(p_Path));
+  std::locale::global(std::locale(""));
+  std::wofstream file(p_Path, std::ios::binary);
+  file << p_WStr;
+}
+
 std::string Util::BaseName(const std::string &p_Path)
 {
   char* path = strdup(p_Path.c_str());
@@ -907,4 +924,9 @@ void Util::CleanupStdErrRedirect()
     dup2(m_OrgStdErr, fileno(stderr));
     close(m_OrgStdErr);
   }
+}
+
+std::string Util::GetEditor()
+{
+  return std::string(getenv("EDITOR") ? getenv("EDITOR") : "nano");
 }

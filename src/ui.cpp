@@ -45,6 +45,7 @@ void Ui::Init()
   raw();
   keypad(stdscr, TRUE);
   curs_set(0);
+  timeout(0);
   pipe(m_Pipe);
 
   const std::map<std::string, std::string> defaultConfig =
@@ -73,6 +74,7 @@ void Ui::Init()
     {"key_goto_folder", "g"},
     {"key_address_book", "KEY_CTRLT"},
     {"key_save_file", "s"},
+    {"key_external_editor", "KEY_CTRLE"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -99,6 +101,7 @@ void Ui::Init()
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
+  m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
 }
@@ -378,6 +381,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeySend), "Send",
       GetKeyDisplay(m_KeyDeleteLine), "DelLine",
+      GetKeyDisplay(m_KeyExternalEditor), "ExtEdit",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -391,17 +395,11 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyBack), "ViewMsg",
       GetKeyDisplay(m_KeyPrevMsg), "PrevPart",
       GetKeyDisplay(m_KeySaveFile), "Save",
-      "", "",
-      "", "",
-      "", "",
     },
     {
       GetKeyDisplay(m_KeyOpen), "ViewPart",
       GetKeyDisplay(m_KeyNextMsg), "NextPart",
       GetKeyDisplay(m_KeyQuit), "Quit",
-      "", "",
-      "", "",
-      "", "",
     },
   };
 
@@ -1788,6 +1786,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
     }
+    else if (p_Key == m_KeyExternalEditor)
+    {
+      ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+    }
     else if (IsValidTextKey(p_Key))
     {
       m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos++, 1, p_Key);
@@ -1866,6 +1868,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyDeleteLine)
     {
       Util::DeleteToMatch(m_ComposeMessageStr, m_ComposeMessagePos, '\n');
+    }
+    else if (p_Key == m_KeyExternalEditor)
+    {
+      ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2929,4 +2935,29 @@ void Ui::InvalidateUiCache(const std::string& p_Folder)
   m_HasRequestedUids[p_Folder] = false;
   std::set<uint32_t>& requestedFlags = m_RequestedFlags[p_Folder];
   requestedFlags.clear();
+}
+
+void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
+{
+  endwin();
+  const std::string& tempPath = Util::GetTempFilename(".txt");
+  Util::WriteWFile(tempPath, p_ComposeMessageStr);
+  const std::string& editor = Util::GetEditor();
+  const std::string& cmd = editor + " " + tempPath;
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    p_ComposeMessageStr = Util::ReadWFile(tempPath);
+    p_ComposeMessagePos = 0;
+  }
+
+  Util::DeleteFile(tempPath);
+
+  refresh();
+
+  wint_t key = 0;
+  while (get_wch(&key) != ERR)
+  {
+    // Discard any remaining input
+  }
 }
