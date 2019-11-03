@@ -27,6 +27,8 @@ class SmtpManager
 public:
   struct Action
   {
+    bool m_IsSendMessage = false;
+    bool m_IsCreateMessage = false;
     std::string m_To;
     std::string m_Cc;
     std::string m_Att;
@@ -37,7 +39,8 @@ public:
 
   struct Result
   {
-    bool m_Result;
+    bool m_Result = false;
+    std::string m_Message;
     Action m_Action;
   };
 
@@ -50,11 +53,12 @@ public:
   virtual ~SmtpManager();
 
   void AsyncAction(const Action& p_Action);
+  Result SyncAction(const Action& p_Action);
   std::string GetAddress();
   
 private:
   void Process();
-  void PerformAction(const Action& p_Action);
+  Result PerformAction(const Action& p_Action);
   void SetStatus(uint32_t p_Flags);
   void ClearStatus(uint32_t p_Flags);
 

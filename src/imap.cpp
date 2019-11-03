@@ -700,6 +700,30 @@ void Imap::IdleDone()
   mailimap_idle_done(m_Imap);
 }
 
+bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft)
+{
+  struct mailimap_flag_list* flaglist = mailimap_flag_list_new_empty();
+  if (p_IsDraft)
+  {
+    mailimap_flag_list_add(flaglist, mailimap_flag_new_seen());
+    mailimap_flag_list_add(flaglist, mailimap_flag_new_draft());
+  }
+
+  time_t nowtime = time(NULL);
+  struct tm* lt = localtime(&nowtime);
+  
+  struct mailimap_date_time* datetime =
+    mailimap_date_time_new(lt->tm_mday, (lt->tm_mon + 1), (lt->tm_year + 1900),
+                           lt->tm_hour, lt->tm_min, lt->tm_sec, 0 /* dt_zone */);
+
+  bool rv = (LOG_IF_IMAP_ERR(mailimap_append(m_Imap, p_Folder.c_str(), flaglist, datetime,
+                                             p_Msg.c_str(), p_Msg.size())) == MAILIMAP_NO_ERROR);
+
+  mailimap_date_time_free(datetime);
+
+  return rv;
+}
+
 bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
 {
   if (p_Force || (p_Folder != m_SelectedFolder))

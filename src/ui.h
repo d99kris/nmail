@@ -53,6 +53,7 @@ public:
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
   void SetSmtpManager(std::shared_ptr<SmtpManager> p_SmtpManager);
   void SetTrashFolder(const std::string& p_TrashFolder);
+  void SetDraftsFolder(const std::string& p_DraftsFolder);
   void ResetImapManager();
   void ResetSmtpManager();
 
@@ -104,7 +105,9 @@ private:
   bool IsValidTextKey(int p_Key);
 
   void SendComposedMessage();
+  void UploadDraftMessage();
   bool DeleteMessage();
+  void MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To);
   void ToggleUnseen();
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);
@@ -119,11 +122,13 @@ private:
   bool CurrentMessageBodyAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
   void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
+  void SetLastStateOrMessageList();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
   std::shared_ptr<SmtpManager> m_SmtpManager;
   std::string m_TrashFolder;
+  std::string m_DraftsFolder;
   bool m_Running = false;
 
   std::string m_Inbox;
@@ -208,6 +213,7 @@ private:
   int m_KeyAddressBook = 0;
   int m_KeySaveFile = 0;
   int m_KeyExternalEditor = 0;
+  int m_KeyPostpone = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   
@@ -233,6 +239,7 @@ private:
   int m_ComposeMessageWrapLine = 0;
   int m_ComposeMessageWrapPos = 0;
   int m_ComposeMessageOffsetY = 0;
+  uint32_t m_ComposeDraftUid = 0;
   
   State m_State = StateViewMessageList;
   State m_LastState = StateViewMessageList;

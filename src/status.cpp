@@ -71,6 +71,10 @@ std::string Status::ToString(bool p_ShowProgress)
   {
     return "Updating flags";
   }
+  else if (m_Flags & FlagSaving)
+  {
+    return "Saving";
+  }
   else if (m_Flags & FlagIdle)
   {
     return "Idle";

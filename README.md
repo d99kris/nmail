@@ -21,6 +21,7 @@ Features
 - Simple setup wizard for GMail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
 - Compose message using external editor ($EDITOR)
+- Saving and continuing draft messages
 
 Planned features
 ----------------
@@ -164,6 +165,7 @@ and fill out the empty fields (except `pass`), example:
 
     address=example@example.com
     cache_encrypt=1
+    drafts=Drafts
     ext_viewer_cmd=open -Wn
     html_convert_cmd=/usr/local/bin/lynx -dump
     imap_host=imap.example.com
@@ -281,6 +283,7 @@ file:
     key_move=m
     key_next_msg=n
     key_open=.
+    key_postpone=KEY_CTRLO
     key_prev_msg=p
     key_quit=q
     key_refresh=l

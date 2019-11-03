@@ -75,6 +75,7 @@ void Ui::Init()
     {"key_address_book", "KEY_CTRLT"},
     {"key_save_file", "s"},
     {"key_external_editor", "KEY_CTRLE"},
+    {"key_postpone", "KEY_CTRLO"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -102,6 +103,7 @@ void Ui::Init()
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
+  m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
 }
@@ -386,6 +388,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
       GetKeyDisplay(m_KeyAddressBook), "AddrBk",
+      GetKeyDisplay(m_KeyPostpone), "Postpone",
     },
   };
 
@@ -1222,37 +1225,9 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
     {
       if (m_FolderListCurrentFolder != m_CurrentFolder)
       {
-        ImapManager::Action action;
-        action.m_Folder = m_CurrentFolder;
-        action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
-        action.m_MoveDestination = m_FolderListCurrentFolder;
-        m_ImapManager->AsyncAction(action);
-
-        m_HasRequestedUids[m_FolderListCurrentFolder] = false;
-
-        {
-          std::lock_guard<std::mutex> lock(m_Mutex);
-          RemoveUidDate(m_CurrentFolder, action.m_Uids);
-          m_Uids[m_CurrentFolder] = m_Uids[m_CurrentFolder] - action.m_Uids;
-          m_Uids[m_FolderListCurrentFolder] = m_Uids[m_FolderListCurrentFolder] + action.m_Uids;
-          m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
-        }
-
-        bool isMsgDateUidsEmpty = false;
-        {
-          std::lock_guard<std::mutex> lock(m_Mutex);
-          isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
-        }
-
+        MoveMessage(m_MessageListCurrentUid[m_CurrentFolder], m_CurrentFolder, m_FolderListCurrentFolder);
         UpdateUidFromIndex(true /* p_UserTriggered */);
-        if (isMsgDateUidsEmpty)
-        {
-          SetState(StateViewMessageList);
-        }
-        else
-        {
-          SetState(m_LastState);
-        }
+        SetLastStateOrMessageList();
       }
       else
       {
@@ -1713,13 +1688,15 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       if (Ui::PromptConfirmCancelCompose())
       {
-        SetState(m_LastState);
+        UpdateUidFromIndex(true /* p_UserTriggered */);
+        SetLastStateOrMessageList();
       }
     }
     else if (p_Key == m_KeySend)
     {
       SendComposedMessage();
-      SetState(m_LastState);
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      SetLastStateOrMessageList();
     }
     else if (p_Key == m_KeyAddressBook)
     {
@@ -1790,6 +1767,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
     }
+    else if (p_Key == m_KeyPostpone)
+    {
+      UploadDraftMessage();
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      SetLastStateOrMessageList();
+    }
     else if (IsValidTextKey(p_Key))
     {
       m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos++, 1, p_Key);
@@ -1805,13 +1788,15 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       if (Ui::PromptConfirmCancelCompose())
       {
-        SetState(m_LastState);
+        UpdateUidFromIndex(true /* p_UserTriggered */);
+        SetLastStateOrMessageList();
       }
     }
     else if (p_Key == m_KeySend)
     {
       SendComposedMessage();
-      SetState(m_LastState);
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      SetLastStateOrMessageList();
     }
     else if (p_Key == KEY_UP)
     {
@@ -1872,6 +1857,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyExternalEditor)
     {
       ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+    }
+    else if (p_Key == m_KeyPostpone)
+    {
+      UploadDraftMessage();
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      SetLastStateOrMessageList();
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2042,6 +2033,63 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
     m_IsComposeHeader = true;
+    m_ComposeDraftUid = 0;
+
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (m_CurrentFolder == m_DraftsFolder)
+    {
+      std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
+      std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+
+      std::map<uint32_t, Header>::iterator hit = headers.find(m_MessageListCurrentUid[m_CurrentFolder]);
+      std::map<uint32_t, Body>::iterator bit = bodys.find(m_MessageListCurrentUid[m_CurrentFolder]);
+      if ((hit != headers.end()) && (bit != bodys.end()))
+      {
+        m_ComposeDraftUid = m_MessageListCurrentUid[m_CurrentFolder];
+        
+        Header& header = hit->second;
+        Body& body = bit->second;
+
+        const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+        m_ComposeMessageStr = Util::ToWString(bodyText);
+        Util::StripCR(m_ComposeMessageStr);
+
+        // @todo: handle quoted commas in address name
+        std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
+        std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
+
+        m_ComposeHeaderStr[0] = Util::ToWString(Util::Join(tos, ", "));
+        m_ComposeHeaderStr[1] = Util::ToWString(Util::Join(ccs, ", "));
+        m_ComposeHeaderStr[3] = Util::ToWString(header.GetSubject());
+
+        int idx = 0;
+        std::string tmppath = Util::GetTempDir() + "forward/";
+        Util::MkDir(tmppath);
+        for (auto& part : body.GetParts())
+        {
+          if (!part.second.m_Filename.empty())
+          {
+            std::string tmpfiledir = tmppath + std::to_string(idx++) + "/";
+            Util::MkDir(tmpfiledir);
+            std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
+
+            Util::WriteFile(tmpfilepath, part.second.m_Data);
+            if (m_ComposeHeaderStr[2].empty())
+            {
+              m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + Util::ToWString(tmpfilepath);
+            }
+            else
+            {
+              m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + L", " + Util::ToWString(tmpfilepath);
+            }
+          }
+        }
+        
+        m_ComposeHeaderRef = header.GetMessageId();
+      
+      }    
+    }
+    
   }
   else if (m_State == StateReplyMessage)
   {
@@ -2072,6 +2120,7 @@ void Ui::SetState(Ui::State p_State)
                                             header.GetFrom() +
                                             " wrote:\n\n" +
                                             Util::AddIndent(bodyText, "> "));
+      Util::StripCR(m_ComposeMessageStr);
 
       // @todo: handle quoted commas in address name
       std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
@@ -2155,6 +2204,8 @@ void Ui::SetState(Ui::State p_State)
 
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText + "\n");
+      Util::StripCR(m_ComposeMessageStr);
+
       m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeForwardSubject(header.GetSubject()));
 
       m_ComposeHeaderRef = header.GetMessageId();
@@ -2449,9 +2500,14 @@ void Ui::ResetSmtpManager()
   m_SmtpManager.reset();
 }
 
-void Ui::SetTrashFolder(const std::string &p_TrashFolder)
+void Ui::SetTrashFolder(const std::string& p_TrashFolder)
 {
   m_TrashFolder = p_TrashFolder;
+}
+
+void Ui::SetDraftsFolder(const std::string& p_DraftsFolder)
+{
+  m_DraftsFolder = p_DraftsFolder;
 }
 
 bool Ui::IsConnected()
@@ -2521,6 +2577,7 @@ bool Ui::IsValidTextKey(int p_Key)
 void Ui::SendComposedMessage()
 {
   SmtpManager::Action action;
+  action.m_IsSendMessage = true;
   action.m_To = Util::ToString(m_ComposeHeaderStr.at(0));
   action.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
   action.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
@@ -2529,27 +2586,52 @@ void Ui::SendComposedMessage()
   action.m_RefMsgId = m_ComposeHeaderRef;
 
   m_SmtpManager->AsyncAction(action);
+
+  if (m_ComposeDraftUid != 0)
+  {
+    MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+  }
+}
+
+void Ui::UploadDraftMessage()
+{
+  if (!m_DraftsFolder.empty())
+  {
+    SmtpManager::Action smtpAction;
+    smtpAction.m_IsCreateMessage = true;
+    smtpAction.m_To = Util::ToString(m_ComposeHeaderStr.at(0));
+    smtpAction.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
+    smtpAction.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
+    smtpAction.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
+    smtpAction.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
+    smtpAction.m_RefMsgId = m_ComposeHeaderRef;
+
+    SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+    if (smtpResult.m_Result)
+    {
+      ImapManager::Action imapAction;
+      imapAction.m_UploadDraft = true;
+      imapAction.m_Folder = m_DraftsFolder;
+      imapAction.m_Msg = smtpResult.m_Message;
+      m_ImapManager->AsyncAction(imapAction);
+
+      if (m_ComposeDraftUid != 0)
+      {
+        MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+      }
+    }
+  }
+  else
+  {
+    SetDialogMessage("Drafts folder not configured");
+  }
 }
 
 bool Ui::DeleteMessage()
 {
   if (!m_TrashFolder.empty())
   {
-    ImapManager::Action action;
-    action.m_Folder = m_CurrentFolder;
-    action.m_Uids.insert(m_MessageListCurrentUid[m_CurrentFolder]);
-    action.m_MoveDestination = m_TrashFolder;
-    m_ImapManager->AsyncAction(action);
-
-    m_HasRequestedUids[m_TrashFolder] = false;
-
-    {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      RemoveUidDate(m_CurrentFolder, action.m_Uids);
-      m_Uids[m_CurrentFolder] = m_Uids[m_CurrentFolder] - action.m_Uids;
-      m_Uids[m_TrashFolder] = m_Uids[m_TrashFolder] + action.m_Uids;
-      m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
-    }
+    MoveMessage(m_MessageListCurrentUid[m_CurrentFolder], m_CurrentFolder, m_TrashFolder);
 
     m_MessageViewLineOffset = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);    
@@ -2571,6 +2653,25 @@ bool Ui::DeleteMessage()
   {
     SetDialogMessage("Trash folder not configured");
     return false;
+  }
+}
+
+void Ui::MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To)
+{
+  ImapManager::Action action;
+  action.m_Folder = p_From;
+  action.m_Uids.insert(p_Uid);
+  action.m_MoveDestination = p_To;
+  m_ImapManager->AsyncAction(action);
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    RemoveUidDate(m_CurrentFolder, action.m_Uids);
+    m_Uids[m_CurrentFolder] = m_Uids[m_CurrentFolder] - action.m_Uids;
+    m_Headers[m_CurrentFolder] = m_Headers[m_CurrentFolder] - action.m_Uids;
+
+    m_HasRequestedUids[p_From] = false;
+    m_HasRequestedUids[p_To] = false;
   }
 }
 
@@ -2959,5 +3060,23 @@ void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessage
   while (get_wch(&key) != ERR)
   {
     // Discard any remaining input
+  }
+}
+
+void Ui::SetLastStateOrMessageList()
+{
+  bool isMsgDateUidsEmpty = false;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
+  }
+
+  if (isMsgDateUidsEmpty)
+  {
+    SetState(StateViewMessageList);
+  }
+  else
+  {
+    SetState(m_LastState);
   }
 }

@@ -30,9 +30,10 @@ public:
     FlagMoving = (1 << 4),
     FlagDeleting = (1 << 5),
     FlagUpdatingFlags = (1 << 6),
-    FlagConnected = (1 << 7),
-    FlagOffline = (1 << 8),
-    FlagIdle = (1 << 9),
+    FlagSaving = (1 << 7),
+    FlagConnected = (1 << 8),
+    FlagOffline = (1 << 9),
+    FlagIdle = (1 << 10),
     FlagMax = FlagIdle,
   };
 

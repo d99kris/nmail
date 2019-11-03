@@ -504,6 +504,13 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
     ClearStatus(Status::FlagUpdatingFlags);
   }
 
+  if (p_Action.m_UploadDraft)
+  {
+    SetStatus(Status::FlagSaving);
+    result.m_Result &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, true);
+    ClearStatus(Status::FlagSaving);
+  }
+
   if (m_ResultHandler)
   {
     m_ResultHandler(p_Action, result);

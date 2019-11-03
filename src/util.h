@@ -99,6 +99,7 @@ public:
   static void InitStdErrRedirect(const std::string& p_Path);
   static void CleanupStdErrRedirect();
   static std::string GetEditor();
+  static void StripCR(std::wstring& p_Str);
 
 private:
   static std::string m_HtmlConvertCmd;

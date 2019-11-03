@@ -70,6 +70,22 @@ void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)
   }
 }
 
+SmtpManager::Result SmtpManager::SyncAction(const SmtpManager::Action& p_Action)
+{
+  if (m_Connect)
+  {
+    return PerformAction(p_Action);
+  }
+  else
+  {
+    LOG_WARNING("action not permitted while offline");
+    Result result;
+    result.m_Result = false;
+    result.m_Action = p_Action;
+    return result;
+  }
+}
+
 std::string SmtpManager::GetAddress()
 {
   return m_Address;
@@ -110,8 +126,13 @@ void SmtpManager::Process()
           m_Actions.pop_front();
           m_QueueMutex.unlock();
 
-          PerformAction(action);
+          const Result& result = PerformAction(action);
 
+          if (m_ResultHandler)
+          {
+            m_ResultHandler(result);
+          }
+          
           m_QueueMutex.lock();
         }
       }
@@ -126,11 +147,10 @@ void SmtpManager::Process()
   m_ExitedCond.notify_one();
 }
 
-void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
+SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
 {
   Result result;
-
-  SetStatus(Status::FlagSending);
+  result.m_Action = p_Action;
 
   const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_To)));
   const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Cc)));
@@ -139,15 +159,26 @@ void SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
   const std::vector<std::string> att = Util::Trim(Util::Split(p_Action.m_Att));
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address);
-  result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, ref, att);
-  result.m_Action = p_Action;
 
-  ClearStatus(Status::FlagSending);
-
-  if (m_ResultHandler)
+  if (p_Action.m_IsSendMessage)
   {
-    m_ResultHandler(result);
+    SetStatus(Status::FlagSending);
+    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, ref, att);
+    ClearStatus(Status::FlagSending);
   }
+  else if (p_Action.m_IsCreateMessage)
+  {
+    const std::string& header = smtp.GetHeader(p_Action.m_Subject, to, cc, bcc, ref);
+    const std::string& body = smtp.GetBody(p_Action.m_Body, att);
+    result.m_Message = header + body;
+    result.m_Result = !result.m_Message.empty();
+  }
+  else
+  {
+    LOG_WARNING("unknown action");
+  }
+
+  return result;
 }
 
 void SmtpManager::SetStatus(uint32_t p_Flags)

@@ -66,7 +66,9 @@ public:
     std::set<uint32_t> m_Uids;
     bool m_SetSeen = false;
     bool m_SetUnseen = false;
+    bool m_UploadDraft = false;
     std::string m_MoveDestination;
+    std::string m_Msg;
   };
 
   struct Result

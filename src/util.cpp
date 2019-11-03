@@ -930,3 +930,8 @@ std::string Util::GetEditor()
 {
   return std::string(getenv("EDITOR") ? getenv("EDITOR") : "nano");
 }
+
+void Util::StripCR(std::wstring& p_Str)
+{
+  p_Str.erase(std::remove(p_Str.begin(), p_Str.end(), L'\r'), p_Str.end());
+}
