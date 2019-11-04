@@ -2105,6 +2105,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessagePos = 0;
     m_IsComposeHeader = true;
     m_ComposeDraftUid = 0;
+    m_ComposeMessageOffsetY = 0;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_CurrentFolder == m_DraftsFolder)
@@ -2174,6 +2175,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
+    m_ComposeMessageOffsetY = 0;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
@@ -2226,6 +2228,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
+    m_ComposeMessageOffsetY = 0;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
