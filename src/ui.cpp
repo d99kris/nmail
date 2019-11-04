@@ -1707,7 +1707,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == KEY_UP)
     {
-      m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine - 1,
+      --m_ComposeHeaderLine;
+      if (m_ComposeHeaderLine < 0)
+      {
+        m_ComposeHeaderPos = 0;
+      }
+
+      m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
                                         (int)m_ComposeHeaderStr.size() - 1);
       m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                        (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
@@ -1735,15 +1741,65 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       m_IsComposeHeader = false;
     }
+    else if (p_Key == KEY_HOME)
+    {
+      // @todo: implement home/end handling in compose
+    }
+    else if (p_Key == KEY_END)
+    {
+      // @todo: implement home/end handling in compose
+    }
     else if (p_Key == KEY_LEFT)
     {
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos - 1,
-                                       (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      --m_ComposeHeaderPos;
+      if (m_ComposeHeaderPos < 0)
+      {
+        --m_ComposeHeaderLine;
+        if (m_ComposeHeaderLine < 0)
+        {
+          m_ComposeHeaderPos = 0;
+        }
+        else
+        {
+          m_ComposeHeaderPos = std::numeric_limits<int>::max();
+        }
+        
+        m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
+                                          (int)m_ComposeHeaderStr.size() - 1);
+        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
+                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      }
+      else
+      {
+        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
+                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      }
     }
     else if (p_Key == KEY_RIGHT)
     {
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos + 1,
-                                       (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      ++m_ComposeHeaderPos;
+      if (m_ComposeHeaderPos > (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size())
+      {
+        m_ComposeHeaderPos = 0;
+        
+        if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
+        {
+          m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine + 1,
+                                            (int)m_ComposeHeaderStr.size() - 1);
+          m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
+                                           (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+        }
+        else
+        {
+          m_IsComposeHeader = false;
+          m_ComposeMessagePos = 0;
+        }
+      }
+      else
+      {
+        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
+                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      }
     }    
     else if (p_Key == KEY_SYS_BACKSPACE)
     {
@@ -1826,9 +1882,24 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
+    else if (p_Key == KEY_HOME)
+    {
+      // @todo: implement home/end handling in compose
+    }
+    else if (p_Key == KEY_END)
+    {
+      // @todo: implement home/end handling in compose
+    }
     else if (p_Key == KEY_LEFT)
     {
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - 1,
+      --m_ComposeMessagePos;
+      if (m_ComposeMessagePos < 0)
+      {
+        m_IsComposeHeader = true;
+        m_ComposeHeaderPos = (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size();
+      }
+
+      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos,
                                         (int)m_ComposeMessageStr.size());
     }
     else if (p_Key == KEY_RIGHT)
