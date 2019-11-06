@@ -25,7 +25,6 @@ Features
 
 Planned features
 ----------------
-- Draft or dead.letter support
 - Email search
 
 Not planned
