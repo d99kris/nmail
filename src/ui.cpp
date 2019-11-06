@@ -2407,6 +2407,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       std::lock_guard<std::mutex> lock(m_Mutex);
       for (auto& folder : p_Response.m_Folders)
       {
+        if (!m_Running)
+        {
+          break;
+        }
+        
         if (!m_HasRequestedUids[folder] && !m_HasPrefetchRequestedUids[folder])
         {
           ImapManager::Request request;
@@ -2430,6 +2435,11 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         std::set<uint32_t> subsetFetchHeaderUids;
         for (auto it = fetchHeaderUids.begin(); it != fetchHeaderUids.end(); ++it)
         {
+          if (!m_Running)
+          {
+            break;
+          }
+          
           subsetFetchHeaderUids.insert(*it);
           if ((subsetFetchHeaderUids.size() == maxMessagesFetchRequest) ||
               (std::next(it) == fetchHeaderUids.end()))

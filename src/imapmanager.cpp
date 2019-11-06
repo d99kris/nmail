@@ -169,7 +169,7 @@ bool ImapManager::ProcessIdle()
     ImapManager::Request request;
     request.m_Folder = currentFolder;
     request.m_GetUids = true;
-    rv = PerformRequest(request, false);
+    rv = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */);
 
     if (!rv)
     {
@@ -205,6 +205,14 @@ bool ImapManager::ProcessIdle()
     if ((selrv != 0) && FD_ISSET(idlefd, &fds))
     {
       LOG_DEBUG("idle notification");
+
+      int len = 0;
+      ioctl(idlefd, FIONREAD, &len);
+      if (len > 0)
+      {
+        std::vector<char> buf(len);
+        read(idlefd, &buf[0], len);
+      }
 
       ImapManager::Request request;
       m_Mutex.lock();
@@ -258,7 +266,6 @@ void ImapManager::Process()
       ioctl(m_Pipe[0], FIONREAD, &len);
       if (len > 0)
       {
-        len = std::min(len, 256);
         std::vector<char> buf(len);
         read(m_Pipe[0], &buf[0], len);
       }
@@ -268,7 +275,7 @@ void ImapManager::Process()
       while (m_Running &&
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
-        while (!m_Actions.empty())
+        while (!m_Actions.empty() && m_Running)
         {
           const Action action = m_Actions.front();
           m_Actions.pop_front();
@@ -280,7 +287,7 @@ void ImapManager::Process()
         }
 
         const int progressReportMinTasks = 2;
-        while (!m_Requests.empty())
+        while (!m_Requests.empty() && m_Running)
         {
           const Request request = m_Requests.front();
           m_Requests.pop_front();
@@ -292,7 +299,7 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagFetching, progress);
 
-          rv &= PerformRequest(request, false);
+          rv &= PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */);
 
           m_QueueMutex.lock();
 
@@ -303,7 +310,7 @@ void ImapManager::Process()
         ClearStatus(Status::FlagFetching);        
         m_QueueMutex.lock();
 
-        if (!m_PrefetchRequests.empty())
+        if (!m_PrefetchRequests.empty() && m_Running)
         {
           const Request request = m_PrefetchRequests.begin()->second.front();
           m_PrefetchRequests.begin()->second.pop_front();
@@ -319,7 +326,7 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagPrefetching, progress);
 
-          rv &= PerformRequest(request, false);
+          rv &= PerformRequest(request, false /* p_Cached */, true /* p_Prefetch */);
 
           m_QueueMutex.lock();
 
@@ -407,7 +414,6 @@ void ImapManager::CacheProcess()
       ioctl(m_CachePipe[0], FIONREAD, &len);
       if (len > 0)
       {
-        len = std::min(len, 256);
         std::vector<char> buf(len);
         read(m_CachePipe[0], &buf[0], len);
       }
@@ -423,7 +429,7 @@ void ImapManager::CacheProcess()
 
           m_CacheQueueMutex.unlock();
 
-          PerformRequest(request, true);
+          PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */);
 
           m_CacheQueueMutex.lock();
         }
@@ -439,7 +445,8 @@ void ImapManager::CacheProcess()
   m_ExitedCacheCond.notify_one();
 }
 
-bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached)
+bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached,
+                                 bool p_Prefetch)
 {
   Response response;
 
@@ -460,19 +467,22 @@ bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_C
 
   if (!p_Request.m_GetHeaders.empty())
   {
-    const bool rv = m_Imap.GetHeaders(p_Request.m_Folder, p_Request.m_GetHeaders, p_Cached, response.m_Headers);
+    const bool rv = m_Imap.GetHeaders(p_Request.m_Folder, p_Request.m_GetHeaders, p_Cached,
+                                      p_Prefetch, response.m_Headers);
     response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetHeadersFailed;
   }
 
   if (!p_Request.m_GetFlags.empty())
   {
-    const bool rv = m_Imap.GetFlags(p_Request.m_Folder, p_Request.m_GetFlags, p_Cached, response.m_Flags);
+    const bool rv = m_Imap.GetFlags(p_Request.m_Folder, p_Request.m_GetFlags, p_Cached,
+                                    response.m_Flags);
     response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFlagsFailed;
   }
 
   if (!p_Request.m_GetBodys.empty())
   {
-    const bool rv = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached, response.m_Bodys);
+    const bool rv = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached,
+                                    p_Prefetch, response.m_Bodys);
     response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetBodysFailed;
   }
 

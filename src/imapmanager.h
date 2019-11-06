@@ -93,7 +93,7 @@ private:
   bool ProcessIdle();
   void Process();
   void CacheProcess();
-  bool PerformRequest(const Request& p_Request, bool p_Cached);
+  bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch);
   bool PerformAction(const Action& p_Action);
   void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
   void ClearStatus(uint32_t p_Flags);

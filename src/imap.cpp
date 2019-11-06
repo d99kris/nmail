@@ -191,7 +191,8 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 }
 
 bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
-                      const bool p_Cached, std::map<uint32_t, Header>& p_Headers)
+                      const bool p_Cached, const bool p_Prefetch,
+                      std::map<uint32_t, Header>& p_Headers)
 {
   bool needFetch = false;
   struct mailimap_set* set = mailimap_set_new_empty();
@@ -199,16 +200,19 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
   {
     bool cacheFound = false;
     const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
-    if (Util::Exists(cachePath))
+    if (Util::NotEmpty(cachePath))
     {
-      const std::string& cacheData = ReadCacheFile(cachePath);
-      if (!cacheData.empty())
+      cacheFound = true;
+      if (!p_Prefetch)
       {
-        Header header;
-        header.SetData(cacheData);
-        Util::Touch(cachePath);
-        p_Headers[uid] = header;
-        cacheFound = true;
+        const std::string& cacheData = ReadCacheFile(cachePath);
+        if (!cacheData.empty())
+        {
+          Header header;
+          header.SetData(cacheData);
+          Util::Touch(cachePath);
+          p_Headers[uid] = header;
+        }
       }
     }
 
@@ -288,8 +292,11 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
           LOG_WARNING("skip header = \"\"");
           continue;
         }
-        
-        p_Headers[uid] = header;
+
+        if (!p_Prefetch)
+        {
+          p_Headers[uid] = header;
+        }
 
         WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
       }
@@ -411,7 +418,8 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
 }
 
 bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
-                    const bool p_Cached, std::map<uint32_t, Body>& p_Bodys)
+                    const bool p_Cached, const bool p_Prefetch,
+                    std::map<uint32_t, Body>& p_Bodys)
 {
   bool needFetch = false;
   struct mailimap_set* set = mailimap_set_new_empty();
@@ -419,16 +427,19 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   {
     bool cacheFound = false;
     const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
-    if (Util::Exists(cachePath))
+    if (Util::NotEmpty(cachePath))
     {
-      const std::string& cacheData = ReadCacheFile(cachePath);
-      if (!cacheData.empty())
+      cacheFound = true;
+      if (!p_Prefetch)
       {
-        Body body;
-        body.SetData(cacheData);
-        Util::Touch(cachePath);
-        p_Bodys[uid] = body;
-        cacheFound = true;
+        const std::string& cacheData = ReadCacheFile(cachePath);
+        if (!cacheData.empty())
+        {
+          Body body;
+          body.SetData(cacheData);
+          Util::Touch(cachePath);
+          p_Bodys[uid] = body;
+        }
       }
     }
 
@@ -512,7 +523,10 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
           continue;
         }
 
-        p_Bodys[uid] = body;
+        if (!p_Prefetch)
+        {
+          p_Bodys[uid] = body;
+        }
 
         const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
         WriteCacheFile(cachePath, body.GetData());

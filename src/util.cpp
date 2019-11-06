@@ -48,6 +48,12 @@ bool Util::Exists(const std::string &p_Path)
   return (stat(p_Path.c_str(), &sb) == 0);
 }
 
+bool Util::NotEmpty(const std::string& p_Path)
+{
+  struct stat sb;
+  return (stat(p_Path.c_str(), &sb) == 0) && (sb.st_size > 0);
+}
+
 std::string Util::ReadFile(const std::string &p_Path)
 {
   std::ifstream file(p_Path, std::ios::binary);
