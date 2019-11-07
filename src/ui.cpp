@@ -106,6 +106,8 @@ void Ui::Init()
   m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
+
+  m_Running = true;
 }
 
 void Ui::Cleanup()
@@ -1081,7 +1083,6 @@ void Ui::PerformUiRequest(char p_UiRequest)
 void Ui::Run()
 {
   DrawAll();
-  m_Running = true;
   int64_t uiIdleTime = 0;
   LOG_DEBUG("entering loop");
 
