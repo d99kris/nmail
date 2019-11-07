@@ -113,12 +113,6 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
-  {
-    std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
-    m_CacheRequests.push_front(p_Request);
-    write(m_CachePipe[1], "1", 1);
-  }
-
   if (m_Imap.GetConnected() || m_Connecting)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);

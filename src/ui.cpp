@@ -2305,6 +2305,8 @@ void Ui::SetState(Ui::State p_State)
 
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
+  if (!m_Running) return;
+  
   char uiRequest = UiRequestNone;
 
   bool updateIndexFromUid = false;
