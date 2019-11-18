@@ -3126,8 +3126,8 @@ void Ui::InvalidateUiCache(const std::string& p_Folder)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_HasRequestedUids[p_Folder] = false;
-  std::set<uint32_t>& requestedFlags = m_RequestedFlags[p_Folder];
-  requestedFlags.clear();
+  m_Flags[p_Folder].clear();
+  m_RequestedFlags[p_Folder].clear();
 }
 
 void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
