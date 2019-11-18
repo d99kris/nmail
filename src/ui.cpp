@@ -620,8 +620,8 @@ void Ui::DrawMessageList()
   
   std::set<uint32_t> fetchHeaderUids;  
   std::set<uint32_t> fetchFlagUids;  
-  std::set<uint32_t> prefetchBodyUidsPrimary;
-  std::set<uint32_t> prefetchBodyUidsSecondary;
+  std::set<uint32_t> fetchBodyUids;
+  std::set<uint32_t> prefetchBodyUids;
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -672,6 +672,13 @@ void Ui::DrawMessageList()
     {
       uint32_t uid = std::prev(msgDateUids.end(), i + 1)->second;
 
+      if ((flags.find(uid) == flags.end()) &&
+          (requestedFlags.find(uid) == requestedFlags.end()))
+      {
+        fetchFlagUids.insert(uid);
+        requestedFlags.insert(uid);
+      }
+
       std::string seenFlag;
       if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
       {
@@ -713,13 +720,12 @@ void Ui::DrawMessageList()
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
         if ((bodys.find(uid) == bodys.end()) &&
-            (prefetchedBodys.find(uid) == prefetchedBodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
           if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
           {
-            prefetchedBodys.insert(uid);
-            prefetchBodyUidsPrimary.insert(uid);
+            requestedBodys.insert(uid);
+            fetchBodyUids.insert(uid);
           }
         }
       }
@@ -732,16 +738,16 @@ void Ui::DrawMessageList()
           if (m_PrefetchLevel >= PrefetchLevelCurrentView)
           {
             prefetchedBodys.insert(uid);
-            prefetchBodyUidsSecondary.insert(uid);
+            prefetchBodyUids.insert(uid);
           }
         }
       }
     }
   }
 
-  if (!prefetchBodyUidsPrimary.empty())
+  if (!fetchBodyUids.empty())
   {
-    for (auto& uid : prefetchBodyUidsPrimary)
+    for (auto& uid : fetchBodyUids)
     {
       ImapManager::Request request;
       request.m_Folder = m_CurrentFolder;
@@ -755,9 +761,9 @@ void Ui::DrawMessageList()
     }
   }
     
-  if (!prefetchBodyUidsSecondary.empty())
+  if (!prefetchBodyUids.empty())
   {
-    for (auto& uid : prefetchBodyUidsSecondary)
+    for (auto& uid : prefetchBodyUids)
     {
       ImapManager::Request request;
       request.m_PrefetchLevel = PrefetchLevelCurrentView;
