@@ -747,12 +747,11 @@ void Ui::DrawMessageList()
       request.m_Folder = m_CurrentFolder;
 
       std::set<uint32_t> fetchUids;
-      request.m_PrefetchLevel = PrefetchLevelCurrentMessage;
       fetchUids.insert(uid);
       request.m_GetBodys = fetchUids;
 
       LOG_DEBUG_VAR("request bodys =", fetchUids);
-      m_ImapManager->PrefetchRequest(request);
+      m_ImapManager->AsyncRequest(request);
     }
   }
     
