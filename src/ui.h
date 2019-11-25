@@ -232,6 +232,7 @@ private:
   bool m_IsComposeHeader = true;
 
   std::string m_ComposeHeaderRef;
+  std::string m_ComposeTempDirectory;
 
   std::wstring m_ComposeMessageStr;
   int m_ComposeMessagePos = 0;

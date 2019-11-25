@@ -1696,6 +1696,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       {
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
+        Util::RmDir(m_ComposeTempDirectory);
       }
     }
     else if (p_Key == m_KeySend)
@@ -1852,6 +1853,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       {
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
+        Util::RmDir(m_ComposeTempDirectory);        
       }
     }
     else if (p_Key == m_KeySend)
@@ -2112,6 +2114,7 @@ void Ui::SetState(Ui::State p_State)
     m_IsComposeHeader = true;
     m_ComposeDraftUid = 0;
     m_ComposeMessageOffsetY = 0;
+    m_ComposeTempDirectory.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_CurrentFolder == m_DraftsFolder)
@@ -2141,13 +2144,12 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeHeaderStr[3] = Util::ToWString(header.GetSubject());
 
         int idx = 0;
-        std::string tmppath = Util::GetTempDir() + "forward/";
-        Util::MkDir(tmppath);
+        std::string tmppath = Util::GetTempDirectory();
         for (auto& part : body.GetParts())
         {
           if (!part.second.m_Filename.empty())
           {
-            std::string tmpfiledir = tmppath + std::to_string(idx++) + "/";
+            std::string tmpfiledir = tmppath + "/" + std::to_string(idx++) + "/";
             Util::MkDir(tmpfiledir);
             std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
@@ -2164,7 +2166,7 @@ void Ui::SetState(Ui::State p_State)
         }
         
         m_ComposeHeaderRef = header.GetMessageId();
-      
+        m_ComposeTempDirectory = tmppath;      
       }    
     }
     
@@ -2182,6 +2184,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
     m_ComposeMessageOffsetY = 0;
+    m_ComposeTempDirectory.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
@@ -2235,6 +2238,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
     m_ComposeMessageOffsetY = 0;
+    m_ComposeTempDirectory.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
@@ -2248,13 +2252,12 @@ void Ui::SetState(Ui::State p_State)
       Body& body = bit->second;
 
       int idx = 0;
-      std::string tmppath = Util::GetTempDir() + "forward/";
-      Util::MkDir(tmppath);
+      std::string tmppath = Util::GetTempDirectory();
       for (auto& part : body.GetParts())
       {
         if (!part.second.m_Filename.empty())
         {
-          std::string tmpfiledir = tmppath + std::to_string(idx++) + "/";
+          std::string tmpfiledir = tmppath + "/" + std::to_string(idx++) + "/";
           Util::MkDir(tmpfiledir);
           std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
@@ -2289,6 +2292,7 @@ void Ui::SetState(Ui::State p_State)
       m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeForwardSubject(header.GetSubject()));
 
       m_ComposeHeaderRef = header.GetMessageId();
+      m_ComposeTempDirectory = tmppath;      
     }
 
     m_IsComposeHeader = true;
@@ -2545,8 +2549,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     }
   }
 
-  std::string tmppath = Util::GetTempDir() + "forward/";
-  Util::RmDir(tmppath); 
+  Util::RmDir(p_Result.m_Action.m_ComposeTempDirectory);
 }
 
 void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
@@ -2676,6 +2679,7 @@ void Ui::SendComposedMessage()
   action.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
   action.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
   action.m_RefMsgId = m_ComposeHeaderRef;
+  action.m_ComposeTempDirectory = m_ComposeTempDirectory;
 
   m_SmtpManager->AsyncAction(action);
 

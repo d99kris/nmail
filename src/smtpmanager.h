@@ -35,6 +35,7 @@ public:
     std::string m_Subject;
     std::string m_Body;
     std::string m_RefMsgId;
+    std::string m_ComposeTempDirectory;
   };
 
   struct Result

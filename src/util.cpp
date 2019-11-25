@@ -137,7 +137,10 @@ void Util::MkDir(const std::string &p_Path)
 
 void Util::RmDir(const std::string &p_Path)
 {
-  apathy::Path::rmdirs(apathy::Path(p_Path));
+  if (!p_Path.empty())
+  {
+    apathy::Path::rmdirs(apathy::Path(p_Path));
+  }
 }
 
 void Util::Touch(const std::string &p_Path)
@@ -173,7 +176,7 @@ void Util::CleanupTempDir()
 
 std::string Util::GetTempFilename(const std::string &p_Suffix)
 {
-  std::string name = GetTempDir() + std::string("temp.XX" "XX" "XX") + p_Suffix;
+  std::string name = GetTempDir() + std::string("tmpfile.XX" "XX" "XX") + p_Suffix;
   char* cname = strdup(name.c_str());
   int fd = mkstemps(cname, p_Suffix.length());
   if (fd != -1)
@@ -182,6 +185,26 @@ std::string Util::GetTempFilename(const std::string &p_Suffix)
   }
 
   name = std::string(cname);
+  free(cname);
+  return name;
+}
+
+// returns a unique temporary directory under GetTemp() dir
+std::string Util::GetTempDirectory()
+{
+  std::string name = GetTempDir() + std::string("tmpdir.XX" "XX" "XX");
+  char* cname = strdup(name.c_str());
+  char* newcname = mkdtemp(cname);
+
+  if (newcname != NULL)
+  {
+    name = std::string(cname);
+  }
+  else
+  {
+    name = "";
+  }
+  
   free(cname);
   return name;
 }

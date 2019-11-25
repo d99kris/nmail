@@ -44,6 +44,7 @@ public:
   static void InitTempDir();
   static void CleanupTempDir();
   static std::string GetTempFilename(const std::string& p_Suffix);
+  static std::string GetTempDirectory();
   static void DeleteFile(const std::string& p_Path);
   static time_t MailtimeToTimet(struct mailimf_date_time* p_Dt);
   static std::string GetHtmlConvertCmd();
