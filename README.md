@@ -3,7 +3,7 @@ nmail - ncurses mail
 
 | **Linux + Mac** |
 |---------|
-| [![Build status](https://travis-ci.org/d99kris/nmail.svg?branch=master)](https://travis-ci.org/d99kris/nmail) |
+| [![Build status](https://travis-ci.com/d99kris/nmail.svg?branch=master)](https://travis-ci.com/d99kris/nmail) |
 
 nmail is a console-based email client for Linux and macOS with a user interface
 similar to alpine / pine.
