@@ -294,10 +294,10 @@ std::string Util::GetDefaultExtViewerCmd()
 #endif
 }
 
-void Util::OpenInExtViewer(const std::string& p_Path)
+int Util::OpenInExtViewer(const std::string& p_Path)
 {
   std::string cmd = m_ExtViewerCmd + " " + p_Path;
-  system(cmd.c_str());
+  return system(cmd.c_str());
 }
 
 void Util::ReplaceString(std::string &p_Str, const std::string &p_Search,

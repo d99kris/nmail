@@ -2010,9 +2010,19 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     {
       const std::string& tempFilename = Util::GetTempFilename(ext);
       Util::WriteFile(tempFilename, m_PartListCurrentPart.m_Data);
+      LOG_DEBUG("opening %s in external viewer", tempFilename.c_str());
       SetDialogMessage("Waiting for external viewer to exit");
       DrawDialog();
-      Util::OpenInExtViewer(tempFilename);
+      int rv = Util::OpenInExtViewer(tempFilename);
+      if (rv != 0)
+      {
+        LOG_WARNING("external viewer error = %d", rv);
+      }
+      else
+      {
+        LOG_DEBUG("external viewer exited ok");
+      }
+
       Util::DeleteFile(tempFilename);
       SetDialogMessage("");
     }
