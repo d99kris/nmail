@@ -165,7 +165,7 @@ and fill out the empty fields (except `pass`), example:
     address=example@example.com
     cache_encrypt=1
     drafts=Drafts
-    ext_viewer_cmd=open -Wn
+    ext_viewer_cmd=open
     html_convert_cmd=/usr/local/bin/lynx -dump
     imap_host=imap.example.com
     imap_port=993

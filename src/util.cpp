@@ -174,6 +174,16 @@ void Util::CleanupTempDir()
   Util::RmDir(GetTempDir());
 }
 
+std::string Util::GetAttachmentsTempDir()
+{
+  return GetTempDir() + std::string("attachments/");
+}
+
+void Util::CleanupAttachmentsTempDir()
+{
+  Util::RmDir(GetAttachmentsTempDir());
+}
+
 std::string Util::GetTempFilename(const std::string &p_Suffix)
 {
   std::string name = GetTempDir() + std::string("tmpfile.XX" "XX" "XX") + p_Suffix;
@@ -286,7 +296,7 @@ void Util::SetExtViewerCmd(const std::string& p_ExtViewerCmd)
 std::string Util::GetDefaultExtViewerCmd()
 {
 #if defined(__APPLE__)
-  return "open -Wn";
+  return "open";
 #elif defined(__linux__)
   return "xdg-open";
 #else
@@ -296,7 +306,7 @@ std::string Util::GetDefaultExtViewerCmd()
 
 int Util::OpenInExtViewer(const std::string& p_Path)
 {
-  std::string cmd = m_ExtViewerCmd + " " + p_Path;
+  std::string cmd = m_ExtViewerCmd + " \"" + p_Path + "\"";
   return system(cmd.c_str());
 }
 

@@ -43,6 +43,8 @@ public:
   static std::string GetTempDir();
   static void InitTempDir();
   static void CleanupTempDir();
+  static std::string GetAttachmentsTempDir();
+  static void CleanupAttachmentsTempDir();
   static std::string GetTempFilename(const std::string& p_Suffix);
   static std::string GetTempDirectory();
   static void DeleteFile(const std::string& p_Path);

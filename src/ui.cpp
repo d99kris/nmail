@@ -1989,42 +1989,47 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
   {
+    const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
+    LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
+    Util::CleanupAttachmentsTempDir();
     SetState(StateViewMessage);
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen))
   {
     std::string ext;
     std::string err;
+    std::string fileName;
     if (!m_PartListCurrentPart.m_Filename.empty())
     {
       ext = Util::GetFileExt(m_PartListCurrentPart.m_Filename);
       err = "Cannot determine file extension for " + m_PartListCurrentPart.m_Filename;
+      fileName = m_PartListCurrentPart.m_Filename;
     }
     else
     {
       ext = Util::ExtensionForMimeType(m_PartListCurrentPart.m_MimeType);
       err = "Unknown MIME type " + m_PartListCurrentPart.m_MimeType;
+      fileName = std::to_string(m_PartListCurrentIndex) + ext;
     }
 
     if (!ext.empty())
     {
-      const std::string& tempFilename = Util::GetTempFilename(ext);
-      Util::WriteFile(tempFilename, m_PartListCurrentPart.m_Data);
-      LOG_DEBUG("opening %s in external viewer", tempFilename.c_str());
+      const std::string& tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+      Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
+      LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
+
       SetDialogMessage("Waiting for external viewer to exit");
       DrawDialog();
-      int rv = Util::OpenInExtViewer(tempFilename);
+      int rv = Util::OpenInExtViewer(tempFilePath);
       if (rv != 0)
       {
-        LOG_WARNING("external viewer error = %d", rv);
+        SetDialogMessage("External viewer error code " + std::to_string(rv));
       }
       else
       {
-        LOG_DEBUG("external viewer exited ok");
+        LOG_DEBUG("external viewer exited successfully");
+        SetDialogMessage("");
       }
-
-      Util::DeleteFile(tempFilename);
-      SetDialogMessage("");
     }
     else
     {
