@@ -484,6 +484,11 @@ mailmime *Smtp::GetMimePart(mailmime_content *p_Content, mailmime_fields *p_Mime
 
 std::string Smtp::MimeEncodeStr(const std::string &p_In)
 {
+  if (std::all_of(p_In.cbegin(), p_In.cend(), [](char c){ return isprint(c); }))
+  {
+    return p_In;
+  }
+  
   int col = 0;
   MMAPString* mmstr = mmap_string_new(NULL);
   mailmime_quoted_printable_write_mem(mmstr, &col, 1, p_In.c_str(), p_In.size());
