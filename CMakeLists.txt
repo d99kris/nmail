@@ -1,11 +1,12 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.14" LANGUAGES CXX)
+project(nmail VERSION "1.15" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
+  message(STATUS "Found ccache")
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 

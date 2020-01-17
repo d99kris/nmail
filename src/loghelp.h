@@ -18,10 +18,11 @@
 
 #define __FILENAME__ (strrchr("/" __FILE__, '/') + 1)
 
-#define LOG_DEBUG(EXPR, ...) Log::Debug(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
-#define LOG_INFO(EXPR, ...) Log::Info(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
-#define LOG_WARNING(EXPR, ...) Log::Warning(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
-#define LOG_ERROR(EXPR, ...) Log::Error(EXPR "  (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+#define LOG_DEBUG(...) Log::Debug(__FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_INFO(...) Log::Info(__FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_WARNING(...) Log::Warning(__FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) Log::Error(__FILENAME__, __LINE__, __VA_ARGS__)
+
 #define LOG_DUMP(STR) Log::Dump(STR)
 #define LOG_DEBUG_VAR(MSG, VAR) do { const std::string& str = PrettyPrint(VAR); LOG_DEBUG(MSG " %s", str.c_str()); } while (0)
 
@@ -34,11 +35,11 @@ static inline int LogImapHelper(int p_Rv, const char* p_Expr, const char* p_File
 {
   if (p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
   {
-    Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Error(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Debug(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
   }
 
   return p_Rv;
@@ -49,11 +50,11 @@ static inline int LogImapLogoutHelper(int p_Rv, const char* p_Expr, const char* 
 {
   if ((p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED) && (p_Rv != MAILIMAP_ERROR_STREAM))
   {
-    Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Error(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Debug(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
   }
 
   return p_Rv;
@@ -68,11 +69,11 @@ static inline T LogIfNotEqual(T p_Rv, typename identity<T>::type p_Expect, const
 {
   if (p_Rv != p_Expect)
   {
-    Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Error(p_File, p_Line, "%s = %d  (%s:%d)", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Debug(p_File, p_Line, "%s = %d  (%s:%d)", p_Expr, p_Rv);
   }
 
   return p_Rv;
@@ -84,11 +85,11 @@ static inline T LogIfEqual(T p_Rv, typename identity<T>::type p_Expect, const ch
 {
   if (p_Rv == p_Expect)
   {
-    Log::Error("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Error(p_File, p_Line, "%s = %d  (%s:%d)", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug("%s = %d  (%s:%d)", p_Expr, p_Rv, p_File, p_Line);
+    Log::Debug(p_File, p_Line, "%s = %d  (%s:%d)", p_Expr, p_Rv);
   }
 
   return p_Rv;
