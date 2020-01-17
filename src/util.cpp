@@ -536,7 +536,7 @@ int Util::GetKeyCode(const std::string& p_KeyName)
       { "KEY_LEFT", KEY_LEFT },
       { "KEY_RIGHT", KEY_RIGHT },
       { "KEY_HOME", KEY_HOME },
-      { "KEY_BACKSPACE", KEY_SYS_BACKSPACE },
+      { "KEY_BACKSPACE", KEY_BACKSPACE },
       { "KEY_F0", KEY_F0 },
       { "KEY_F1", KEY_F(1) },
       { "KEY_F2", KEY_F(2) },

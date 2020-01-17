@@ -1253,7 +1253,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
     m_FolderListFilterPos = Util::Bound(0, m_FolderListFilterPos + 1,
                                         (int)m_FolderListFilterStr.size());
   }
-  else if (p_Key == KEY_SYS_BACKSPACE)
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
   {
     if (m_FolderListFilterPos > 0)
     {
@@ -1333,7 +1333,7 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
     m_AddressListFilterPos = Util::Bound(0, m_AddressListFilterPos + 1,
                                          (int)m_AddressListFilterStr.size());
   }
-  else if (p_Key == KEY_SYS_BACKSPACE)
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
   {
     if (m_AddressListFilterPos > 0)
     {
@@ -1582,7 +1582,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     m_MessageViewLineOffset = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack))
   {
     SetState(StateViewMessageList);
   }
@@ -1807,8 +1807,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                          (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
       }
-    }    
-    else if (p_Key == KEY_SYS_BACKSPACE)
+    }
+    else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
     {
       if (m_ComposeHeaderPos > 0)
       {
@@ -1915,7 +1915,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + 1,
                                         (int)m_ComposeMessageStr.size());
     }
-    else if (p_Key == KEY_SYS_BACKSPACE)
+    else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
     {
       if (m_ComposeMessagePos > 0)
       {
@@ -1987,7 +1987,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     m_PartListCurrentIndex = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_SYS_BACKSPACE) || (p_Key == m_KeyBack))
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack))
   {
     const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
     LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
@@ -3109,7 +3109,7 @@ bool Ui::PromptString(const std::string& p_Prompt, std::string& p_Entry)
     {
       // ignore
     }
-    else if (key == KEY_SYS_BACKSPACE)
+    else if ((key == KEY_BACKSPACE) || (key == KEY_DELETE))
     {
       if (m_FilenameEntryStringPos > 0)
       {

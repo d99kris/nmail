@@ -10,15 +10,10 @@
 #include <string>
 #include <vector>
 
-#ifdef __APPLE__
-#define KEY_SYS_BACKSPACE 127
-#else
-#define KEY_SYS_BACKSPACE KEY_BACKSPACE
-#endif
-
 #define KEY_TAB 9
 #define KEY_RETURN 10
 #define KEY_SPACE 32
+#define KEY_DELETE 127
 
 class Util
 {
