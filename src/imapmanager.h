@@ -35,6 +35,7 @@ public:
     ResponseStatusGetHeadersFailed = (1 << 2),
     ResponseStatusGetFlagsFailed = (1 << 3),
     ResponseStatusGetBodysFailed = (1 << 4),
+    ResponseStatusLoginFailed = (1 << 5),
   };
   
   struct Request

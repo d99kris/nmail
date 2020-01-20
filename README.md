@@ -18,7 +18,7 @@ Features
 - Address book auto-generated based on email messages
 - Viewing HTML emails
 - Opening/viewing attachments in external program
-- Simple setup wizard for GMail and Outlook/Hotmail
+- Simple setup wizard for Gmail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
 - Compose message using external editor ($EDITOR)
 - Saving and continuing draft messages
@@ -30,7 +30,7 @@ Planned features
 Not planned
 -----------
 - Multiple email accounts in a single session
-- Special handling for GMail labels
+- Special handling for Gmail labels
 - Threaded view
 
 
@@ -130,8 +130,8 @@ macOS
 Getting Started
 ===============
 
-Gmail
------
+Gmail Setup
+-----------
 Use the setup wizard to set up nmail for the account. Example (replace
 example@gmail.com with your actual gmail address):
 
@@ -141,8 +141,10 @@ example@gmail.com with your actual gmail address):
     Save password (y/n): y
     Password: 
 
-Outlook (and Hotmail)
----------------------
+Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling gmail IMAP access.
+
+Outlook (and Hotmail) Setup
+---------------------------
 Use the setup wizard to set up nmail for the account. Example (replace
 example@hotmail.com with your actual outlook / hotmail address):
 
@@ -295,6 +297,22 @@ file:
     persist_folder_filter=1
     plain_text=1
     show_progress=1
+
+
+Email Service Providers
+=======================
+
+Gmail Prerequisites
+-------------------
+Gmail prevents password-authenticated IMAP access by default.
+
+In order to enable IMAP access go to the Gmail web interface - typically
+[mail.google.com](https://mail.google.com) - and navigate to 
+`Settings -> Forwarding and POP/IMAP -> IMAP access` and select: `Enable IMAP`
+
+To enable password-authenticated IMAP access go to
+[myaccount.google.com/security](https://myaccount.google.com/security) and under
+`Less secure app access` click `Turn on access (not recommended)`.
 
 
 Technical Details

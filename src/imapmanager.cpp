@@ -233,10 +233,22 @@ void ImapManager::Process()
   {
     if (m_Imap.Login())
     {
-      m_Connecting = false;
       SetStatus(Status::FlagConnected);
-      ClearStatus(Status::FlagConnecting);
     }
+    else
+    {
+      SetStatus(Status::FlagOffline);
+      if (m_ResponseHandler)
+      {
+        ImapManager::Request request;
+        Response response;
+        response.m_ResponseStatus = ResponseStatusLoginFailed;
+        m_ResponseHandler(request, response);
+      }
+    }
+
+    m_Connecting = false;
+    ClearStatus(Status::FlagConnecting);
   }
 
   LOG_DEBUG("entering loop");
@@ -254,7 +266,7 @@ void ImapManager::Process()
     {
       rv &= ProcessIdle();
     }
-    else if (FD_ISSET(m_Pipe[0], &fds))
+    else if ((FD_ISSET(m_Pipe[0], &fds)) && m_Imap.GetConnected())
     {
       int len = 0;
       ioctl(m_Pipe[0], FIONREAD, &len);

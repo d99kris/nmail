@@ -2510,6 +2510,10 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     {
       SetDialogMessage("Get message flags failed");
     }
+    else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusLoginFailed)
+    {
+      SetDialogMessage("Login failed");
+    }
   }
 
   if (updateIndexFromUid)
