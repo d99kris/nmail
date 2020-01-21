@@ -24,7 +24,10 @@
 #define LOG_ERROR(...) Log::Error(__FILENAME__, __LINE__, __VA_ARGS__)
 
 #define LOG_DUMP(STR) Log::Dump(STR)
-#define LOG_DEBUG_VAR(MSG, VAR) do { const std::string& str = PrettyPrint(VAR); LOG_DEBUG(MSG " %s", str.c_str()); } while (0)
+#define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) break; \
+                                     const std::string& str = PrettyPrint(VAR); \
+                                     LOG_DEBUG(MSG " %s", str.c_str()); \
+                                   } while (0)
 
 #define LOG_IF_NULL(EXPR) LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_SMTP_ERR(EXPR) LogIfNotEqual(EXPR, MAILSMTP_NO_ERROR, #EXPR, __FILENAME__, __LINE__)
