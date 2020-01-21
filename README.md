@@ -227,6 +227,10 @@ preferred way of reporting issues and asking questions is by opening
 Verbose logging can also be enabled by setting `verbose_logging=1` in
 `~/.nmail/main.conf`.
 
+**Warning:** With verbose logging actual email contents may be present
+in the resulting log file. Please edit the log file and remove any
+email message content that is private, before sharing the log file.
+
 
 Email List
 ==========
