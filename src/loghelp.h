@@ -24,6 +24,7 @@
 #define LOG_ERROR(...) Log::Error(__FILENAME__, __LINE__, __VA_ARGS__)
 
 #define LOG_DUMP(STR) Log::Dump(STR)
+#define LOG_DEBUG_FUNC(ARGS) do { if (Log::GetDebugEnabled()) { Log::Debug(__FILE__, __LINE__, "%s(%s)", __FUNCTION__, ARGS.c_str()); } } while(0)
 #define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) break; \
                                      const std::string& str = PrettyPrint(VAR); \
                                      LOG_DEBUG(MSG " %s", str.c_str()); \
@@ -103,5 +104,28 @@ static inline std::string PrettyPrint(const T& p_Container)
 {
   std::stringstream sstream;
   sstream << p_Container;
+  return sstream.str();
+}
+
+void PrettyPrintArgsHelper(std::stringstream& /*p_Sstream*/);
+
+template<typename FirstArg, typename... RemainingArgs>
+void PrettyPrintArgsHelper(std::stringstream& p_Sstream, const FirstArg& p_FirstArg, const RemainingArgs&... p_RemainingArgs)
+{
+  if (!p_Sstream.str().empty())
+  {
+    p_Sstream << ", ";
+  }
+
+  p_Sstream << p_FirstArg;
+
+  PrettyPrintArgsHelper(p_Sstream, p_RemainingArgs...);
+}
+
+template<typename... Args>
+std::string STR(const Args&... p_Args)
+{
+  std::stringstream sstream;
+  PrettyPrintArgsHelper(sstream, p_Args...);
   return sstream.str();
 }

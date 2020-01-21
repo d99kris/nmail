@@ -299,3 +299,9 @@ std::vector<std::string> Header::MimeToUtf8(const std::vector<std::string>& p_St
   }
   return strs;
 }
+
+std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header)
+{
+  p_Stream << p_Header.GetData();
+  return p_Stream;
+}

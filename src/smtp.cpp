@@ -23,10 +23,12 @@ Smtp::Smtp(const std::string &p_User, const std::string &p_Pass, const std::stri
   , m_Name(p_Name)
   , m_Address(p_Address)
 {
+  LOG_DEBUG_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Name, p_Address));
 }
 
 Smtp::~Smtp()
 {
+  LOG_DEBUG_FUNC(STR());
 }
 
 bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
@@ -35,6 +37,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
                 const std::string& p_RefMsgId,
                 const std::vector<std::string> &p_AttachmentPaths)
 {
+  LOG_DEBUG_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
+
   const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
   const std::string& body = GetBody(p_Message, p_AttachmentPaths);
   const std::string& data = header + body;
@@ -48,6 +52,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
 
 bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_Recipients)
 {
+  LOG_DEBUG_FUNC(STR(p_Data, p_Recipients));
+
   const bool enableSsl = (m_Port == 465);
   const bool enableTls = !enableSsl;
   const bool enableEsmtp = true;

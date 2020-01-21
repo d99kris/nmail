@@ -330,3 +330,9 @@ void Body::RemoveInvalidHeaders()
     }
   }
 }
+
+std::ostream& operator<<(std::ostream& p_Stream, const Body& p_Body)
+{
+  p_Stream << p_Body.GetData();
+  return p_Stream;
+}

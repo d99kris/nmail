@@ -44,3 +44,5 @@ private:
   ssize_t m_TextHtmlIndex = -1;
   std::string m_TextFromHtml;
 };
+
+std::ostream& operator<<(std::ostream& p_Stream, const Body& p_Body);

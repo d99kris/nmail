@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.20" LANGUAGES CXX)
+project(nmail VERSION "1.21" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -48,6 +48,8 @@ add_executable(nmail
   src/lockfile.h
   src/log.cpp
   src/log.h
+  src/loghelp.cpp
+  src/loghelp.h
   src/main.cpp
   src/serialized.cpp
   src/serialized.h

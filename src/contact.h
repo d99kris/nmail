@@ -29,3 +29,4 @@ private:
   std::string m_Name;
 };
 
+std::ostream& operator<<(std::ostream& p_Stream, const Contact& p_Contact);

@@ -73,6 +73,8 @@ private:
 
   void DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids);
 
+  static void Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData);
+
 private:
   std::string m_User;
   std::string m_Pass;

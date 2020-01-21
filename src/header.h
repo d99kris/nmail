@@ -56,3 +56,5 @@ private:
   std::string m_UniqueId;
   std::set<std::string> m_Addresses;
 };
+
+std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header);

@@ -67,3 +67,9 @@ std::vector<Contact> Contact::FromStrings(const std::vector<std::string> &p_Strs
   }
   return contacts;
 }
+
+std::ostream& operator<<(std::ostream& p_Stream, const Contact& p_Contact)
+{
+  p_Stream << p_Contact.ToString();
+  return p_Stream;
+}
