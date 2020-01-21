@@ -1,6 +1,6 @@
 // main.cpp
 //
-// Copyright (c) 2019 Kristofer Berggren
+// Copyright (c) 2019-2020 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -293,7 +293,7 @@ static void ShowVersion()
   std::cout <<
     "nmail " << Util::GetAppVersion() << "\n"
     "\n"
-    "Copyright (c) 2019 Kristofer Berggren\n"
+    "Copyright (c) 2019-2020 Kristofer Berggren\n"
     "\n"
     "nmail is distributed under the MIT license.\n"
     "\n"
