@@ -501,6 +501,8 @@ std::string Smtp::MimeEncodeStr(const std::string &p_In)
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
                   void* p_UserData)
 {
+  if (p_LogType == MAILSTREAM_LOG_TYPE_DATA_SENT_PRIVATE) return; // dont log private data, like passwords
+  
   (void)p_Smtp;
   (void)p_UserData;
   char* buffer = (char*)malloc(p_Size + 1);
