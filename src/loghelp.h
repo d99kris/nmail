@@ -24,7 +24,10 @@
 #define LOG_ERROR(...) Log::Error(__FILENAME__, __LINE__, __VA_ARGS__)
 
 #define LOG_DUMP(STR) Log::Dump(STR)
-#define LOG_DEBUG_FUNC(ARGS) do { if (Log::GetDebugEnabled()) { Log::Debug(__FILE__, __LINE__, "%s(%s)", __FUNCTION__, ARGS.c_str()); } } while(0)
+#define LOG_DEBUG_FUNC(ARGS) do { if (!Log::GetDebugEnabled()) break; \
+                                  const std::string& str = ARGS; \
+                                  Log::Debug(__FILE__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
+                                } while(0)
 #define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) break; \
                                      const std::string& str = PrettyPrint(VAR); \
                                      LOG_DEBUG(MSG " %s", str.c_str()); \
