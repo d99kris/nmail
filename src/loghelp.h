@@ -76,11 +76,11 @@ static inline T LogIfNotEqual(T p_Rv, typename identity<T>::type p_Expect, const
 {
   if (p_Rv != p_Expect)
   {
-    Log::Error(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
+    Log::Error(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
+    Log::Debug(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
   }
 
   return p_Rv;
@@ -92,11 +92,11 @@ static inline T LogIfEqual(T p_Rv, typename identity<T>::type p_Expect, const ch
 {
   if (p_Rv == p_Expect)
   {
-    Log::Error(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
+    Log::Error(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
   }
   else
   {
-    Log::Debug(p_File, p_Line, "%s = %d", p_Expr, p_Rv);
+    Log::Debug(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
   }
 
   return p_Rv;
