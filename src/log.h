@@ -15,6 +15,7 @@ class Log
 public:
   static void SetPath(const std::string& p_Path);
   static void SetDebugEnabled(bool p_DebugEnabled);
+  static bool GetDebugEnabled();
 
   static void Debug(const char* p_Filename, int p_LineNo, const char* p_Format, ...);
   static void Info(const char* p_Filename, int p_LineNo, const char* p_Format, ...);

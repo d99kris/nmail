@@ -25,6 +25,11 @@ void Log::SetDebugEnabled(bool p_DebugEnabled)
   m_DebugEnabled = p_DebugEnabled;
 }
 
+bool Log::GetDebugEnabled()
+{
+  return m_DebugEnabled;
+}
+
 void Log::Debug(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
 {
   if (m_DebugEnabled)

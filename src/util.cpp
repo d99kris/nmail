@@ -974,3 +974,17 @@ void Util::StripCR(std::wstring& p_Str)
 {
   p_Str.erase(std::remove(p_Str.begin(), p_Str.end(), L'\r'), p_Str.end());
 }
+
+std::string Util::Strip(const std::string& p_Str, const char p_Char)
+{
+  std::string str = p_Str;
+  str.erase(std::remove(str.begin(), str.end(), p_Char), str.end());
+  return str;
+}
+
+std::string Util::TrimRight(const std::string& p_Str, const std::string& p_Trim)
+{
+  const auto strEnd = p_Str.find_last_not_of(p_Trim);
+
+  return p_Str.substr(0, strEnd + 1);
+}

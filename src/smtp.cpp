@@ -56,7 +56,10 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   mailsmtp *smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return false;
 
-  mailsmtp_set_logger(smtp, Logger, NULL);
+  if (Log::GetDebugEnabled())
+  {
+    mailsmtp_set_logger(smtp, Logger, NULL);
+  }
   
   int rv = MAILSMTP_NO_ERROR;
   if (enableSsl)
@@ -508,6 +511,7 @@ void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t 
   char* buffer = (char*)malloc(p_Size + 1);
   memcpy(buffer, p_Buffer, p_Size);
   buffer[p_Size] = 0;
-  LOG_DEBUG("smtp %i: %s", p_LogType, buffer);
+  std::string str = Util::TrimRight(Util::Strip(std::string(buffer), '\r'), "\n");
+  LOG_DEBUG("smtp %i: %s", p_LogType, str.c_str());
   free(buffer);
 }
