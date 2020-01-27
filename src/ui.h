@@ -37,6 +37,7 @@ public:
   {
     UiRequestNone = 0,
     UiRequestDrawAll = (1 << 0),
+    UiRequestDrawError = (1 << 1),
   };
 
   enum PrefetchLevel
@@ -61,6 +62,7 @@ public:
 
   void ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response);
   void ResultHandler(const ImapManager::Action& p_Action, const ImapManager::Result& p_Result);
+  void SmtpResultHandlerError(const SmtpManager::Result& p_Result);
   void SmtpResultHandler(const SmtpManager::Result& p_Result);
   void StatusHandler(const StatusUpdate& p_StatusUpdate);
   
@@ -117,7 +119,7 @@ private:
   void ComposeMessagePrevLine();
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
-  bool PromptConfirmCancelCompose();
+  bool PromptYesNo(const std::string& p_Prompt);
   bool PromptString(const std::string& p_Prompt, std::string& p_Entry);
   bool CurrentMessageBodyAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
@@ -241,7 +243,10 @@ private:
   int m_ComposeMessageWrapPos = 0;
   int m_ComposeMessageOffsetY = 0;
   uint32_t m_ComposeDraftUid = 0;
-  
+
+  std::deque<SmtpManager::Result> m_SmtpErrorResults;
+  std::mutex m_SmtpErrorMutex;
+
   State m_State = StateViewMessageList;
   State m_LastState = StateViewMessageList;
   State m_LastMessageState = StateComposeMessage;

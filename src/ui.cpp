@@ -1083,6 +1083,19 @@ void Ui::PerformUiRequest(char p_UiRequest)
   {
     DrawAll();
   }
+
+  if (p_UiRequest & UiRequestDrawError)
+  {
+    std::unique_lock<std::mutex> lock(m_SmtpErrorMutex);
+    if (!m_SmtpErrorResults.empty())
+    {
+      const SmtpManager::Result result = m_SmtpErrorResults.front();
+      m_SmtpErrorResults.pop_front();
+      lock.unlock();
+
+      SmtpResultHandlerError(result);
+    }
+  }
 }
 
 void Ui::Run()
@@ -1692,7 +1705,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   {
     if (p_Key == m_KeyCancel)
     {
-      if (Ui::PromptConfirmCancelCompose())
+      if (Ui::PromptYesNo("Cancel message (y/n)?"))
       {
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
@@ -1703,7 +1716,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       SendComposedMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
-      SetLastStateOrMessageList();
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
     }
     else if (p_Key == m_KeyAddressBook)
     {
@@ -1834,7 +1854,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       UploadDraftMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
-      SetLastStateOrMessageList();
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -1849,7 +1876,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   {
     if (p_Key == m_KeyCancel)
     {
-      if (Ui::PromptConfirmCancelCompose())
+      if (Ui::PromptYesNo("Cancel message (y/n)?"))
       {
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
@@ -1860,7 +1887,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       SendComposedMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
-      SetLastStateOrMessageList();
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
     }
     else if (p_Key == KEY_UP)
     {
@@ -1941,7 +1975,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       UploadDraftMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
-      SetLastStateOrMessageList();
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2539,14 +2580,57 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
   }
 }
 
+void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
+{
+  if (!m_DraftsFolder.empty())
+  {
+    SmtpManager::Action smtpAction = p_Result.m_Action;
+    if (PromptYesNo("Send message failed. Save draft (y/n)?"))
+    {
+      smtpAction.m_IsSendMessage = false;
+      smtpAction.m_IsCreateMessage = true;
+
+      SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+      if (smtpResult.m_Result)
+      {
+        ImapManager::Action imapAction;
+        imapAction.m_UploadDraft = true;
+        imapAction.m_Folder = m_DraftsFolder;
+        imapAction.m_Msg = smtpResult.m_Message;
+        m_ImapManager->AsyncAction(imapAction);
+
+        if (smtpAction.m_ComposeDraftUid != 0)
+        {
+          MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+        }
+      }
+    }
+    else
+    {
+      if (smtpAction.m_ComposeDraftUid != 0)
+      {
+        MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+      }
+    }
+
+    AsyncUiRequest(UiRequestDrawAll);
+  }
+  else
+  {
+    SetDialogMessage("Send message failed");
+  }
+}
+
 void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
 {
   if (!p_Result.m_Result)
   {
-    SetDialogMessage("Send message failed");
+    std::unique_lock<std::mutex> lock(m_SmtpErrorMutex);
+    m_SmtpErrorResults.push_back(p_Result);
+    AsyncUiRequest(UiRequestDrawError);
   }
   else
-  {
+  {    
     const SmtpManager::Action& action = p_Result.m_Action;
     const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(action.m_To)));
     const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(action.m_Cc)));
@@ -2565,6 +2649,11 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
         AsyncUiRequest(UiRequestDrawAll);
         break;
       }
+    }
+
+    if ((action.m_ComposeDraftUid != 0) && !m_DraftsFolder.empty() && !m_TrashFolder.empty())
+    {
+      MoveMessage(action.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
     }
   }
 
@@ -2699,13 +2788,9 @@ void Ui::SendComposedMessage()
   action.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
   action.m_RefMsgId = m_ComposeHeaderRef;
   action.m_ComposeTempDirectory = m_ComposeTempDirectory;
+  action.m_ComposeDraftUid = m_ComposeDraftUid;
 
   m_SmtpManager->AsyncAction(action);
-
-  if (m_ComposeDraftUid != 0)
-  {
-    MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
-  }
 }
 
 void Ui::UploadDraftMessage()
@@ -3030,11 +3115,11 @@ int Ui::ReadKeyBlocking()
   }
 }
 
-bool Ui::PromptConfirmCancelCompose()
+bool Ui::PromptYesNo(const std::string& p_Prompt)
 {
   werase(m_DialogWin);
 
-  const std::string& dispStr = "Cancel message (y/n)?";
+  const std::string& dispStr = p_Prompt;
   int x = std::max((m_ScreenWidth - (int)dispStr.size() - 1) / 2, 0);
   wattron(m_DialogWin, A_REVERSE);
   mvwprintw(m_DialogWin, 0, x, " %s ", dispStr.c_str());
