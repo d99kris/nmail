@@ -800,14 +800,26 @@ void Ui::DrawMessageList()
     }
   }
   
+  const int maxFlagsFetchRequest = 1000;
   if (!fetchFlagUids.empty())
   {
-    ImapManager::Request request;
-    request.m_Folder = m_CurrentFolder;
-    request.m_GetFlags = fetchFlagUids;
+    std::set<uint32_t> subsetFetchFlagUids;
+    for (auto it = fetchFlagUids.begin(); it != fetchFlagUids.end(); ++it)
+    {
+      subsetFetchFlagUids.insert(*it);
+      if ((subsetFetchFlagUids.size() == maxFlagsFetchRequest) ||
+          (std::next(it) == fetchFlagUids.end()))
+      {
+        ImapManager::Request request;
+        request.m_Folder = m_CurrentFolder;
+        request.m_GetFlags = subsetFetchFlagUids;
     
-    LOG_DEBUG_VAR("request flags =", fetchFlagUids);
-    m_ImapManager->AsyncRequest(request);
+        LOG_DEBUG_VAR("request flags =", subsetFetchFlagUids);
+        m_ImapManager->AsyncRequest(request);
+        
+        subsetFetchFlagUids.clear(); 
+      }
+    }
   }
 
   wrefresh(m_MainWin);
