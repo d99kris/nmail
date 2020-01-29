@@ -2597,7 +2597,11 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
   if (!m_DraftsFolder.empty())
   {
     SmtpManager::Action smtpAction = p_Result.m_Action;
-    if (PromptYesNo("Send message failed. Save draft (y/n)?"))
+    const std::string msg =
+      (smtpAction.m_ComposeDraftUid != 0)
+      ? "Send message failed. Overwrite draft (y/n)?"
+      : "Send message failed. Save draft (y/n)?";
+    if (PromptYesNo(msg))
     {
       smtpAction.m_IsSendMessage = false;
       smtpAction.m_IsCreateMessage = true;
@@ -2614,14 +2618,10 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
         if (smtpAction.m_ComposeDraftUid != 0)
         {
           MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+          m_HasRequestedUids[m_TrashFolder] = false;        
         }
-      }
-    }
-    else
-    {
-      if (smtpAction.m_ComposeDraftUid != 0)
-      {
-        MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+
+        m_HasRequestedUids[m_DraftsFolder] = false;        
       }
     }
 
