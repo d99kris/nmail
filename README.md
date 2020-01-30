@@ -213,6 +213,24 @@ setting. The following levels are supported:
     3 = pre-fetching of all messages in all folders, i.e. full sync
 
 
+Compose Editor
+==============
+
+The built-in email compose editor in nmail supports the following:
+
+    Arrow keys     move the cursor
+    Page Up/Down   move the cursor page up / down
+    Ctrl-K         delete current line
+    Ctrl-C         cancel message
+    Ctrl-O         postpone message
+    Ctrl-X         send message
+    Ctrl-E         edit message in external editor
+    Ctrl-T         search address book
+    Backspace      backspace
+    Delete         delete
+    Enter          new line
+
+
 Troubleshooting
 ===============
 
