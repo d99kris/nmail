@@ -76,6 +76,8 @@ void Ui::Init()
     {"key_save_file", "s"},
     {"key_external_editor", "KEY_CTRLE"},
     {"key_postpone", "KEY_CTRLO"},
+    {"key_othercmd_help", "o"},
+    {"key_export", "e"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -104,6 +106,8 @@ void Ui::Init()
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
   m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
+  m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
+  m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
 
@@ -338,7 +342,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyReply), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
-      GetKeyDisplay(m_KeyRefresh), "Refresh",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
     },
     {
       GetKeyDisplay(m_KeyOpen), "ViewMsg",
@@ -347,6 +351,13 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCompose), "Compose",
       GetKeyDisplay(m_KeyMove), "Move",
       GetKeyDisplay(m_KeyQuit), "Quit",
+    },
+    {
+      GetKeyDisplay(m_KeyRefresh), "Refresh",
+      GetKeyDisplay(m_KeyExport), "Export",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+    },
+    {
     },
   };
 
@@ -358,7 +369,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyReply), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
-      GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
     },
     {
       GetKeyDisplay(m_KeyOpen), "MsgParts",
@@ -367,7 +378,14 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCompose), "Compose",
       GetKeyDisplay(m_KeyMove), "Move",
       GetKeyDisplay(m_KeyQuit), "Quit",
-    }
+    },
+    {
+      GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
+      GetKeyDisplay(m_KeyExport), "Export",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+    },
+    {
+    },
   };
 
   static std::vector<std::vector<std::string>> viewFoldersHelp =
@@ -414,11 +432,22 @@ void Ui::DrawHelp()
     switch (m_State)
     {
       case StateViewMessageList:
-        DrawHelpText(viewMessagesListHelp);
-        break;
+        {
+          auto first = viewMessagesListHelp.begin() + m_HelpViewMessagesListOffset;
+          auto last = viewMessagesListHelp.begin() + m_HelpViewMessagesListOffset + 2;
+          std::vector<std::vector<std::string>> helpMessages(first, last);
+          DrawHelpText(helpMessages);
+          break;
+        }
 
       case StateViewMessage:
-        DrawHelpText(viewMessageHelp);
+        {
+          auto first = viewMessageHelp.begin() + m_HelpViewMessageOffset;
+          auto last = viewMessageHelp.begin() + m_HelpViewMessageOffset + 2;
+          std::vector<std::vector<std::string>> helpMessages(first, last);
+          DrawHelpText(helpMessages);
+          break;
+        }
         break;
 
       case StateGotoFolder:
@@ -1556,6 +1585,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("Cannot toggle read/unread while offline");
     }
   }
+  else if (p_Key == m_KeyOtherCmdHelp)
+  {
+    m_HelpViewMessagesListOffset = (m_HelpViewMessagesListOffset == 0) ? 2 : 0;
+  }
+  else if (p_Key == m_KeyExport)
+  {
+    ExportMessage();
+  }
   else
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
@@ -1702,6 +1739,14 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     {
       SetDialogMessage("Cannot toggle read/unread while offline");
     }
+  }
+  else if (p_Key == m_KeyOtherCmdHelp)
+  {
+    m_HelpViewMessageOffset = (m_HelpViewMessageOffset == 0) ? 2 : 0;
+  }
+  else if (p_Key == m_KeyExport)
+  {
+    ExportMessage();
   }
   else
   {
@@ -2160,11 +2205,13 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateViewMessageList)
   {
     curs_set(0);
+    m_HelpViewMessagesListOffset = 0;
   }
   else if (m_State == StateViewMessage)
   {
     curs_set(0);
     m_MessageViewLineOffset = 0;
+    m_HelpViewMessageOffset = 0;
   }
   else if (m_State == StateComposeMessage)
   {
@@ -3290,5 +3337,38 @@ void Ui::SetLastStateOrMessageList()
   else
   {
     SetState(m_LastState);
+  }
+}
+
+void Ui::ExportMessage()
+{
+  const uint32_t currentUid = m_MessageListCurrentUid[m_CurrentFolder];
+  std::string filename = std::to_string(currentUid) + ".eml";
+  if (PromptString("Export Filename: ", filename))
+  {
+    if (!filename.empty())
+    {
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      const std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+      if (bodys.find(currentUid) != bodys.end())
+      {
+        Util::WriteFile(filename, m_Bodys[m_CurrentFolder][currentUid].GetData());
+        lock.unlock();
+        SetDialogMessage("Message exported");
+      }
+      else
+      {
+        lock.unlock();
+        SetDialogMessage("Export failed (message not available)");
+      }
+    }
+    else
+    {
+      SetDialogMessage("Export cancelled (empty filename)");
+    }
+  }
+  else
+  {
+    SetDialogMessage("Export cancelled");
   }
 }
