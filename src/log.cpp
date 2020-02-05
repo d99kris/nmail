@@ -11,7 +11,7 @@
 #include <sys/time.h>
 
 std::string Log::m_Path;
-bool Log::m_DebugEnabled = false;
+int Log::m_VerboseLevel = 0;
 std::mutex Log::m_Mutex;
 
 void Log::SetPath(const std::string &p_Path)
@@ -20,14 +20,25 @@ void Log::SetPath(const std::string &p_Path)
   remove(m_Path.c_str());
 }
 
-void Log::SetDebugEnabled(bool p_DebugEnabled)
+void Log::SetVerboseLevel(int p_Level)
 {
-  m_DebugEnabled = p_DebugEnabled;
+  m_VerboseLevel = p_Level;
+}
+
+void Log::Trace(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+{
+  if (m_VerboseLevel >= TRACE_LEVEL)
+  {
+    va_list vaList;
+    va_start(vaList, p_Format);
+    Write(p_Filename, p_LineNo, "TRACE", p_Format, vaList);
+    va_end(vaList);
+  }
 }
 
 void Log::Debug(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
 {
-  if (m_DebugEnabled)
+  if (m_VerboseLevel >= DEBUG_LEVEL)
   {
     va_list vaList;
     va_start(vaList, p_Format);

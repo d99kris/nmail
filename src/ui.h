@@ -89,7 +89,7 @@ private:
 
   void AsyncUiRequest(char p_UiRequest);
   void PerformUiRequest(char p_UiRequest);
-  void SetDialogMessage(const std::string& p_DialogMessage);
+  void SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn = false);
 
   void ViewFolderListKeyHandler(int p_Key);
   void ViewAddressListKeyHandler(int p_Key);

@@ -37,7 +37,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
                 const std::string& p_RefMsgId,
                 const std::vector<std::string> &p_AttachmentPaths)
 {
-  LOG_DEBUG_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
+  LOG_DEBUG_FUNC(STR());
+  LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
 
   const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
   const std::string& body = GetBody(p_Message, p_AttachmentPaths);
@@ -52,7 +53,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
 
 bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_Recipients)
 {
-  LOG_DEBUG_FUNC(STR(p_Data, p_Recipients));
+  LOG_DEBUG_FUNC(STR());
+  LOG_TRACE_FUNC(STR(p_Data, p_Recipients));
 
   const bool enableSsl = (m_Port == 465);
   const bool enableTls = !enableSsl;
@@ -62,7 +64,7 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   mailsmtp *smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return false;
 
-  if (Log::GetDebugEnabled())
+  if (Log::GetTraceEnabled())
   {
     mailsmtp_set_logger(smtp, Logger, NULL);
   }
@@ -518,6 +520,6 @@ void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t 
   memcpy(buffer, p_Buffer, p_Size);
   buffer[p_Size] = 0;
   std::string str = Util::TrimRight(Util::Strip(std::string(buffer), '\r'), "\n");
-  LOG_DEBUG("smtp %i: %s", p_LogType, str.c_str());
+  LOG_TRACE("smtp %i: %s", p_LogType, str.c_str());
   free(buffer);
 }

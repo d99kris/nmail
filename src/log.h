@@ -13,10 +13,17 @@
 class Log
 {
 public:
+  static const int INFO_LEVEL = 0;
+  static const int DEBUG_LEVEL = 1;
+  static const int TRACE_LEVEL = 2;
+  
   static void SetPath(const std::string& p_Path);
-  static void SetDebugEnabled(bool p_DebugEnabled);
-  static inline bool GetDebugEnabled() { return m_DebugEnabled; }
+  static void SetVerboseLevel(int p_Level);
+  static inline int GetVerboseLevel()  { return m_VerboseLevel; }
+  static inline bool GetTraceEnabled() { return m_VerboseLevel >= TRACE_LEVEL; }
+  static inline bool GetDebugEnabled() { return m_VerboseLevel >= DEBUG_LEVEL; }
 
+  static void Trace(const char* p_Filename, int p_LineNo, const char* p_Format, ...);
   static void Debug(const char* p_Filename, int p_LineNo, const char* p_Format, ...);
   static void Info(const char* p_Filename, int p_LineNo, const char* p_Format, ...);
   static void Warning(const char* p_Filename, int p_LineNo, const char* p_Format, ...);
@@ -29,6 +36,6 @@ private:
   
 private:
   static std::string m_Path;
-  static bool m_DebugEnabled;
+  static int m_VerboseLevel;
   static std::mutex m_Mutex;
 };

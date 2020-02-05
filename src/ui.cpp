@@ -320,7 +320,7 @@ void Ui::DrawDefaultDialog()
   wrefresh(m_DialogWin);
 }
 
-void Ui::SetDialogMessage(const std::string &p_DialogMessage)
+void Ui::SetDialogMessage(const std::string &p_DialogMessage, bool p_Warn /*= false */)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_DialogMessage = p_DialogMessage;
@@ -328,7 +328,14 @@ void Ui::SetDialogMessage(const std::string &p_DialogMessage)
   if (!p_DialogMessage.empty())
   {
     const std::string& logMessage = Util::ToLower(p_DialogMessage);
-    LOG_DEBUG("%s", logMessage.c_str());
+    if (p_Warn)
+    {
+      LOG_WARNING("%s", logMessage.c_str());
+    }
+    else
+    {
+      LOG_DEBUG("%s", logMessage.c_str());
+    }
   }
 }
 
@@ -508,7 +515,7 @@ void Ui::DrawFolderList()
   {
     ImapManager::Request request;
     request.m_GetFolders = true;
-    LOG_DEBUG("request folders");
+    LOG_DEBUG("async request folders");
     m_HasRequestedFolders = true;
     m_ImapManager->AsyncRequest(request);
   }
@@ -642,7 +649,7 @@ void Ui::DrawMessageList()
     ImapManager::Request request;
     request.m_Folder = m_CurrentFolder;
     request.m_GetUids = true;
-    LOG_DEBUG_VAR("request uids =", m_CurrentFolder);
+    LOG_DEBUG_VAR("async request uids =", m_CurrentFolder);
     m_HasRequestedUids[m_CurrentFolder] = true;
     m_ImapManager->AsyncRequest(request);
   }
@@ -785,7 +792,7 @@ void Ui::DrawMessageList()
       fetchUids.insert(uid);
       request.m_GetBodys = fetchUids;
 
-      LOG_DEBUG_VAR("request bodys =", fetchUids);
+      LOG_DEBUG_VAR("async request bodys =", fetchUids);
       m_ImapManager->AsyncRequest(request);
     }
   }
@@ -802,7 +809,7 @@ void Ui::DrawMessageList()
       fetchUids.insert(uid);
       request.m_GetBodys = fetchUids;
 
-      LOG_DEBUG_VAR("request bodys =", fetchUids);
+      LOG_DEBUG_VAR("prefetch request bodys =", fetchUids);
       m_ImapManager->PrefetchRequest(request);
     }
   }
@@ -821,7 +828,7 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetHeaders = subsetFetchHeaderUids;
 
-        LOG_DEBUG_VAR("request headers =", subsetFetchHeaderUids);
+        LOG_DEBUG_VAR("async request headers =", subsetFetchHeaderUids);
         m_ImapManager->AsyncRequest(request);
         
         subsetFetchHeaderUids.clear(); 
@@ -843,7 +850,7 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetFlags = subsetFetchFlagUids;
     
-        LOG_DEBUG_VAR("request flags =", subsetFetchFlagUids);
+        LOG_DEBUG_VAR("async request flags =", subsetFetchFlagUids);
         m_ImapManager->AsyncRequest(request);
         
         subsetFetchFlagUids.clear(); 
@@ -948,7 +955,7 @@ void Ui::DrawMessage()
     ImapManager::Request request;
     request.m_Folder = m_CurrentFolder;
     request.m_GetBodys = fetchBodyUids;
-    LOG_DEBUG_VAR("request bodys =", fetchBodyUids);
+    LOG_DEBUG_VAR("async request bodys =", fetchBodyUids);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -2121,7 +2128,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       int rv = Util::OpenInExtViewer(tempFilePath);
       if (rv != 0)
       {
-        SetDialogMessage("External viewer error code " + std::to_string(rv));
+        SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
       }
       else
       {
@@ -2131,7 +2138,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     }
     else
     {
-      SetDialogMessage(err);
+      SetDialogMessage(err, true /* p_Warn */);
     }
   }
   else if (p_Key == m_KeySaveFile)
@@ -2545,7 +2552,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           request.m_PrefetchLevel = PrefetchLevelFullSync;
           request.m_Folder = folder;
           request.m_GetUids = true;
-          LOG_DEBUG_VAR("request uids =", folder);
+          LOG_DEBUG_VAR("prefetch request uids =", folder);
           m_HasPrefetchRequestedUids[folder] = true;
           m_ImapManager->PrefetchRequest(request);
         }
@@ -2577,8 +2584,8 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             request.m_GetHeaders = subsetFetchHeaderUids;
             request.m_GetBodys = subsetFetchHeaderUids;
 
-            LOG_DEBUG_VAR("request headers =", subsetFetchHeaderUids);
-            LOG_DEBUG_VAR("request bodys =", subsetFetchHeaderUids);
+            LOG_DEBUG_VAR("prefetch request headers =", subsetFetchHeaderUids);
+            LOG_DEBUG_VAR("prefetch request bodys =", subsetFetchHeaderUids);
             m_ImapManager->PrefetchRequest(request);
         
             subsetFetchHeaderUids.clear(); 
@@ -2592,27 +2599,27 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
   {
     if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed)
     {
-      SetDialogMessage("Get folders failed");
+      SetDialogMessage("Get folders failed", true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetBodysFailed)
     {
-      SetDialogMessage("Get message body failed");
+      SetDialogMessage("Get message body failed", true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed)
     {
-      SetDialogMessage("Get message headers failed");
+      SetDialogMessage("Get message headers failed", true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed)
     {
-      SetDialogMessage("Get message ids failed");
+      SetDialogMessage("Get message ids failed", true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFlagsFailed)
     {
-      SetDialogMessage("Get message flags failed");
+      SetDialogMessage("Get message flags failed", true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusLoginFailed)
     {
-      SetDialogMessage("Login failed");
+      SetDialogMessage("Login failed", true /* p_Warn */);
     }
   }
 
@@ -2630,11 +2637,11 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
   {
     if (!p_Action.m_MoveDestination.empty())
     {
-      SetDialogMessage("Move message failed");
+      SetDialogMessage("Move message failed", true /* p_Warn */);
     }
     else if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
     {
-      SetDialogMessage("Update message flags failed");
+      SetDialogMessage("Update message flags failed", true /* p_Warn */);
     }
   }
 }
@@ -2676,7 +2683,7 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
   }
   else
   {
-    SetDialogMessage("Send message failed");
+    SetDialogMessage("Send message failed", true /* p_Warn */);
   }
 }
 
@@ -2730,7 +2737,7 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
     ImapManager::Request request;
     request.m_PrefetchLevel = PrefetchLevelFullSync;
     request.m_GetFolders = true;
-    LOG_DEBUG("request folders");
+    LOG_DEBUG("prefetch request folders");
     m_HasPrefetchRequestedFolders = true;
     m_ImapManager->PrefetchRequest(request);
   }
@@ -2882,7 +2889,7 @@ void Ui::UploadDraftMessage()
   }
   else
   {
-    SetDialogMessage("Drafts folder not configured");
+    SetDialogMessage("Drafts folder not configured", true /* p_Warn */);
   }
 }
 
@@ -2910,7 +2917,7 @@ bool Ui::DeleteMessage()
   }
   else
   {
-    SetDialogMessage("Trash folder not configured");
+    SetDialogMessage("Trash folder not configured", true /* p_Warn */);
     return false;
   }
 }
@@ -3359,7 +3366,7 @@ void Ui::ExportMessage()
       else
       {
         lock.unlock();
-        SetDialogMessage("Export failed (message not available)");
+        SetDialogMessage("Export failed (message not available)", true /* p_Warn */);
       }
     }
     else

@@ -49,6 +49,9 @@ Command-line Options:
     -e, --verbose
         enable verbose logging
 
+    -ee, --extraverbose
+        enable extra verbose logging
+
     -h, --help
         display this help and exit
 
@@ -245,9 +248,15 @@ preferred way of reporting issues and asking questions is by opening
 Verbose logging can also be enabled by setting `verbose_logging=1` in
 `~/.nmail/main.conf`.
 
-**Warning:** With verbose logging actual email contents may be present
-in the resulting log file. Please edit the log file and remove any
-email message content that is private, before sharing the log file.
+An extra verbose logging mode is also supported. It produces very large
+log files with detailed information. The extra verbose logs typically
+contain actual email contents. Review and edit such logs to remove any
+private information before sharing. To enable extra verbose logging:
+
+    nmail --extraverbose
+
+Extra verbose logging can also be enabled by setting `verbose_logging=2` in
+`~/.nmail/main.conf`.
 
 
 Email List

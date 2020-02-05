@@ -52,7 +52,11 @@ int main(int argc, char* argv[])
     }
     else if ((*it == "-e") || (*it == "--verbose"))
     {
-      Log::SetDebugEnabled(true);
+      Log::SetVerboseLevel(Log::DEBUG_LEVEL);
+    }
+    else if ((*it == "-ee") || (*it == "--extraverbose"))
+    {
+      Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
     else if ((*it == "-h") || (*it == "--help"))
     {
@@ -104,7 +108,7 @@ int main(int argc, char* argv[])
 
   const std::string os = Util::GetOs();
   const std::string compiler = Util::GetCompiler();
-  LOG_INFO("using %s/%s", os.c_str(), compiler.c_str());
+  LOG_INFO("built using %s/%s", os.c_str(), compiler.c_str());
 
   Util::InitTempDir();
 
@@ -170,9 +174,16 @@ int main(int argc, char* argv[])
   Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
   Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
 
-  if (config->Get("verbose_logging") == "1")
+  if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {
-    Log::SetDebugEnabled(true);
+    if (config->Get("verbose_logging") == "1")
+    {
+      Log::SetVerboseLevel(Log::DEBUG_LEVEL);
+    }
+    else if (config->Get("verbose_logging") == "2")
+    {
+      Log::SetVerboseLevel(Log::TRACE_LEVEL);
+    }
   }
   
   uint16_t imapPort = 0;
@@ -271,6 +282,7 @@ static void ShowHelp()
     "Options:\n"
     "   -d, --confdir <DIR>  use a different directory than ~/.nmail\n"
     "   -e, --verbose        enable verbose logging\n"
+    "   -ee, --extraverbose  enable extra verbose logging\n"
     "   -h, --help           display this help and exit\n"
     "   -o, --offline        run in offline mode\n"
     "   -s, --setup <SERV>   setup wizard for specified service, supported\n"

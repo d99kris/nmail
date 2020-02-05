@@ -30,7 +30,7 @@ Imap::Imap(const std::string &p_User, const std::string &p_Pass, const std::stri
   InitCacheDir();
   InitImapCacheDir();
 
-  if (Log::GetDebugEnabled())
+  if (Log::GetTraceEnabled())
   {
     mailimap_set_logger(m_Imap, Logger, NULL);
   }
@@ -984,6 +984,6 @@ void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, 
   memcpy(buffer, p_Buffer, p_Size);
   buffer[p_Size] = 0;
   std::string str = Util::TrimRight(Util::Strip(std::string(buffer), '\r'), "\n");
-  LOG_DEBUG("imap %i: %s", p_LogType, str.c_str());
+  LOG_TRACE("imap %i: %s", p_LogType, str.c_str());
   free(buffer);
 }
