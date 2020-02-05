@@ -126,6 +126,7 @@ private:
   void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void SetLastStateOrMessageList();
   void ExportMessage();
+  void ImportMessage();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -219,6 +220,7 @@ private:
   int m_KeyPostpone = 0;
   int m_KeyOtherCmdHelp = 0;
   int m_KeyExport = 0;
+  int m_KeyImport = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   

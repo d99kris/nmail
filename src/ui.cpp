@@ -78,6 +78,7 @@ void Ui::Init()
     {"key_postpone", "KEY_CTRLO"},
     {"key_othercmd_help", "o"},
     {"key_export", "e"},
+    {"key_import", "i"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -108,6 +109,7 @@ void Ui::Init()
   m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
   m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
   m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
+  m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
 
@@ -362,6 +364,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyRefresh), "Refresh",
       GetKeyDisplay(m_KeyExport), "Export",
+      GetKeyDisplay(m_KeyImport), "Import",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
     },
     {
@@ -1600,6 +1603,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     ExportMessage();
   }
+  else if (p_Key == m_KeyImport)
+  {
+    ImportMessage();
+  }
   else
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
@@ -2643,6 +2650,18 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
     {
       SetDialogMessage("Update message flags failed", true /* p_Warn */);
     }
+    else if (p_Action.m_UploadDraft)
+    {
+      SetDialogMessage("Saving draft message failed", true /* p_Warn */);
+    }
+    else if (p_Action.m_UploadMessage)
+    {
+      SetDialogMessage("Importing message failed", true /* p_Warn */);
+    }
+    else
+    {
+      SetDialogMessage("Unknown IMAP action error", true /* p_Warn */);
+    }
   }
 }
 
@@ -3377,5 +3396,39 @@ void Ui::ExportMessage()
   else
   {
     SetDialogMessage("Export cancelled");
+  }
+}
+
+void Ui::ImportMessage()
+{
+  std::string filename;
+  if (PromptString("Import Filename: ", filename))
+  {
+    if (!filename.empty())
+    {
+      if (Util::NotEmpty(filename))
+      {
+        const std::string& msg = Util::ReadFile(filename);
+
+        ImapManager::Action imapAction;
+        imapAction.m_UploadMessage = true;
+        imapAction.m_Folder = m_CurrentFolder;
+        imapAction.m_Msg = msg;
+        m_ImapManager->AsyncAction(imapAction);
+        m_HasRequestedUids[m_CurrentFolder] = false;
+      }
+      else
+      {
+        SetDialogMessage("Import failed (file not found or empty)");
+      }
+    }
+    else
+    {
+      SetDialogMessage("Import cancelled (empty filename)");
+    }
+  }
+  else
+  {
+    SetDialogMessage("Import cancelled");
   }
 }
