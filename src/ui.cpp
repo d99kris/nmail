@@ -350,8 +350,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyPrevMsg), "PrevMsg",
       GetKeyDisplay(m_KeyReply), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
-      GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
-      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+      GetKeyDisplay(m_KeyRefresh), "Refresh",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
       GetKeyDisplay(m_KeyOpen), "ViewMsg",
@@ -362,10 +362,10 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
     {
-      GetKeyDisplay(m_KeyRefresh), "Refresh",
+      GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
       GetKeyDisplay(m_KeyImport), "Import",
-      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
     },
@@ -378,8 +378,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyPrevMsg), "PrevMsg",
       GetKeyDisplay(m_KeyReply), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
-      GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
-      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+      GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
       GetKeyDisplay(m_KeyOpen), "MsgParts",
@@ -390,9 +390,9 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
     {
-      GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
+      GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
-      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmd",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
     },
