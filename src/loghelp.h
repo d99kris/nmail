@@ -27,11 +27,11 @@
 #define LOG_DUMP(STR) Log::Dump(STR)
 #define LOG_TRACE_FUNC(ARGS) do { if (!Log::GetTraceEnabled()) break; \
                                   const std::string& str = ARGS; \
-                                  Log::Trace(__FILE__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
+                                  Log::Trace(__FILENAME__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
                                 } while(0)
 #define LOG_DEBUG_FUNC(ARGS) do { if (!Log::GetDebugEnabled()) break; \
                                   const std::string& str = ARGS; \
-                                  Log::Debug(__FILE__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
+                                  Log::Debug(__FILENAME__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
                                 } while(0)
 #define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) break; \
                                      const std::string& str = PrettyPrint(VAR); \
