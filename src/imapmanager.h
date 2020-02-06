@@ -69,6 +69,7 @@ public:
     bool m_SetUnseen = false;
     bool m_UploadDraft = false;
     bool m_UploadMessage = false;
+    bool m_DeleteMessages = false;
     std::string m_MoveDestination;
     std::string m_Msg;
   };

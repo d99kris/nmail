@@ -2658,6 +2658,10 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
     {
       SetDialogMessage("Importing message failed", true /* p_Warn */);
     }
+    else if (p_Action.m_DeleteMessages)
+    {
+      SetDialogMessage("Permanently delete message failed", true /* p_Warn */);
+    }
     else
     {
       SetDialogMessage("Unknown IMAP action error", true /* p_Warn */);
@@ -2916,20 +2920,30 @@ bool Ui::DeleteMessage()
 {
   if (!m_TrashFolder.empty())
   {
-    MoveMessage(m_MessageListCurrentUid[m_CurrentFolder], m_CurrentFolder, m_TrashFolder);
-
-    m_MessageViewLineOffset = 0;
-    UpdateUidFromIndex(true /* p_UserTriggered */);    
-
-    bool isMsgDateUidsEmpty = false;
+    if (m_CurrentFolder != m_TrashFolder)
     {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
+      MoveMessage(m_MessageListCurrentUid[m_CurrentFolder], m_CurrentFolder, m_TrashFolder);
+
+      m_MessageViewLineOffset = 0;
+      UpdateUidFromIndex(true /* p_UserTriggered */);    
+
+      bool isMsgDateUidsEmpty = false;
+      {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
+      }
+
+      if (isMsgDateUidsEmpty)
+      {
+        SetState(StateViewMessageList);
+      }
     }
-
-    if (isMsgDateUidsEmpty)
+    else
     {
-      SetState(StateViewMessageList);
+      if (Ui::PromptYesNo("Permanently delete message (y/n)?"))
+      {
+        DeleteMessage(m_MessageListCurrentUid[m_CurrentFolder], m_CurrentFolder);
+      }
     }
     
     return true;
@@ -2957,6 +2971,24 @@ void Ui::MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::strin
 
     m_HasRequestedUids[p_From] = false;
     m_HasRequestedUids[p_To] = false;
+  }
+}
+
+void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
+{
+  ImapManager::Action action;
+  action.m_Folder = p_Folder;
+  action.m_Uids.insert(p_Uid);
+  action.m_DeleteMessages = true;
+  m_ImapManager->AsyncAction(action);
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    RemoveUidDate(p_Folder, action.m_Uids);
+    m_Uids[p_Folder] = m_Uids[p_Folder] - action.m_Uids;
+    m_Headers[p_Folder] = m_Headers[p_Folder] - action.m_Uids;
+
+    m_HasRequestedUids[p_Folder] = false;
   }
 }
 

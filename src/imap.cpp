@@ -702,10 +702,10 @@ bool Imap::DeleteMessages(const std::string &p_Folder, const std::set<uint32_t> 
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
-  std::lock_guard<std::mutex> imapLock(m_ImapMutex);
-
   bool rv = true;
   rv &= SetFlagDeleted(p_Folder, p_Uids, true);
+
+  std::lock_guard<std::mutex> imapLock(m_ImapMutex);
   rv &= (LOG_IF_IMAP_ERR(mailimap_expunge(m_Imap)) == MAILIMAP_NO_ERROR);
   return rv;
 }

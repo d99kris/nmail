@@ -110,6 +110,7 @@ private:
   void UploadDraftMessage();
   bool DeleteMessage();
   void MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To);
+  void DeleteMessage(uint32_t p_Uid, const std::string& p_Folder);
   void ToggleUnseen();
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);

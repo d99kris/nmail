@@ -534,6 +534,13 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
     ClearStatus(Status::FlagSaving);
   }
 
+  if (p_Action.m_DeleteMessages)
+  {
+    SetStatus(Status::FlagDeleting);
+    result.m_Result &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
+    ClearStatus(Status::FlagDeleting);
+  }
+
   if (m_ResultHandler)
   {
     m_ResultHandler(p_Action, result);
