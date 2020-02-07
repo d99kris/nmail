@@ -55,6 +55,8 @@ public:
   void SetSmtpManager(std::shared_ptr<SmtpManager> p_SmtpManager);
   void SetTrashFolder(const std::string& p_TrashFolder);
   void SetDraftsFolder(const std::string& p_DraftsFolder);
+  void SetSentFolder(const std::string& p_SentFolder);
+  void SetClientStoreSent(bool p_ClientStoreSent);
   void ResetImapManager();
   void ResetSmtpManager();
 
@@ -134,6 +136,8 @@ private:
   std::shared_ptr<SmtpManager> m_SmtpManager;
   std::string m_TrashFolder;
   std::string m_DraftsFolder;
+  std::string m_SentFolder;
+  bool m_ClientStoreSent = false;
   bool m_Running = false;
 
   std::string m_Inbox;

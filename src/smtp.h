@@ -24,10 +24,11 @@ public:
 
   bool Send(const std::string& p_Subject, const std::string& p_Message,
             const std::vector<Contact>& p_To,
-            const std::vector<Contact>& p_Cc = std::vector<Contact>(),
-            const std::vector<Contact>& p_Bcc = std::vector<Contact>(),
-            const std::string& p_RefMsgId = std::string(),
-            const std::vector<std::string>& p_AttachmentPaths = std::vector<std::string>());
+            const std::vector<Contact>& p_Cc,
+            const std::vector<Contact>& p_Bcc,
+            const std::string& p_RefMsgId,
+            const std::vector<std::string>& p_AttachmentPaths,
+            std::string& p_ResultMessage);
   std::string GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
                         const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
                         const std::string& p_RefMsgId);

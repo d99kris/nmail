@@ -163,7 +163,8 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action &p_Acti
   if (p_Action.m_IsSendMessage)
   {
     SetStatus(Status::FlagSending);
-    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, ref, att);
+    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, ref, att,
+                                result.m_Message);
     ClearStatus(Status::FlagSending);
   }
   else if (p_Action.m_IsCreateMessage)

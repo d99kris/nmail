@@ -169,6 +169,7 @@ and fill out the empty fields (except `pass`), example:
 
     address=example@example.com
     cache_encrypt=1
+    client_store_sent=0
     drafts=Drafts
     ext_viewer_cmd=open
     html_convert_cmd=/usr/local/bin/lynx -dump
@@ -179,16 +180,26 @@ and fill out the empty fields (except `pass`), example:
     pass=
     prefetch_level=2
     save_pass=1
+    sent=Sent
     smtp_host=smtp.example.com
     smtp_port=465
     trash=Trash
     user=example@example.com
     verbose_logging=0
 
+### pass
+
 The field `pass` shall be left empty. The next time nmail is started it will
 prompt for password. If having configured nmail to save the password
 `save_pass=1` the field `pass` will be automatically populated with the
 password encrypted (refer to Security section below for details).
+
+### client_store_sent
+
+The field `client_store_sent` indicates whether nmail shall upload sent emails
+to configured `sent` folder. Many email service providers (gmail, outlook, etc)
+do this on server side, so this should only be enabled if emails sent using
+nmail do not automatically gets stored in the sent folder.
 
 
 Multiple Email Accounts

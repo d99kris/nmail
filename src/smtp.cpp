@@ -35,7 +35,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
                 const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
                 const std::vector<Contact>& p_Bcc,
                 const std::string& p_RefMsgId,
-                const std::vector<std::string> &p_AttachmentPaths)
+                const std::vector<std::string>& p_AttachmentPaths,
+                std::string& p_ResultMessage)
 {
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
@@ -43,6 +44,7 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
   const std::string& body = GetBody(p_Message, p_AttachmentPaths);
   const std::string& data = header + body;
+  p_ResultMessage = data;
   std::vector<Contact> recipients;
   recipients.insert(recipients.end(), p_To.begin(), p_To.end());
   recipients.insert(recipients.end(), p_Cc.begin(), p_Cc.end());

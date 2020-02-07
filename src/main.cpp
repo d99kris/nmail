@@ -126,6 +126,8 @@ int main(int argc, char* argv[])
     {"inbox", "INBOX"},
     {"trash", ""},
     {"drafts", ""},
+    {"sent", ""},
+    {"client_store_sent", "0"},
     {"cache_encrypt", "1"},
     {"html_convert_cmd", Util::GetDefaultHtmlConvertCmd()},
     {"ext_viewer_cmd", Util::GetDefaultExtViewerCmd()},
@@ -170,6 +172,8 @@ int main(int argc, char* argv[])
   const std::string& inbox = config->Get("inbox");
   std::string trash = config->Get("trash");
   std::string drafts = config->Get("drafts");
+  std::string sent = config->Get("sent");
+  const bool clientStoreSent = (config->Get("client_store_sent") == "1");
   const bool cacheEncrypt = (config->Get("cache_encrypt") == "1");
   Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
   Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
@@ -247,6 +251,8 @@ int main(int argc, char* argv[])
   ui.SetImapManager(imapManager);
   ui.SetTrashFolder(trash);
   ui.SetDraftsFolder(drafts);
+  ui.SetSentFolder(sent);
+  ui.SetClientStoreSent(clientStoreSent);
   ui.SetSmtpManager(smtpManager);
 
   ui.Run();
@@ -344,6 +350,7 @@ static void SetupGmail(std::shared_ptr<Config> p_Config)
   p_Config->Set("inbox", "INBOX");  
   p_Config->Set("trash", "[Gmail]/Trash");
   p_Config->Set("drafts", "[Gmail]/Drafts");
+  p_Config->Set("sent", "[Gmail]/Sent Mail");
 }
 
 static void SetupOutlook(std::shared_ptr<Config> p_Config)
@@ -357,6 +364,7 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config)
   p_Config->Set("inbox", "Inbox");  
   p_Config->Set("trash", "Deleted");  
   p_Config->Set("drafts", "Drafts");
+  p_Config->Set("sent", "Sent");
 }
 
 bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,

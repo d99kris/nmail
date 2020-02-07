@@ -2744,6 +2744,28 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     {
       MoveMessage(action.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
     }
+
+    if (m_ClientStoreSent)
+    {
+      if (!m_SentFolder.empty())
+      {
+        ImapManager::Action imapAction;
+        imapAction.m_UploadMessage = true;
+        imapAction.m_Folder = m_SentFolder;
+        imapAction.m_Msg = p_Result.m_Message;
+        m_ImapManager->AsyncAction(imapAction);
+      }
+      else
+      {
+        SetDialogMessage("Sent folder not configured", true /* p_Warn */);
+      }
+    }
+
+    if (!m_SentFolder.empty())
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_HasRequestedUids[m_SentFolder] = false;
+    }
   }
 
   Util::RmDir(p_Result.m_Action.m_ComposeTempDirectory);
@@ -2800,6 +2822,16 @@ void Ui::SetTrashFolder(const std::string& p_TrashFolder)
 void Ui::SetDraftsFolder(const std::string& p_DraftsFolder)
 {
   m_DraftsFolder = p_DraftsFolder;
+}
+
+void Ui::SetSentFolder(const std::string& p_SentFolder)
+{
+  m_SentFolder = p_SentFolder;
+}
+
+void Ui::SetClientStoreSent(bool p_ClientStoreSent)
+{
+  m_ClientStoreSent = p_ClientStoreSent;
 }
 
 bool Ui::IsConnected()
