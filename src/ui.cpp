@@ -962,7 +962,7 @@ void Ui::DrawMessage()
     m_ImapManager->AsyncRequest(request);
   }
 
-  if (markSeen)
+  if (markSeen && !m_MessageViewToggledSeen)
   {
     MarkSeen();
   }
@@ -1583,7 +1583,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     {
       if (m_MessageListCurrentUid[m_CurrentFolder] != -1)
       {
-        ToggleUnseen();
+        ToggleSeen();
       }
       else
       {
@@ -1747,7 +1747,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      ToggleUnseen();
+      {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        m_MessageViewToggledSeen = true;
+      }
+      ToggleSeen();
     }
     else
     {
@@ -2220,6 +2224,10 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(0);
     m_HelpViewMessagesListOffset = 0;
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      m_MessageViewToggledSeen = false;
+    }
   }
   else if (m_State == StateViewMessage)
   {
@@ -2878,10 +2886,26 @@ std::string Ui::GetStatusStr()
 
 std::string Ui::GetStateStr()
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   switch (m_State)
   {
     case StateViewMessageList: return "Folder: " + m_CurrentFolder;
-    case StateViewMessage: return std::string("Message ") + (m_Plaintext ? "plain" : "html");
+    case StateViewMessage:
+      {
+        std::string str = std::string("Message ") + (m_Plaintext ? "plain" : "html");
+        if (m_MessageViewToggledSeen)
+        {
+          const std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
+          const int uid = m_MessageListCurrentUid[m_CurrentFolder];
+          const bool unread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
+          if (unread)
+          {
+            str += " [unread]";
+          }
+        }
+
+        return str;
+      }
     case StateGotoFolder: return "Goto Folder";
     case StateMoveToFolder: return "Move To Folder";
     case StateComposeMessage: return "Compose";
@@ -3024,7 +3048,7 @@ void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
   }
 }
 
-void Ui::ToggleUnseen()
+void Ui::ToggleSeen()
 {
   std::map<uint32_t, uint32_t> flags;
   {
@@ -3094,6 +3118,13 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
 
   m_MessageListUidSet[m_CurrentFolder] = p_UserTriggered;
 
+  static int lastUid = 0;
+  if (lastUid != m_MessageListCurrentUid[m_CurrentFolder])
+  {
+    m_MessageViewToggledSeen = false;
+    lastUid = m_MessageListCurrentUid[m_CurrentFolder];
+  }
+  
   LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 

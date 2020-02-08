@@ -113,7 +113,7 @@ private:
   bool DeleteMessage();
   void MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To);
   void DeleteMessage(uint32_t p_Uid, const std::string& p_Folder);
-  void ToggleUnseen();
+  void ToggleSeen();
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);
   void UpdateIndexFromUid();
@@ -264,5 +264,7 @@ private:
   int m_HelpViewMessagesListOffset = 0;
   int m_HelpViewMessageOffset = 0;
 
+  bool m_MessageViewToggledSeen = false;
+  
   int m_Pipe[2] = {-1, -1};
 };
