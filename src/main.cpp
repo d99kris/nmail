@@ -25,7 +25,7 @@
 static bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
                            const uint16_t p_Imapport, const std::string& p_Smtphost,
                            const uint16_t p_Smtpport);
-static bool ValidatePass(const std::string& p_Pass);
+static bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix);
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
@@ -122,6 +122,8 @@ int main(int argc, char* argv[])
     {"imap_port", "993"},
     {"smtp_host", ""},
     {"smtp_port", "465"},
+    {"smtp_user", ""},
+    {"smtp_pass", ""},
     {"save_pass", "0"},
     {"inbox", "INBOX"},
     {"trash", ""},
@@ -165,9 +167,11 @@ int main(int argc, char* argv[])
   const std::string& name = config->Get("name");
   const std::string& address = config->Get("address");
   const std::string& user = config->Get("user");
-  std::string encpass = config->Get("pass");
+  std::string encPass = config->Get("pass");
   const std::string& imapHost = config->Get("imap_host");
   const std::string& smtpHost = config->Get("smtp_host");
+  std::string smtpUser = config->Get("smtp_user");
+  std::string encSmtpPass = config->Get("smtp_pass");
   const bool savePass = (config->Get("save_pass") == "1");
   const std::string& inbox = config->Get("inbox");
   std::string trash = config->Get("trash");
@@ -210,24 +214,52 @@ int main(int argc, char* argv[])
   }
 
   std::string pass;
-  if (encpass.empty())
+  if (encPass.empty())
   {
-    std::cout << "Password: ";
+    std::cout << (smtpUser.empty() ? "Password: " : "IMAP Password: ");
     pass = Util::GetPass();
     if (savePass)
     {
-      encpass = Serialized::ToHex(AES::Encrypt(pass, user));
-      config->Set("pass", encpass);
+      encPass = Serialized::ToHex(AES::Encrypt(pass, user));
+      config->Set("pass", encPass);
     }
   }
   else
   {
-    pass = AES::Decrypt(Serialized::FromHex(encpass), user);
+    pass = AES::Decrypt(Serialized::FromHex(encPass), user);
   }
 
-  if (!ValidatePass(pass))
+  if (!ValidatePass(pass, smtpUser.empty() ? "" : "IMAP "))
   {
-    ShowHelp();
+    return 1;
+  }
+
+  std::string smtpPass;
+  if (smtpUser.empty())
+  {
+    smtpUser = user;
+    smtpPass = pass;
+  }
+  else
+  {
+    if (encSmtpPass.empty())
+    {
+      std::cout << "SMTP Password: ";
+      smtpPass = Util::GetPass();
+      if (savePass)
+      {
+        encSmtpPass = Serialized::ToHex(AES::Encrypt(smtpPass, smtpUser));
+        config->Set("smtp_pass", encSmtpPass);
+      }
+    }
+    else
+    {
+      smtpPass = AES::Decrypt(Serialized::FromHex(encSmtpPass), smtpUser);
+    }
+  }
+  
+  if (!ValidatePass(smtpPass, "SMTP "))
+  {
     return 1;
   }
   
@@ -242,7 +274,7 @@ int main(int argc, char* argv[])
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
   std::shared_ptr<SmtpManager> smtpManager =
-    std::make_shared<SmtpManager>(user, pass, smtpHost, smtpPort, name, address, online,
+    std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
@@ -380,11 +412,12 @@ bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
   return true;
 }
 
-bool ValidatePass(const std::string& p_Pass)
+bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix)
 {
   if (p_Pass.empty())
   {
-    std::cout << "error: pass not specified.\n\n";
+    std::cout << "error: " << p_ErrorPrefix << "pass not specified.\n\n";
+    return false;
   }
 
   return true;

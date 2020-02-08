@@ -182,7 +182,9 @@ and fill out the empty fields (except `pass`), example:
     save_pass=1
     sent=Sent
     smtp_host=smtp.example.com
+    smtp_pass=
     smtp_port=465
+    smtp_user=
     trash=Trash
     user=example@example.com
     verbose_logging=0
@@ -196,10 +198,18 @@ password encrypted (refer to Security section below for details).
 
 ### client_store_sent
 
-The field `client_store_sent` indicates whether nmail shall upload sent emails
-to configured `sent` folder. Many email service providers (gmail, outlook, etc)
-do this on server side, so this should only be enabled if emails sent using
-nmail do not automatically gets stored in the sent folder.
+The field `client_store_sent` should generally be left `0`. It indicates whether
+nmail shall upload sent emails to configured `sent` folder. Many email service
+providers (gmail, outlook, etc) do this on server side, so this should only be
+enabled if emails sent using nmail do not automatically gets stored in the sent
+folder.
+
+### smtp_user / smtp_pass
+
+The field `smtp_user` should generally be left blank, and only be specified in
+case the email account has different username and password for sending emails
+(or if one wants to use one email service provider for receiving and another
+for sending emails).
 
 
 Multiple Email Accounts
