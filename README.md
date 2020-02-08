@@ -244,6 +244,15 @@ The built-in email compose editor in nmail supports the following:
     Delete         delete
     Enter          new line
 
+The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.:
+
+    To      : Alice <alice@example.com>, Bob <bob@example.com>
+    Cc      : Chuck <chuck@example.com>, Dave <dave@example.com>
+    Attchmnt: localpath.txt, /tmp/absolutepath.txt
+    Subject : Hello world
+
+Attachment paths may be local (just filename) or absolute (full path).
+
 
 Troubleshooting
 ===============
