@@ -124,6 +124,8 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
 
   if (esmtpMode)
   {
+    LOG_DEBUG("smtp->auth = 0x%x", smtp->auth);
+
     rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
 
     if (rv != MAILSMTP_NO_ERROR) return false;

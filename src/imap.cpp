@@ -759,7 +759,8 @@ void Imap::IdleDone()
 
 bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft)
 {
-  LOG_DEBUG_FUNC(STR(p_Folder, p_Msg, p_IsDraft));
+  LOG_DEBUG_FUNC(STR(p_Folder, "***", p_IsDraft));
+  LOG_TRACE_FUNC(STR(p_Folder, p_Msg, p_IsDraft));
 
   struct mailimap_flag_list* flaglist = mailimap_flag_list_new_empty();
   mailimap_flag_list_add(flaglist, mailimap_flag_new_seen());
