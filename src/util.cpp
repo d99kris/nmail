@@ -824,7 +824,7 @@ std::string Util::GetAppVersion()
   return version;
 }
 
-std::string Util::GetOs()
+std::string Util::GetBuildOs()
 {
 #if defined(_WIN32)
   return "Windows";
@@ -987,4 +987,44 @@ std::string Util::TrimRight(const std::string& p_Str, const std::string& p_Trim)
   const auto strEnd = p_Str.find_last_not_of(p_Trim);
 
   return p_Str.substr(0, strEnd + 1);
+}
+
+std::string Util::RunCommand(const std::string& p_Cmd)
+{
+  std::string output;
+  std::string outPath = Util::GetTempFilename(".txt");
+  std::string command = p_Cmd + " 2> /dev/null > " + outPath;
+  if (system(command.c_str()) == 0)
+  {
+    output = Util::ReadFile(outPath);
+  }
+
+  Util::DeleteFile(outPath);
+  return output;
+}
+
+std::string Util::GetSystemOs()
+{
+#if defined (__APPLE__)
+  const std::string& name = RunCommand("sw_vers -productName | tr -d '\n'");
+  const std::string& version = RunCommand("sw_vers -productVersion | tr -d '\n'");
+  return name + " " + version;
+#elif defined (__linux__)
+  return RunCommand("grep PRETTY_NAME /etc/os-release 2> /dev/null | "
+                    "cut -d= -f2 | sed -e \"s/\\\"//g\" | tr -d '\n'");
+#else
+  return "";
+#endif
+}
+
+std::string Util::GetLinkedLibs(const std::string& p_Prog)
+{
+#if defined (__APPLE__)
+  return RunCommand("otool -L " + p_Prog + " | tail -n +2");
+#elif defined (__linux__)
+  return RunCommand("ldd " + p_Prog);
+#else
+  (void)p_Prog;
+  return "";
+#endif
 }

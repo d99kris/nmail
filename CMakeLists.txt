@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.40" LANGUAGES CXX)
+project(nmail VERSION "1.41" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -84,8 +84,7 @@ target_include_directories(nmail PRIVATE "ext")
 set_target_properties(nmail PROPERTIES COMPILE_FLAGS
                       "-Wall -Wextra -Wpedantic -Wshadow -Wpointer-arith \
                        -Wcast-qual -Wno-missing-braces -Wswitch-default -Wunreachable-code \
-                       -Wundef -Wuninitialized -Wcast-align \
-                       -Wno-gnu-zero-variadic-macro-arguments")
+                       -Wundef -Wuninitialized -Wcast-align")
 target_compile_definitions(nmail PRIVATE PROJECT_VERSION="${PROJECT_VERSION}" LIBETPAN_IOS_DISABLE_SSL=0 WIN32=0)
 
 # Dependency ncurses

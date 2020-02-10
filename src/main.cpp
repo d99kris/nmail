@@ -32,6 +32,7 @@ static void ShowVersion();
 static void SetupCommon(std::shared_ptr<Config> p_Config);
 static void SetupGmail(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
+static void LogSystemInfo(const std::string& p_Prog);
 
 int main(int argc, char* argv[])
 {
@@ -105,10 +106,6 @@ int main(int argc, char* argv[])
   
   const std::string version = Util::GetAppVersion();
   LOG_INFO("starting nmail %s", version.c_str());
-
-  const std::string os = Util::GetOs();
-  const std::string compiler = Util::GetCompiler();
-  LOG_INFO("built using %s/%s", os.c_str(), compiler.c_str());
 
   Util::InitTempDir();
 
@@ -194,6 +191,11 @@ int main(int argc, char* argv[])
     }
   }
   
+  if (Log::GetDebugEnabled())
+  {
+    LogSystemInfo(std::string(argv[0]));
+  }
+
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
   uint32_t prefetchLevel = 0;
@@ -429,4 +431,23 @@ bool ReportConfigError(const std::string& p_Param)
   std::cout << "error: " << p_Param << " not specified in config file (" << configPath
             << ").\n\n";
   return false;
+}
+
+void LogSystemInfo(const std::string& p_Prog)
+{
+  const std::string buildOs = Util::GetBuildOs();
+  LOG_DEBUG("build os:  %s", buildOs.c_str());
+
+  const std::string compiler = Util::GetCompiler();
+  LOG_DEBUG("compiler:  %s", compiler.c_str());
+
+  const std::string systemOs = Util::GetSystemOs();
+  LOG_DEBUG("system os: %s", systemOs.c_str());
+
+  const std::string linkedLibs = Util::GetLinkedLibs(p_Prog);
+  if (!linkedLibs.empty())
+  {
+    LOG_DEBUG("libs:    ");
+    LOG_DUMP(linkedLibs.c_str());
+  }
 }

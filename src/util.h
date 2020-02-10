@@ -85,7 +85,7 @@ public:
   static std::string ToHexString(int p_Val);
   static void DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar);
   static std::string GetAppVersion();
-  static std::string GetOs();
+  static std::string GetBuildOs();
   static std::string GetCompiler();
 
   static void RegisterSignalHandler();
@@ -101,6 +101,9 @@ public:
   static void StripCR(std::wstring& p_Str);
   static std::string Strip(const std::string& p_Str, const char p_Char);
   static std::string TrimRight(const std::string& p_Str, const std::string& p_Trim);
+  static std::string RunCommand(const std::string& p_Cmd);
+  static std::string GetSystemOs();
+  static std::string GetLinkedLibs(const std::string& p_Prog);
 
 private:
   static std::string m_HtmlConvertCmd;
