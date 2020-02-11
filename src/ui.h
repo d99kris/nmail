@@ -127,6 +127,7 @@ private:
   bool CurrentMessageBodyAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
   void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
+  void ExternalPager();
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
@@ -222,6 +223,7 @@ private:
   int m_KeyAddressBook = 0;
   int m_KeySaveFile = 0;
   int m_KeyExternalEditor = 0;
+  int m_KeyExternalPager = 0;
   int m_KeyPostpone = 0;
   int m_KeyOtherCmdHelp = 0;
   int m_KeyExport = 0;
@@ -265,6 +267,8 @@ private:
   int m_HelpViewMessageOffset = 0;
 
   bool m_MessageViewToggledSeen = false;
+
+  std::string m_CurrentMessageViewText;
   
   int m_Pipe[2] = {-1, -1};
 };

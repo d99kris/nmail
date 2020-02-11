@@ -75,6 +75,7 @@ void Ui::Init()
     {"key_address_book", "KEY_CTRLT"},
     {"key_save_file", "s"},
     {"key_external_editor", "KEY_CTRLE"},
+    {"key_external_pager", "KEY_CTRLE"},
     {"key_postpone", "KEY_CTRLO"},
     {"key_othercmd_help", "o"},
     {"key_export", "e"},
@@ -106,6 +107,7 @@ void Ui::Init()
   m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
+  m_KeyExternalPager = Util::GetKeyCode(m_Config.Get("key_external_pager"));
   m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
   m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
   m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
@@ -392,6 +394,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
+      GetKeyDisplay(m_KeyExternalPager), "ExtView",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
@@ -936,6 +939,7 @@ void Ui::DrawMessage()
       Body& body = bodyIt->second;
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       const std::string text = headerText + bodyText;
+      m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
       const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_ScreenWidth);
       int countLines = wlines.size();
@@ -1765,6 +1769,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyExport)
   {
     ExportMessage();
+  }
+  else if (p_Key == m_KeyExternalPager)
+  {
+    ExternalPager();
   }
   else
   {
@@ -3423,13 +3431,48 @@ void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessage
   endwin();
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteWFile(tempPath, p_ComposeMessageStr);
-  const std::string& editor = Util::GetEditor();
+  const std::string& editor = Util::GetEditorCmd();
   const std::string& cmd = editor + " " + tempPath;
+  LOG_DEBUG("launching external editor: %s", cmd.c_str());
   int rv = system(cmd.c_str());
   if (rv == 0)
   {
+    LOG_DEBUG("external editor exited successfully");
     p_ComposeMessageStr = Util::ReadWFile(tempPath);
     p_ComposeMessagePos = 0;
+  }
+  else
+  {
+    LOG_WARNING("external editor exited with %d", rv);
+  }
+
+  Util::DeleteFile(tempPath);
+
+  refresh();
+
+  wint_t key = 0;
+  while (get_wch(&key) != ERR)
+  {
+    // Discard any remaining input
+  }
+}
+
+void Ui::ExternalPager()
+{
+  endwin();
+  const std::string& tempPath = Util::GetTempFilename(".txt");
+  Util::WriteFile(tempPath, m_CurrentMessageViewText);
+  const std::string& pager = Util::GetPagerCmd();
+  const std::string& cmd = pager + " " + tempPath;
+  LOG_DEBUG("launching external pager: %s", cmd.c_str());
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    LOG_DEBUG("external pager exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("external pager exited with %d", rv);
   }
 
   Util::DeleteFile(tempPath);

@@ -97,7 +97,10 @@ public:
   static std::string ExtensionForMimeType(const std::string& p_MimeType);
   static void InitStdErrRedirect(const std::string& p_Path);
   static void CleanupStdErrRedirect();
-  static std::string GetEditor();
+  static void SetEditorCmd(const std::string& p_EditorCmd);
+  static std::string GetEditorCmd();
+  static void SetPagerCmd(const std::string& p_PagerCmd);
+  static std::string GetPagerCmd();
   static void StripCR(std::wstring& p_Str);
   static std::string Strip(const std::string& p_Str, const char p_Char);
   static std::string TrimRight(const std::string& p_Str, const std::string& p_Trim);
@@ -110,6 +113,8 @@ private:
   static std::string m_HtmlConvertCmd;
   static std::string m_ExtViewerCmd;
   static std::string m_ApplicationDir;
+  static std::string m_PagerCmd;
+  static std::string m_EditorCmd;
   static int m_OrgStdErr;
   static int m_NewStdErr;
 };

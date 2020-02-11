@@ -38,6 +38,8 @@
 std::string Util::m_HtmlConvertCmd;
 std::string Util::m_ExtViewerCmd;
 std::string Util::m_ApplicationDir;
+std::string Util::m_PagerCmd;
+std::string Util::m_EditorCmd;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 
@@ -974,9 +976,28 @@ void Util::CleanupStdErrRedirect()
   }
 }
 
-std::string Util::GetEditor()
+void Util::SetEditorCmd(const std::string& p_EditorCmd)
 {
+  m_EditorCmd = p_EditorCmd;
+}
+
+std::string Util::GetEditorCmd()
+{
+  if (!m_EditorCmd.empty()) return m_EditorCmd;
+
   return std::string(getenv("EDITOR") ? getenv("EDITOR") : "nano");
+}
+
+void Util::SetPagerCmd(const std::string& p_PagerCmd)
+{
+  m_PagerCmd = p_PagerCmd;
+}
+
+std::string Util::GetPagerCmd()
+{
+  if (!m_PagerCmd.empty()) return m_PagerCmd;
+
+  return std::string(getenv("PAGER") ? getenv("PAGER") : "less");
 }
 
 void Util::StripCR(std::wstring& p_Str)

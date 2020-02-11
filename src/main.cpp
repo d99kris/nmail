@@ -132,6 +132,8 @@ int main(int argc, char* argv[])
     {"ext_viewer_cmd", Util::GetDefaultExtViewerCmd()},
     {"prefetch_level", "2"},
     {"verbose_logging", "0"},
+    {"pager_cmd", ""},
+    {"editor_cmd", ""},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
 
@@ -178,6 +180,8 @@ int main(int argc, char* argv[])
   const bool cacheEncrypt = (config->Get("cache_encrypt") == "1");
   Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
   Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
+  Util::SetPagerCmd(config->Get("pager_cmd"));
+  Util::SetEditorCmd(config->Get("editor_cmd"));
 
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {

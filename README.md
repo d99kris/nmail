@@ -21,6 +21,7 @@ Features
 - Simple setup wizard for Gmail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
 - Compose message using external editor ($EDITOR)
+- View message using external viewer ($PAGER)
 - Saving and continuing draft messages
 
 Planned features
@@ -171,12 +172,14 @@ and fill out the empty fields (except `pass`), example:
     cache_encrypt=1
     client_store_sent=0
     drafts=Drafts
+    editor_cmd=
     ext_viewer_cmd=open
     html_convert_cmd=/usr/local/bin/lynx -dump
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
     name=Firstname Lastname
+    pager_cmd=
     pass=
     prefetch_level=2
     save_pass=1
@@ -210,6 +213,20 @@ The field `smtp_user` should generally be left blank, and only be specified in
 case the email account has different username and password for sending emails
 (or if one wants to use one email service provider for receiving and another
 for sending emails).
+
+### editor_cmd
+
+The field `editor_cmd` allows overriding which external editor to use when
+composing / editing an email using an external editor (`Ctrl-E`). If not
+specified, nmail will use the editor specified by the environment variable
+`$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
+
+### pager_cmd
+
+The field `pager_cmd` allows overriding which external pager / text viewer to
+use when viewing an email using an external pager (`Ctrl-E`). If not specified,
+nmail will use the pager specified by the environment variable `$PAGER`.
+If `$PAGER` is not set, nmail will use `less`.
 
 
 Multiple Email Accounts
@@ -340,11 +357,13 @@ file:
     key_delete=d
     key_delete_line=KEY_CTRLK
     key_external_editor=KEY_CTRLE
+    key_external_pager=KEY_CTRLE
     key_forward=f
     key_goto_folder=g
     key_move=m
     key_next_msg=n
     key_open=.
+    key_othercmd_help=o
     key_postpone=KEY_CTRLO
     key_prev_msg=p
     key_quit=q
