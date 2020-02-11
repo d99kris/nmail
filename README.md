@@ -166,7 +166,20 @@ file:
     $ nmail
 
 Then open the config file `~/.nmail/main.conf` in your favourite text editor
-and fill out the empty fields (except `pass`), example:
+and fill out the required fields:
+
+    address=example@example.com
+    drafts=Drafts
+    imap_host=imap.example.com
+    imap_port=993
+    inbox=INBOX
+    name=Firstname Lastname
+    smtp_host=smtp.example.com
+    smtp_port=587
+    trash=Trash
+    user=example@example.com
+
+Full example of a config file `~/.nmail/main.conf`:
 
     address=example@example.com
     cache_encrypt=1
@@ -186,33 +199,30 @@ and fill out the empty fields (except `pass`), example:
     sent=Sent
     smtp_host=smtp.example.com
     smtp_pass=
-    smtp_port=465
+    smtp_port=587
     smtp_user=
     trash=Trash
     user=example@example.com
     verbose_logging=0
 
-### pass
+### address
 
-The field `pass` shall be left empty. The next time nmail is started it will
-prompt for password. If having configured nmail to save the password
-`save_pass=1` the field `pass` will be automatically populated with the
-password encrypted (refer to Security section below for details).
+The from-address to use. Required for sending emails.
+
+### cache_encrypt
+
+Indicates whether nmail shall encrypt local message cache or not (default enabled).
 
 ### client_store_sent
 
-The field `client_store_sent` should generally be left `0`. It indicates whether
-nmail shall upload sent emails to configured `sent` folder. Many email service
-providers (gmail, outlook, etc) do this on server side, so this should only be
-enabled if emails sent using nmail do not automatically gets stored in the sent
-folder.
+This field should generally be left `0`. It indicates whether nmail shall upload
+sent emails to configured `sent` folder. Many email service providers
+(gmail, outlook, etc) do this on server side, so this should only be enabled if
+emails sent using nmail do not automatically gets stored in the sent folder.
 
-### smtp_user / smtp_pass
+### drafts
 
-The field `smtp_user` should generally be left blank, and only be specified in
-case the email account has different username and password for sending emails
-(or if one wants to use one email service provider for receiving and another
-for sending emails).
+Name of drafts folder - needed if using functionality to postpone email editing.
 
 ### editor_cmd
 
@@ -221,12 +231,105 @@ composing / editing an email using an external editor (`Ctrl-E`). If not
 specified, nmail will use the editor specified by the environment variable
 `$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
 
+### ext_viewer_cmd
+
+This field specifies which command nmail should use to open email parts /
+attachments. It's automatically set to a suitable command for the OS in use.
+
+### html_convert_cmd
+
+Specifies how nmail should convert HTML emails to text. It's automatically
+set appropriately by nmail if any of `lynx`, `elinks`, `links` is available
+on the system.
+
+### imap_host
+
+IMAP hostname / address. Required for fetching emails.
+
+### imap_port
+
+IMAP port. Required for fetching emails.
+
+### inbox
+
+IMAP inbox folder name. Required for nmail to open the proper default folder.
+
+### name
+
+Real name of sender. Recommended when sending emails.
+
 ### pager_cmd
 
 The field `pager_cmd` allows overriding which external pager / text viewer to
 use when viewing an email using an external pager (`Ctrl-E`). If not specified,
 nmail will use the pager specified by the environment variable `$PAGER`.
 If `$PAGER` is not set, nmail will use `less`.
+
+### pass
+
+The field `pass` shall be left empty. The next time nmail is started it will
+prompt for password. If having configured nmail to save the password
+`save_pass=1` the field `pass` will be automatically populated with the
+password encrypted (refer to Security section below for details).
+
+### prefetch_level
+
+Messages are pre-fetched from server based on the `prefetch_level` config
+setting. The following levels are supported:
+
+    0 = no pre-fetching, messages are retrieved when viewed
+    1 = pre-fetching of currently selected message
+    2 = pre-fetching of all messages in current folder view (default)
+    3 = pre-fetching of all messages in all folders, i.e. full sync
+
+### save_pass
+
+Specified whether nmail shall store the password(s). Default 1 (enabled).
+
+### sent
+
+IMAP sent folder name. Used by nmail if `client_store_sent` is enabled to store
+copies of outgoing emails. 
+
+### smtp_host
+
+SMTP hostname / address. Required for sending emails.
+
+### smtp_pass
+
+The field `smtp_pass` shall be left empty. The next time nmail is started it
+will prompt for SMTP password in case `smtp_user` has been specified. If nmail
+is configured nmail to save passwords `save_pass=1` the field `smtp_pass` will
+be automatically populated with the password encrypted (refer to Security
+section below for details).
+
+### smtp_port
+
+SMTP port. Required for fetching emails. Default 587.
+
+### smtp_user
+
+The field `smtp_user` should generally be left blank, and only be specified in
+case the email account has different username and password for sending emails
+(or if one wants to use one email service provider for receiving and another
+for sending emails). If not specified, the configured `user` field will be
+used.
+
+### trash
+
+IMAP trash folder name. Needs to be specified in order to delete emails.
+
+### user
+
+Email account username for IMAP (and SMTP).
+
+### verbose_logging
+
+Allows forcing nmail to enable specified logging level:
+
+    0 = info, warnings, errors (default)
+    1 = debug (same as `-e`, `--verbose` - enable verbose logging)
+    2 = trace (same as `-ee`, `--extraverbose` - enable extra verbose logging
 
 
 Multiple Email Accounts
@@ -240,18 +343,6 @@ such usage one can set up aliases for accessing different accounts, e.g.:
 
     alias gm='nmail -d ${HOME}/.nmail-gm' # gmail
     alias hm='nmail -d ${HOME}/.nmail-hm' # hotmail
-
-
-Pre-fetching
-============
-
-nmail pre-fetches messages from server based on the `prefetch_level` config
-setting. The following levels are supported:
-
-    0 = no pre-fetching, messages are retrieved when viewed
-    1 = pre-fetching of currently selected message
-    2 = pre-fetching of all messages in current folder view (default)
-    3 = pre-fetching of all messages in all folders, i.e. full sync
 
 
 Compose Editor
