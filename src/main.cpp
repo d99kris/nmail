@@ -32,7 +32,7 @@ static void ShowVersion();
 static void SetupCommon(std::shared_ptr<Config> p_Config);
 static void SetupGmail(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
-static void LogSystemInfo(const std::string& p_Prog);
+static void LogSystemInfo();
 
 int main(int argc, char* argv[])
 {
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
   
   if (Log::GetDebugEnabled())
   {
-    LogSystemInfo(std::string(argv[0]));
+    LogSystemInfo();
   }
 
   uint16_t imapPort = 0;
@@ -433,7 +433,7 @@ bool ReportConfigError(const std::string& p_Param)
   return false;
 }
 
-void LogSystemInfo(const std::string& p_Prog)
+void LogSystemInfo()
 {
   const std::string buildOs = Util::GetBuildOs();
   LOG_DEBUG("build os:  %s", buildOs.c_str());
@@ -444,10 +444,14 @@ void LogSystemInfo(const std::string& p_Prog)
   const std::string systemOs = Util::GetSystemOs();
   LOG_DEBUG("system os: %s", systemOs.c_str());
 
-  const std::string linkedLibs = Util::GetLinkedLibs(p_Prog);
-  if (!linkedLibs.empty())
+  const std::string selfPath = Util::GetSelfPath();
+  if (!selfPath.empty())
   {
-    LOG_DEBUG("libs:    ");
-    LOG_DUMP(linkedLibs.c_str());
+    const std::string linkedLibs = Util::GetLinkedLibs(selfPath);
+    if (!linkedLibs.empty())
+    {
+      LOG_DEBUG("libs:    ");
+      LOG_DUMP(linkedLibs.c_str());
+    }
   }
 }

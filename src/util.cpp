@@ -16,6 +16,15 @@
 #include <execinfo.h>
 #include <libgen.h>
 #include <termios.h>
+#include <unistd.h>
+
+#ifdef __APPLE__
+#include <libproc.h>
+#endif
+
+#ifdef __linux__
+#include <linux/limits.h>
+#endif
 
 #include <libetpan/libetpan.h>
 #include <ncursesw/ncurses.h>
@@ -1020,11 +1029,30 @@ std::string Util::GetSystemOs()
 std::string Util::GetLinkedLibs(const std::string& p_Prog)
 {
 #if defined (__APPLE__)
-  return RunCommand("otool -L " + p_Prog + " | tail -n +2");
+  return RunCommand("otool -L " + p_Prog + " 2> /dev/null | tail -n +2 | awk '{$1=$1};1'");
 #elif defined (__linux__)
-  return RunCommand("ldd " + p_Prog);
+  return RunCommand("ldd " + p_Prog + " 2> /dev/null | awk '{$1=$1};1'");
 #else
   (void)p_Prog;
   return "";
 #endif
+}
+
+std::string Util::GetSelfPath()
+{
+#if defined (__APPLE__)
+  char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+  if (proc_pidpath(getpid(), pathbuf, sizeof(pathbuf)) > 0)
+  {
+    return std::string(pathbuf);
+  }
+#elif defined (__linux__)
+  char pathbuf[PATH_MAX];
+  ssize_t count = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf));
+  if (count > 0)
+  {
+    return std::string(pathbuf, count);
+  }
+#endif
+  return "";
 }

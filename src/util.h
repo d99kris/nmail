@@ -104,6 +104,7 @@ public:
   static std::string RunCommand(const std::string& p_Cmd);
   static std::string GetSystemOs();
   static std::string GetLinkedLibs(const std::string& p_Prog);
+  static std::string GetSelfPath();
 
 private:
   static std::string m_HtmlConvertCmd;
