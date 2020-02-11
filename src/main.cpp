@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
     {"imap_host", ""},
     {"imap_port", "993"},
     {"smtp_host", ""},
-    {"smtp_port", "465"},
+    {"smtp_port", "587"},
     {"smtp_user", ""},
     {"smtp_pass", ""},
     {"save_pass", "0"},
