@@ -55,6 +55,7 @@ void Ui::Init()
     {"plain_text", "1"},
     {"show_progress", "1"},
     {"new_msg_bell", "1"},
+    {"prompt_before_quit", "0"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -114,6 +115,7 @@ void Ui::Init()
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
+  m_PromptBeforeQuit = m_Config.Get("prompt_before_quit") == "1";
 
   m_Running = true;
 }
@@ -1427,8 +1429,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
 {
   if (p_Key == m_KeyQuit)
   {
-    m_Running = false;
-    LOG_DEBUG("stop thread");
+    Quit();
   }
   else if (p_Key == m_KeyRefresh)
   {
@@ -1623,8 +1624,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
 {
   if (p_Key == m_KeyQuit)
   {
-    m_Running = false;
-    LOG_DEBUG("stop thread");
+    Quit();
   }
   else if (p_Key == KEY_UP)
   {
@@ -2084,8 +2084,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 {
   if (p_Key == m_KeyQuit)
   {
-    m_Running = false;
-    LOG_DEBUG("stop thread");
+    Quit();
   }
   else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
   {
@@ -3568,5 +3567,14 @@ void Ui::ImportMessage()
   else
   {
     SetDialogMessage("Import cancelled");
+  }
+}
+
+void Ui::Quit()
+{
+  if (!m_PromptBeforeQuit || Ui::PromptYesNo("Quit nmail (y/n)?"))
+  {
+    m_Running = false;
+    LOG_DEBUG("stop thread");
   }
 }

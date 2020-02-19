@@ -131,6 +131,7 @@ private:
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
+  void Quit();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -230,7 +231,8 @@ private:
   int m_KeyImport = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
-  
+  bool m_PromptBeforeQuit = false;
+
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;
 

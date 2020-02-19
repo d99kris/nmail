@@ -467,6 +467,7 @@ file:
     new_msg_bell=1
     persist_folder_filter=1
     plain_text=1
+    prompt_before_quit=0
     show_progress=1
 
 
