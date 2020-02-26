@@ -942,6 +942,7 @@ std::string Util::ExtensionForMimeType(const std::string& p_MimeType)
 {
   static const std::map<std::string, std::string> typeToExt =
   {
+    { "image/png", ".png" },
     { "text/html", ".html" },
     { "text/plain", ".txt" },
   };
