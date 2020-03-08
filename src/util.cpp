@@ -28,7 +28,6 @@
 
 #include <libetpan/libetpan.h>
 #include <ncursesw/ncurses.h>
-#include <openssl/sha.h>
 
 #include "apathy/path.hpp"
 
@@ -42,16 +41,6 @@ std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
-
-std::string Util::SHA256(const std::string &p_Str)
-{
-  unsigned char hash[SHA256_DIGEST_LENGTH];
-  SHA256_CTX sha256;
-  SHA256_Init(&sha256);
-  SHA256_Update(&sha256, p_Str.c_str(), p_Str.size());
-  SHA256_Final(hash, &sha256);
-  return Serialized::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
-}
 
 bool Util::Exists(const std::string &p_Path)
 {

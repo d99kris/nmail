@@ -18,7 +18,6 @@
 class Util
 {
 public:
-  static std::string SHA256(const std::string& p_Str);
   static bool Exists(const std::string& p_Path);
   static bool NotEmpty(const std::string& p_Path);
   static std::string ReadFile(const std::string& p_Path);

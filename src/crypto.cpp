@@ -1,20 +1,38 @@
-// aes.cpp
+// crypto.cpp
 //
 // Copyright (c) 2019-2020 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "aes.h"
+#include "crypto.h"
 
 #include <cstring>
 
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
 
-std::string AES::Encrypt(const std::string &p_Plaintext, const std::string &p_Pass)
+#include "loghelp.h"
+#include "serialized.h"
+
+void Crypto::Init()
+{
+}
+
+void Crypto::Cleanup()
+{
+}
+
+std::string Crypto::GetVersion()
+{
+  return std::string(SSLeay_version(SSLEAY_VERSION));
+}
+
+std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string &p_Pass)
 {
   unsigned char salt[8] = { 0 };
   RAND_bytes(salt, sizeof(salt));
@@ -64,7 +82,7 @@ std::string AES::Encrypt(const std::string &p_Plaintext, const std::string &p_Pa
   return ciphertext;
 }
 
-std::string AES::Decrypt(const std::string &p_Ciphertext, const std::string &p_Pass)
+std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::string &p_Pass)
 {
   unsigned char salt[8] = { 0 };
   unsigned char* ciphertext = (unsigned char*)const_cast<char*>(p_Ciphertext.c_str());
@@ -110,4 +128,14 @@ std::string AES::Decrypt(const std::string &p_Ciphertext, const std::string &p_P
   }
 
   return plaintext;
+}
+
+std::string Crypto::SHA256(const std::string &p_Str)
+{
+  unsigned char hash[SHA256_DIGEST_LENGTH];
+  SHA256_CTX sha256;
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, p_Str.c_str(), p_Str.size());
+  SHA256_Final(hash, &sha256);
+  return Serialized::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
 }

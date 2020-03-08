@@ -12,6 +12,7 @@
 
 #include <libetpan/libetpan.h>
 
+#include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
 #include "sethelp.h"
@@ -174,7 +175,7 @@ void Header::Parse()
               }
             }
 
-            m_UniqueId = Util::SHA256(m_From + m_DateTime + m_MessageId);
+            m_UniqueId = Crypto::SHA256(m_From + m_DateTime + m_MessageId);
           }
         }
       }

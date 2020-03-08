@@ -9,7 +9,7 @@
 
 #include <libetpan/libetpan.h>
 
-#include "aes.h"
+#include "crypto.h"
 #include "flag.h"
 #include "log.h"
 #include "loghelp.h"
@@ -850,7 +850,7 @@ std::string Imap::GetFolderCacheDir(const std::string &p_Folder)
   if (m_CacheEncrypt)
   {
     // @todo: consider encrypting folder name instead of hashing
-    return GetImapCacheDir() + Util::SHA256(p_Folder) + std::string("/");
+    return GetImapCacheDir() + Crypto::SHA256(p_Folder) + std::string("/");
   }
   else
   {
@@ -923,7 +923,7 @@ std::string Imap::ReadCacheFile(const std::string &p_Path)
 {
   if (m_CacheEncrypt)
   {
-    return AES::Decrypt(Util::ReadFile(p_Path), m_Pass);
+    return Crypto::AESDecrypt(Util::ReadFile(p_Path), m_Pass);
   }
   else
   {
@@ -935,7 +935,7 @@ void Imap::WriteCacheFile(const std::string &p_Path, const std::string &p_Str)
 {
   if (m_CacheEncrypt)
   {
-    Util::WriteFile(p_Path, AES::Encrypt(p_Str, m_Pass));
+    Util::WriteFile(p_Path, Crypto::AESEncrypt(p_Str, m_Pass));
   }
   else
   {

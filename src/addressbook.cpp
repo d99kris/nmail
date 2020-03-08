@@ -11,7 +11,7 @@
 #include <string>
 #include <utility>
 
-#include "aes.h"
+#include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
 #include "maphelp.h"
@@ -126,7 +126,7 @@ std::string AddressBook::ReadCacheFile(const std::string &p_Path)
 {
   if (m_CacheEncrypt)
   {
-    return AES::Decrypt(Util::ReadFile(p_Path), m_Pass);
+    return Crypto::AESDecrypt(Util::ReadFile(p_Path), m_Pass);
   }
   else
   {
@@ -138,7 +138,7 @@ void AddressBook::WriteCacheFile(const std::string &p_Path, const std::string &p
 {
   if (m_CacheEncrypt)
   {
-    Util::WriteFile(p_Path, AES::Encrypt(p_Str, m_Pass));
+    Util::WriteFile(p_Path, Crypto::AESEncrypt(p_Str, m_Pass));
   }
   else
   {

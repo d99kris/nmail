@@ -11,8 +11,8 @@
 #include "apathy/path.hpp"
 
 #include "addressbook.h"
-#include "aes.h"
 #include "config.h"
+#include "crypto.h"
 #include "imapmanager.h"
 #include "lockfile.h"
 #include "log.h"
@@ -195,6 +195,8 @@ int main(int argc, char* argv[])
     }
   }
   
+  Crypto::Init();
+
   if (Log::GetDebugEnabled())
   {
     LogSystemInfo();
@@ -226,13 +228,13 @@ int main(int argc, char* argv[])
     pass = Util::GetPass();
     if (savePass)
     {
-      encPass = Serialized::ToHex(AES::Encrypt(pass, user));
+      encPass = Serialized::ToHex(Crypto::AESEncrypt(pass, user));
       config->Set("pass", encPass);
     }
   }
   else
   {
-    pass = AES::Decrypt(Serialized::FromHex(encPass), user);
+    pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), user);
   }
 
   if (!ValidatePass(pass, smtpUser.empty() ? "" : "IMAP "))
@@ -254,13 +256,13 @@ int main(int argc, char* argv[])
       smtpPass = Util::GetPass();
       if (savePass)
       {
-        encSmtpPass = Serialized::ToHex(AES::Encrypt(smtpPass, smtpUser));
+        encSmtpPass = Serialized::ToHex(Crypto::AESEncrypt(smtpPass, smtpUser));
         config->Set("smtp_pass", encSmtpPass);
       }
     }
     else
     {
-      smtpPass = AES::Decrypt(Serialized::FromHex(encSmtpPass), smtpUser);
+      smtpPass = Crypto::AESDecrypt(Serialized::FromHex(encSmtpPass), smtpUser);
     }
   }
   
@@ -448,6 +450,9 @@ void LogSystemInfo()
   const std::string systemOs = Util::GetSystemOs();
   LOG_DEBUG("system os: %s", systemOs.c_str());
 
+  const std::string openSSLVersion = Crypto::GetVersion();
+  LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
+  
   const std::string selfPath = Util::GetSelfPath();
   if (!selfPath.empty())
   {

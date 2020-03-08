@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.46" LANGUAGES CXX)
+project(nmail VERSION "1.47" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -28,14 +28,14 @@ add_executable(nmail
   ext/cxx-prettyprint/prettyprint.hpp
   src/addressbook.cpp
   src/addressbook.h
-  src/aes.cpp
-  src/aes.h
   src/body.cpp
   src/body.h
   src/config.cpp
   src/config.h
   src/contact.cpp
   src/contact.h
+  src/crypto.cpp
+  src/crypto.h
   src/flag.cpp
   src/flag.h
   src/header.cpp
