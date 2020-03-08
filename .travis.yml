@@ -4,15 +4,19 @@ language:
 compiler:
   - clang
 
-os:
-  - linux
-  - osx
-
 dist:
   - bionic
 
 osx_image:
   - xcode11
+
+jobs:
+  include:
+    - os: linux
+    - os: osx
+      env:
+        - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
+        - OPENSSL_LIBRARIES=/usr/local/opt/openssl/lib
 
 addons:
   apt:
@@ -28,6 +32,7 @@ addons:
       - openssl
       - ncurses
       - libetpan
+    update: true
 
 script:
   - mkdir -p build
