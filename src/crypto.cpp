@@ -9,6 +9,7 @@
 
 #include <cstring>
 
+#include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -21,6 +22,8 @@
 
 void Crypto::Init()
 {
+  SSL_library_init();
+  SSL_load_error_strings();
 }
 
 void Crypto::Cleanup()
@@ -84,6 +87,8 @@ std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string
 
 std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::string &p_Pass)
 {
+  if (p_Ciphertext.empty()) return std::string();
+  
   unsigned char salt[8] = { 0 };
   unsigned char* ciphertext = (unsigned char*)const_cast<char*>(p_Ciphertext.c_str());
   int ciphertextlen = p_Ciphertext.size();
