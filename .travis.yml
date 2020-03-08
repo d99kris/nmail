@@ -32,6 +32,7 @@ addons:
       - openssl
       - ncurses
       - libetpan
+    update: true
 
 script:
   - mkdir -p build
