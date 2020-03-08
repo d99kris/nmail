@@ -83,7 +83,9 @@ private:
   bool m_CacheEncrypt = false;
 
   std::mutex m_ImapMutex;
-	struct mailimap* m_Imap = NULL;
+  struct mailimap* m_Imap = NULL;
+
+  std::mutex m_CacheMutex;
 
   std::string m_SelectedFolder;
   bool m_SelectedFolderIsEmpty = true;

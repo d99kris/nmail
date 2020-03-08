@@ -110,6 +110,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   
   if (p_Cached)
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     p_Folders = Deserialize<std::set<std::string>>(ReadCacheFile(GetFoldersCachePath()));
     return true;
   }
@@ -139,6 +140,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
 
     mailimap_list_result_free(list);
 
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     WriteCacheFile(GetFoldersCachePath(), Serialize(p_Folders));
 
     return true;
@@ -153,6 +155,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 
   if (p_Cached)
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     p_Uids = Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
     return true;
   }
@@ -166,6 +169,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 
   if (SelectedFolderIsEmpty())
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
     DeleteCacheExceptUids(p_Folder, p_Uids);
     return true;
@@ -197,6 +201,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 
     mailimap_fetch_list_free(fetch_result);
 
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
     DeleteCacheExceptUids(p_Folder, p_Uids);
   }
@@ -218,6 +223,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
   for (auto& uid : p_Uids)
   {
     bool cacheFound = false;
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
     if (Util::NotEmpty(cachePath))
     {
@@ -317,6 +323,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
           p_Headers[uid] = header;
         }
 
+        std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
         WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
       }
     
@@ -338,6 +345,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
 
   if (p_Cached)
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     p_Flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
     return true;
   }
@@ -426,6 +434,8 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
 
     std::map<uint32_t, uint32_t> newFlags = p_Flags;
     std::map<uint32_t, uint32_t> oldFlags;
+
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
     newFlags.insert(oldFlags.begin(), oldFlags.end());
     // cache combined flags of previously cached and newly fetched, in case requesting flags for not all messages
@@ -449,6 +459,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   for (auto& uid : p_Uids)
   {
     bool cacheFound = false;
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
     if (Util::NotEmpty(cachePath))
     {
@@ -551,6 +562,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
           p_Bodys[uid] = body;
         }
 
+        std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
         const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
         WriteCacheFile(cachePath, body.GetData());
       }
@@ -601,6 +613,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
 
   if (rv == MAILIMAP_NO_ERROR)
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::map<uint32_t, uint32_t> flags =
       Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
     for (auto& uid : p_Uids)
@@ -682,6 +695,7 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
 
   if (rv == MAILIMAP_NO_ERROR)
   {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::set<uint32_t> uids =
       Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
     for (auto& uid : p_Uids)
@@ -796,6 +810,7 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
     int rv = LOG_IF_IMAP_ERR(mailimap_select(m_Imap, p_Folder.c_str()));
     if (rv == MAILIMAP_NO_ERROR)
     {
+      std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
       m_SelectedFolder = p_Folder;
       m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_has_exists == 1) && (m_Imap->imap_selection_info->sel_exists == 0);
       InitFolderCacheDir(p_Folder);
