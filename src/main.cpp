@@ -453,6 +453,9 @@ void LogSystemInfo()
   const std::string openSSLVersion = Crypto::GetVersion();
   LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
   
+  const std::string libetpanVersion = Util::GetLibetpanVersion();
+  LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
+  
   const std::string selfPath = Util::GetSelfPath();
   if (!selfPath.empty())
   {

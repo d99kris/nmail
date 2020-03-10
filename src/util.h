@@ -107,6 +107,7 @@ public:
   static std::string GetSystemOs();
   static std::string GetLinkedLibs(const std::string& p_Prog);
   static std::string GetSelfPath();
+  static std::string GetLibetpanVersion();
 
 private:
   static std::string m_HtmlConvertCmd;

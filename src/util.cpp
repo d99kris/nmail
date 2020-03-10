@@ -1067,3 +1067,15 @@ std::string Util::GetSelfPath()
 #endif
   return "";
 }
+
+std::string Util::GetLibetpanVersion()
+{
+  std::string version;
+#if defined(LIBETPAN_VERSION_MAJOR) && defined(LIBETPAN_VERSION_MINOR)
+  version += std::to_string(LIBETPAN_VERSION_MAJOR) + "." + std::to_string(LIBETPAN_VERSION_MINOR);
+#ifdef LIBETPAN_API_CURRENT
+  version += " API " + std::to_string(LIBETPAN_API_CURRENT);
+#endif
+#endif
+  return version;
+}
