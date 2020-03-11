@@ -73,7 +73,7 @@ void Ui::Init()
     {"key_open", "."},
     {"key_back", ","},
     {"key_goto_folder", "g"},
-    {"key_address_book", "KEY_CTRLT"},
+    {"key_to_select", "KEY_CTRLT"},
     {"key_save_file", "s"},
     {"key_external_editor", "KEY_CTRLE"},
     {"key_external_pager", "KEY_CTRLE"},
@@ -105,7 +105,7 @@ void Ui::Init()
   m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
-  m_KeyAddressBook = Util::GetKeyCode(m_Config.Get("key_address_book"));
+  m_KeyToSelect = Util::GetKeyCode(m_Config.Get("key_to_select"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
   m_KeyExternalPager = Util::GetKeyCode(m_Config.Get("key_external_pager"));
@@ -223,6 +223,13 @@ void Ui::DrawAll()
       DrawDialog();
       break;      
 
+    case StateFileList:
+      DrawTop();
+      DrawFileList();
+      DrawHelp();
+      DrawDialog();
+      break;      
+
     case StateViewPartList:
       DrawTop();
       DrawPartList();
@@ -263,6 +270,7 @@ void Ui::DrawDialog()
     case StateGotoFolder:
     case StateMoveToFolder:
     case StateAddressList:
+    case StateFileList:
       DrawSearchDialog();
       break;
 
@@ -288,6 +296,11 @@ void Ui::DrawSearchDialog()
     case StateAddressList:
       filterPos = m_AddressListFilterPos;
       filterStr = m_AddressListFilterStr;
+      break;
+
+    case StateFileList:
+      filterPos = m_FileListFilterPos;
+      filterStr = m_FileListFilterStr;
       break;
 
     default:
@@ -422,8 +435,8 @@ void Ui::DrawHelp()
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
-      GetKeyDisplay(m_KeyAddressBook), "AddrBk",
       GetKeyDisplay(m_KeyPostpone), "Postpone",
+      GetKeyDisplay(m_KeyToSelect), "ToSelect",
     },
   };
 
@@ -468,6 +481,7 @@ void Ui::DrawHelp()
       case StateGotoFolder:
       case StateMoveToFolder:
       case StateAddressList:
+      case StateFileList:
         DrawHelpText(viewFoldersHelp);
         break;
 
@@ -641,6 +655,85 @@ void Ui::DrawAddressList()
       mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), waddress.size());
 
       if (i == m_AddressListCurrentIndex)
+      {
+        wattroff(m_MainWin, A_REVERSE);
+      }
+    }
+  }
+
+  wrefresh(m_MainWin);
+}
+
+void Ui::DrawFileList()
+{
+  werase(m_MainWin);
+
+  std::set<Fileinfo, FileinfoCompare> files;
+
+  if (m_FileListFilterStr.empty())
+  {
+    files = m_Files;
+  }
+  else
+  {
+    for (const auto& file : m_Files)
+    {
+      if (Util::ToLower(file.m_Name).find(Util::ToLower(Util::ToString(m_FileListFilterStr)))
+          != std::string::npos)
+      {
+        files.insert(file);
+      }
+    }
+  }
+
+  int count = files.size();
+  if (count > 0)
+  {
+    m_FileListCurrentIndex = Util::Bound(0, m_FileListCurrentIndex, (int)files.size() - 1);
+
+    int posOffs = 2;
+    int itemsMax = m_MainWinHeight - 1 - posOffs;
+    int idxOffs = Util::Bound(0, (int)(m_FileListCurrentIndex - ((itemsMax - 1) / 2)),
+                              std::max(0, (int)files.size() - (int)itemsMax));
+    int idxMax = idxOffs + std::min(itemsMax, (int)files.size());
+
+    int maxWidth = std::min(m_ScreenWidth - 4, 50);
+    std::wstring dirLabel = L"Dir: ";
+    int maxDirLen = maxWidth - dirLabel.size();
+    std::wstring dirPath = Util::ToWString(m_CurrentDir);
+    int dirPathRight = ((int)dirPath.size() < maxDirLen) ? 0 : (dirPath.size() - maxDirLen);
+    dirLabel += dirPath.substr(dirPathRight);    
+    mvwaddnwstr(m_MainWin, 0, 2, dirLabel.c_str(), dirLabel.size());
+
+    for (int i = idxOffs; i < idxMax; ++i)
+    {
+      const Fileinfo& fileinfo = *std::next(files.begin(), i);
+
+      int maxNameLen = maxWidth - 2 - 7; // two spaces and (dir) / 1023 KB
+      std::wstring name = Util::ToWString(fileinfo.m_Name);
+      name = Util::TrimPadWString(name.substr(0, maxNameLen), maxNameLen);
+
+      if (fileinfo.IsDir())
+      {
+        name += L"    (dir)";
+      }
+      else
+      {
+        // max 7 - ex: "1023 KB"
+        std::string size = Util::GetPrefixedSize(fileinfo.m_Size);
+        size = std::string(7 - size.size(), ' ') + size;
+        name += L"  " + Util::ToWString(size);
+      }
+
+      if (i == m_FileListCurrentIndex)
+      {
+        wattron(m_MainWin, A_REVERSE);
+        m_FileListCurrentFile = fileinfo;
+      }
+
+      mvwaddnwstr(m_MainWin, i - idxOffs + posOffs, 2, name.c_str(), name.size());
+
+      if (i == m_FileListCurrentIndex)
       {
         wattroff(m_MainWin, A_REVERSE);
       }
@@ -1194,6 +1287,7 @@ void Ui::Run()
         CleanupWindows();
         InitWindows();
         DrawAll();
+        continue;
       }
 
       switch (m_State)
@@ -1219,6 +1313,10 @@ void Ui::Run()
 
         case StateAddressList:
           ViewAddressListKeyHandler(key);
+          break;
+
+        case StateFileList:
+          ViewFileListKeyHandler(key);
           break;
 
         case StateViewPartList:
@@ -1420,6 +1518,109 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   else if (IsValidTextKey(p_Key))
   {
     m_AddressListFilterStr.insert(m_AddressListFilterPos++, 1, p_Key);
+  }
+
+  DrawAll();
+}
+
+void Ui::ViewFileListKeyHandler(int p_Key)
+{
+  if (p_Key == m_KeyCancel)
+  {
+    SetState(m_LastMessageState);
+  }
+  else if (p_Key == KEY_UP)
+  {
+    --m_FileListCurrentIndex;
+  }
+  else if (p_Key == KEY_DOWN)
+  {
+    ++m_FileListCurrentIndex;
+  }
+  else if (p_Key == KEY_PPAGE)
+  {
+    m_FileListCurrentIndex = m_FileListCurrentIndex - m_MainWinHeight;
+  }
+  else if (p_Key == KEY_NPAGE)
+  {
+    m_FileListCurrentIndex = m_FileListCurrentIndex + m_MainWinHeight;
+  }
+  else if (p_Key == KEY_HOME)
+  {
+    m_FileListCurrentIndex = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    m_FileListCurrentIndex = std::numeric_limits<int>::max();
+  }
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
+  {
+    if (m_FileListCurrentFile.IsDir())
+    {
+      m_FileListFilterPos = 0;
+      m_FileListFilterStr.clear();
+      m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
+      m_Files = Util::ListPaths(m_CurrentDir);
+      m_FileListCurrentIndex = 0;
+      m_FileListCurrentFile.m_Name = "";
+    }
+    else
+    {
+      std::string newFilePath = Util::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
+      std::wstring filepaths;
+      const std::string& oldFilepaths =
+        Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine].substr(0, m_ComposeHeaderPos)));
+      if (!oldFilepaths.empty() && (oldFilepaths[oldFilepaths.size() - 1] != ','))
+      {
+        filepaths = Util::ToWString(", " + newFilePath);
+      }
+      else
+      {
+        filepaths = Util::ToWString(newFilePath);
+      }
+
+      m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos, filepaths);
+      m_ComposeHeaderPos += filepaths.size();
+      SetState(m_LastMessageState);
+    }
+  }
+  else if (p_Key == KEY_LEFT)
+  {
+    m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos - 1,
+                                         (int)m_FileListFilterStr.size());
+  }
+  else if (p_Key == KEY_RIGHT)
+  {
+    m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos + 1,
+                                         (int)m_FileListFilterStr.size());
+  }
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  {
+    if (m_FileListFilterPos > 0)
+    {
+      m_FileListFilterStr.erase(--m_FileListFilterPos, 1);
+    }
+    else
+    {
+      // backspace with empty filter goes up one directory level
+      m_FileListFilterPos = 0;
+      m_FileListFilterStr.clear();
+      m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
+      m_Files = Util::ListPaths(m_CurrentDir);
+      m_FileListCurrentIndex = 0;
+      m_FileListCurrentFile.m_Name = "";
+    }
+  }
+  else if (p_Key == KEY_DC)
+  {
+    if (m_FileListFilterPos < (int)m_FileListFilterStr.size())
+    {
+      m_FileListFilterStr.erase(m_FileListFilterPos, 1);
+    }
+  }
+  else if (IsValidTextKey(p_Key))
+  {
+    m_FileListFilterStr.insert(m_FileListFilterPos++, 1, p_Key);
   }
 
   DrawAll();
@@ -1808,11 +2009,15 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         SetLastStateOrMessageList();
       }
     }
-    else if (p_Key == m_KeyAddressBook)
+    else if (p_Key == m_KeyToSelect)
     {
       if (m_ComposeHeaderLine < 2)
       {
         SetState(StateAddressList);
+      }
+      else if (m_ComposeHeaderLine == 2)
+      {
+        SetState(StateFileList);
       }
     }
     else if (p_Key == KEY_UP)
@@ -2189,13 +2394,13 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
 void Ui::SetState(Ui::State p_State)
 {
-  if (p_State == StateAddressList)
+  if ((p_State == StateAddressList) || (p_State == StateFileList))
   {
-    // going to address list
+    // going to address or file list
     m_LastMessageState = m_State;
     m_State = p_State;
   }
-  else if (m_State != StateAddressList)
+  else if ((m_State != StateAddressList) && (m_State != StateFileList))
   {
     // normal state transition
     m_LastState = m_State;
@@ -2203,7 +2408,7 @@ void Ui::SetState(Ui::State p_State)
   }
   else
   {
-    // exiting address list
+    // exiting address or file list
     m_State = p_State;
     return;
   }
@@ -2449,6 +2654,16 @@ void Ui::SetState(Ui::State p_State)
     m_Addresses = AddressBook::Get();
     m_AddressListCurrentIndex = 0;
     m_AddressListCurrentAddress = "";
+  }
+  else if (m_State == StateFileList)
+  {
+    curs_set(1);
+    m_FileListFilterPos = 0;
+    m_FileListFilterStr.clear();
+    m_CurrentDir = Util::GetCurrentWorkingDir();
+    m_Files = Util::ListPaths(m_CurrentDir);
+    m_FileListCurrentIndex = 0;
+    m_FileListCurrentFile.m_Name = "";
   }
   else if (m_State == StateViewPartList)
   {
@@ -2919,6 +3134,7 @@ std::string Ui::GetStateStr()
     case StateReplyMessage: return "Reply";
     case StateForwardMessage: return "Forward";
     case StateAddressList: return "Address Book";
+    case StateFileList: return "File Selection";
     case StateViewPartList: return "Message Parts";
     default: return "Unknown State";
   }

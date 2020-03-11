@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,53 @@
 #define KEY_RETURN 10
 #define KEY_SPACE 32
 #define KEY_DELETE 127
+
+struct Fileinfo
+{
+  Fileinfo()
+  : m_Name("")
+  , m_Size(0)
+  {
+  }
+
+  Fileinfo(const std::string& p_Name, ssize_t p_Size)
+  : m_Name(p_Name)
+  , m_Size(p_Size)
+  {
+  }
+  
+  inline bool IsDir() const
+  {
+    return (m_Size == -1);
+  }
+
+  inline bool IsHidden() const
+  {
+    return m_Name.empty() || ((m_Name.at(0) == '.') && (m_Name != ".."));
+  }
+
+  std::string m_Name;
+  ssize_t m_Size = 0;
+};
+
+struct FileinfoCompare
+{
+  bool operator() (const Fileinfo& p_Lhs, const Fileinfo& p_Rhs) const
+  {
+    if (p_Lhs.IsDir() != p_Rhs.IsDir())
+    {
+      return p_Lhs.IsDir() > p_Rhs.IsDir();
+    }
+    else if (p_Lhs.IsHidden() != p_Rhs.IsHidden())
+    {
+      return p_Lhs.IsHidden() < p_Rhs.IsHidden();
+    }
+    else
+    {
+      return p_Lhs.m_Name < p_Rhs.m_Name;
+    }
+  }
+};
 
 class Util
 {
@@ -29,6 +77,10 @@ public:
   static std::string GetFileExt(const std::string& p_Path);
   static std::string DirName(const std::string& p_Path);
   static std::vector<std::string> ListDir(const std::string& p_Folder);
+  static std::set<Fileinfo, FileinfoCompare> ListPaths(const std::string& p_Folder);
+  static std::string GetPrefixedSize(ssize_t p_Size);
+  static std::string GetCurrentWorkingDir();
+  static std::string AbsolutePath(const std::string& p_Path);
   static void MkDir(const std::string& p_Path);
   static void RmDir(const std::string& p_Path);
   static void Touch(const std::string& p_Path);

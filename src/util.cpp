@@ -130,6 +130,41 @@ std::vector<std::string> Util::ListDir(const std::string& p_Folder)
   return files;
 }
 
+std::set<Fileinfo, FileinfoCompare> Util::ListPaths(const std::string& p_Folder)
+{
+  std::set<Fileinfo, FileinfoCompare> fileinfos;
+  fileinfos.insert(Fileinfo("..", -1));
+
+  const std::vector<apathy::Path>& paths = apathy::Path::listdir(p_Folder);
+  for (auto& path : paths)
+  {
+    Fileinfo fileinfo(path.filename(), path.is_directory() ? -1 : path.size());
+    fileinfos.insert(fileinfo);
+  }
+  return fileinfos;
+}
+
+std::string Util::GetPrefixedSize(ssize_t p_Size)
+{
+  std::vector<std::string> prefixes({ "B", "KB", "MB", "GB", "TB", "PB" });
+  size_t i = 0;
+  for (i = 0; (i < prefixes.size()) && (p_Size >= 1024); i++, (p_Size /= 1024))
+  {
+  }
+
+  return std::to_string(p_Size) + " " + prefixes.at(i);
+}
+
+std::string Util::GetCurrentWorkingDir()
+{
+  return apathy::Path::cwd().absolute().sanitize().string();
+}
+
+std::string Util::AbsolutePath(const std::string& p_Path)
+{
+  return apathy::Path(p_Path).absolute().sanitize().string();
+}
+
 void Util::MkDir(const std::string &p_Path)
 {
   apathy::Path::makedirs(p_Path);

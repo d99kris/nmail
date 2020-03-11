@@ -30,7 +30,8 @@ public:
     StateReplyMessage = 5,
     StateForwardMessage = 6,
     StateAddressList = 7,
-    StateViewPartList = 8,
+    StateFileList = 8,
+    StateViewPartList = 9,
   };
 
   enum UiRequest
@@ -84,6 +85,7 @@ private:
   void DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText);
   void DrawFolderList();
   void DrawAddressList();
+  void DrawFileList();
   void DrawMessageList();
   void DrawMessage();
   void DrawComposeMessage();
@@ -95,6 +97,7 @@ private:
 
   void ViewFolderListKeyHandler(int p_Key);
   void ViewAddressListKeyHandler(int p_Key);
+  void ViewFileListKeyHandler(int p_Key);
   void ViewMessageListKeyHandler(int p_Key);
   void ViewMessageKeyHandler(int p_Key);
   void ComposeMessageKeyHandler(int p_Key);
@@ -170,6 +173,9 @@ private:
   std::map<std::string, std::set<uint32_t>> m_RequestedFlags;
 
   std::vector<std::string> m_Addresses;
+
+  std::string m_CurrentDir;
+  std::set<Fileinfo, FileinfoCompare> m_Files;
   
   WINDOW* m_TopWin = NULL;
   WINDOW* m_MainWin = NULL;
@@ -189,6 +195,9 @@ private:
 
   int m_AddressListCurrentIndex = 0;
   std::string m_AddressListCurrentAddress;
+
+  int m_FileListCurrentIndex = 0;
+  Fileinfo m_FileListCurrentFile;
 
   int m_PartListCurrentIndex = 0;
   Part m_PartListCurrentPart;
@@ -221,7 +230,7 @@ private:
   int m_KeyOpen = 0;
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;
-  int m_KeyAddressBook = 0;
+  int m_KeyToSelect = 0;
   int m_KeySaveFile = 0;
   int m_KeyExternalEditor = 0;
   int m_KeyExternalPager = 0;
@@ -238,6 +247,9 @@ private:
 
   int m_AddressListFilterPos = 0;
   std::wstring m_AddressListFilterStr;
+
+  int m_FileListFilterPos = 0;
+  std::wstring m_FileListFilterStr;
 
   int m_FilenameEntryStringPos = 0;
   std::wstring m_FilenameEntryString;

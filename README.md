@@ -441,7 +441,6 @@ This configuration file controls the UI aspects of nmail. Default configuration
 file:
 
     help_enabled=1
-    key_address_book=KEY_CTRLT
     key_back=,
     key_cancel=KEY_CTRLC
     key_compose=c
@@ -462,6 +461,7 @@ file:
     key_reply=r
     key_save_file=s
     key_send=KEY_CTRLX
+    key_to_select=KEY_CTRLT
     key_toggle_text_html=t
     key_toggle_unread=u
     new_msg_bell=1
