@@ -455,7 +455,14 @@ void LogSystemInfo()
   
   const std::string libetpanVersion = Util::GetLibetpanVersion();
   LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
-  
+
+  const std::string unameStr = Util::GetUname();
+  if (!unameStr.empty())
+  {
+    LOG_DEBUG("uname:   ");
+    LOG_DUMP(unameStr.c_str());
+  }
+
   const std::string selfPath = Util::GetSelfPath();
   if (!selfPath.empty())
   {

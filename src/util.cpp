@@ -1114,3 +1114,12 @@ std::string Util::GetLibetpanVersion()
 #endif
   return version;
 }
+
+std::string Util::GetUname()
+{
+#if defined (__APPLE__) || defined (__linux__)
+  return RunCommand("uname -a 2> /dev/null");
+#else
+  return "";
+#endif
+}
