@@ -8,6 +8,7 @@
 #include "util.h"
 
 #include <algorithm>
+#include <csignal>
 #include <map>
 #include <set>
 
@@ -33,6 +34,9 @@
 
 #include "loghelp.h"
 #include "serialized.h"
+
+std::mutex ThreadRegister::m_Mutex;
+std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 
 std::string Util::m_HtmlConvertCmd;
 std::string Util::m_ExtViewerCmd;
@@ -889,29 +893,72 @@ std::string Util::GetCompiler()
 #endif
 }
 
+std::string Util::GetSigName(int p_Signal)
+{
+  static std::map<int, std::string> signames =
+  {
+    { SIGABRT, "SIGABRT" },
+    { SIGSEGV, "SIGSEGV" },
+    { SIGBUS,  "SIGBUS" },
+    { SIGILL,  "SIGILL" },
+    { SIGFPE,  "SIGFPE" },
+    { SIGTRAP, "SIGTRAP" },
+    { SIGUSR1, "SIGUSR1" },
+  };
+
+  auto it = signames.find(p_Signal);
+  return (it != signames.end()) ? it->second : std::to_string(p_Signal);
+}
+
 void Util::RegisterSignalHandler()
 {
   signal(SIGABRT, SignalHandler);
   signal(SIGSEGV, SignalHandler);
-  signal(SIGBUS, SignalHandler);
-  signal(SIGILL, SignalHandler);
-  signal(SIGFPE, SignalHandler);
-  signal(SIGPIPE, SignalHandler); 
+  signal(SIGBUS,  SignalHandler);
+  signal(SIGILL,  SignalHandler);
+  signal(SIGFPE,  SignalHandler);
+  signal(SIGTRAP, SignalHandler); 
+  signal(SIGUSR1, SignalHandler); 
 }
+
+static std::mutex s_SignalMutex;
 
 void Util::SignalHandler(int p_Signal)
 {
+  const std::string& threadLabel = "\nthread " + ThreadRegister::GetName() + "\n";
   void *callstack[64];
   int size = backtrace(callstack, sizeof(callstack));
-  const std::string& callstackStr = "\n" + BacktraceSymbolsStr(callstack, size) + "\n";
-  const std::string& logMsg = "unexpected termination: " + std::to_string(p_Signal);
-  LOG_ERROR("%s", logMsg.c_str());
-  LOG_DUMP(callstackStr.c_str());
+  const std::string& callstackStr = BacktraceSymbolsStr(callstack, size);
 
-  CleanupStdErrRedirect();
-  system("reset");
-  std::cerr << logMsg << "\n" << callstackStr;
-  exit(1);
+  if (p_Signal != SIGUSR1)
+  {
+    {
+      std::lock_guard<std::mutex> lock(s_SignalMutex);
+
+      const std::string& logMsg = "unexpected termination: " + GetSigName(p_Signal);
+      LOG_ERROR("%s", logMsg.c_str());
+      LOG_DUMP(threadLabel.c_str());
+      LOG_DUMP(callstackStr.c_str());
+
+      CleanupStdErrRedirect();
+      system("reset");
+      std::cerr << logMsg << "\n" << callstackStr << "\n";
+    }
+
+    if (Log::GetDebugEnabled())
+    {
+      ThreadRegister::SignalThreads(SIGUSR1);
+      sleep(1);
+    }
+
+    exit(1);
+  }
+  else
+  {
+    std::lock_guard<std::mutex> lock(s_SignalMutex);
+    LOG_DUMP(threadLabel.c_str());
+    LOG_DUMP(callstackStr.c_str());
+  }
 }
 
 std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)

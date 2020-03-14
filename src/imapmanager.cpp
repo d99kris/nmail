@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "loghelp.h"
+#include "util.h"
 
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const std::string& p_Host, const uint16_t p_Port,
@@ -229,6 +230,8 @@ bool ImapManager::ProcessIdle()
 
 void ImapManager::Process()
 {
+  THREAD_REGISTER();
+  
   if (m_Connect)
   {
     if (m_Imap.Login())
@@ -404,6 +407,8 @@ void ImapManager::Process()
 
 void ImapManager::CacheProcess()
 {
+  THREAD_REGISTER();
+  
   LOG_DEBUG("entering cache loop");
   while (m_CacheRunning)
   {

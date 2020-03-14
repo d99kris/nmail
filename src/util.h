@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <csignal>
+#include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -15,6 +18,8 @@
 #define KEY_RETURN 10
 #define KEY_SPACE 32
 #define KEY_DELETE 127
+
+#define THREAD_REGISTER() ThreadRegister threadRegister(__PRETTY_FUNCTION__)
 
 struct Fileinfo
 {
@@ -61,6 +66,45 @@ struct FileinfoCompare
       return p_Lhs.m_Name < p_Rhs.m_Name;
     }
   }
+};
+
+class ThreadRegister
+{
+public:
+  ThreadRegister(const std::string& p_Name)
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_Threads.insert({ pthread_self(), p_Name });
+  }
+
+  ~ThreadRegister()
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_Threads.erase(pthread_self());
+  }
+
+  static std::string GetName()
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    auto it = m_Threads.find(pthread_self());
+    return (it != m_Threads.end()) ? it->second : "";
+  }
+
+  static void SignalThreads(int p_Sig)
+  {
+    pthread_t self = pthread_self();
+    for (auto it = m_Threads.begin(); it != m_Threads.end(); ++it)
+    {
+      if (it->first != self)
+      {
+        pthread_kill(it->first, p_Sig);
+      }
+    }
+  }
+
+private:
+  static std::mutex m_Mutex;
+  static std::map<pthread_t, std::string> m_Threads;
 };
 
 class Util
@@ -161,6 +205,7 @@ public:
   static std::string GetSelfPath();
   static std::string GetLibetpanVersion();
   static std::string GetUname();
+  static std::string GetSigName(int p_Signal);
 
 private:
   static std::string m_HtmlConvertCmd;

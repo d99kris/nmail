@@ -93,6 +93,8 @@ std::string SmtpManager::GetAddress()
 
 void SmtpManager::Process()
 {
+  THREAD_REGISTER();
+
   LOG_DEBUG("entering loop");
   while (m_Running)
   {
