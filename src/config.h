@@ -22,6 +22,7 @@ public:
   void Save(const std::string& p_Path) const;
   std::string Get(const std::string& p_Param) const;
   void Set(const std::string& p_Param, const std::string& p_Value);
+  void Delete(const std::string& p_Param);
 
 private:
   std::map<std::string, std::string> m_Map;

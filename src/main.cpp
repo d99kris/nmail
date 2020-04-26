@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 
   Util::InitTempDir();
 
-  const std::map<std::string, std::string> defaultConfig =
+  const std::map<std::string, std::string> defaultMainConfig =
   {
     {"name", ""},
     {"address", ""},
@@ -136,24 +136,33 @@ int main(int argc, char* argv[])
     {"pager_cmd", ""},
     {"editor_cmd", ""},
   };
-  const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
+  const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
+  std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
 
-  std::shared_ptr<Config> config = std::make_shared<Config>(configPath, defaultConfig);
-
+  const std::map<std::string, std::string> defaultSecretConfig =
+  {
+    {"pass", ""},
+    {"smtp_pass", ""},
+  };
+  const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
+  std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
+  
   if (!setup.empty())
   {
-    remove(configPath.c_str());
-    config = std::make_shared<Config>(configPath, defaultConfig);
+    remove(mainConfigPath.c_str());
+    remove(secretConfigPath.c_str());
+    mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
+    secretConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
     
     if (setup == "gmail")
     {
-      SetupGmail(config);
-      config->Save();
+      SetupGmail(mainConfig);
+      mainConfig->Save();
     }
     else if (setup == "outlook")
     {
-      SetupOutlook(config);
-      config->Save();
+      SetupOutlook(mainConfig);
+      mainConfig->Save();
     }
     else
     {
@@ -163,34 +172,49 @@ int main(int argc, char* argv[])
     }
   }
 
-  // Read config
-  const std::string& name = config->Get("name");
-  const std::string& address = config->Get("address");
-  const std::string& user = config->Get("user");
-  std::string encPass = config->Get("pass");
-  const std::string& imapHost = config->Get("imap_host");
-  const std::string& smtpHost = config->Get("smtp_host");
-  std::string smtpUser = config->Get("smtp_user");
-  std::string encSmtpPass = config->Get("smtp_pass");
-  const bool savePass = (config->Get("save_pass") == "1");
-  const std::string& inbox = config->Get("inbox");
-  std::string trash = config->Get("trash");
-  std::string drafts = config->Get("drafts");
-  std::string sent = config->Get("sent");
-  const bool clientStoreSent = (config->Get("client_store_sent") == "1");
-  const bool cacheEncrypt = (config->Get("cache_encrypt") == "1");
-  Util::SetHtmlConvertCmd(config->Get("html_convert_cmd"));
-  Util::SetExtViewerCmd(config->Get("ext_viewer_cmd"));
-  Util::SetPagerCmd(config->Get("pager_cmd"));
-  Util::SetEditorCmd(config->Get("editor_cmd"));
+  // Read main config
+  const std::string& name = mainConfig->Get("name");
+  const std::string& address = mainConfig->Get("address");
+  const std::string& user = mainConfig->Get("user");
+  const std::string& imapHost = mainConfig->Get("imap_host");
+  const std::string& smtpHost = mainConfig->Get("smtp_host");
+  std::string smtpUser = mainConfig->Get("smtp_user");
+  const bool savePass = (mainConfig->Get("save_pass") == "1");
+  const std::string& inbox = mainConfig->Get("inbox");
+  std::string trash = mainConfig->Get("trash");
+  std::string drafts = mainConfig->Get("drafts");
+  std::string sent = mainConfig->Get("sent");
+  const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
+  const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
+  Util::SetHtmlConvertCmd(mainConfig->Get("html_convert_cmd"));
+  Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
+  Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
+  Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
+
+  // Read secret config
+  std::string encPass = secretConfig->Get("pass");
+  if (encPass.empty())
+  {
+    encPass = mainConfig->Get("pass");
+    mainConfig->Delete("pass");
+    secretConfig->Set("pass", encPass);
+  }
+  
+  std::string encSmtpPass = secretConfig->Get("smtp_pass");
+  if (encSmtpPass.empty())
+  {
+    encSmtpPass = mainConfig->Get("smtp_pass");
+    mainConfig->Delete("smtp_pass");
+    secretConfig->Set("smtp_pass", encSmtpPass);
+  }
 
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {
-    if (config->Get("verbose_logging") == "1")
+    if (mainConfig->Get("verbose_logging") == "1")
     {
       Log::SetVerboseLevel(Log::DEBUG_LEVEL);
     }
-    else if (config->Get("verbose_logging") == "2")
+    else if (mainConfig->Get("verbose_logging") == "2")
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
@@ -208,9 +232,9 @@ int main(int argc, char* argv[])
   uint32_t prefetchLevel = 0;
   try
   {
-    imapPort = std::stoi(config->Get("imap_port"));
-    smtpPort = std::stoi(config->Get("smtp_port"));
-    prefetchLevel = std::stoi(config->Get("prefetch_level"));
+    imapPort = std::stoi(mainConfig->Get("imap_port"));
+    smtpPort = std::stoi(mainConfig->Get("smtp_port"));
+    prefetchLevel = std::stoi(mainConfig->Get("prefetch_level"));
   }
   catch (...)
   {
@@ -230,7 +254,7 @@ int main(int argc, char* argv[])
     if (savePass)
     {
       encPass = Serialized::ToHex(Crypto::AESEncrypt(pass, user));
-      config->Set("pass", encPass);
+      secretConfig->Set("pass", encPass);
     }
   }
   else
@@ -258,7 +282,7 @@ int main(int argc, char* argv[])
       if (savePass)
       {
         encSmtpPass = Serialized::ToHex(Crypto::AESEncrypt(smtpPass, smtpUser));
-        config->Set("smtp_pass", encSmtpPass);
+        secretConfig->Set("smtp_pass", encSmtpPass);
       }
     }
     else
@@ -304,8 +328,11 @@ int main(int argc, char* argv[])
   smtpManager.reset();
   imapManager.reset();
 
-  config->Save();
-  config.reset();
+  mainConfig->Save();
+  mainConfig.reset();
+
+  secretConfig->Save();
+  secretConfig.reset();
 
   AddressBook::Cleanup();
   

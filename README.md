@@ -193,12 +193,10 @@ Full example of a config file `~/.nmail/main.conf`:
     inbox=INBOX
     name=Firstname Lastname
     pager_cmd=
-    pass=
     prefetch_level=2
     save_pass=1
     sent=Sent
     smtp_host=smtp.example.com
-    smtp_pass=
     smtp_port=587
     smtp_user=
     trash=Trash
@@ -265,13 +263,6 @@ use when viewing an email using an external pager (`Ctrl-E`). If not specified,
 nmail will use the pager specified by the environment variable `$PAGER`.
 If `$PAGER` is not set, nmail will use `less`.
 
-### pass
-
-The field `pass` shall be left empty. The next time nmail is started it will
-prompt for password. If having configured nmail to save the password
-`save_pass=1` the field `pass` will be automatically populated with the
-password encrypted (refer to Security section below for details).
-
 ### prefetch_level
 
 Messages are pre-fetched from server based on the `prefetch_level` config
@@ -294,14 +285,6 @@ copies of outgoing emails.
 ### smtp_host
 
 SMTP hostname / address. Required for sending emails.
-
-### smtp_pass
-
-The field `smtp_pass` shall be left empty. The next time nmail is started it
-will prompt for SMTP password in case `smtp_user` has been specified. If nmail
-is configured nmail to save passwords `save_pass=1` the field `smtp_pass` will
-be automatically populated with the password encrypted (refer to Security
-section below for details).
 
 ### smtp_port
 
@@ -426,7 +409,7 @@ cached messages / headers. Example (enter email account password at prompt):
 Storing the account password (`save_pass=1` in main.conf) is *not* secure.
 While nmail encrypts the password, the key is trivial to determine from
 the source code. Only store the password if measurements are taken to ensure
-`~/.nmail/main.conf` cannot by accessed by a third-party.
+`~/.nmail/secret.conf` cannot by accessed by a third-party.
 
 
 Configuration

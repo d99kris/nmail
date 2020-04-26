@@ -88,3 +88,8 @@ void Config::Set(const std::string& p_Param, const std::string& p_Value)
 {
   m_Map[p_Param] = p_Value;
 }
+
+void Config::Delete(const std::string& p_Param)
+{
+  m_Map.erase(p_Param);
+}
