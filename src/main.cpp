@@ -115,13 +115,11 @@ int main(int argc, char* argv[])
     {"name", ""},
     {"address", ""},
     {"user", ""},
-    {"pass", ""},
     {"imap_host", ""},
     {"imap_port", "993"},
     {"smtp_host", ""},
     {"smtp_port", "587"},
     {"smtp_user", ""},
-    {"smtp_pass", ""},
     {"save_pass", "0"},
     {"inbox", "INBOX"},
     {"trash", ""},
@@ -141,8 +139,6 @@ int main(int argc, char* argv[])
 
   const std::map<std::string, std::string> defaultSecretConfig =
   {
-    {"pass", ""},
-    {"smtp_pass", ""},
   };
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
   std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
@@ -152,7 +148,7 @@ int main(int argc, char* argv[])
     remove(mainConfigPath.c_str());
     remove(secretConfigPath.c_str());
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
-    secretConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
+    secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
     
     if (setup == "gmail")
     {
@@ -192,22 +188,33 @@ int main(int argc, char* argv[])
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
 
   // Read secret config
-  std::string encPass = secretConfig->Get("pass");
-  if (encPass.empty())
+  std::string encPass;
+  if (secretConfig->Exist("pass"))
   {
+    encPass = secretConfig->Get("pass");
+  }
+  else if (mainConfig->Exist("pass"))
+  {
+    LOG_DEBUG("migrating 'pass' to secret.conf");
     encPass = mainConfig->Get("pass");
     mainConfig->Delete("pass");
     secretConfig->Set("pass", encPass);
   }
   
-  std::string encSmtpPass = secretConfig->Get("smtp_pass");
-  if (encSmtpPass.empty())
+  std::string encSmtpPass;
+  if (secretConfig->Exist("smtp_pass"))
   {
+    encSmtpPass = secretConfig->Get("smtp_pass");
+  }
+  else if (mainConfig->Exist("smtp_pass"))
+  {
+    LOG_DEBUG("migrating 'smtp_pass' to secret.conf");
     encSmtpPass = mainConfig->Get("smtp_pass");
     mainConfig->Delete("smtp_pass");
     secretConfig->Set("smtp_pass", encSmtpPass);
   }
 
+  // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {
     if (mainConfig->Get("verbose_logging") == "1")

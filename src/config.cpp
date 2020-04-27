@@ -93,3 +93,8 @@ void Config::Delete(const std::string& p_Param)
 {
   m_Map.erase(p_Param);
 }
+
+bool Config::Exist(const std::string& p_Param)
+{
+  return (m_Map.find(p_Param) != m_Map.end());
+}
