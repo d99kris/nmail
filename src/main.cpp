@@ -187,33 +187,6 @@ int main(int argc, char* argv[])
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
 
-  // Read secret config
-  std::string encPass;
-  if (secretConfig->Exist("pass"))
-  {
-    encPass = secretConfig->Get("pass");
-  }
-  else if (mainConfig->Exist("pass"))
-  {
-    LOG_DEBUG("migrating 'pass' to secret.conf");
-    encPass = mainConfig->Get("pass");
-    mainConfig->Delete("pass");
-    secretConfig->Set("pass", encPass);
-  }
-  
-  std::string encSmtpPass;
-  if (secretConfig->Exist("smtp_pass"))
-  {
-    encSmtpPass = secretConfig->Get("smtp_pass");
-  }
-  else if (mainConfig->Exist("smtp_pass"))
-  {
-    LOG_DEBUG("migrating 'smtp_pass' to secret.conf");
-    encSmtpPass = mainConfig->Get("smtp_pass");
-    mainConfig->Delete("smtp_pass");
-    secretConfig->Set("smtp_pass", encSmtpPass);
-  }
-
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {
@@ -226,7 +199,35 @@ int main(int argc, char* argv[])
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
   }
+
+  // Read secret config
+  std::string encPass;
+  if (secretConfig->Exist("pass"))
+  {
+    encPass = secretConfig->Get("pass");
+  }
+  else if (mainConfig->Exist("pass"))
+  {
+    LOG_DEBUG("migrating pass to secret.conf");
+    encPass = mainConfig->Get("pass");
+    mainConfig->Delete("pass");
+    secretConfig->Set("pass", encPass);
+  }
   
+  std::string encSmtpPass;
+  if (secretConfig->Exist("smtp_pass"))
+  {
+    encSmtpPass = secretConfig->Get("smtp_pass");
+  }
+  else if (mainConfig->Exist("smtp_pass"))
+  {
+    LOG_DEBUG("migrating smtp_pass to secret.conf");
+    encSmtpPass = mainConfig->Get("smtp_pass");
+    mainConfig->Delete("smtp_pass");
+    secretConfig->Set("smtp_pass", encSmtpPass);
+  }
+
+  // Crypto init
   Crypto::Init();
 
   if (Log::GetDebugEnabled())
