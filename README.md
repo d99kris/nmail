@@ -423,6 +423,7 @@ configure nmail.
 This configuration file controls the UI aspects of nmail. Default configuration
 file:
 
+    compose_hardwrap=0
     help_enabled=1
     key_back=,
     key_cancel=KEY_CTRLC

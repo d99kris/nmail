@@ -210,7 +210,8 @@ private:
   std::string m_FolderListCurrentFolder;
 
   Config m_Config;
-  
+
+  bool m_ComposeHardwrap = false;
   bool m_HelpEnabled = true;
 
   int m_KeyPrevMsg = 0;

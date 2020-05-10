@@ -50,6 +50,7 @@ void Ui::Init()
 
   const std::map<std::string, std::string> defaultConfig =
   {
+    {"compose_hardwrap", "0"},
     {"help_enabled", "1"},
     {"persist_folder_filter", "1"},
     {"plain_text", "1"},
@@ -85,6 +86,7 @@ void Ui::Init()
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
 
+  m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
@@ -3153,7 +3155,8 @@ void Ui::SendComposedMessage()
   action.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
   action.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
   action.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
-  action.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
+  action.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
+                                                   : m_ComposeMessageStr);
   action.m_RefMsgId = m_ComposeHeaderRef;
   action.m_ComposeTempDirectory = m_ComposeTempDirectory;
   action.m_ComposeDraftUid = m_ComposeDraftUid;
@@ -3171,7 +3174,8 @@ void Ui::UploadDraftMessage()
     smtpAction.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
     smtpAction.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
     smtpAction.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
-    smtpAction.m_Body = Util::ToString(Util::Join(m_ComposeMessageLines));
+    smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
+                                                         : m_ComposeMessageStr);
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
