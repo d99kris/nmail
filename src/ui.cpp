@@ -56,7 +56,10 @@ void Ui::Init()
     {"plain_text", "1"},
     {"show_progress", "1"},
     {"new_msg_bell", "1"},
-    {"prompt_before_quit", "0"},
+    {"quit_without_confirm", "1"},
+    {"send_without_confirm", "0"},
+    {"cancel_without_confirm", "0"},
+    {"postpone_without_confirm", "0"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -117,7 +120,10 @@ void Ui::Init()
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
-  m_PromptBeforeQuit = m_Config.Get("prompt_before_quit") == "1";
+  m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
+  m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
+  m_CancelWithoutConfirm = m_Config.Get("cancel_without_confirm") == "1";
+  m_PostponeWithoutConfirm = m_Config.Get("postpone_without_confirm") == "1";
 
   m_Running = true;
 }
@@ -2207,7 +2213,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   {
     if (p_Key == m_KeyCancel)
     {
-      if (Ui::PromptYesNo("Cancel message (y/n)?"))
+      if (m_CancelWithoutConfirm || Ui::PromptYesNo("Cancel message (y/n)?"))
       {
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
@@ -2216,33 +2222,39 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeySend)
     {
-      SendComposedMessage();
-      UpdateUidFromIndex(true /* p_UserTriggered */);
-      if (m_ComposeDraftUid != 0)
+      if (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?"))
       {
-        SetState(StateViewMessageList);
+        SendComposedMessage();
+        UpdateUidFromIndex(true /* p_UserTriggered */);
+        if (m_ComposeDraftUid != 0)
+        {
+          SetState(StateViewMessageList);
+        }
+        else
+        {
+          SetLastStateOrMessageList();
+        }
       }
-      else
+    }
+    else if (p_Key == m_KeyPostpone)
+    {
+      if (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?"))
       {
-        SetLastStateOrMessageList();
+        UploadDraftMessage();
+        UpdateUidFromIndex(true /* p_UserTriggered */);
+        if (m_ComposeDraftUid != 0)
+        {
+          SetState(StateViewMessageList);
+        }
+        else
+        {
+          SetLastStateOrMessageList();
+        }
       }
     }
     else if (p_Key == m_KeyExternalEditor)
     {
       ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
-    }
-    else if (p_Key == m_KeyPostpone)
-    {
-      UploadDraftMessage();
-      UpdateUidFromIndex(true /* p_UserTriggered */);
-      if (m_ComposeDraftUid != 0)
-      {
-        SetState(StateViewMessageList);
-      }
-      else
-      {
-        SetLastStateOrMessageList();
-      }
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -3774,7 +3786,7 @@ void Ui::ImportMessage()
 
 void Ui::Quit()
 {
-  if (!m_PromptBeforeQuit || Ui::PromptYesNo("Quit nmail (y/n)?"))
+  if (m_QuitWithoutConfirm || Ui::PromptYesNo("Quit nmail (y/n)?"))
   {
     m_Running = false;
     LOG_DEBUG("stop thread");

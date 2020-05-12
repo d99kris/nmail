@@ -423,6 +423,7 @@ configure nmail.
 This configuration file controls the UI aspects of nmail. Default configuration
 file:
 
+    cancel_without_confirm=0
     compose_hardwrap=0
     help_enabled=1
     key_back=,
@@ -451,7 +452,9 @@ file:
     new_msg_bell=1
     persist_folder_filter=1
     plain_text=1
-    prompt_before_quit=0
+    postpone_without_confirm=0
+    quit_without_confirm=1
+    send_without_confirm=0
     show_progress=1
 
 

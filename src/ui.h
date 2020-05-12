@@ -241,7 +241,10 @@ private:
   int m_KeyImport = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
-  bool m_PromptBeforeQuit = false;
+  bool m_QuitWithoutConfirm = true;
+  bool m_SendWithoutConfirm = false;
+  bool m_CancelWithoutConfirm = false;
+  bool m_PostponeWithoutConfirm = false;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;
