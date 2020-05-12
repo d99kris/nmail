@@ -695,16 +695,18 @@ int Util::GetKeyCode(const std::string& p_KeyName)
   return keyCode;
 }
 
-std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength)
+std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                         bool p_WrapQuoteLines)
 {
   int pos = 0;
   int wrapLine = 0;
   int wrapPos = 0;
-  return WordWrap(p_Text, p_LineLength, pos, wrapLine, wrapPos);
+  return WordWrap(p_Text, p_LineLength, p_WrapQuoteLines, pos, wrapLine, wrapPos);
 }
 
-std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength, int p_Pos,
-                                         int &p_WrapLine, int &p_WrapPos)
+std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                         bool p_WrapQuoteLines,
+                                         int p_Pos, int &p_WrapLine, int &p_WrapPos)
 {
   std::wostringstream wrapped;
   std::vector<std::wstring> lines;
@@ -720,7 +722,8 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
       std::wstring linePart = line;
       while (true)
       {
-        if (linePart.size() >= p_LineLength)
+        if ((linePart.size() >= p_LineLength) &&
+            (p_WrapQuoteLines || (linePart.rfind(L">", 0) != 0)))
         {
           size_t spacePos = linePart.rfind(L' ', p_LineLength);
           if (spacePos != std::wstring::npos)

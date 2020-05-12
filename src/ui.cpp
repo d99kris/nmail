@@ -1039,7 +1039,7 @@ void Ui::DrawMessage()
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
-      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_MaxLineLength);
+      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_MaxLineLength, true);
       int countLines = wlines.size();
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
@@ -1074,7 +1074,7 @@ void Ui::DrawMessage()
 
 void Ui::DrawComposeMessage()
 {
-  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
+  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
@@ -2200,7 +2200,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -2210,7 +2210,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -2551,7 +2551,7 @@ void Ui::SetState(Ui::State p_State)
 
       std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       std::vector<std::wstring> bodyTextLines =
-        Util::WordWrap(Util::ToWString(bodyText), m_MaxLineLength - 4);
+        Util::WordWrap(Util::ToWString(bodyText), (m_MaxLineLength - 4), false);
       std::string indentBodyText =
         Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
       

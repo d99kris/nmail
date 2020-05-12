@@ -169,8 +169,10 @@ public:
   static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
   static int GetKeyCode(const std::string& p_KeyName);
 
-  static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength);
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                            bool p_WrapQuoteLines);
+  static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                            bool p_WrapQuoteLines,
                                             int p_Pos, int& p_WrapLine, int& p_WrapPos);
   static std::string GetPass();
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);
