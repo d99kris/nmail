@@ -340,7 +340,7 @@ The built-in email compose editor in nmail supports the following:
     Ctrl-O         postpone message
     Ctrl-X         send message
     Ctrl-E         edit message in external editor
-    Ctrl-T         search address book
+    Ctrl-T         to select, from address book / from file dialog
     Backspace      backspace
     Delete         delete
     Enter          new line
