@@ -2549,11 +2549,16 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
-      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      std::vector<std::wstring> bodyTextLines =
+        Util::WordWrap(Util::ToWString(bodyText), m_MaxLineLength - 4);
+      std::string indentBodyText =
+        Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
+      
       m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
                                             header.GetFrom() +
                                             " wrote:\n\n" +
-                                            Util::AddIndent(bodyText, "> "));
+                                            indentBodyText);
       Util::StripCR(m_ComposeMessageStr);
 
       // @todo: handle quoted commas in address name
