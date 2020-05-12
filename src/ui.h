@@ -284,6 +284,8 @@ private:
   bool m_MessageViewToggledSeen = false;
 
   std::string m_CurrentMessageViewText;
+
+  int m_MaxLineLength = 0;
   
   int m_Pipe[2] = {-1, -1};
 };

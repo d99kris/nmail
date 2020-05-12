@@ -762,7 +762,7 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
   {
     if (p_Pos > 0)
     {
-      int lineLength = (line.size() < p_LineLength) ? (line.size() + 1) : line.size();
+      int lineLength = line.size() + 1;
       if (lineLength <= p_Pos)
       {
         p_Pos -= lineLength;

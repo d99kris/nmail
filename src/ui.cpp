@@ -135,6 +135,7 @@ void Ui::Cleanup()
 void Ui::InitWindows()
 {
   getmaxyx(stdscr, m_ScreenHeight, m_ScreenWidth);
+  m_MaxLineLength = m_ScreenWidth - 1;
   wclear(stdscr);
   wrefresh(stdscr);
   const int topHeight = 1;
@@ -1038,7 +1039,7 @@ void Ui::DrawMessage()
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
-      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_ScreenWidth);
+      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_MaxLineLength);
       int countLines = wlines.size();
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
@@ -1073,7 +1074,7 @@ void Ui::DrawMessage()
 
 void Ui::DrawComposeMessage()
 {
-  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_ScreenWidth,
+  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
@@ -2199,7 +2200,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_ScreenWidth,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -2209,7 +2210,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_ScreenWidth,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
