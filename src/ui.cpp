@@ -2539,7 +2539,7 @@ void Ui::SetState(Ui::State p_State)
 
       std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
       std::vector<std::wstring> bodyTextLines =
-        Util::WordWrap(Util::ToWString(bodyText), (m_MaxLineLength - 4), false);
+        Util::WordWrap(Util::ToWString(bodyText), (m_MaxLineLength - 8), false);
       std::string indentBodyText =
         Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
       
