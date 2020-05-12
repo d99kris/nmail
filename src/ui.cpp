@@ -1988,42 +1988,12 @@ void Ui::ViewMessageKeyHandler(int p_Key)
 
 void Ui::ComposeMessageKeyHandler(int p_Key)
 {
+  bool continueProcess = false;
+
+  // process state-specific key handling first
   if (m_IsComposeHeader)
   {
-    if (p_Key == m_KeyCancel)
-    {
-      if (Ui::PromptYesNo("Cancel message (y/n)?"))
-      {
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        SetLastStateOrMessageList();
-        Util::RmDir(m_ComposeTempDirectory);
-      }
-    }
-    else if (p_Key == m_KeySend)
-    {
-      SendComposedMessage();
-      UpdateUidFromIndex(true /* p_UserTriggered */);
-      if (m_ComposeDraftUid != 0)
-      {
-        SetState(StateViewMessageList);
-      }
-      else
-      {
-        SetLastStateOrMessageList();
-      }
-    }
-    else if (p_Key == m_KeyToSelect)
-    {
-      if (m_ComposeHeaderLine < 2)
-      {
-        SetState(StateAddressList);
-      }
-      else if (m_ComposeHeaderLine == 2)
-      {
-        SetState(StateFileList);
-      }
-    }
-    else if (p_Key == KEY_UP)
+    if (p_Key == KEY_UP)
     {
       --m_ComposeHeaderLine;
       if (m_ComposeHeaderLine < 0)
@@ -2137,57 +2107,25 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
     }
-    else if (p_Key == m_KeyExternalEditor)
+    else if (p_Key == m_KeyToSelect)
     {
-      ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
-    }
-    else if (p_Key == m_KeyPostpone)
-    {
-      UploadDraftMessage();
-      UpdateUidFromIndex(true /* p_UserTriggered */);
-      if (m_ComposeDraftUid != 0)
+      if (m_ComposeHeaderLine < 2)
       {
-        SetState(StateViewMessageList);
+        SetState(StateAddressList);
       }
-      else
+      else if (m_ComposeHeaderLine == 2)
       {
-        SetLastStateOrMessageList();
+        SetState(StateFileList);
       }
-    }
-    else if (IsValidTextKey(p_Key))
-    {
-      m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos++, 1, p_Key);
     }
     else
     {
-      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+      continueProcess = true;
     }
   }
-  else
+  else // compose body
   {
-    if (p_Key == m_KeyCancel)
-    {
-      if (Ui::PromptYesNo("Cancel message (y/n)?"))
-      {
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        SetLastStateOrMessageList();
-        Util::RmDir(m_ComposeTempDirectory);        
-      }
-    }
-    else if (p_Key == m_KeySend)
-    {
-      SendComposedMessage();
-      UpdateUidFromIndex(true /* p_UserTriggered */);
-      if (m_ComposeDraftUid != 0)
-      {
-        SetState(StateViewMessageList);
-      }
-      else
-      {
-        SetLastStateOrMessageList();
-      }
-    }
-    else if (p_Key == KEY_UP)
+    if (p_Key == KEY_UP)
     {
       ComposeMessagePrevLine();
     }
@@ -2258,6 +2196,37 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       Util::DeleteToMatch(m_ComposeMessageStr, m_ComposeMessagePos, '\n');
     }
+    else
+    {
+      continueProcess = true;
+    }
+  }
+
+  // process common key handling last (if not handled above)
+  if (continueProcess)
+  {
+    if (p_Key == m_KeyCancel)
+    {
+      if (Ui::PromptYesNo("Cancel message (y/n)?"))
+      {
+        UpdateUidFromIndex(true /* p_UserTriggered */);
+        SetLastStateOrMessageList();
+        Util::RmDir(m_ComposeTempDirectory);
+      }
+    }
+    else if (p_Key == m_KeySend)
+    {
+      SendComposedMessage();
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
+    }
     else if (p_Key == m_KeyExternalEditor)
     {
       ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
@@ -2277,7 +2246,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (IsValidTextKey(p_Key))
     {
-      m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, p_Key);
+      if (m_IsComposeHeader)
+      {
+        m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos++, 1, p_Key);
+      }
+      else
+      {
+        m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, p_Key);
+      }
     }
     else
     {
