@@ -460,7 +460,7 @@ file:
     postpone_without_confirm=0
     quit_without_confirm=1
     send_without_confirm=0
-    show_embedded_images=0
+    show_embedded_images=1
     show_progress=1
 
 
