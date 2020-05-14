@@ -141,27 +141,27 @@ void Header::Parse()
                   break;
 
                 case MAILIMF_FIELD_FROM:
-                  addrs = MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
+                  addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_From = Util::Join(addrs, ", ");
-                  addrs = MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
+                  addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
                   m_ShortFrom = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_TO:
-                  addrs = MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_To = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_CC:
-                  addrs = MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_Cc = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_SUBJECT:
-                  m_Subject = MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
+                  m_Subject = Util::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
                   Util::ReplaceString(m_Subject, "\r", "");
                   Util::ReplaceString(m_Subject, "\n", "");
                   break;
@@ -270,35 +270,6 @@ std::string Header::GroupToString(mailimf_group *p_Group)
   str += std::string("; ");
 
   return str;
-}
-
-std::string Header::MimeToUtf8(const std::string &p_Str)
-{
-  const char* charset = "UTF-8";
-  char* cdecoded = NULL;
-  size_t curtoken = 0;
-  int rv = mailmime_encoded_phrase_parse(charset, p_Str.c_str(), p_Str.size(), &curtoken,
-                                         charset, &cdecoded);
-  if ((rv == MAILIMF_NO_ERROR) && (cdecoded != NULL))
-  {
-    std::string decoded(cdecoded);
-    free(cdecoded);
-    return decoded;
-  }
-  else
-  {
-    return p_Str;
-  }
-}
-
-std::vector<std::string> Header::MimeToUtf8(const std::vector<std::string>& p_Strs)
-{
-  std::vector<std::string> strs;
-  for (auto& str : p_Strs)
-  {
-    strs.push_back(MimeToUtf8(str));
-  }
-  return strs;
 }
 
 std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header)

@@ -37,8 +37,6 @@ private:
   std::string MailboxToString(struct mailimf_mailbox* p_Mailbox,
                               const bool p_Short = false);
   std::string GroupToString(struct mailimf_group* p_Group);
-  std::string MimeToUtf8(const std::string& p_Str);
-  std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
 
 private:
   std::string m_Data;

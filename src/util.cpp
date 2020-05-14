@@ -1186,3 +1186,32 @@ std::string Util::GetUname()
   return "";
 #endif
 }
+
+std::string Util::MimeToUtf8(const std::string &p_Str)
+{
+  const char* charset = "UTF-8";
+  char* cdecoded = NULL;
+  size_t curtoken = 0;
+  int rv = mailmime_encoded_phrase_parse(charset, p_Str.c_str(), p_Str.size(), &curtoken,
+                                         charset, &cdecoded);
+  if ((rv == MAILIMF_NO_ERROR) && (cdecoded != NULL))
+  {
+    std::string decoded(cdecoded);
+    free(cdecoded);
+    return decoded;
+  }
+  else
+  {
+    return p_Str;
+  }
+}
+
+std::vector<std::string> Util::MimeToUtf8(const std::vector<std::string>& p_Strs)
+{
+  std::vector<std::string> strs;
+  for (auto& str : p_Strs)
+  {
+    strs.push_back(MimeToUtf8(str));
+  }
+  return strs;
+}

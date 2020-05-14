@@ -209,6 +209,8 @@ public:
   static std::string GetLibetpanVersion();
   static std::string GetUname();
   static std::string GetSigName(int p_Signal);
+  static std::string MimeToUtf8(const std::string& p_Str);
+  static std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
 
 private:
   static std::string m_HtmlConvertCmd;

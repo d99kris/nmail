@@ -297,7 +297,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
           }
 
           part.m_MimeType = p_MimeType;
-          part.m_Filename = filename;
+          part.m_Filename = Util::MimeToUtf8(filename);
           part.m_ContentId = contentId;
           m_Parts[index] = part;
           
