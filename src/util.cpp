@@ -287,7 +287,11 @@ time_t Util::MailtimeToTimet(mailimf_date_time *p_Dt)
 
 std::string Util::GetHtmlConvertCmd()
 {
-  return m_HtmlConvertCmd;
+  if (!m_HtmlConvertCmd.empty()) return m_HtmlConvertCmd;
+
+  static std::string defaultHtmlConvertCmd = GetDefaultHtmlConvertCmd();
+  
+  return defaultHtmlConvertCmd;
 }
 
 void Util::SetHtmlConvertCmd(const std::string &p_HtmlConvertCmd)
@@ -327,6 +331,15 @@ std::string Util::GetDefaultHtmlConvertCmd()
   return result;
 }
 
+std::string Util::GetExtViewerCmd()
+{
+  if (!m_ExtViewerCmd.empty()) return m_ExtViewerCmd;
+
+  static std::string defaultExtViewerCmd = GetDefaultExtViewerCmd();
+  
+  return defaultExtViewerCmd;
+}
+
 void Util::SetExtViewerCmd(const std::string& p_ExtViewerCmd)
 {
   m_ExtViewerCmd = p_ExtViewerCmd;
@@ -345,7 +358,7 @@ std::string Util::GetDefaultExtViewerCmd()
 
 int Util::OpenInExtViewer(const std::string& p_Path)
 {
-  std::string cmd = m_ExtViewerCmd + " \"" + p_Path + "\"";
+  std::string cmd = GetExtViewerCmd() + " \"" + p_Path + "\"";
   return system(cmd.c_str());
 }
 

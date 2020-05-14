@@ -186,8 +186,8 @@ Full example of a config file `~/.nmail/main.conf`:
     client_store_sent=0
     drafts=Drafts
     editor_cmd=
-    ext_viewer_cmd=open
-    html_convert_cmd=/usr/local/bin/lynx -dump
+    ext_viewer_cmd=
+    html_convert_cmd=
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
@@ -231,14 +231,19 @@ specified, nmail will use the editor specified by the environment variable
 
 ### ext_viewer_cmd
 
-This field specifies which command nmail should use to open email parts /
-attachments. It's automatically set to a suitable command for the OS in use.
+This field allows overriding the external viewer used when viewing email
+parts and attachments. By default nmail uses `open` on macOS and `xdg-open`
+on Linux.
 
 ### html_convert_cmd
 
-Specifies how nmail should convert HTML emails to text. It's automatically
-set appropriately by nmail if any of `lynx`, `elinks`, `links` is available
-on the system.
+This field allows customizing how nmail should convert HTML emails to text.
+If not specified, nmail checks if `lynx`, `elinks` or `links` is available
+on the system (in that order), and uses the first found. The exact command
+used is one of:
+- `lynx -assume_charset=utf-8 -display_charset=utf-8 -dump`
+- `elinks -dump-charset utf-8 -dump`
+- `links -codepage utf-8 -dump`
 
 ### imap_host
 

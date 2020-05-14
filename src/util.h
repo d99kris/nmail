@@ -142,6 +142,7 @@ public:
   static std::string GetHtmlConvertCmd();
   static void SetHtmlConvertCmd(const std::string& p_HtmlConvertCmd);
   static std::string GetDefaultHtmlConvertCmd();
+  static std::string GetExtViewerCmd();
   static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
   static std::string GetDefaultExtViewerCmd();
   static int OpenInExtViewer(const std::string& p_Path);

@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.64" LANGUAGES CXX)
+project(nmail VERSION "1.65" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
