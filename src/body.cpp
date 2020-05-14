@@ -227,6 +227,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   mailmime_data* data = p_Mime->mm_data.mm_single;
   mailmime_single_fields fields;
   std::string filename;
+  std::string contentId;
   std::string charset;
 
   memset(&fields, 0, sizeof(mailmime_single_fields));
@@ -234,22 +235,23 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   {
     mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
 
-    char* cfilename = fields.fld_disposition_filename;
-
-    if (cfilename == NULL)
+    if (fields.fld_disposition_filename != NULL)
     {
-      cfilename = fields.fld_content_name;
+      filename = std::string(fields.fld_disposition_filename);
+    }
+    else if (fields.fld_content_name != NULL)
+    {
+      filename = std::string(fields.fld_content_name);
     }
 
-    if (cfilename != NULL)
+    if (fields.fld_id != NULL)
     {
-      filename = std::string(cfilename);
+      contentId = std::string(fields.fld_id);
     }
-
-    char* ccharset = fields.fld_content_charset;
-    if (ccharset != NULL)
+    
+    if (fields.fld_content_charset != NULL)
     {
-      charset = Util::ToLower(std::string(ccharset));
+      charset = Util::ToLower(std::string(fields.fld_content_charset));
     }
   }
   
@@ -296,6 +298,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
           part.m_MimeType = p_MimeType;
           part.m_Filename = filename;
+          part.m_ContentId = contentId;
           m_Parts[index] = part;
           
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))

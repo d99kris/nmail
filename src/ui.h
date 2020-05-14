@@ -245,6 +245,7 @@ private:
   bool m_SendWithoutConfirm = false;
   bool m_CancelWithoutConfirm = false;
   bool m_PostponeWithoutConfirm = false;
+  bool m_ShowEmbeddedImages = true;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

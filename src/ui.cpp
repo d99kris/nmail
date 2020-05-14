@@ -60,6 +60,7 @@ void Ui::Init()
     {"send_without_confirm", "0"},
     {"cancel_without_confirm", "0"},
     {"postpone_without_confirm", "0"},
+    {"show_embedded_images", "1"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -124,7 +125,8 @@ void Ui::Init()
   m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
   m_CancelWithoutConfirm = m_Config.Get("cancel_without_confirm") == "1";
   m_PostponeWithoutConfirm = m_Config.Get("postpone_without_confirm") == "1";
-
+  m_ShowEmbeddedImages = m_Config.Get("show_embedded_images") == "1";
+  
   m_Running = true;
 }
 
@@ -2318,6 +2320,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     std::string ext;
     std::string err;
     std::string fileName;
+    bool isUnamedTextHtml = false;
     if (!m_PartListCurrentPart.m_Filename.empty())
     {
       ext = Util::GetFileExt(m_PartListCurrentPart.m_Filename);
@@ -2329,12 +2332,48 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       ext = Util::ExtensionForMimeType(m_PartListCurrentPart.m_MimeType);
       err = "Unknown MIME type " + m_PartListCurrentPart.m_MimeType;
       fileName = std::to_string(m_PartListCurrentIndex) + ext;
+      isUnamedTextHtml = (m_PartListCurrentPart.m_MimeType == "text/html");
     }
 
     if (!ext.empty())
     {
-      const std::string& tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-      Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
+      std::string tempFilePath;
+        
+      if (m_ShowEmbeddedImages && isUnamedTextHtml)
+      {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        int uid = m_MessageListCurrentUid[m_CurrentFolder];
+        std::map<uint32_t, Body>& bodys = m_Bodys[m_CurrentFolder];
+        std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+        if (bodyIt != bodys.end())
+        {
+          Body& body = bodyIt->second;
+          const std::map<ssize_t, Part>& parts = body.GetParts();
+          for (auto& part : parts)
+          {
+            if (!part.second.m_ContentId.empty())
+            {
+              const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
+              LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
+              Util::WriteFile(tempPartFilePath, part.second.m_Data);
+            }
+          }
+        }
+
+        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+        std::string partData = m_PartListCurrentPart.m_Data;
+        Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
+        Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
+        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+        Util::WriteFile(tempFilePath, partData);
+      }
+      else
+      {
+        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+        Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
+      }
+
       LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
 
       SetDialogMessage("Waiting for external viewer to exit");

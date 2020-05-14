@@ -15,6 +15,7 @@ struct Part
   std::string m_MimeType;
   std::string m_Data;
   std::string m_Filename;
+  std::string m_ContentId;
 };
 
 class Body
