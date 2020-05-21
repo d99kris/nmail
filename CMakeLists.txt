@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.66" LANGUAGES CXX)
+project(nmail VERSION "1.67" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -21,6 +21,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 else()
   message(STATUS "Using build type '${CMAKE_BUILD_TYPE}'.")
 endif()
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Application
 add_executable(nmail
