@@ -525,15 +525,15 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string> > &p_HelpText)
     int x = 0;
     for (int colIdx = 0; colIdx < (int)rowIt->size(); colIdx += 2)
     {
-      std::string cmd = rowIt->at(colIdx);
-      std::string desc = rowIt->at(colIdx + 1);
+      std::wstring wcmd = Util::ToWString(rowIt->at(colIdx));
+      std::wstring wdesc = Util::ToWString(rowIt->at(colIdx + 1));
 
       wattron(m_HelpWin, A_REVERSE);
-      mvwprintw(m_HelpWin, y, x, "%s", cmd.c_str());
+      mvwaddnwstr(m_HelpWin, y, x, wcmd.c_str(), wcmd.size());
       wattroff(m_HelpWin, A_REVERSE);
 
-      const std::string descTrim = desc.substr(0, width - cmd.size() - 2);
-      mvwprintw(m_HelpWin, y, x + cmd.size() + 1, "%s", descTrim.c_str());
+      const std::wstring wdescTrim = wdesc.substr(0, width - wcmd.size() - 2);
+      mvwaddnwstr(m_HelpWin, y, x + wcmd.size() + 1, wdescTrim.c_str(), wdescTrim.size());
 
       x += width;
     }
@@ -3122,6 +3122,14 @@ std::string Ui::GetKeyDisplay(int p_Key)
   else if (p_Key == '.')
   {
     return ">";
+  }
+  else if (p_Key == KEY_LEFT)
+  {
+    return "←";
+  }
+  else if (p_Key == KEY_RIGHT)
+  {
+    return "→";
   }
   else if ((p_Key >= 'a') && (p_Key <= 'z'))
   {
