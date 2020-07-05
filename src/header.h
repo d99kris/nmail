@@ -22,6 +22,7 @@ public:
   std::string GetShortFrom();
   std::string GetTo();
   std::string GetCc();
+  std::string GetReplyTo();
   std::string GetSubject();
   std::string GetUniqueId();
   std::string GetMessageId();
@@ -49,6 +50,7 @@ private:
   std::string m_ShortFrom;
   std::string m_To;
   std::string m_Cc;
+  std::string m_ReplyTo;
   std::string m_Subject;
   std::string m_MessageId;
   std::string m_UniqueId;

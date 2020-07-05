@@ -64,6 +64,12 @@ std::string Header::GetCc()
   return m_Cc;
 }
 
+std::string Header::GetReplyTo()
+{
+  Parse();
+  return m_ReplyTo;
+}
+
 std::string Header::GetSubject()
 {
   Parse();
@@ -168,6 +174,12 @@ void Header::Parse()
 
                 case MAILIMF_FIELD_MESSAGE_ID:
                   m_MessageId = std::string(field->fld_data.fld_message_id->mid_value);
+                  break;
+
+                case MAILIMF_FIELD_REPLY_TO:
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list));
+                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                  m_ReplyTo = Util::Join(addrs, ", ");
                   break;
 
                 default:

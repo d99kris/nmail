@@ -1006,6 +1006,11 @@ void Ui::DrawMessage()
       Header& header = headerIt->second;
       ss << "Date: " << header.GetDateTime() << "\n";
       ss << "From: " << header.GetFrom() << "\n";
+      if (!header.GetReplyTo().empty())
+      {
+        ss << "Reply-To: " << header.GetReplyTo() << "\n";
+      }
+
       ss << "To: " << header.GetTo() << "\n";
       if (!header.GetCc().empty())
       {
@@ -2515,8 +2520,17 @@ void Ui::SetState(Ui::State p_State)
         Util::StripCR(m_ComposeMessageStr);
 
         // @todo: handle quoted commas in address name
-        std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
-        std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
+        std::vector<std::string> tos;
+        std::vector<std::string> ccs;
+        if (header.GetReplyTo().empty())
+        {
+          tos = Util::Split(header.GetTo(), ',');
+          ccs = Util::Split(header.GetCc(), ',');
+        }
+        else
+        {
+          tos = Util::Split(header.GetReplyTo(), ',');
+        }
 
         m_ComposeHeaderStr[0] = Util::ToWString(Util::Join(tos, ", "));
         m_ComposeHeaderStr[1] = Util::ToWString(Util::Join(ccs, ", "));
@@ -2589,8 +2603,18 @@ void Ui::SetState(Ui::State p_State)
       Util::StripCR(m_ComposeMessageStr);
 
       // @todo: handle quoted commas in address name
-      std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
-      std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
+      std::vector<std::string> tos;
+      std::vector<std::string> ccs;
+      if (header.GetReplyTo().empty())
+      {
+        tos = Util::Split(header.GetTo(), ',');
+        ccs = Util::Split(header.GetCc(), ',');
+      }
+      else
+      {
+        tos = Util::Split(header.GetReplyTo(), ',');
+      }
+      
       ccs.insert(ccs.end(), tos.begin(), tos.end());
       std::string selfAddress = m_SmtpManager->GetAddress();
       for (auto it = ccs.begin(); it != ccs.end(); /* incremented in loop */)
@@ -2663,6 +2687,12 @@ void Ui::SetState(Ui::State p_State)
                         "Date: " + header.GetDateTime() + "\n"
                         "Subject: " + header.GetSubject() + "\n"
                         "To: " + header.GetTo() + "\n");
+      if (!header.GetReplyTo().empty())
+      {
+        m_ComposeMessageStr +=
+          Util::ToWString("Reply-To: " + header.GetReplyTo());
+      }
+
       if (!header.GetCc().empty())
       {
         m_ComposeMessageStr +=
