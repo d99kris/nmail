@@ -346,6 +346,7 @@ The built-in email compose editor in nmail supports the following:
     Ctrl-X         send message
     Ctrl-E         edit message in external editor
     Ctrl-T         to select, from address book / from file dialog
+    Ctrl-R         toggle rich headers (bcc)
     Backspace      backspace
     Delete         delete
     Enter          new line
@@ -449,6 +450,7 @@ file:
     key_quit=q
     key_refresh=l
     key_reply=r
+    key_rich_header=KEY_CTRLR
     key_save_file=s
     key_send=KEY_CTRLX
     key_to_select=KEY_CTRLT
@@ -462,6 +464,7 @@ file:
     send_without_confirm=0
     show_embedded_images=1
     show_progress=1
+    show_rich_header=0
 
 
 Email Service Providers

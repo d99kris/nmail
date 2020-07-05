@@ -49,6 +49,16 @@ public:
     PrefetchLevelFullSync = 3,
   };
 
+  enum HeaderField
+  {
+    HeaderAll = -1,
+    HeaderTo = 0,
+    HeaderCc,
+    HeaderBcc,
+    HeaderAtt,
+    HeaderSub,
+  };
+
   Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel);
   virtual ~Ui();
 
@@ -135,6 +145,9 @@ private:
   void ExportMessage();
   void ImportMessage();
   void Quit();
+  std::wstring GetComposeStr(int p_HeaderField);
+  void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
+  int GetCurrentHeaderField();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -239,6 +252,7 @@ private:
   int m_KeyOtherCmdHelp = 0;
   int m_KeyExport = 0;
   int m_KeyImport = 0;
+  int m_KeyRichHeader = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
@@ -246,6 +260,7 @@ private:
   bool m_CancelWithoutConfirm = false;
   bool m_PostponeWithoutConfirm = false;
   bool m_ShowEmbeddedImages = true;
+  bool m_ShowRichHeader = false;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

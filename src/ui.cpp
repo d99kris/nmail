@@ -61,6 +61,7 @@ void Ui::Init()
     {"cancel_without_confirm", "0"},
     {"postpone_without_confirm", "0"},
     {"show_embedded_images", "1"},
+    {"show_rich_header", "0"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -86,6 +87,7 @@ void Ui::Init()
     {"key_othercmd_help", "o"},
     {"key_export", "e"},
     {"key_import", "i"},
+    {"key_rich_header", "KEY_CTRLR"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -119,6 +121,7 @@ void Ui::Init()
   m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
   m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
+  m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
@@ -126,6 +129,7 @@ void Ui::Init()
   m_CancelWithoutConfirm = m_Config.Get("cancel_without_confirm") == "1";
   m_PostponeWithoutConfirm = m_Config.Get("postpone_without_confirm") == "1";
   m_ShowEmbeddedImages = m_Config.Get("show_embedded_images") == "1";
+  m_ShowRichHeader = m_Config.Get("show_rich_header") == "1";
   
   m_Running = true;
 }
@@ -133,6 +137,7 @@ void Ui::Init()
 void Ui::Cleanup()
 {
   m_Config.Set("plain_text", m_Plaintext ? "1" : "0");
+  m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
   m_Config.Save();
   close(m_Pipe[0]);
   close(m_Pipe[1]);
@@ -443,6 +448,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeySend), "Send",
       GetKeyDisplay(m_KeyDeleteLine), "DelLine",
       GetKeyDisplay(m_KeyExternalEditor), "ExtEdit",
+      GetKeyDisplay(m_KeyRichHeader), "RichHdr",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -1091,11 +1097,34 @@ void Ui::DrawComposeMessage()
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
+  std::vector<std::wstring> headerLines;
+  if (m_ShowRichHeader)
+  {
+    headerLines =
+    {
+      L"To      : ",
+      L"Cc      : ",
+      L"Bcc     : ",
+      L"Attchmnt: ",
+      L"Subject : ",
+    };
+  }
+  else
+  {
+    headerLines =
+    {
+      L"To      : ",
+      L"Cc      : ",
+      L"Attchmnt: ",
+      L"Subject : ",
+    };
+  }
+
   int cursY = 0;
   int cursX = 0;
   if (m_IsComposeHeader)
   {
-    if (m_ComposeHeaderLine < 4)
+    if (m_ComposeHeaderLine < (int)m_ComposeHeaderStr.size())
     {
       cursY = m_ComposeHeaderLine;
       cursX = m_ComposeHeaderPos + 10;
@@ -1103,23 +1132,15 @@ void Ui::DrawComposeMessage()
   }
   else
   {
-    cursY = 5 + m_ComposeMessageWrapLine;
+    cursY = headerLines.size() + 1 + m_ComposeMessageWrapLine;
     cursX = m_ComposeMessageWrapPos;
   }
 
   werase(m_MainWin);
 
   std::vector<std::wstring> composeLines;
-
-  std::vector<std::wstring> headerLines =
-  {
-    L"To      : ",
-    L"Cc      : ",
-    L"Attchmnt: ",
-    L"Subject : ",
-  };
-
-  for (int i = 0; i < (int)m_ComposeHeaderStr.size(); ++i)
+  
+  for (int i = 0; i < (int)headerLines.size(); ++i)
   {
     if (i != m_ComposeHeaderLine)
     {
@@ -2122,11 +2143,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeyToSelect)
     {
-      if (m_ComposeHeaderLine < 2)
+      int headerField = GetCurrentHeaderField();
+      if ((headerField == HeaderTo) || (headerField == HeaderCc) || (headerField == HeaderBcc))
       {
         SetState(StateAddressList);
       }
-      else if (m_ComposeHeaderLine == 2)
+      else if (headerField == HeaderAtt)
       {
         SetState(StateFileList);
       }
@@ -2262,6 +2284,23 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyExternalEditor)
     {
       ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+    }
+    else if (p_Key == m_KeyRichHeader)
+    {
+      std::wstring to = GetComposeStr(HeaderTo);
+      std::wstring cc = GetComposeStr(HeaderCc);
+      std::wstring bcc = GetComposeStr(HeaderBcc);
+      std::wstring att = GetComposeStr(HeaderAtt);
+      std::wstring sub = GetComposeStr(HeaderSub);
+      
+      m_ShowRichHeader = !m_ShowRichHeader;
+
+      SetComposeStr(HeaderAll, L"");
+      SetComposeStr(HeaderTo, to);
+      SetComposeStr(HeaderCc, cc);
+      SetComposeStr(HeaderBcc, bcc);
+      SetComposeStr(HeaderAtt, att);
+      SetComposeStr(HeaderSub, sub);
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2485,11 +2524,7 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateComposeMessage)
   {
     curs_set(1);
-    m_ComposeHeaderStr.clear();
-    m_ComposeHeaderStr[0] = L"";
-    m_ComposeHeaderStr[1] = L"";
-    m_ComposeHeaderStr[2] = L"";
-    m_ComposeHeaderStr[3] = L"";
+    SetComposeStr(HeaderAll, L"");
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
     m_ComposeHeaderRef.clear();
@@ -2532,9 +2567,11 @@ void Ui::SetState(Ui::State p_State)
           tos = Util::Split(header.GetReplyTo(), ',');
         }
 
-        m_ComposeHeaderStr[0] = Util::ToWString(Util::Join(tos, ", "));
-        m_ComposeHeaderStr[1] = Util::ToWString(Util::Join(ccs, ", "));
-        m_ComposeHeaderStr[3] = Util::ToWString(header.GetSubject());
+        SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
+        SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+        SetComposeStr(HeaderBcc, L"");
+        SetComposeStr(HeaderAtt, L"");
+        SetComposeStr(HeaderSub, Util::ToWString(header.GetSubject()));
 
         int idx = 0;
         std::string tmppath = Util::GetTempDirectory();
@@ -2547,13 +2584,13 @@ void Ui::SetState(Ui::State p_State)
             std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
             Util::WriteFile(tmpfilepath, part.second.m_Data);
-            if (m_ComposeHeaderStr[2].empty())
+            if (GetComposeStr(HeaderAtt).empty())
             {
-              m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + Util::ToWString(tmpfilepath);
+              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
             }
             else
             {
-              m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + L", " + Util::ToWString(tmpfilepath);
+              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + L", " + Util::ToWString(tmpfilepath));
             }
           }
         }
@@ -2567,11 +2604,7 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateReplyMessage)
   {
     curs_set(1);
-    m_ComposeHeaderStr.clear();
-    m_ComposeHeaderStr[0] = L"";
-    m_ComposeHeaderStr[1] = L"";
-    m_ComposeHeaderStr[2] = L"";
-    m_ComposeHeaderStr[3] = L"";
+    SetComposeStr(HeaderAll, L"");
     m_ComposeHeaderLine = 3;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
@@ -2623,10 +2656,11 @@ void Ui::SetState(Ui::State p_State)
               (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
       }
 
-      m_ComposeHeaderStr[0] = Util::ToWString(header.GetFrom());
-      m_ComposeHeaderStr[1] = Util::ToWString(Util::Join(ccs, ", "));
-      m_ComposeHeaderStr[2] = L"";
-      m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeReplySubject(header.GetSubject()));
+      SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+      SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+      SetComposeStr(HeaderBcc, L"");
+      SetComposeStr(HeaderAtt, L"");
+      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeReplySubject(header.GetSubject())));
 
       m_ComposeHeaderRef = header.GetMessageId();
     }
@@ -2636,11 +2670,7 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateForwardMessage)
   {
     curs_set(1);
-    m_ComposeHeaderStr.clear();
-    m_ComposeHeaderStr[0] = L"";
-    m_ComposeHeaderStr[1] = L"";
-    m_ComposeHeaderStr[2] = L"";
-    m_ComposeHeaderStr[3] = L"";
+    SetComposeStr(HeaderAll, L"");
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
@@ -2670,13 +2700,15 @@ void Ui::SetState(Ui::State p_State)
           std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
           Util::WriteFile(tmpfilepath, part.second.m_Data);
-          if (m_ComposeHeaderStr[2].empty())
+          if (GetComposeStr(HeaderAtt).empty())
           {
-            m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + Util::ToWString(tmpfilepath);
+            SetComposeStr(HeaderAtt,
+                          GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
           }
           else
           {
-            m_ComposeHeaderStr[2] = m_ComposeHeaderStr[2] + L", " + Util::ToWString(tmpfilepath);
+            SetComposeStr(HeaderAtt,
+                          GetComposeStr(HeaderAtt) + L", " + Util::ToWString(tmpfilepath));
           }
         }
       }
@@ -2703,7 +2735,7 @@ void Ui::SetState(Ui::State p_State)
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText + "\n");
       Util::StripCR(m_ComposeMessageStr);
 
-      m_ComposeHeaderStr[3] = Util::ToWString(Util::MakeForwardSubject(header.GetSubject()));
+      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeForwardSubject(header.GetSubject())));
 
       m_ComposeHeaderRef = header.GetMessageId();
       m_ComposeTempDirectory = tmppath;      
@@ -3222,10 +3254,11 @@ void Ui::SendComposedMessage()
 {
   SmtpManager::Action action;
   action.m_IsSendMessage = true;
-  action.m_To = Util::ToString(m_ComposeHeaderStr.at(0));
-  action.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
-  action.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
-  action.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
+  action.m_To = Util::ToString(GetComposeStr(HeaderTo));
+  action.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
+  action.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
+  action.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
+  action.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
   action.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
                                                    : m_ComposeMessageStr);
   action.m_RefMsgId = m_ComposeHeaderRef;
@@ -3241,10 +3274,11 @@ void Ui::UploadDraftMessage()
   {
     SmtpManager::Action smtpAction;
     smtpAction.m_IsCreateMessage = true;
-    smtpAction.m_To = Util::ToString(m_ComposeHeaderStr.at(0));
-    smtpAction.m_Cc = Util::ToString(m_ComposeHeaderStr.at(1));
-    smtpAction.m_Att = Util::ToString(m_ComposeHeaderStr.at(2));
-    smtpAction.m_Subject = Util::ToString(m_ComposeHeaderStr.at(3));
+    smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
+    smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
+    smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
+    smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
+    smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
     smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
                                                          : m_ComposeMessageStr);
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
@@ -3868,4 +3902,114 @@ void Ui::Quit()
     m_Running = false;
     LOG_DEBUG("stop thread");
   }
+}
+
+std::wstring Ui::GetComposeStr(int p_HeaderField)
+{
+  if (m_ShowRichHeader)
+  {
+    return m_ComposeHeaderStr[p_HeaderField];
+  }
+  else
+  {
+    switch (p_HeaderField)
+    {
+      case HeaderTo: return m_ComposeHeaderStr[0];
+
+      case HeaderCc: return m_ComposeHeaderStr[1];
+
+      case HeaderAtt: return m_ComposeHeaderStr[2];
+
+      case HeaderSub: return m_ComposeHeaderStr[3];
+
+      default: break;
+    }
+  }
+
+  return L"";
+}
+
+void Ui::SetComposeStr(int p_HeaderField, const std::wstring& p_Str)
+{
+  if (p_HeaderField == HeaderAll)
+  {
+    m_ComposeHeaderStr.clear();
+    m_ComposeHeaderStr[0] = p_Str;
+    m_ComposeHeaderStr[1] = p_Str;
+    m_ComposeHeaderStr[2] = p_Str;
+    m_ComposeHeaderStr[3] = p_Str;
+    if (m_ShowRichHeader)
+    {
+      m_ComposeHeaderStr[4] = p_Str;
+    }
+  }
+  else
+  {
+    if (m_ShowRichHeader)
+    {
+      m_ComposeHeaderStr[p_HeaderField] = p_Str;
+    }
+    else
+    {
+      switch (p_HeaderField)
+      {
+        case HeaderTo:
+          m_ComposeHeaderStr[0] = p_Str;
+          break;
+
+        case HeaderCc:
+          m_ComposeHeaderStr[1] = p_Str;
+          break;
+
+        case HeaderAtt:
+          m_ComposeHeaderStr[2] = p_Str;
+          break;
+
+        case HeaderSub:
+          m_ComposeHeaderStr[3] = p_Str;
+          break;
+
+        default:
+          break;
+      }
+    }
+  }
+}
+
+int Ui::GetCurrentHeaderField()
+{
+  if (m_ShowRichHeader)
+  {
+    switch (m_ComposeHeaderLine)
+    {
+      case 0: return HeaderTo;
+          
+      case 1: return HeaderCc;
+          
+      case 2: return HeaderBcc;
+          
+      case 3: return HeaderAtt;
+          
+      case 4: return HeaderSub;
+
+      default: break;
+    }
+  }
+  else
+  {
+    switch (m_ComposeHeaderLine)
+    {
+      case 0: return HeaderTo;
+          
+      case 1: return HeaderCc;
+          
+      case 2: return HeaderAtt;
+          
+      case 3: return HeaderSub;
+
+      default: break;
+    }
+  }
+
+  return HeaderAll;
 }

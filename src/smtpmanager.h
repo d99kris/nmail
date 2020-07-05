@@ -31,6 +31,7 @@ public:
     bool m_IsCreateMessage = false;
     std::string m_To;
     std::string m_Cc;
+    std::string m_Bcc;
     std::string m_Att;
     std::string m_Subject;
     std::string m_Body;
