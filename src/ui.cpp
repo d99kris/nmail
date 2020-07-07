@@ -1057,7 +1057,7 @@ void Ui::DrawMessage()
     if (bodyIt != bodys.end())
     {
       Body& body = bodyIt->second;
-      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
@@ -2636,7 +2636,7 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
-      std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
       std::vector<std::wstring> bodyTextLines =
         Util::WordWrap(Util::ToWString(bodyText), (m_MaxLineLength - 8), false);
       std::string indentBodyText =
@@ -2744,7 +2744,7 @@ void Ui::SetState(Ui::State p_State)
           Util::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
-      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText);
       Util::StripCR(m_ComposeMessageStr);
 

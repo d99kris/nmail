@@ -28,13 +28,13 @@ std::string Body::GetTextPlain()
 {
   Parse();
 
-  if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
+  if (!m_TextPlain.empty())
   {
-    return m_Parts.at(m_TextPlainIndex).m_Data;
+    return m_TextPlain;
   }
   else
   {
-    return "";
+    return m_TextHtml;
   }
 }
 
@@ -42,34 +42,13 @@ std::string Body::GetTextHtml()
 {
   Parse();
 
-  if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
+  if (!m_TextHtml.empty())
   {
-    return m_Parts.at(m_TextHtmlIndex).m_Data;
+    return m_TextHtml;
   }
   else
   {
-    return "";
-  }
-}
-
-std::string Body::GetTextFromHtml()
-{
-  Parse();
-
-  return m_TextFromHtml;
-}
-
-std::string Body::GetText()
-{
-  Parse();
-
-  if (!m_TextFromHtml.empty())
-  {
-    return m_TextFromHtml;
-  }
-  else
-  {
-    return GetTextPlain();
+    return m_TextPlain;
   }
 }
 
@@ -93,9 +72,25 @@ void Body::Parse()
       mailmime_free(mime);
     }
 
+    ParseText();
     ParseHtml();
 
     m_Parsed = true;
+  }
+}
+
+void Body::ParseText()
+{
+  if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
+  {
+    const Part& part = m_Parts.at(m_TextPlainIndex);
+    std::string partText = part.m_Data;
+    if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
+    {
+      partText = Util::ConvertEncoding(part.m_Charset, "utf-8", partText);
+    }
+    
+    m_TextPlain = partText;
   }
 }
 
@@ -103,18 +98,28 @@ void Body::ParseHtml()
 {
   if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
   {
-    const std::string& textHtml = m_Parts.at(m_TextHtmlIndex).m_Data;
+    const Part& part = m_Parts.at(m_TextHtmlIndex);
+    std::string partHtml = part.m_Data;
+    if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
+    {
+      partHtml = Util::ConvertEncoding(part.m_Charset, "utf-8", partHtml);
+    }
+
+    // @todo: more elegant removal of meta-tags
+    Util::ReplaceString(partHtml, "<meta ", "<beta ");
+    Util::ReplaceString(partHtml, "<META ", "<BETA ");
+
     const std::string& textHtmlPath = Util::GetTempFilename(".html");
-    Util::WriteFile(textHtmlPath, textHtml);
+    Util::WriteFile(textHtmlPath, partHtml);
 
     const std::string& textFromHtmlPath = Util::GetTempFilename(".txt");
-    const std::string& command = Util::GetHtmlToTextConvertCmd() + std::string(" ") + textHtmlPath +
-        std::string(" 2> /dev/null > ") + textFromHtmlPath;
+    const std::string& command = Util::GetHtmlToTextConvertCmd() + std::string(" ") +
+      textHtmlPath + std::string(" 2> /dev/null > ") + textFromHtmlPath;
     int rv = system(command.c_str());
     if (rv == 0)
     {
-      m_TextFromHtml = Util::ReadFile(textFromHtmlPath);
-      m_TextFromHtml = Util::ReduceIndent(m_TextFromHtml, 3); // @todo: make configurable?
+      m_TextHtml = Util::ReadFile(textFromHtmlPath);
+      m_TextHtml = Util::ReduceIndent(m_TextHtml, 3); // @todo: make configurable?
     }
 
     Util::DeleteFile(textHtmlPath);
@@ -270,36 +275,16 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
         {
           Part part;
 
-          if (!charset.empty() && (charset != "utf-8"))
-          {
-            char* convStr = NULL;
-            size_t convLen = 0;
-            if ((charconv_buffer("utf-8", charset.c_str(), parsedStr, parsedLen, &convStr, &convLen) == MAIL_CHARCONV_NO_ERROR) &&
-                (convStr != NULL))
-            {
-              part.m_Data = std::string(convStr, convLen);
-              charconv_buffer_free(convStr);
-            }
-            else
-            {
-              LOG_ERROR("cannot convert %s to utf-8", charset.c_str());
-            }
-          }
-
           if (parsedStr != NULL)
           {
-            if (part.m_Data.empty())
-            {
-              part.m_Data = std::string(parsedStr, parsedLen);
-            }
-
+            part.m_Data = std::string(parsedStr, parsedLen);
             mmap_string_unref(parsedStr);
           }
 
+          part.m_Charset = charset;
           part.m_MimeType = p_MimeType;
           part.m_Filename = Util::MimeToUtf8(filename);
           part.m_ContentId = contentId;
-          m_Parts[index] = part;
           
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
@@ -310,6 +295,8 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
           {
             m_TextHtmlIndex = index;
           }
+
+          m_Parts[index] = part;
         }
       }
       break;

@@ -16,6 +16,7 @@ struct Part
   std::string m_Data;
   std::string m_Filename;
   std::string m_ContentId;
+  std::string m_Charset;
 };
 
 class Body
@@ -25,12 +26,11 @@ public:
   std::string GetData() const;
   std::string GetTextPlain();
   std::string GetTextHtml();
-  std::string GetTextFromHtml();
-  std::string GetText();
   std::map<ssize_t, Part> GetParts();
 
 private:
   void Parse();
+  void ParseText();
   void ParseHtml();
   void ParseMime(struct mailmime* p_Mime);
   void ParseMimeData(struct mailmime* p_Mime, std::string p_MimeType);
@@ -43,7 +43,8 @@ private:
   std::map<ssize_t, Part> m_Parts;
   ssize_t m_TextPlainIndex = -1;
   ssize_t m_TextHtmlIndex = -1;
-  std::string m_TextFromHtml;
+  std::string m_TextHtml;
+  std::string m_TextPlain;
 };
 
 std::ostream& operator<<(std::ostream& p_Stream, const Body& p_Body);
