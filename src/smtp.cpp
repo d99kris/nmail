@@ -32,6 +32,7 @@ Smtp::~Smtp()
 }
 
 bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
+                const std::string& p_HtmlMessage,
                 const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
                 const std::vector<Contact>& p_Bcc,
                 const std::string& p_RefMsgId,
@@ -42,7 +43,7 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
 
   const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
-  const std::string& body = GetBody(p_Message, p_AttachmentPaths);
+  const std::string& body = GetBody(p_Message, p_HtmlMessage, p_AttachmentPaths);
   const std::string& data = header + body;
   p_ResultMessage = data;
   std::vector<Contact> recipients;
@@ -311,28 +312,52 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   return out;
 }
 
-std::string Smtp::GetBody(const std::string &p_Message,
+std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_HtmlMessage,
                           const std::vector<std::string> &p_AttachmentPaths)
 {
-  struct mailmime_fields* mimefields = mailmime_fields_new_empty();
-  struct mailmime_content* mimecontent = mailmime_content_new_with_str("multipart/mixed");
-  struct mailmime* mime = GetMimePart(mimecontent, mimefields, 0);
-  struct mailmime* msgmime = GetMimeTextPart("text/plain", MAILMIME_MECHANISM_QUOTED_PRINTABLE,
-                                             p_Message);
-  mailmime_smart_add_part(mime, msgmime);
+#if 0
+  mainMultipart (content for message, subType="mixed")
+    ->htmlAndTextBodyPart (bodyPart1 for mainMultipart)
+      ->htmlAndTextMultipart (content for htmlAndTextBodyPart, subType="alternative")
+        ->textBodyPart (bodyPart2 for the htmlAndTextMultipart)
+          ->text (content for textBodyPart)
+        ->htmlBodyPart (bodyPart1 for htmlAndTextMultipart)
+          ->html (content for htmlBodyPart)
+    ->fileBodyPart1 (bodyPart2 for the mainMultipart)
+      ->FileDataHandler (content for fileBodyPart1 )
+#endif
+ 
+  struct mailmime* mainMultipart =
+    GetMimePart(mailmime_content_new_with_str("multipart/mixed"),
+                mailmime_fields_new_empty(), 0);
 
+  struct mailmime* htmlAndTextMultipart =
+    GetMimePart(mailmime_content_new_with_str("multipart/alternative"),
+                mailmime_fields_new_empty(), 0);
+
+  struct mailmime* textBodyPart = GetMimeTextPart("text/plain", p_Message);
+  mailmime_smart_add_part(htmlAndTextMultipart, textBodyPart);
+
+  if (!p_HtmlMessage.empty())
+  {
+    struct mailmime* htmlBodyPart = GetMimeTextPart("text/html", p_HtmlMessage);
+    mailmime_smart_add_part(htmlAndTextMultipart, htmlBodyPart);
+  }
+
+  mailmime_smart_add_part(mainMultipart, htmlAndTextMultipart);
+  
   for (auto& path : p_AttachmentPaths)
   {
-    struct mailmime* attachmime = GetMimeFilePart(path);
-    mailmime_smart_add_part(mime, attachmime);
+    struct mailmime* fileBodyPart = GetMimeFilePart(path);
+    mailmime_smart_add_part(mainMultipart, fileBodyPart);
   }
 
   struct mailmime* msg_mime = mailmime_new_message_data(NULL);
-  mailmime_smart_add_part(msg_mime, mime);
+  mailmime_smart_add_part(msg_mime, mainMultipart);
 
   int col = 0;
   MMAPString* mmstr = mmap_string_new(NULL);
-  mailmime_write_mem(mmstr, &col, mime);
+  mailmime_write_mem(mmstr, &col, mainMultipart);
   std::string out = std::string(mmstr->str, mmstr->len);
 
   mmap_string_free(mmstr);
@@ -341,10 +366,10 @@ std::string Smtp::GetBody(const std::string &p_Message,
   return out;
 }
 
-mailmime *Smtp::GetMimeTextPart(const char *p_MimeType, int p_EncodingType,
-                                const std::string &p_Message)
+mailmime *Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message)
 {
-  struct mailmime_mechanism* encoding = mailmime_mechanism_new(p_EncodingType, NULL);
+  int encodingType = MAILMIME_MECHANISM_QUOTED_PRINTABLE;
+  struct mailmime_mechanism* encoding = mailmime_mechanism_new(encodingType, NULL);
   struct mailmime_disposition* disposition =
       mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_INLINE, NULL, NULL,
                                          NULL, NULL, (size_t) -1);

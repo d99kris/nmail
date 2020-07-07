@@ -23,6 +23,7 @@ Features
 - Compose message using external editor ($EDITOR)
 - View message using external viewer ($PAGER)
 - Saving and continuing draft messages
+- Composing HTML emails using Markdown formatting
 
 Planned features
 ----------------
@@ -86,7 +87,7 @@ nmail is developed and tested on Linux and macOS. Current version has been
 tested on:
 
 - macOS 10.14 Mojave
-- Ubuntu 18.04 LTS
+- Ubuntu 20.04 LTS
 
 
 Build / Install
@@ -97,7 +98,7 @@ Linux / Ubuntu
 
 **Dependencies**
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man lynx
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man lynx markdown
 
 **Source**
 
@@ -116,7 +117,7 @@ macOS
 
 **Dependencies**
 
-    brew install cmake libetpan openssl ncurses help2man lynx
+    brew install cmake libetpan openssl ncurses help2man lynx markdown
 
 **Source**
 
@@ -184,10 +185,11 @@ Full example of a config file `~/.nmail/main.conf`:
     address=example@example.com
     cache_encrypt=1
     client_store_sent=0
+    compose_generate_html=1
     drafts=Drafts
     editor_cmd=
     ext_viewer_cmd=
-    html_convert_cmd=
+    html_to_text_cmd=
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
@@ -199,6 +201,7 @@ Full example of a config file `~/.nmail/main.conf`:
     smtp_host=smtp.example.com
     smtp_port=587
     smtp_user=
+    text_to_html_cmd=
     trash=Trash
     user=example@example.com
     verbose_logging=0
@@ -218,6 +221,12 @@ sent emails to configured `sent` folder. Many email service providers
 (gmail, outlook, etc) do this on server side, so this should only be enabled if
 emails sent using nmail do not automatically gets stored in the sent folder.
 
+### compose_generate_html
+
+Controls whether nmail shall generate a plain/html message part based on
+processing the composed message as Markdown, when sending sending emails from
+nmail. 
+
 ### drafts
 
 Name of drafts folder - needed if using functionality to postpone email editing.
@@ -235,7 +244,7 @@ This field allows overriding the external viewer used when viewing email
 parts and attachments. By default nmail uses `open` on macOS and `xdg-open`
 on Linux.
 
-### html_convert_cmd
+### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
 If not specified, nmail checks if `lynx`, `elinks` or `links` is available
@@ -302,6 +311,12 @@ case the email account has different username and password for sending emails
 (or if one wants to use one email service provider for receiving and another
 for sending emails). If not specified, the configured `user` field will be
 used.
+
+### text_to_html_cmd
+
+This field allows overriding which external program to use for converting
+composed plain text markdown message to corresponding plain/html part. If not
+specified, nmail will use the program `markdown` if present on the system.
 
 ### trash
 
@@ -441,6 +456,7 @@ file:
     key_external_pager=KEY_CTRLE
     key_forward=f
     key_goto_folder=g
+    key_import=i
     key_move=m
     key_next_msg=n
     key_open=.
@@ -456,6 +472,7 @@ file:
     key_to_select=KEY_CTRLT
     key_toggle_text_html=t
     key_toggle_unread=u
+    key_view_html=KEY_CTRLV
     new_msg_bell=1
     persist_folder_filter=1
     plain_text=1

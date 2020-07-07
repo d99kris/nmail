@@ -88,6 +88,7 @@ void Ui::Init()
     {"key_export", "e"},
     {"key_import", "i"},
     {"key_rich_header", "KEY_CTRLR"},
+    {"key_view_html", "KEY_CTRLV"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -122,6 +123,7 @@ void Ui::Init()
   m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
+  m_KeyViewHtml = Util::GetKeyCode(m_Config.Get("key_view_html"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
@@ -454,6 +456,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCancel), "Cancel",
       GetKeyDisplay(m_KeyPostpone), "Postpone",
       GetKeyDisplay(m_KeyToSelect), "ToSelect",
+      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
     },
   };
 
@@ -2244,6 +2247,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       if (m_CancelWithoutConfirm || Ui::PromptYesNo("Cancel message (y/n)?"))
       {
+        Util::RmDir(Util::GetPreviewTempDir());        
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
         Util::RmDir(m_ComposeTempDirectory);
@@ -2253,6 +2257,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       if (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?"))
       {
+        Util::RmDir(Util::GetPreviewTempDir());        
         SendComposedMessage();
         UpdateUidFromIndex(true /* p_UserTriggered */);
         if (m_ComposeDraftUid != 0)
@@ -2269,6 +2274,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       if (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?"))
       {
+        Util::RmDir(Util::GetPreviewTempDir());        
         UploadDraftMessage();
         UpdateUidFromIndex(true /* p_UserTriggered */);
         if (m_ComposeDraftUid != 0)
@@ -2301,6 +2307,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       SetComposeStr(HeaderBcc, bcc);
       SetComposeStr(HeaderAtt, att);
       SetComposeStr(HeaderSub, sub);
+    }
+    else if (p_Key == m_KeyViewHtml)
+    {
+      std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
+      std::string htmlStr = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
+      Util::WriteFile(tempFilePath, htmlStr);
+      Util::OpenInExtViewer(tempFilePath);
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2550,7 +2563,7 @@ void Ui::SetState(Ui::State p_State)
         Header& header = hit->second;
         Body& body = bit->second;
 
-        const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
+        const std::string& bodyText = body.GetTextPlain();
         m_ComposeMessageStr = Util::ToWString(bodyText);
         Util::StripCR(m_ComposeMessageStr);
 
@@ -2722,17 +2735,17 @@ void Ui::SetState(Ui::State p_State)
       if (!header.GetReplyTo().empty())
       {
         m_ComposeMessageStr +=
-          Util::ToWString("Reply-To: " + header.GetReplyTo());
+          Util::ToWString("Reply-To: " + header.GetReplyTo() + "\n");
       }
 
       if (!header.GetCc().empty())
       {
         m_ComposeMessageStr +=
-          Util::ToWString("Cc: " + header.GetCc());
+          Util::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetText();
-      m_ComposeMessageStr += Util::ToWString("\n" + bodyText + "\n");
+      m_ComposeMessageStr += Util::ToWString("\n" + bodyText);
       Util::StripCR(m_ComposeMessageStr);
 
       SetComposeStr(HeaderSub, Util::ToWString(Util::MakeForwardSubject(header.GetSubject())));
@@ -3252,20 +3265,21 @@ bool Ui::IsValidTextKey(int p_Key)
 
 void Ui::SendComposedMessage()
 {
-  SmtpManager::Action action;
-  action.m_IsSendMessage = true;
-  action.m_To = Util::ToString(GetComposeStr(HeaderTo));
-  action.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
-  action.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
-  action.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
-  action.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-  action.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
-                                                   : m_ComposeMessageStr);
-  action.m_RefMsgId = m_ComposeHeaderRef;
-  action.m_ComposeTempDirectory = m_ComposeTempDirectory;
-  action.m_ComposeDraftUid = m_ComposeDraftUid;
+  SmtpManager::Action smtpAction;
+  smtpAction.m_IsSendMessage = true;
+  smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
+  smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
+  smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
+  smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
+  smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
+  smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
+                                                       : m_ComposeMessageStr);
+  smtpAction.m_HtmlBody = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
+  smtpAction.m_RefMsgId = m_ComposeHeaderRef;
+  smtpAction.m_ComposeTempDirectory = m_ComposeTempDirectory;
+  smtpAction.m_ComposeDraftUid = m_ComposeDraftUid;
 
-  m_SmtpManager->AsyncAction(action);
+  m_SmtpManager->AsyncAction(smtpAction);
 }
 
 void Ui::UploadDraftMessage()
@@ -3281,6 +3295,7 @@ void Ui::UploadDraftMessage()
     smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
     smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
                                                          : m_ComposeMessageStr);
+    smtpAction.m_HtmlBody = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);

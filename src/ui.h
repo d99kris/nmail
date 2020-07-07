@@ -253,6 +253,7 @@ private:
   int m_KeyExport = 0;
   int m_KeyImport = 0;
   int m_KeyRichHeader = 0;
+  int m_KeyViewHtml = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;

@@ -108,7 +108,7 @@ void Body::ParseHtml()
     Util::WriteFile(textHtmlPath, textHtml);
 
     const std::string& textFromHtmlPath = Util::GetTempFilename(".txt");
-    const std::string& command = Util::GetHtmlConvertCmd() + std::string(" ") + textHtmlPath +
+    const std::string& command = Util::GetHtmlToTextConvertCmd() + std::string(" ") + textHtmlPath +
         std::string(" 2> /dev/null > ") + textFromHtmlPath;
     int rv = system(command.c_str());
     if (rv == 0)

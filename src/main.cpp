@@ -127,12 +127,14 @@ int main(int argc, char* argv[])
     {"sent", ""},
     {"client_store_sent", "0"},
     {"cache_encrypt", "1"},
-    {"html_convert_cmd", ""},
+    {"html_to_text_cmd", ""},
+    {"text_to_html_cmd", ""},
     {"ext_viewer_cmd", ""},
     {"prefetch_level", "2"},
     {"verbose_logging", "0"},
     {"pager_cmd", ""},
     {"editor_cmd", ""},
+    {"compose_generate_html", "1"},
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -182,10 +184,12 @@ int main(int argc, char* argv[])
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
   const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
-  Util::SetHtmlConvertCmd(mainConfig->Get("html_convert_cmd"));
+  Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
+  Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
   Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
+  Util::SetComposeGenerateHtml(mainConfig->Get("compose_generate_html") == "1");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)

@@ -165,14 +165,14 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action &p_Acti
   if (p_Action.m_IsSendMessage)
   {
     SetStatus(Status::FlagSending);
-    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, to, cc, bcc, ref, att,
-                                result.m_Message);
+    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, p_Action.m_HtmlBody,
+                                to, cc, bcc, ref, att, result.m_Message);
     ClearStatus(Status::FlagSending);
   }
   else if (p_Action.m_IsCreateMessage)
   {
     const std::string& header = smtp.GetHeader(p_Action.m_Subject, to, cc, bcc, ref);
-    const std::string& body = smtp.GetBody(p_Action.m_Body, att);
+    const std::string& body = smtp.GetBody(p_Action.m_Body, p_Action.m_HtmlBody, att);
     result.m_Message = header + body;
     result.m_Result = !result.m_Message.empty();
   }

@@ -135,13 +135,20 @@ public:
   static void CleanupTempDir();
   static std::string GetAttachmentsTempDir();
   static void CleanupAttachmentsTempDir();
+  static std::string GetPreviewTempDir();
+  static void CleanupPreviewTempDir();
   static std::string GetTempFilename(const std::string& p_Suffix);
   static std::string GetTempDirectory();
   static void DeleteFile(const std::string& p_Path);
   static time_t MailtimeToTimet(struct mailimf_date_time* p_Dt);
-  static std::string GetHtmlConvertCmd();
-  static void SetHtmlConvertCmd(const std::string& p_HtmlConvertCmd);
-  static std::string GetDefaultHtmlConvertCmd();
+  static std::string GetHtmlToTextConvertCmd();
+  static void SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd);
+  static std::string GetDefaultHtmlToTextConvertCmd();
+  static std::string GetTextToHtmlConvertCmd();
+  static void SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd);
+  static std::string GetDefaultTextToHtmlConvertCmd();
+  static std::string ConvertTextToHtml(const std::string& p_Text);
+  static void SetComposeGenerateHtml(bool p_Enable);
   static std::string GetExtViewerCmd();
   static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
   static std::string GetDefaultExtViewerCmd();
@@ -213,11 +220,13 @@ public:
   static std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
 
 private:
-  static std::string m_HtmlConvertCmd;
+  static std::string m_HtmlToTextConvertCmd;
+  static std::string m_TextToHtmlConvertCmd;
   static std::string m_ExtViewerCmd;
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;
+  static bool m_ComposeGenerateHtml;
   static int m_OrgStdErr;
   static int m_NewStdErr;
 };

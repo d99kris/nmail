@@ -38,11 +38,13 @@
 std::mutex ThreadRegister::m_Mutex;
 std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 
-std::string Util::m_HtmlConvertCmd;
+std::string Util::m_HtmlToTextConvertCmd;
+std::string Util::m_TextToHtmlConvertCmd;
 std::string Util::m_ExtViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
+bool Util::m_ComposeGenerateHtml = false;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 
@@ -223,6 +225,16 @@ void Util::CleanupAttachmentsTempDir()
   Util::RmDir(GetAttachmentsTempDir());
 }
 
+std::string Util::GetPreviewTempDir()
+{
+  return GetTempDir() + std::string("preview/");
+}
+
+void Util::CleanupPreviewTempDir()
+{
+  Util::RmDir(GetPreviewTempDir());
+}
+
 std::string Util::GetTempFilename(const std::string &p_Suffix)
 {
   std::string name = GetTempDir() + std::string("tmpfile.XX" "XX" "XX") + p_Suffix;
@@ -285,21 +297,21 @@ time_t Util::MailtimeToTimet(mailimf_date_time *p_Dt)
   return t;
 }
 
-std::string Util::GetHtmlConvertCmd()
+std::string Util::GetHtmlToTextConvertCmd()
 {
-  if (!m_HtmlConvertCmd.empty()) return m_HtmlConvertCmd;
+  if (!m_HtmlToTextConvertCmd.empty()) return m_HtmlToTextConvertCmd;
 
-  static std::string defaultHtmlConvertCmd = GetDefaultHtmlConvertCmd();
+  static std::string defaultHtmlToTextConvertCmd = GetDefaultHtmlToTextConvertCmd();
   
-  return defaultHtmlConvertCmd;
+  return defaultHtmlToTextConvertCmd;
 }
 
-void Util::SetHtmlConvertCmd(const std::string &p_HtmlConvertCmd)
+void Util::SetHtmlToTextConvertCmd(const std::string &p_HtmlToTextConvertCmd)
 {
-  m_HtmlConvertCmd = p_HtmlConvertCmd;
+  m_HtmlToTextConvertCmd = p_HtmlToTextConvertCmd;
 }
 
-std::string Util::GetDefaultHtmlConvertCmd()
+std::string Util::GetDefaultHtmlToTextConvertCmd()
 {
   std::string result;
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
@@ -329,6 +341,46 @@ std::string Util::GetDefaultHtmlConvertCmd()
   Util::DeleteFile(commandOutPath);
 
   return result;
+}
+
+std::string Util::GetTextToHtmlConvertCmd()
+{
+  if (!m_TextToHtmlConvertCmd.empty()) return m_TextToHtmlConvertCmd;
+
+  static std::string defaultTextToHtmlConvertCmd = GetDefaultTextToHtmlConvertCmd();
+
+  return defaultTextToHtmlConvertCmd;
+}
+
+void Util::SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd)
+{
+  m_TextToHtmlConvertCmd = p_TextToHtmlConvertCmd;
+}
+
+std::string Util::GetDefaultTextToHtmlConvertCmd()
+{
+  return "markdown";
+}
+
+std::string Util::ConvertTextToHtml(const std::string& p_Text)
+{
+  if (!m_ComposeGenerateHtml) return std::string();
+
+  std::string text = p_Text;
+  ReplaceString(text, "\n", "  \n"); // prepend line-breaks with double spaces to enforce them
+  const std::string& tempPath = GetTempFilename(".md");
+  Util::WriteFile(tempPath, text);
+  const std::string& textToHtmlCmd = GetTextToHtmlConvertCmd();
+  const std::string& cmd = textToHtmlCmd + " " + tempPath;
+  const std::string& htmlText = RunCommand(cmd);
+  Util::DeleteFile(tempPath);
+
+  return htmlText;
+}
+
+void Util::SetComposeGenerateHtml(bool p_Enable)
+{
+  m_ComposeGenerateHtml = p_Enable;
 }
 
 std::string Util::GetExtViewerCmd()
@@ -792,6 +844,8 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
     }
   }
 
+  lines.push_back(L"");
+
   return lines;
 }
 
@@ -1115,6 +1169,10 @@ std::string Util::RunCommand(const std::string& p_Cmd)
   if (system(command.c_str()) == 0)
   {
     output = Util::ReadFile(outPath);
+  }
+  else
+  {
+    LOG_WARNING("external command failed: %s", command.c_str());
   }
 
   Util::DeleteFile(outPath);
