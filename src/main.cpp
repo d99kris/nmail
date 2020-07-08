@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     {"verbose_logging", "0"},
     {"pager_cmd", ""},
     {"editor_cmd", ""},
-    {"compose_generate_html", "1"},
+    {"markdown_html_compose", "0"},
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
   Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
-  Util::SetComposeGenerateHtml(mainConfig->Get("compose_generate_html") == "1");
+  Util::SetComposeGenerateHtml(mainConfig->Get("markdown_html_compose") == "1");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)

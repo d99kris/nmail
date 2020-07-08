@@ -23,7 +23,7 @@ Features
 - Compose message using external editor ($EDITOR)
 - View message using external viewer ($PAGER)
 - Saving and continuing draft messages
-- Composing HTML emails using Markdown formatting
+- Compose HTML emails using Markdown (see `markdown_html_compose` option)
 
 Planned features
 ----------------
@@ -185,7 +185,6 @@ Full example of a config file `~/.nmail/main.conf`:
     address=example@example.com
     cache_encrypt=1
     client_store_sent=0
-    compose_generate_html=1
     drafts=Drafts
     editor_cmd=
     ext_viewer_cmd=
@@ -193,6 +192,7 @@ Full example of a config file `~/.nmail/main.conf`:
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
+    markdown_html_compose=0
     name=Firstname Lastname
     pager_cmd=
     prefetch_level=2
@@ -220,12 +220,6 @@ This field should generally be left `0`. It indicates whether nmail shall upload
 sent emails to configured `sent` folder. Many email service providers
 (gmail, outlook, etc) do this on server side, so this should only be enabled if
 emails sent using nmail do not automatically gets stored in the sent folder.
-
-### compose_generate_html
-
-Controls whether nmail shall generate a plain/html message part based on
-processing the composed message as Markdown, when sending sending emails from
-nmail. 
 
 ### drafts
 
@@ -265,6 +259,12 @@ IMAP port. Required for fetching emails.
 ### inbox
 
 IMAP inbox folder name. Required for nmail to open the proper default folder.
+
+### markdown_html_compose
+
+Controls whether nmail shall generate a plain/html message part based on
+processing the composed message as Markdown, when sending sending emails from
+nmail. Disabled by default.
 
 ### name
 
