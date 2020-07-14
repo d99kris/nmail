@@ -2568,17 +2568,8 @@ void Ui::SetState(Ui::State p_State)
         Util::StripCR(m_ComposeMessageStr);
 
         // @todo: handle quoted commas in address name
-        std::vector<std::string> tos;
-        std::vector<std::string> ccs;
-        if (header.GetReplyTo().empty())
-        {
-          tos = Util::Split(header.GetTo(), ',');
-          ccs = Util::Split(header.GetCc(), ',');
-        }
-        else
-        {
-          tos = Util::Split(header.GetReplyTo(), ',');
-        }
+        std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
+        std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
 
         SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
         SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
@@ -2649,17 +2640,8 @@ void Ui::SetState(Ui::State p_State)
       Util::StripCR(m_ComposeMessageStr);
 
       // @todo: handle quoted commas in address name
-      std::vector<std::string> tos;
-      std::vector<std::string> ccs;
-      if (header.GetReplyTo().empty())
-      {
-        tos = Util::Split(header.GetTo(), ',');
-        ccs = Util::Split(header.GetCc(), ',');
-      }
-      else
-      {
-        tos = Util::Split(header.GetReplyTo(), ',');
-      }
+      std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
+      std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
       
       ccs.insert(ccs.end(), tos.begin(), tos.end());
       std::string selfAddress = m_SmtpManager->GetAddress();
@@ -2669,8 +2651,16 @@ void Ui::SetState(Ui::State p_State)
               (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
       }
 
-      SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
-      SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+      if (!header.GetReplyTo().empty())
+      {
+        SetComposeStr(HeaderTo, Util::ToWString(header.GetReplyTo()));
+      }
+      else
+      {
+        SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+      }
+
+      SetComposeStr(HeaderCc, Util::ToWString(Util::Trim(Util::Join(ccs, ", "))));
       SetComposeStr(HeaderBcc, L"");
       SetComposeStr(HeaderAtt, L"");
       SetComposeStr(HeaderSub, Util::ToWString(Util::MakeReplySubject(header.GetSubject())));
@@ -2734,14 +2724,12 @@ void Ui::SetState(Ui::State p_State)
                         "To: " + header.GetTo() + "\n");
       if (!header.GetReplyTo().empty())
       {
-        m_ComposeMessageStr +=
-          Util::ToWString("Reply-To: " + header.GetReplyTo() + "\n");
+        m_ComposeMessageStr += Util::ToWString("Reply-To: " + header.GetReplyTo() + "\n");
       }
 
       if (!header.GetCc().empty())
       {
-        m_ComposeMessageStr +=
-          Util::ToWString("Cc: " + header.GetCc() + "\n");
+        m_ComposeMessageStr += Util::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
