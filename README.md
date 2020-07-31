@@ -83,7 +83,7 @@ Supported Platforms
 nmail is developed and tested on Linux and macOS. Current version has been
 tested on:
 
-- macOS 10.14 Mojave
+- macOS 10.15 Catalina
 - Ubuntu 20.04 LTS
 
 
@@ -192,11 +192,14 @@ and fill out the required fields:
 Full example of a config file `~/.nmail/main.conf`:
 
     address=example@example.com
+    addressbook_encrypt=0
     cache_encrypt=1
+    cache_index_encrypt=0
     client_store_sent=0
     drafts=Drafts
     editor_cmd=
     ext_viewer_cmd=
+    folders_exclude=
     html_to_text_cmd=
     imap_host=imap.example.com
     imap_port=993
@@ -219,9 +222,17 @@ Full example of a config file `~/.nmail/main.conf`:
 
 The from-address to use. Required for sending emails.
 
+### addressbook_encrypt
+
+Indicates whether nmail shall encrypt local address book cache or not (default disabled).
+
 ### cache_encrypt
 
 Indicates whether nmail shall encrypt local message cache or not (default enabled).
+
+### cache_index_encrypt
+
+Indicates whether nmail shall encrypt local search index or not (default disabled).
 
 ### client_store_sent
 
@@ -246,6 +257,15 @@ specified, nmail will use the editor specified by the environment variable
 This field allows overriding the external viewer used when viewing email
 parts and attachments. By default nmail uses `open` on macOS and `xdg-open`
 on Linux.
+
+### folders_exclude
+
+This field allows excluding certain folders from being accessible in nmail
+and also from being indexed by the search engine. This is mainly useful for
+email service providers with "virtual" folders that are holding copies of
+emails in other folders. When using the setup-wizard to configure a GMail
+account, this field will be configured to the following (otherwise empty):
+"[Gmail]/All Mail","[Gmail]/Important","[Gmail]/Starred"
 
 ### html_to_text_cmd
 
@@ -385,6 +405,16 @@ The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.
 Attachment paths may be local (just filename) or absolute (full path).
 
 
+Email Search
+============
+
+Press `/` in the message list view to search for an email. The search engine
+supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`, `AND`
+and `OR`.
+
+Press `<` to exit search results and go back to current folder message list.
+
+
 Troubleshooting
 ===============
 
@@ -461,6 +491,7 @@ file:
     key_compose=c
     key_delete=d
     key_delete_line=KEY_CTRLK
+    key_export=e
     key_external_editor=KEY_CTRLE
     key_external_pager=KEY_CTRLE
     key_forward=f
@@ -477,6 +508,7 @@ file:
     key_reply=r
     key_rich_header=KEY_CTRLR
     key_save_file=s
+    key_search=/
     key_send=KEY_CTRLX
     key_to_select=KEY_CTRLT
     key_toggle_text_html=t
@@ -517,6 +549,7 @@ following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) - MIT License
 - [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) - Boost License
+- [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) - MIT License
 
 
 License
