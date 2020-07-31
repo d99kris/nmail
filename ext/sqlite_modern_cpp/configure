@@ -4096,7 +4096,7 @@ $debug ||
 # Create a (secure) tmp directory for tmp files.
 
 {
-  tmp=`(umask 077 && mktemp -d "./confXXXXXX") 2>/dev/null` &&
+  tmp=`(umask 077 && mktemp -d "./confXX""XX""XX") 2>/dev/null` &&
   test -d "$tmp"
 }  ||
 {

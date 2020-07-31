@@ -9,14 +9,14 @@ namespace sqlite {
 
 	class sqlite_exception: public std::runtime_error {
 	public:
-		sqlite_exception(const char* msg, std::string sql, int code = -1): runtime_error(msg), code(code), sql(sql) {}
-		sqlite_exception(int code, std::string sql): runtime_error(sqlite3_errstr(code)), code(code), sql(sql) {}
-		int get_code() const {return code & 0xFF;}
-		int get_extended_code() const {return code;}
-		std::string get_sql() const {return sql;}
+		sqlite_exception(const char* msg, std::string sql, int code = -1): runtime_error(msg), m_code(code), m_sql(sql) {}
+		sqlite_exception(int code, std::string sql): runtime_error(sqlite3_errstr(code)), m_code(code), m_sql(sql) {}
+		int get_code() const {return m_code & 0xFF;}
+		int get_extended_code() const {return m_code;}
+		std::string get_sql() const {return m_sql;}
 	private:
-		int code;
-		std::string sql;
+		int m_code;
+		std::string m_sql;
 	};
 
 	namespace errors {

@@ -24,13 +24,10 @@ Features
 - View message using external viewer ($PAGER)
 - Saving and continuing draft messages
 - Compose HTML emails using Markdown (see `markdown_html_compose` option)
-
-Planned features
-----------------
 - Email search
 
-Not planned
------------
+Not Supported / Out of Scope
+----------------------------
 - Multiple email accounts in a single session
 - Special handling for Gmail labels
 - Threaded view
@@ -98,7 +95,13 @@ Linux / Ubuntu
 
 **Dependencies**
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev help2man lynx markdown
+Required:
+
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev
+
+Optional:
+
+    sudo apt install git lynx markdown
 
 **Source**
 
@@ -117,7 +120,13 @@ macOS
 
 **Dependencies**
 
-    brew install cmake libetpan openssl ncurses help2man lynx markdown
+Required:
+
+    brew install cmake libetpan openssl ncurses xapian sqlite
+
+Optional:
+
+    brew install lynx markdown
 
 **Source**
 

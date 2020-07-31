@@ -79,25 +79,49 @@ public:
     bool m_Result;
   };
 
+  struct SearchQuery
+  {
+    std::string m_QueryStr;
+    unsigned m_Offset = 0;
+    unsigned m_Max = 0;
+  };
+
+  struct SearchResult
+  {
+    std::vector<Header> m_Headers;
+    std::vector<std::pair<std::string, uint32_t>> m_FolderUids;
+    bool m_HasMore;
+  };
+
 public:
   ImapManager(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
               const uint16_t p_Port, const bool p_Connect, const bool p_CacheEncrypt,
+              const bool p_CacheIndexEncrypt,
+              const std::set<std::string>& p_FoldersExclude,
               const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
               const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
-              const std::function<void(const StatusUpdate&)>& p_StatusHandler);
+              const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+              const std::function<void(const ImapManager::SearchQuery&,
+                                       const ImapManager::SearchResult&)>& p_SearchHandler);
   virtual ~ImapManager();
 
+  void Start();
+  
   void AsyncRequest(const Request& p_Request);
   void PrefetchRequest(const Request& p_Request);
   void AsyncAction(const Action& p_Action);
+  void AsyncSearch(const SearchQuery& p_SearchQuery);
+
   void SetCurrentFolder(const std::string& p_Folder);
   
 private:
   bool ProcessIdle();
   void Process();
   void CacheProcess();
+  void SearchProcess();
   bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch);
   bool PerformAction(const Action& p_Action);
+  void PerformSearch(const SearchQuery& p_SearchQuery);
   void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
   void ClearStatus(uint32_t p_Flags);
 
@@ -107,6 +131,7 @@ private:
   std::function<void(const ImapManager::Request&,const ImapManager::Response&)> m_ResponseHandler;
   std::function<void(const ImapManager::Action&,const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
+  std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
   std::atomic<bool> m_CacheRunning;
@@ -135,4 +160,10 @@ private:
 
   int m_Pipe[2] = {-1, -1};
   int m_CachePipe[2] = {-1, -1};
+
+  std::thread m_SearchThread;
+  bool m_SearchRunning = false;
+  std::deque<SearchQuery> m_SearchQueue;
+  std::condition_variable m_SearchCond;
+  std::mutex m_SearchMutex;
 };

@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(nmail VERSION "1.74" LANGUAGES CXX)
+project(nmail VERSION "1.75" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -27,10 +27,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 add_executable(nmail
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
+  ext/sqlite_modern_cpp/hdr/sqlite_modern_cpp.h
   src/addressbook.cpp
   src/addressbook.h
   src/body.cpp
   src/body.h
+  src/cacheutil.cpp
+  src/cacheutil.h
   src/config.cpp
   src/config.h
   src/contact.cpp
@@ -43,6 +46,10 @@ add_executable(nmail
   src/header.h
   src/imap.cpp
   src/imap.h
+  src/imapcache.cpp
+  src/imapcache.h
+  src/imapindex.cpp
+  src/imapindex.h
   src/imapmanager.cpp
   src/imapmanager.h
   src/lockfile.cpp
@@ -52,6 +59,8 @@ add_executable(nmail
   src/loghelp.cpp
   src/loghelp.h
   src/main.cpp
+  src/searchengine.cpp
+  src/searchengine.h
   src/serialized.cpp
   src/serialized.h
   src/smtp.cpp
@@ -97,6 +106,10 @@ include_directories(${CURSES_INCLUDE_DIR})
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+find_package(Xapian REQUIRED)
+
+find_package(SQLite3 REQUIRED)
+
 find_path(LIBETPAN_INCLUDE_DIR
   NAMES libetpan/libetpan.h
   PATHS ${additional_includes}
@@ -113,10 +126,10 @@ else()
   message(STATUS "Found libetpan")
 endif()
 
-include_directories(${LIBETPAN_INCLUDE_DIR})
+include_directories(${LIBETPAN_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr")
 
 # Linking
-target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL ${LIBETPAN_LIBRARY} pthread ${CMAKE_DL_LIBS})
+target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3 ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} pthread ${CMAKE_DL_LIBS})
 
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)

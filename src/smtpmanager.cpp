@@ -30,9 +30,6 @@ SmtpManager::SmtpManager(const std::string &p_User, const std::string &p_Pass,
   , m_Running(false)
 {
   pipe(m_Pipe);
-  m_Running = true;
-  LOG_DEBUG("start thread");
-  m_Thread = std::thread(&SmtpManager::Process, this);
 }
 
 SmtpManager::~SmtpManager()
@@ -55,6 +52,13 @@ SmtpManager::~SmtpManager()
 
   close(m_Pipe[0]);
   close(m_Pipe[1]);
+}
+
+void SmtpManager::Start()
+{
+  m_Running = true;
+  LOG_DEBUG("start thread");
+  m_Thread = std::thread(&SmtpManager::Process, this);
 }
 
 void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)

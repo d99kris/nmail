@@ -15,14 +15,20 @@
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const std::string& p_Host, const uint16_t p_Port,
                          const bool p_Connect, const bool p_CacheEncrypt,
+                         const bool p_CacheIndexEncrypt,
+                         const std::set<std::string>& p_FoldersExclude,
                          const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
                          const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
-                         const std::function<void(const StatusUpdate&)>& p_StatusHandler)
-  : m_Imap(p_User, p_Pass, p_Host, p_Port, p_CacheEncrypt)
+                         const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+                         const std::function<void(const SearchQuery&,
+                                                  const SearchResult&)>& p_SearchHandler)
+  : m_Imap(p_User, p_Pass, p_Host, p_Port, p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude,
+           p_StatusHandler)
   , m_Connect(p_Connect)
   , m_ResponseHandler(p_ResponseHandler)
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
+  , m_SearchHandler(p_SearchHandler)
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
@@ -30,12 +36,6 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   pipe(m_Pipe);
   pipe(m_CachePipe);
   m_Connecting = m_Connect;
-  SetStatus(m_Connecting ? Status::FlagConnecting : Status::FlagOffline);
-  m_Running = true;
-  m_CacheRunning = true;
-  LOG_DEBUG("start threads");
-  m_Thread = std::thread(&ImapManager::Process, this);
-  m_CacheThread = std::thread(&ImapManager::CacheProcess, this);
 }
 
 ImapManager::~ImapManager()
@@ -87,11 +87,35 @@ ImapManager::~ImapManager()
       LOG_WARNING("cache thread exit timeout");
     }
   }
-  
+
+  if (m_SearchRunning)
+  {
+    std::unique_lock<std::mutex> lock(m_SearchMutex);
+    m_SearchRunning = false;
+    m_SearchCond.notify_one();
+  }
+
+  if (m_SearchThread.joinable())
+  {
+    m_SearchThread.join();
+  }  
+
   close(m_Pipe[0]);
   close(m_Pipe[1]);
   close(m_CachePipe[0]);
   close(m_CachePipe[1]);
+}
+
+void ImapManager::Start()
+{
+  SetStatus(m_Connecting ? Status::FlagConnecting : Status::FlagOffline);
+  m_Running = true;
+  m_CacheRunning = true;
+  m_SearchRunning = true;
+  LOG_DEBUG("start threads");
+  m_Thread = std::thread(&ImapManager::Process, this);
+  m_CacheThread = std::thread(&ImapManager::CacheProcess, this);  
+  m_SearchThread = std::thread(&ImapManager::SearchProcess, this);  
 }
 
 void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
@@ -114,7 +138,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
 
 void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
 {
-  if (m_Imap.GetConnected() || m_Connecting)
+  if (m_Connecting || m_Imap.GetConnected())
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
@@ -141,6 +165,13 @@ void ImapManager::AsyncAction(const ImapManager::Action &p_Action)
   {
     LOG_WARNING("action not permitted while offline");
   }
+}
+
+void ImapManager::AsyncSearch(const SearchQuery& p_SearchQuery)
+{
+  std::unique_lock<std::mutex> lock(m_SearchMutex);
+  m_SearchQueue.push_front(p_SearchQuery);
+  m_SearchCond.notify_one();
 }
 
 void ImapManager::SetCurrentFolder(const std::string& p_Folder)
@@ -456,6 +487,35 @@ void ImapManager::CacheProcess()
   m_ExitedCacheCond.notify_one();
 }
 
+void ImapManager::SearchProcess()
+{
+  LOG_DEBUG("entering loop");
+  while (m_SearchRunning)
+  {
+    SearchQuery searchQuery;
+
+    {
+      std::unique_lock<std::mutex> lock(m_SearchMutex);
+      while (m_SearchQueue.empty() && m_SearchRunning)
+      {
+        m_SearchCond.wait(lock);
+      }
+
+      if (!m_SearchRunning)
+      {
+        break;
+      }
+
+      searchQuery = m_SearchQueue.front();
+      m_SearchQueue.pop_front();
+    }
+
+    PerformSearch(searchQuery);
+  }
+
+  LOG_DEBUG("exiting loop");
+}
+
 bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached,
                                  bool p_Prefetch)
 {
@@ -552,6 +612,18 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
   }
 
   return (result.m_Result);
+}
+
+void ImapManager::PerformSearch(const SearchQuery& p_SearchQuery)
+{
+  SearchResult searchResult;
+  m_Imap.Search(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
+                searchResult.m_Headers, searchResult.m_FolderUids, searchResult.m_HasMore);
+
+  if (m_SearchHandler)
+  {
+    m_SearchHandler(p_SearchQuery, searchResult);
+  }
 }
 
 void ImapManager::SetStatus(uint32_t p_Flags, uint32_t p_Progress /* = 0 */)

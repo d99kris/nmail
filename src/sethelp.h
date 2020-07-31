@@ -23,3 +23,17 @@ std::set<T> operator-(std::set<T> p_Lhs, const std::set<T>& p_Rhs)
   }
   return p_Lhs;
 }
+
+template <typename T>
+std::vector<T> ToVector(const std::set<T>& p_Set)
+{
+  std::vector<T> vec(p_Set.size());
+  std::copy(p_Set.begin(), p_Set.end(), vec.begin());
+  return vec;
+}
+
+template <typename T>
+std::set<T> ToSet(const std::vector<T>& p_Vector)
+{
+  return std::set<T>(p_Vector.begin(), p_Vector.end());
+}

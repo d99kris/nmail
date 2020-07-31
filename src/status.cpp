@@ -75,6 +75,17 @@ std::string Status::ToString(bool p_ShowProgress)
   {
     return "Saving";
   }
+  else if (m_Flags & FlagIndexing)
+  {
+    if (p_ShowProgress && (m_Progress > 0))
+    {
+      return "Indexing " + std::to_string(m_Progress) + "%";
+    }
+    else
+    {
+      return "Indexing";
+    }
+  }
   else if (m_Flags & FlagIdle)
   {
     return "Idle";

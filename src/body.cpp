@@ -64,7 +64,7 @@ void Body::Parse()
   {
     struct mailmime* mime = NULL;
     size_t current_index = 0;
-    LOG_IF_IMAP_ERR(mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime));
+    mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
 
     if (mime != NULL)
     {

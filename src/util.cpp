@@ -568,6 +568,41 @@ std::vector<std::string> Util::Split(const std::string &p_Str, char p_Sep)
   return vec;
 }
 
+std::vector<std::string> Util::SplitQuoted(const std::string& p_Str)
+{
+  std::vector<std::string> words;
+  size_t quoteCnt = 0;
+  std::string segment;
+  std::stringstream ss(p_Str);
+
+  while (std::getline(ss, segment, '\"'))
+  {
+    ++quoteCnt;
+    if (quoteCnt % 2 == 0)
+    {
+      segment = Trim(segment);
+      if (!segment.empty())
+      {
+        words.push_back(segment);
+      }
+    }
+    else
+    {
+      std::stringstream segmentStream(segment);
+      while (std::getline(segmentStream, segment, ','))
+      {
+        segment = Trim(segment);
+        if (!segment.empty())
+        {
+          words.push_back(segment);
+        }
+      }
+    }
+  }
+
+  return words;
+}
+
 std::string Util::Trim(const std::string &p_Str)
 {
   std::string space = " ";

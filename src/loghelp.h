@@ -38,6 +38,8 @@
                                      LOG_DEBUG(MSG " %s", str.c_str()); \
                                    } while (0)
 
+#define LOG_IF_NONZERO(EXPR) LogHelp::LogIfNotEqual(EXPR, 0, #EXPR, __FILENAME__, __LINE__)
+#define LOG_IF_BADFD(EXPR) LogHelp::LogIfEqual(EXPR, -1, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_NULL(EXPR) LogHelp::LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_IMAP_ERR(EXPR) LogHelp::LogImap(EXPR, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_IMAP_LOGOUT_ERR(EXPR) LogHelp::LogImapLogout(EXPR, #EXPR, __FILENAME__, __LINE__)
