@@ -4,16 +4,12 @@ language:
 compiler:
   - clang
 
-dist:
-  - focal
-
-osx_image:
-  - xcode11
-
 jobs:
   include:
     - os: linux
+      dist: focal
     - os: osx
+      osx_image: xcode11
       env:
         - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
         - OPENSSL_LIBRARIES=/usr/local/opt/openssl/lib
