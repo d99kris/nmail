@@ -24,6 +24,7 @@ addons:
       - libetpan-dev
       - libxapian-dev
       - libsqlite3-dev
+    update: true
   homebrew:
     packages:
       - cmake
