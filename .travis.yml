@@ -26,12 +26,16 @@ addons:
       - libreadline-dev
       - libncurses5-dev
       - libetpan-dev
+      - libxapian-dev
+      - libsqlite3-dev
   homebrew:
     packages:
       - cmake
       - openssl
       - ncurses
       - libetpan
+      - xapian
+      - sqlite
     update: true
 
 script:
