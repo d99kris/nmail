@@ -5,7 +5,7 @@ compiler:
   - clang
 
 dist:
-  - bionic
+  - focal
 
 osx_image:
   - xcode11
