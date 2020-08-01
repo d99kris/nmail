@@ -107,3 +107,8 @@ bool SearchEngine::Exists(const std::string& p_DocId)
   m_Database->reopen();
   return (m_Database->postlist_begin(p_DocId) != m_Database->postlist_end(p_DocId));
 }
+
+std::string SearchEngine::GetXapianVersion()
+{
+  return std::string(XAPIAN_VERSION);
+}

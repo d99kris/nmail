@@ -29,6 +29,8 @@ public:
   std::vector<std::string> List();
   bool Exists(const std::string& p_DocId);
 
+  static std::string GetXapianVersion();
+  
 private:
   std::string m_DbPath;
   std::unique_ptr<Xapian::Database> m_Database;

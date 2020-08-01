@@ -29,6 +29,7 @@
 
 #include <libetpan/libetpan.h>
 #include <ncursesw/ncurses.h>
+#include <sqlite3.h>
 
 #include "apathy/path.hpp"
 
@@ -1328,4 +1329,9 @@ std::string Util::ConvertEncoding(const std::string& p_SrcEnc, const std::string
   }
 
   return str;
+}
+
+std::string Util::GetSQLiteVersion()
+{
+  return std::string(SQLITE_VERSION);
 }

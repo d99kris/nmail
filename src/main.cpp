@@ -504,18 +504,24 @@ void LogSystemInfo()
   const std::string systemOs = Util::GetSystemOs();
   LOG_DEBUG("system os: %s", systemOs.c_str());
 
-  const std::string openSSLVersion = Crypto::GetVersion();
-  LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
-  
-  const std::string libetpanVersion = Util::GetLibetpanVersion();
-  LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
-
   const std::string unameStr = Util::GetUname();
   if (!unameStr.empty())
   {
     LOG_DEBUG("uname:   ");
     LOG_DUMP(unameStr.c_str());
   }
+
+  const std::string libetpanVersion = Util::GetLibetpanVersion();
+  LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
+
+  const std::string libxapianVersion = SearchEngine::GetXapianVersion();
+  LOG_DEBUG("libxapian: %s", libxapianVersion.c_str());
+
+  const std::string openSSLVersion = Crypto::GetVersion();
+  LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
+  
+  const std::string sqliteVersion = Util::GetSQLiteVersion();
+  LOG_DEBUG("sqlite:    %s", sqliteVersion.c_str());
 
   const std::string selfPath = Util::GetSelfPath();
   if (!selfPath.empty())

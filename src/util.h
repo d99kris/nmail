@@ -221,6 +221,7 @@ public:
   static std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
   static std::string ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
                                      const std::string& p_SrcStr);
+  static std::string GetSQLiteVersion();
 
 private:
   static std::string m_HtmlToTextConvertCmd;
