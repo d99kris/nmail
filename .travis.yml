@@ -17,14 +17,12 @@ jobs:
 addons:
   apt:
     packages:
-      - cmake
       - libssl-dev
       - libreadline-dev
       - libncurses5-dev
       - libetpan-dev
       - libxapian-dev
       - libsqlite3-dev
-    update: true
   homebrew:
     packages:
       - cmake
@@ -34,6 +32,19 @@ addons:
       - xapian
       - sqlite
     update: true
+
+install:
+  # Hack: Get a recent cmake
+  - DEPS_DIR="${HOME}/deps"
+  - mkdir -p "${DEPS_DIR}" && cd "${DEPS_DIR}"
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      CMAKE_URL="https://cmake.org/files/v3.16/cmake-3.16.8-Linux-x86_64.tar.gz"
+      mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - "${CMAKE_URL}" | tar --strip-components=1 -xz -C cmake
+      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+    fi
+  - cmake --version
+  - cd "${TRAVIS_BUILD_DIR}"
 
 script:
   - mkdir -p build
