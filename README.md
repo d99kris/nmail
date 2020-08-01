@@ -101,7 +101,7 @@ Required:
 
 Optional:
 
-    sudo apt install git lynx markdown
+    sudo apt install lynx markdown
 
 **Source**
 
