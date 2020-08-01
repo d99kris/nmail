@@ -34,6 +34,7 @@ public:
     FlagConnected = (1 << 8),
     FlagOffline = (1 << 9),
     FlagIdle = (1 << 10),
+    FlagIndexing = (1 << 11),
     FlagMax = FlagIdle,
   };
 

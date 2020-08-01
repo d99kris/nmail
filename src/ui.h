@@ -78,6 +78,8 @@ public:
   void SmtpResultHandlerError(const SmtpManager::Result& p_Result);
   void SmtpResultHandler(const SmtpManager::Result& p_Result);
   void StatusHandler(const StatusUpdate& p_StatusUpdate);
+  void SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
+                     const ImapManager::SearchResult& p_SearchResult);
   
 private:
   void Init();
@@ -97,6 +99,7 @@ private:
   void DrawAddressList();
   void DrawFileList();
   void DrawMessageList();
+  void DrawMessageListSearch();
   void DrawMessage();
   void DrawComposeMessage();
   void DrawPartList();
@@ -136,7 +139,8 @@ private:
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
   bool PromptYesNo(const std::string& p_Prompt);
-  bool PromptString(const std::string& p_Prompt, std::string& p_Entry);
+  bool PromptString(const std::string& p_Prompt, const std::string& p_Action,
+                    std::string& p_Entry);
   bool CurrentMessageBodyAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
   void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
@@ -144,6 +148,7 @@ private:
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
+  void SearchMessage();
   void Quit();
   std::wstring GetComposeStr(int p_HeaderField);
   void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
@@ -163,6 +168,7 @@ private:
   uint32_t m_PrefetchLevel = 0;
 
   std::string m_CurrentFolder = "INBOX";
+  std::string m_PreviousFolder;
     
   std::mutex m_Mutex;
   Status m_Status;  
@@ -254,6 +260,7 @@ private:
   int m_KeyImport = 0;
   int m_KeyRichHeader = 0;
   int m_KeyViewHtml = 0;
+  int m_KeySearch = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
@@ -308,4 +315,14 @@ private:
   int m_MaxLineLength = 0;
   
   int m_Pipe[2] = {-1, -1};
+
+  bool m_MessageListSearch = false;
+  std::string m_MessageListSearchQuery;
+  size_t m_MessageListSearchOffset = 0;
+  size_t m_MessageListSearchMax = 0;
+  bool m_MessageListSearchHasMore = false;
+  std::vector<Header> m_MessageListSearchResultHeaders;
+  std::vector<std::pair<std::string, uint32_t>> m_MessageListSearchResultFolderUids;
+
+  std::pair<std::string, int32_t> m_CurrentFolderUid = std::make_pair("", -1);
 };

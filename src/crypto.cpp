@@ -144,3 +144,163 @@ std::string Crypto::SHA256(const std::string &p_Str)
   SHA256_Final(hash, &sha256);
   return Serialized::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
 }
+
+bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass)
+{
+  unsigned char salt[8] = { 0 };
+  RAND_bytes(salt, sizeof(salt));
+
+  unsigned char key[32] = { 0 };
+  unsigned char iv[32] = { 0 };
+  EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()), p_Pass.size(), 1, key, iv);
+
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  if (ctx != NULL)
+  {
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
+    {
+      // @todo: add file error handling
+      std::ifstream inStream;
+      inStream.open(p_InPath, std::ios::binary);
+
+      inStream.seekg(0, std::ios::end);
+      std::streamsize inFileRemainingLen = inStream.tellg();
+      inStream.seekg(0, std::ios::beg);
+      
+      std::ofstream outStream;
+      outStream.open(p_OutPath, std::ios::binary);
+
+      outStream.write("Salted__", 8);
+      outStream.write((char *)salt, 8);
+
+      const std::streamsize inBufLen = 64 * 1024;
+      std::vector<char> inBuf(inBufLen);
+
+      const std::streamsize outBufLen = inBufLen + EVP_CIPHER_CTX_block_size(ctx);
+      std::vector<char> outBuf(outBufLen);
+
+      while (inFileRemainingLen > 0)
+      {
+        std::streamsize readLen = std::min(inFileRemainingLen, inBufLen);
+        inStream.read(inBuf.data(), readLen);
+
+        int writeLen = 0;
+        if (EVP_EncryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(), readLen) == 0)
+        {
+          EVP_CIPHER_CTX_free(ctx);
+          return false;
+        }
+
+        outStream.write(outBuf.data(), writeLen);
+        inFileRemainingLen -= readLen;
+      }
+
+      int writeLen = 0;
+      if (EVP_EncryptFinal_ex(ctx, (unsigned char*)outBuf.data(), &writeLen) == 0)
+      {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+      }
+
+      outStream.write(outBuf.data(), writeLen);
+    }
+    else
+    {
+      return false;
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass)
+{
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  if (ctx != NULL)
+  {
+    // @todo: add file error handling
+    std::ifstream inStream;
+    inStream.open(p_InPath, std::ios::binary);
+
+    inStream.seekg(0, std::ios::end);
+    std::streamsize inFileRemainingLen = inStream.tellg();
+    inStream.seekg(0, std::ios::beg);
+      
+    std::ofstream outStream;
+    outStream.open(p_OutPath, std::ios::binary);
+
+    const std::streamsize inBufLen = 64 * 1024;
+    std::vector<char> inBuf(inBufLen);
+
+    if (inFileRemainingLen < 16)
+    {
+      return false;
+    }
+  
+    inStream.read(inBuf.data(), 8);
+    inFileRemainingLen -= 8;
+    if (strncmp((const char*)inBuf.data(), "Salted__", 8) != 0)
+    {
+      return false;
+    }
+
+    unsigned char salt[8] = { 0 };
+    inStream.read((char *)salt, 8);
+    inFileRemainingLen -= 8;
+
+    unsigned char key[32] = { 0 };
+    unsigned char iv[32] = { 0 };
+    EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()), p_Pass.size(), 1, key, iv);
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
+    {
+      const std::streamsize outBufLen = inBufLen + EVP_CIPHER_CTX_block_size(ctx);
+      std::vector<char> outBuf(outBufLen);
+
+      while (inFileRemainingLen > 0)
+      {
+        std::streamsize readLen = std::min(inFileRemainingLen, inBufLen);
+        inStream.read(inBuf.data(), readLen);
+
+        int writeLen = 0;
+        if (EVP_DecryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(), readLen) == 0)
+        {
+          EVP_CIPHER_CTX_free(ctx);
+          return false;
+        }
+
+        outStream.write(outBuf.data(), writeLen);
+        inFileRemainingLen -= readLen;
+      }
+
+      int writeLen = 0;
+      if (EVP_DecryptFinal_ex(ctx, (unsigned char*)outBuf.data(), &writeLen) == 0)
+      {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+      }
+
+      outStream.write(outBuf.data(), writeLen);
+    }
+    else
+    {
+      EVP_CIPHER_CTX_free(ctx);
+      return false;
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+

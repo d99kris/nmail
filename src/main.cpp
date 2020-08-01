@@ -18,6 +18,7 @@
 #include "log.h"
 #include "loghelp.h"
 #include "serialized.h"
+#include "sethelp.h"
 #include "smtpmanager.h"
 #include "ui.h"
 #include "util.h"
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
     apathy::Path::makedirs(Util::GetApplicationDir());
   }
 
-  DirLock dirLock(Util::GetApplicationDir());
+  ScopedDirLock dirLock(Util::GetApplicationDir());
   if (!dirLock.IsLocked())
   {
     std::cout <<
@@ -125,8 +126,10 @@ int main(int argc, char* argv[])
     {"trash", ""},
     {"drafts", ""},
     {"sent", ""},
+    {"addressbook_encrypt", "0"},
     {"client_store_sent", "0"},
     {"cache_encrypt", "1"},
+    {"cache_index_encrypt", "0"},
     {"html_to_text_cmd", ""},
     {"text_to_html_cmd", ""},
     {"ext_viewer_cmd", ""},
@@ -135,6 +138,7 @@ int main(int argc, char* argv[])
     {"pager_cmd", ""},
     {"editor_cmd", ""},
     {"markdown_html_compose", "0"},
+    {"folders_exclude", ""},
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -184,12 +188,15 @@ int main(int argc, char* argv[])
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
   const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
+  const bool cacheIndexEncrypt = (mainConfig->Get("cache_index_encrypt") == "1");
+  const bool addressBookEncrypt = (mainConfig->Get("addressbook_encrypt") == "1");
   Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
   Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
   Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   Util::SetComposeGenerateHtml(mainConfig->Get("markdown_html_compose") == "1");
+  std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -313,17 +320,20 @@ int main(int argc, char* argv[])
   Ui ui(inbox, address, prefetchLevel);
 
   std::shared_ptr<ImapManager> imapManager =
-    std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online, cacheEncrypt,
+    std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
+                                  cacheEncrypt, cacheIndexEncrypt,
+                                  foldersExclude,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
                                   std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2),
-                                  std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
+                                  std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1),
+                                  std::bind(&Ui::SearchHandler, std::ref(ui), std::placeholders::_1, std::placeholders::_2));
 
   std::shared_ptr<SmtpManager> smtpManager =
     std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
-  AddressBook::Init(cacheEncrypt, pass);
+  AddressBook::Init(addressBookEncrypt, pass);
 
   ui.SetImapManager(imapManager);
   ui.SetTrashFolder(trash);
@@ -332,6 +342,9 @@ int main(int argc, char* argv[])
   ui.SetClientStoreSent(clientStoreSent);
   ui.SetSmtpManager(smtpManager);
 
+  imapManager->Start();
+  smtpManager->Start();
+  
   ui.Run();
 
   ui.ResetSmtpManager();
@@ -431,6 +444,7 @@ static void SetupGmail(std::shared_ptr<Config> p_Config)
   p_Config->Set("trash", "[Gmail]/Trash");
   p_Config->Set("drafts", "[Gmail]/Drafts");
   p_Config->Set("sent", "[Gmail]/Sent Mail");
+  p_Config->Set("folders_exclude", "\"[Gmail]/All Mail\",\"[Gmail]/Important\",\"[Gmail]/Starred\"");
 }
 
 static void SetupOutlook(std::shared_ptr<Config> p_Config)

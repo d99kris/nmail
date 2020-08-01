@@ -56,6 +56,7 @@ public:
               const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~SmtpManager();
 
+  void Start();
   void AsyncAction(const Action& p_Action);
   Result SyncAction(const Action& p_Action);
   std::string GetAddress();

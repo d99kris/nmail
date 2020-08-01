@@ -5,6 +5,8 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
+#pragma once
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -211,6 +213,15 @@ static void SerializeToFile(const std::string& p_Path, const T& p_Value)
   serialized.Save(p_Path);
 }
 
+template <typename T, typename U>
+static void SerializeToFile(const std::string& p_Path, const T& p_TVal, const U& p_UVal)
+{
+  Serialized serialized;
+  serialized << p_TVal;
+  serialized << p_UVal;
+  serialized.Save(p_Path);
+}
+
 template <typename T>
 static void DeserializeFromFile(const std::string& p_Path, T& p_Value)
 {
@@ -219,6 +230,14 @@ static void DeserializeFromFile(const std::string& p_Path, T& p_Value)
   serialized >> p_Value;
 }
 
+template <typename T, typename U>
+static void DeserializeFromFile(const std::string& p_Path, T& p_TVal, U& p_UVal)
+{
+  Serialized serialized;
+  serialized.Load(p_Path);
+  serialized >> p_TVal;
+  serialized >> p_UVal;
+}
 
 template <typename T>
 static std::string Serialize(const T& p_Value)

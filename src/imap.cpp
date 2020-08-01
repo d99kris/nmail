@@ -11,35 +11,50 @@
 
 #include "crypto.h"
 #include "flag.h"
+#include "imapcache.h"
 #include "log.h"
 #include "loghelp.h"
+#include "lockfile.h"
 #include "serialized.h"
 #include "util.h"
 
 Imap::Imap(const std::string &p_User, const std::string &p_Pass, const std::string &p_Host,
-           const uint16_t p_Port, const bool p_CacheEncrypt)
+           const uint16_t p_Port, const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
+           const std::set<std::string>& p_FoldersExclude,
+           const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
   , m_Port(p_Port)
   , m_CacheEncrypt(p_CacheEncrypt)
+  , m_CacheIndexEncrypt(p_CacheIndexEncrypt)
+  , m_FoldersExclude(p_FoldersExclude)
 {
   LOG_DEBUG_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
 
   m_Imap = LOG_IF_NULL(mailimap_new(0, NULL));
-  InitCacheDir();
-  InitImapCacheDir();
+
+  m_ImapCache.reset(new ImapCache(m_CacheEncrypt, m_Pass));
 
   if (Log::GetTraceEnabled())
   {
     mailimap_set_logger(m_Imap, Logger, NULL);
   }
+
+  std::set<std::string> folders;
+  GetFolders(true /* p_Cached */, folders);
+  m_ImapCache->PruneCacheFolders(folders);
+  m_ImapIndex.reset(new ImapIndex(m_CacheIndexEncrypt, m_CacheEncrypt, m_Pass, folders,
+                                  p_StatusHandler));
 }
 
 Imap::~Imap()
 {
   LOG_DEBUG_FUNC(STR());
 
+  m_ImapIndex.reset();
+  m_ImapCache.reset();
+  
   if (m_Imap != NULL)
   {
     mailimap_free(m_Imap);
@@ -111,7 +126,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   if (p_Cached)
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    p_Folders = Deserialize<std::set<std::string>>(ReadCacheFile(GetFoldersCachePath()));
+    p_Folders = Deserialize<std::set<std::string>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFoldersCachePath()));
     return true;
   }
 
@@ -132,7 +147,16 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
           if (!((bflags->mbf_type == MAILIMAP_MBX_LIST_FLAGS_SFLAG) &&
                 (bflags->mbf_sflag == MAILIMAP_MBX_LIST_SFLAG_NOSELECT)))
           {
-            p_Folders.insert(std::string(mblist->mb_name));
+            const std::string& folder = std::string(mblist->mb_name);
+            if (m_FoldersExclude.find(folder) == m_FoldersExclude.end())
+            {
+              LOG_DEBUG("folder include %s", folder.c_str());
+              p_Folders.insert(folder);
+            }
+            else
+            {
+              LOG_DEBUG("folder exclude %s", folder.c_str());
+            }
           }
         }
       }
@@ -140,8 +164,12 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
 
     mailimap_list_result_free(list);
 
-    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    WriteCacheFile(GetFoldersCachePath(), Serialize(p_Folders));
+    {
+      std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+      m_ImapCache->WriteCacheFile(m_ImapCache->GetFoldersCachePath(), Serialize(p_Folders));
+    }
+
+    m_ImapIndex->EnqueueSyncFolders(p_Folders);
 
     return true;
   }
@@ -156,7 +184,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   if (p_Cached)
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    p_Uids = Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
+    p_Uids = Deserialize<std::set<uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder)));
     return true;
   }
 
@@ -170,8 +198,8 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   if (SelectedFolderIsEmpty())
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
-    DeleteCacheExceptUids(p_Folder, p_Uids);
+    m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
+    m_ImapCache->DeleteCacheExceptUids(p_Folder, p_Uids);
     return true;
   }
 
@@ -201,9 +229,13 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
 
     mailimap_fetch_list_free(fetch_result);
 
-    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
-    DeleteCacheExceptUids(p_Folder, p_Uids);
+    {
+      std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+      m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder), Serialize(p_Uids));
+      m_ImapCache->DeleteCacheExceptUids(p_Folder, p_Uids);
+    }
+
+    m_ImapIndex->EnqueueDeleteMessages(p_Folder, p_Uids);
   }
 
   mailimap_fetch_type_free(fetch_type);
@@ -224,13 +256,13 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
   {
     bool cacheFound = false;
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    const std::string& cachePath = GetHeaderCachePath(p_Folder, uid);
+    const std::string& cachePath = m_ImapCache->GetHeaderCachePath(p_Folder, uid);
     if (Util::NotEmpty(cachePath))
     {
       cacheFound = true;
       if (!p_Prefetch)
       {
-        const std::string& cacheData = ReadCacheFile(cachePath);
+        const std::string& cacheData = m_ImapCache->ReadCacheFile(cachePath);
         if (!cacheData.empty())
         {
           Header header;
@@ -323,8 +355,12 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
           p_Headers[uid] = header;
         }
 
-        std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-        WriteCacheFile(GetHeaderCachePath(p_Folder, uid), header.GetData());
+        {
+          std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+          m_ImapCache->WriteCacheFile(m_ImapCache->GetHeaderCachePath(p_Folder, uid), header.GetData());
+        }
+
+        m_ImapIndex->EnqueueAddMessage(p_Folder, uid);
       }
     
       mailimap_fetch_list_free(fetch_result);
@@ -346,7 +382,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   if (p_Cached)
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    p_Flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+    p_Flags = Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     return true;
   }
 
@@ -436,10 +472,10 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     std::map<uint32_t, uint32_t> oldFlags;
 
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+    oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     newFlags.insert(oldFlags.begin(), oldFlags.end());
     // cache combined flags of previously cached and newly fetched, in case requesting flags for not all messages
-    WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
+    m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
   }
 
   mailimap_fetch_type_free(fetch_type);
@@ -460,13 +496,13 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   {
     bool cacheFound = false;
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
+    const std::string& cachePath = m_ImapCache->GetBodyCachePath(p_Folder, uid);
     if (Util::NotEmpty(cachePath))
     {
       cacheFound = true;
       if (!p_Prefetch)
       {
-        const std::string& cacheData = ReadCacheFile(cachePath);
+        const std::string& cacheData = m_ImapCache->ReadCacheFile(cachePath);
         if (!cacheData.empty())
         {
           Body body;
@@ -562,9 +598,13 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
           p_Bodys[uid] = body;
         }
 
-        std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-        const std::string& cachePath = GetBodyCachePath(p_Folder, uid);
-        WriteCacheFile(cachePath, body.GetData());
+        {
+          std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+          const std::string& cachePath = m_ImapCache->GetBodyCachePath(p_Folder, uid);
+          m_ImapCache->WriteCacheFile(cachePath, body.GetData());
+        }
+
+        m_ImapIndex->EnqueueAddMessage(p_Folder, uid);
       }
 
       mailimap_fetch_list_free(fetch_result);
@@ -615,7 +655,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::map<uint32_t, uint32_t> flags =
-      Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+      Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     for (auto& uid : p_Uids)
     {
       if (p_Value)
@@ -628,7 +668,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
       }
     }
 
-    WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(flags));
+    m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder), Serialize(flags));
   }
   
   return (rv == MAILIMAP_NO_ERROR);
@@ -697,16 +737,16 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::set<uint32_t> uids =
-      Deserialize<std::set<uint32_t>>(ReadCacheFile(GetFolderUidsCachePath(p_Folder)));
+      Deserialize<std::set<uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder)));
     for (auto& uid : p_Uids)
     {
       uids.erase(uid);
 
-      Util::DeleteFile(GetBodyCachePath(p_Folder, uid));
-      Util::DeleteFile(GetHeaderCachePath(p_Folder, uid));
+      Util::DeleteFile(m_ImapCache->GetBodyCachePath(p_Folder, uid));
+      Util::DeleteFile(m_ImapCache->GetHeaderCachePath(p_Folder, uid));
     }
     
-    WriteCacheFile(GetFolderUidsCachePath(p_Folder), Serialize(uids));
+    m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder), Serialize(uids));
   }
 
   return (rv == MAILIMAP_NO_ERROR);
@@ -756,6 +796,8 @@ int Imap::IdleStart(const std::string& p_Folder)
   if (rv == MAILIMAP_NO_ERROR)
   {
     int fd = mailimap_idle_get_fd(m_Imap);
+    LockSelectedFolder(false);
+    m_ImapIndex->NotifyIdle(true);
     return fd;
   }
 
@@ -767,8 +809,8 @@ void Imap::IdleDone()
   LOG_DEBUG_FUNC(STR());
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
-
   mailimap_idle_done(m_Imap);
+  m_ImapIndex->NotifyIdle(false);
 }
 
 bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft)
@@ -801,6 +843,13 @@ bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, 
   return rv;
 }
 
+void Imap::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
+                  std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids, 
+                  bool& p_HasMore)
+{
+  return m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
+}
+
 bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Force));
@@ -813,12 +862,19 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
       std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
       m_SelectedFolder = p_Folder;
       m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_has_exists == 1) && (m_Imap->imap_selection_info->sel_exists == 0);
-      InitFolderCacheDir(p_Folder);
+      const bool cachedUidValid = m_ImapCache->InitFolderCacheDir(p_Folder, GetUidValidity());
+      if (!cachedUidValid)
+      {
+        LOG_DEBUG("delete and add folder %s", p_Folder.c_str());
+        m_ImapIndex->EnqueueDeleteFolder(p_Folder);
+        m_ImapIndex->EnqueueAddFolder(p_Folder);
+      }
+        
       LOG_DEBUG("folder %s = %d", p_Folder.c_str(),
                 (m_Imap->imap_selection_info->sel_has_exists == 1) ? m_Imap->imap_selection_info->sel_exists : -1);
     }
 
-    return (rv == MAILIMAP_NO_ERROR);
+    return (rv == MAILIMAP_NO_ERROR) && LockSelectedFolder(true);
   }
   else
   {
@@ -831,164 +887,55 @@ bool Imap::SelectedFolderIsEmpty()
   return m_SelectedFolderIsEmpty;
 }
 
+bool Imap::LockSelectedFolder(bool p_DoLock)
+{
+  static int dirFd = -1;
+  static std::string lockedFolder;
+
+  if (m_SelectedFolder.empty()) return false; // nothing to lock
+
+  if (!p_DoLock)
+  {
+    // perform unlock
+    if (!lockedFolder.empty())
+    {
+      const bool rv = PathLock::Unlock(dirFd);
+      lockedFolder.clear();
+      dirFd = -1;
+      return rv;
+    }
+  }
+  else
+  {
+    // perform lock, when lock is not already held
+    if (lockedFolder != m_SelectedFolder)
+    {
+      // unlock any previously held lock
+      if (!lockedFolder.empty())
+      {
+        PathLock::Unlock(dirFd);
+        lockedFolder.clear();
+        dirFd = -1;
+      }
+
+      // acquire lock
+      const std::string& dirPath = m_ImapCache->GetFolderCacheDir(m_SelectedFolder);
+      dirFd = PathLock::Lock(dirPath);
+      if (dirFd == -1)
+      {
+        return false;
+      }
+
+      lockedFolder = m_SelectedFolder;
+    }
+  }
+
+  return true;
+}  
+
 uint32_t Imap::GetUidValidity()
 {
   return m_Imap->imap_selection_info->sel_uidvalidity;
-}
-
-std::string Imap::GetCacheDir()
-{
-  return Util::GetApplicationDir() + std::string("cache/");
-}
-
-void Imap::InitCacheDir()
-{
-  static const int version = 1;
-  const std::string cacheDir = GetCacheDir();
-  CommonInitCacheDir(cacheDir, version);
-}
-
-std::string Imap::GetImapCacheDir()
-{
-  return GetCacheDir() + std::string("imap/");
-}
-
-void Imap::InitImapCacheDir()
-{
-  static const int version = 1;
-  const std::string imapCacheDir = GetImapCacheDir();
-  CommonInitCacheDir(imapCacheDir, version);
-}
-
-std::string Imap::GetFolderCacheDir(const std::string &p_Folder)
-{
-  if (m_CacheEncrypt)
-  {
-    // @todo: consider encrypting folder name instead of hashing
-    return GetImapCacheDir() + Crypto::SHA256(p_Folder) + std::string("/");
-  }
-  else
-  {
-    return GetImapCacheDir() + Serialized::ToHex(p_Folder) + std::string("/");
-  }
-}
-
-std::string Imap::GetFolderUidsCachePath(const std::string &p_Folder)
-{
-  return GetFolderCacheDir(p_Folder) + std::string("uids");
-}
-
-std::string Imap::GetFolderFlagsCachePath(const std::string &p_Folder)
-{
-  return GetFolderCacheDir(p_Folder) + std::string("flags");
-}
-
-std::string Imap::GetFoldersCachePath()
-{
-  return GetImapCacheDir() + std::string("folders");
-}
-
-std::string Imap::GetMessageCachePath(const std::string &p_Folder, uint32_t p_Uid,
-                                      const std::string &p_Suffix)
-{
-  const std::string& path = GetFolderCacheDir(p_Folder) + std::string("/") +
-    std::to_string(p_Uid) + p_Suffix;
-  return path;
-}
-
-std::string Imap::GetHeaderCachePath(const std::string &p_Folder, uint32_t p_Uid)
-{
-  return GetMessageCachePath(p_Folder, p_Uid, ".hdr");
-}
-
-std::string Imap::GetBodyCachePath(const std::string &p_Folder, uint32_t p_Uid)
-{
-  return GetMessageCachePath(p_Folder, p_Uid, ".eml");
-}
-
-void Imap::InitFolderCacheDir(const std::string &p_Folder)
-{
-  static const int validity = GetUidValidity();
-  const std::string folderCacheDir = GetFolderCacheDir(p_Folder);
-  CommonInitCacheDir(folderCacheDir, validity);
-}
-
-void Imap::CommonInitCacheDir(const std::string &p_Dir, int p_Version)
-{
-  const std::string& dirVersionPath = p_Dir + "version";
-  if (Util::Exists(p_Dir))
-  {
-    int dirVersion = -1;
-    DeserializeFromFile(dirVersionPath, dirVersion);
-    if (dirVersion != p_Version)
-    {
-      Util::RmDir(p_Dir);
-      Util::MkDir(p_Dir);
-      SerializeToFile(dirVersionPath, p_Version);
-    }
-  }
-  else
-  {
-    Util::MkDir(p_Dir);
-    SerializeToFile(dirVersionPath, p_Version);
-  }
-}
-
-std::string Imap::ReadCacheFile(const std::string &p_Path)
-{
-  if (m_CacheEncrypt)
-  {
-    return Crypto::AESDecrypt(Util::ReadFile(p_Path), m_Pass);
-  }
-  else
-  {
-    return Util::ReadFile(p_Path);
-  }
-}
-
-void Imap::WriteCacheFile(const std::string &p_Path, const std::string &p_Str)
-{
-  if (m_CacheEncrypt)
-  {
-    Util::WriteFile(p_Path, Crypto::AESEncrypt(p_Str, m_Pass));
-  }
-  else
-  {
-    Util::WriteFile(p_Path, p_Str);
-  }
-}
-
-void Imap::DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids)
-{
-  const std::vector<std::string>& cacheFiles = Util::ListDir(GetFolderCacheDir(p_Folder));
-  for (auto& cacheFile : cacheFiles)
-  {
-    const std::string& fileName = Util::RemoveFileExt(Util::BaseName(cacheFile));
-    if (Util::IsInteger(fileName))
-    {
-      uint32_t uid = Util::ToInteger(fileName);
-      if (p_Uids.find(uid) == p_Uids.end())
-      {
-        const std::string& filePath = GetFolderCacheDir(p_Folder) + cacheFile;
-        Util::DeleteFile(filePath);
-      }
-    }
-  }
-
-  std::map<uint32_t, uint32_t> flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
-  for (auto flag = flags.begin(); flag != flags.end(); /* increment in loop */)
-  {
-    uint32_t uid = flag->first;
-    if (p_Uids.find(uid) == p_Uids.end())
-    {
-      flag = flags.erase(flag);
-    }
-    else
-    {
-      ++flag;
-    }
-  }
-  WriteCacheFile(GetFolderFlagsCachePath(p_Folder), Serialize(flags));
 }
 
 void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData)
