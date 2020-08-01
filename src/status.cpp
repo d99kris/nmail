@@ -7,6 +7,8 @@
 
 #include "status.h"
 
+#include "loghelp.h"
+
 Status::Status()
 {
 }
@@ -32,81 +34,92 @@ bool Status::IsSet(const Status::Flag& p_Flag)
 
 std::string Status::ToString(bool p_ShowProgress)
 {
+  std::string str;
+  
   if (m_Flags & FlagConnecting)
   {
-    return "Connecting";
+    str = "Connecting";
   }
   else if (m_Flags & FlagFetching)
   {
     if (p_ShowProgress && (m_Progress > 0))
     {
-      return "Fetching " + std::to_string(m_Progress) + "%";
+      str = "Fetching " + std::to_string(m_Progress) + "%";
     }
     else
     {
-      return "Fetching";
+      str = "Fetching";
     }
   }
   else if (m_Flags & FlagSending)
   {
-    return "Sending";
+    str = "Sending";
   }
   else if (m_Flags & FlagPrefetching)
   {
     if (p_ShowProgress && (m_Progress > 0))
     {
-      return "Pre-fetching " + std::to_string(m_Progress) + "%";
+      str = "Pre-fetching " + std::to_string(m_Progress) + "%";
     }
     else
     {
-      return "Pre-fetching";
+      str = "Pre-fetching";
     }
   }
   else if (m_Flags & FlagMoving)
   {
-    return "Moving";
+    str = "Moving";
   }
   else if (m_Flags & FlagDeleting)
   {
-    return "Deleting";
+    str = "Deleting";
   }
   else if (m_Flags & FlagUpdatingFlags)
   {
-    return "Updating flags";
+    str = "Updating flags";
   }
   else if (m_Flags & FlagSaving)
   {
-    return "Saving";
+    str = "Saving";
   }
   else if (m_Flags & FlagIndexing)
   {
     if (p_ShowProgress && (m_Progress > 0))
     {
-      return "Indexing " + std::to_string(m_Progress) + "%";
+      str = "Indexing " + std::to_string(m_Progress) + "%";
     }
     else
     {
-      return "Indexing";
+      str = "Indexing";
     }
   }
   else if (m_Flags & FlagIdle)
   {
-    return "Idle";
+    str = "Idle";
   }
   else if (m_Flags & FlagConnected)
   {
-    return "Connected";
+    str = "Connected";
   }
   else if (m_Flags & FlagOffline)
   {
-    return "Offline";
+    str = "Offline";
   }
   else if (m_Flags & FlagNone)
   {
-    return "No status";
+    str = "No status";
   }
   else
   {
-    return "inv status";
+    str = "inv status";
   }
+
+  static std::string lastStr;
+  if (str != lastStr)
+  {
+    LOG_DEBUG("new status: %s", str.c_str());
+    lastStr = str;
+  }
+
+  return str;
 }
