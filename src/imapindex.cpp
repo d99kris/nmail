@@ -491,7 +491,7 @@ void ImapIndex::CleanupCacheTempDir()
   Util::RmDir(GetCacheIndexDbTempDir());
 }
 
-void ImapIndex::SetStatus(uint32_t p_Flags, uint32_t p_Progress /* = 0 */)
+void ImapIndex::SetStatus(uint32_t p_Flags, int32_t p_Progress /* = -1 */)
 {
   StatusUpdate statusUpdate;
   statusUpdate.SetFlags = p_Flags;

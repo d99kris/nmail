@@ -350,7 +350,7 @@ void ImapManager::Process()
         ClearStatus(Status::FlagFetching);        
         m_QueueMutex.lock();
 
-        if (!m_PrefetchRequests.empty() && m_Running)
+        while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() && m_Running)
         {
           const Request request = m_PrefetchRequests.begin()->second.front();
           m_PrefetchRequests.begin()->second.pop_front();
@@ -626,7 +626,7 @@ void ImapManager::PerformSearch(const SearchQuery& p_SearchQuery)
   }
 }
 
-void ImapManager::SetStatus(uint32_t p_Flags, uint32_t p_Progress /* = 0 */)
+void ImapManager::SetStatus(uint32_t p_Flags, int32_t p_Progress /* = -1 */)
 {
   StatusUpdate statusUpdate;
   statusUpdate.SetFlags = p_Flags;

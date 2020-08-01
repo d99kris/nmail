@@ -15,14 +15,17 @@ Status::~Status()
 {
 }
 
-void Status::Update(const StatusUpdate &p_StatusUpdate)
+void Status::Update(const StatusUpdate& p_StatusUpdate)
 {
   m_Flags |= p_StatusUpdate.SetFlags;
   m_Flags &= ~p_StatusUpdate.ClearFlags;
-  m_Progress = p_StatusUpdate.Progress;
+  if (p_StatusUpdate.Progress != -1)
+  {
+    m_Progress = p_StatusUpdate.Progress;
+  }
 }
 
-bool Status::IsSet(const Status::Flag &p_Flag)
+bool Status::IsSet(const Status::Flag& p_Flag)
 {
   return m_Flags & p_Flag;
 }

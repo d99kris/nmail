@@ -122,7 +122,7 @@ private:
   bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch);
   bool PerformAction(const Action& p_Action);
   void PerformSearch(const SearchQuery& p_SearchQuery);
-  void SetStatus(uint32_t p_Flags, uint32_t p_Progress = 0);
+  void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
 
 private:

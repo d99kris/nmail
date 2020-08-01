@@ -14,7 +14,7 @@ struct StatusUpdate
 {
   uint32_t SetFlags = 0;
   uint32_t ClearFlags = 0;
-  uint32_t Progress = 0;
+  int32_t Progress = -1;
 };
 
 class Status
@@ -47,5 +47,5 @@ public:
   
 private:
   uint32_t m_Flags = 0;
-  uint32_t m_Progress = 0;
+  int32_t m_Progress = 0;
 };
