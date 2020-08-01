@@ -292,7 +292,7 @@ void ImapManager::Process()
     FD_ZERO(&fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
-    struct timeval tv = {60, 0};
+    struct timeval tv = {15, 0};
     int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
     bool rv = true;
 
