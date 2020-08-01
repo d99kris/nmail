@@ -316,6 +316,9 @@ setting. The following levels are supported:
     2 = pre-fetching of all messages in current folder view (default)
     3 = pre-fetching of all messages in all folders, i.e. full sync
 
+With level 0-2 configured, pre-fetch level 3 - a single full sync - may be
+triggered at run-time by pressing `S` from the message list.
+
 ### save_pass
 
 Specified whether nmail shall store the password(s). Default 1 (enabled).
@@ -510,6 +513,7 @@ file:
     key_save_file=s
     key_search=/
     key_send=KEY_CTRLX
+    key_sync=s
     key_to_select=KEY_CTRLT
     key_toggle_text_html=t
     key_toggle_unread=u

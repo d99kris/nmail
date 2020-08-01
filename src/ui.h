@@ -153,6 +153,7 @@ private:
   std::wstring GetComposeStr(int p_HeaderField);
   void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
   int GetCurrentHeaderField();
+  void StartSync();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -261,6 +262,7 @@ private:
   int m_KeyRichHeader = 0;
   int m_KeyViewHtml = 0;
   int m_KeySearch = 0;
+  int m_KeySync = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;

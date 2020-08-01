@@ -90,6 +90,7 @@ void Ui::Init()
     {"key_rich_header", "KEY_CTRLR"},
     {"key_view_html", "KEY_CTRLV"},
     {"key_search", "/"},
+    {"key_sync", "s"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -126,6 +127,7 @@ void Ui::Init()
   m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
   m_KeyViewHtml = Util::GetKeyCode(m_Config.Get("key_view_html"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
+  m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
@@ -411,6 +413,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExport), "Export",
       GetKeyDisplay(m_KeyImport), "Import",
       GetKeyDisplay(m_KeySearch), "Search",
+      GetKeyDisplay(m_KeySync), "FullSync",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
@@ -1977,6 +1980,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeySearch)
   {
     SearchMessage();
+  }
+  else if (p_Key == m_KeySync)
+  {
+    StartSync();
   }
   else
   {
@@ -4282,4 +4289,31 @@ int Ui::GetCurrentHeaderField()
   }
 
   return HeaderAll;
+}
+
+void Ui::StartSync()
+{
+  if (IsConnected())
+  {
+    if (m_PrefetchLevel < PrefetchLevelFullSync)
+    {
+      LOG_DEBUG("manual full sync started");
+      m_PrefetchLevel = PrefetchLevelFullSync;
+
+      ImapManager::Request request;
+      request.m_PrefetchLevel = PrefetchLevelFullSync;
+      request.m_GetFolders = true;
+      LOG_DEBUG("prefetch request folders");
+      m_HasPrefetchRequestedFolders = true;
+      m_ImapManager->PrefetchRequest(request);
+    }
+    else
+    {
+      SetDialogMessage("Sync already enabled", true /* p_Warn */);
+    }
+  }
+  else
+  {
+    SetDialogMessage("Cannot sync while offline", true /* p_Warn */);
+  }
 }
