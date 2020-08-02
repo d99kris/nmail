@@ -188,9 +188,12 @@ private:
   std::map<std::string, bool> m_HasPrefetchRequestedUids;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedHeaders;
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
+
+  std::map<std::string, std::set<uint32_t>> m_PrefetchedFlags;
+  std::map<std::string, std::set<uint32_t>> m_RequestedFlags;
+
   std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;
   std::map<std::string, std::set<uint32_t>> m_RequestedBodys;
-  std::map<std::string, std::set<uint32_t>> m_RequestedFlags;
 
   std::vector<std::string> m_Addresses;
 

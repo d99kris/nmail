@@ -3044,37 +3044,129 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
     if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
     {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      const int maxMessagesFetchRequest = 5;
-      const std::set<uint32_t>& fetchHeaderUids = p_Response.m_Uids;
-      if (!fetchHeaderUids.empty())
+      const std::string& folder = p_Response.m_Folder;
+
+      std::set<uint32_t> prefetchHeaders;  
+      std::set<uint32_t> prefetchFlags;  
+      std::set<uint32_t> prefetchBodys;
+
       {
-        std::set<uint32_t> subsetFetchHeaderUids;
-        for (auto it = fetchHeaderUids.begin(); it != fetchHeaderUids.end(); ++it)
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        std::map<uint32_t, Header>& headers = m_Headers[folder];
+        std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[folder];
+        std::set<uint32_t>& prefetchedHeaders = m_PrefetchedHeaders[folder];
+
+        std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
+        std::set<uint32_t>& requestedFlags = m_RequestedFlags[folder];
+        std::set<uint32_t>& prefetchedFlags = m_PrefetchedFlags[folder];
+
+        std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+        std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
+        std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[folder];
+
+        for (auto& uid : p_Response.m_Uids)
         {
-          if (!m_Running)
+          if ((headers.find(uid) == headers.end()) &&
+              (requestedHeaders.find(uid) == requestedHeaders.end()) &&
+              (prefetchedHeaders.find(uid) == prefetchedHeaders.end()))
           {
-            break;
+            prefetchHeaders.insert(uid);
+            prefetchedHeaders.insert(uid);
           }
+
+          if ((flags.find(uid) == flags.end()) &&
+              (requestedFlags.find(uid) == requestedFlags.end()) &&
+              (prefetchedFlags.find(uid) == prefetchedFlags.end()))
+          {
+            prefetchFlags.insert(uid);
+            prefetchedFlags.insert(uid);
+          }
+
+          if ((bodys.find(uid) == bodys.end()) &&
+              (requestedBodys.find(uid) == requestedBodys.end()) &&
+              (prefetchedBodys.find(uid) == prefetchedBodys.end()))
+          {
+            prefetchBodys.insert(uid);
+            prefetchedBodys.insert(uid);
+          }
+        }
+      }
+              
+      const int maxHeadersFetchRequest = 25;
+      if (!prefetchHeaders.empty())
+      {
+        std::set<uint32_t> subsetPrefetchHeaders;
+        for (auto it = prefetchHeaders.begin(); it != prefetchHeaders.end(); ++it)
+        {
+          if (!m_Running) break;
           
-          subsetFetchHeaderUids.insert(*it);
-          if ((subsetFetchHeaderUids.size() == maxMessagesFetchRequest) ||
-              (std::next(it) == fetchHeaderUids.end()))
+          subsetPrefetchHeaders.insert(*it);
+          if ((subsetPrefetchHeaders.size() == maxHeadersFetchRequest) ||
+              (std::next(it) == prefetchHeaders.end()))
           {
             ImapManager::Request request;
             request.m_PrefetchLevel = PrefetchLevelFullSync;
-            request.m_Folder = p_Response.m_Folder;;
-            request.m_GetHeaders = subsetFetchHeaderUids;
-            request.m_GetBodys = subsetFetchHeaderUids;
+            request.m_Folder = folder;
+            request.m_GetHeaders = subsetPrefetchHeaders;
 
-            LOG_DEBUG_VAR("prefetch request headers =", subsetFetchHeaderUids);
-            LOG_DEBUG_VAR("prefetch request bodys =", subsetFetchHeaderUids);
+            LOG_DEBUG_VAR("prefetch request headers =", subsetPrefetchHeaders);
             m_ImapManager->PrefetchRequest(request);
         
-            subsetFetchHeaderUids.clear(); 
+            subsetPrefetchHeaders.clear(); 
           }
         }
-      }      
+      }
+
+      const int maxFlagsFetchRequest = 1000;
+      if (!prefetchFlags.empty())
+      {
+        std::set<uint32_t> subsetPrefetchFlags;
+        for (auto it = prefetchFlags.begin(); it != prefetchFlags.end(); ++it)
+        {
+          if (!m_Running) break;
+
+          subsetPrefetchFlags.insert(*it);
+          if ((subsetPrefetchFlags.size() == maxFlagsFetchRequest) ||
+              (std::next(it) == prefetchFlags.end()))
+          {
+            ImapManager::Request request;
+            request.m_PrefetchLevel = PrefetchLevelFullSync;
+            request.m_Folder = folder;
+            request.m_GetFlags = subsetPrefetchFlags;
+    
+            LOG_DEBUG_VAR("prefetch request flags =", subsetPrefetchFlags);
+            m_ImapManager->PrefetchRequest(request);
+        
+            subsetPrefetchFlags.clear(); 
+          }
+        }
+      }
+
+      const int maxBodysFetchRequest = 1; // XXX evaluate
+      if (!prefetchBodys.empty())
+      {
+        std::set<uint32_t> subsetPrefetchBodys;
+        for (auto it = prefetchBodys.begin(); it != prefetchBodys.end(); ++it)
+        {
+          if (!m_Running) break;
+
+          subsetPrefetchBodys.insert(*it);
+          if ((subsetPrefetchBodys.size() == maxBodysFetchRequest) ||
+              (std::next(it) == prefetchBodys.end()))
+          {
+            ImapManager::Request request;
+            request.m_PrefetchLevel = PrefetchLevelFullSync;
+            request.m_Folder = folder;
+            request.m_GetBodys = subsetPrefetchBodys;
+
+            LOG_DEBUG_VAR("prefetch request bodys =", subsetPrefetchBodys);
+            m_ImapManager->PrefetchRequest(request);
+        
+            subsetPrefetchBodys.clear(); 
+          }
+        }
+      }
     }
   }
   
