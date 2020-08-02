@@ -3810,6 +3810,11 @@ void Ui::UpdateIndexFromUid()
   {
     UpdateUidFromIndex(false /* p_UserTriggered */);
   }
+  else
+  {
+    m_CurrentFolderUid.first = m_CurrentFolder;
+    m_CurrentFolderUid.second = m_MessageListCurrentUid[m_CurrentFolder];
+  }
 
   LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
 }
