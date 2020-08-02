@@ -1533,7 +1533,8 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   {
     m_FolderListCurrentIndex = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
+           ((p_Key == KEY_RIGHT) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
   {
     if (m_State == StateGotoFolder)
     {
@@ -1622,7 +1623,8 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   {
     m_AddressListCurrentIndex = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
+           ((p_Key == KEY_RIGHT) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
     std::wstring address;
     const std::string& oldAddress =
@@ -1702,7 +1704,8 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   {
     m_FileListCurrentIndex = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
+           ((p_Key == KEY_RIGHT) && (m_FileListFilterPos == (int)m_FileListFilterStr.size())))
   {
     if (m_FileListCurrentFile.IsDir())
     {
@@ -1824,7 +1827,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     m_MessageListCurrentIndex[m_CurrentFolder] = std::numeric_limits<int>::max();
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
   {
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
@@ -1832,7 +1835,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetState(StateViewMessage);
     }
   }
-  else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack))
+  else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
     if (m_MessageListSearch)
     {
@@ -2035,11 +2038,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     m_MessageViewLineOffset = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack))
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
     SetState(StateViewMessageList);
   }
-  else if (p_Key == m_KeyOpen)
+  else if ((p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
   {
     SetState(StateViewPartList);
   }
@@ -2497,14 +2500,14 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     m_PartListCurrentIndex = std::numeric_limits<int>::max();
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack))
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
     const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
     LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
     Util::CleanupAttachmentsTempDir();
     SetState(StateViewMessage);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen))
+  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
   {
     std::string ext;
     std::string err;
