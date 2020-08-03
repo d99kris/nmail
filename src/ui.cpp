@@ -1842,6 +1842,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_MessageListSearch = false;
       m_CurrentFolder = m_PreviousFolder;
       m_PreviousFolder = "";
+      UpdateIndexFromUid();
     }
     else
     {
@@ -4268,6 +4269,7 @@ void Ui::SearchMessage()
       m_MessageListSearch = false;
       m_CurrentFolder = m_PreviousFolder;
       m_PreviousFolder = "";
+      UpdateIndexFromUid();
     }
   }
 }
