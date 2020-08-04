@@ -317,7 +317,7 @@ setting. The following levels are supported:
     3 = pre-fetching of all messages in all folders, i.e. full sync
 
 With level 0-2 configured, pre-fetch level 3 - a single full sync - may be
-triggered at run-time by pressing `S` from the message list.
+triggered at run-time by pressing `s` from the message list.
 
 ### save_pass
 
@@ -415,7 +415,7 @@ Press `/` in the message list view to search for an email. The search engine
 supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`, `AND`
 and `OR`.
 
-Press `<` to exit search results and go back to current folder message list.
+Press `<` or `Left` to exit search results and go back to current folder message list.
 
 
 Troubleshooting
