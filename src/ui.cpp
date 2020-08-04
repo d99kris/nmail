@@ -4267,8 +4267,12 @@ void Ui::SearchMessage()
     else
     {
       m_MessageListSearch = false;
-      m_CurrentFolder = m_PreviousFolder;
-      m_PreviousFolder = "";
+      if (m_PreviousFolder != "")
+      {
+        m_CurrentFolder = m_PreviousFolder;
+        m_PreviousFolder = "";
+      }
+      
       UpdateIndexFromUid();
     }
   }
