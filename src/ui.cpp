@@ -1736,6 +1736,15 @@ void Ui::ViewFileListKeyHandler(int p_Key)
       SetState(m_LastMessageState);
     }
   }
+  else if ((p_Key == KEY_LEFT) && (m_FileListFilterPos == 0))
+  {
+    m_FileListFilterPos = 0;
+    m_FileListFilterStr.clear();
+    m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
+    m_Files = Util::ListPaths(m_CurrentDir);
+    m_FileListCurrentIndex = 0;
+    m_FileListCurrentFile.m_Name = "";
+  }
   else if (p_Key == KEY_LEFT)
   {
     m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos - 1,
