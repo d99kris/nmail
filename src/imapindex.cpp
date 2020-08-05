@@ -97,9 +97,12 @@ void ImapIndex::EnqueueAddFolder(const std::string& p_Folder)
   std::unique_lock<std::mutex> lock(m_ProcessMutex);
   if (m_AddedFolders.find(p_Folder) == m_AddedFolders.end())
   {
-    m_AddedFolders.insert(p_Folder);
-    m_AddQueue[p_Folder].insert(0); // use uid 0 to indicate all uids
-    m_ProcessCondVar.notify_one();
+    if (Util::Exists(m_ImapCache->GetFolderCacheDir(p_Folder))) // only enqueue folders that are cached
+    {
+      m_AddedFolders.insert(p_Folder);
+      m_AddQueue[p_Folder].insert(0); // use uid 0 to indicate all uids
+      m_ProcessCondVar.notify_one();
+    }
   }
 
   m_QueueSize = m_AddQueue.size() + m_DeleteQueue.size();
