@@ -7,6 +7,8 @@
 
 #include "searchengine.h"
 
+#include "loghelp.h"
+
 SearchEngine::SearchEngine(const std::string& p_DbPath)
   : m_DbPath(p_DbPath)
 {
@@ -57,30 +59,39 @@ void SearchEngine::Commit()
 
 std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max, bool& p_HasMore)
 {
-  Xapian::QueryParser queryParser;
-  queryParser.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
-
-  Xapian::Query query = queryParser.parse_query(p_QueryStr);
-
-  std::lock_guard<std::mutex> DatabaseLock(m_DatabaseMutex);
-  m_Database->reopen();
-  Xapian::Enquire enquire(*m_Database);
-  enquire.set_query(query);
-
   std::vector<std::string> docIds;
-  p_HasMore = false;
-  size_t cnt = 0;
-  Xapian::MSet mset = enquire.get_mset(p_Offset, p_Max + 1);
-  for (Xapian::MSetIterator it = mset.begin(); it != mset.end(); ++it, ++cnt)
-  {      
-    if (cnt >= p_Max)
-    {
-      p_HasMore = true;
-      break;
-    }
 
-    Xapian::Document doc = m_Database->get_document(*it);
-    docIds.push_back(doc.get_data());
+  try
+  {
+    Xapian::QueryParser queryParser;
+    queryParser.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
+
+    Xapian::Query query = queryParser.parse_query(p_QueryStr);
+
+    std::lock_guard<std::mutex> DatabaseLock(m_DatabaseMutex);
+    m_Database->reopen();
+    Xapian::Enquire enquire(*m_Database);
+    enquire.set_query(query);
+
+    p_HasMore = false;
+    size_t cnt = 0;
+    Xapian::MSet mset = enquire.get_mset(p_Offset, p_Max + 1);
+    for (Xapian::MSetIterator it = mset.begin(); it != mset.end(); ++it, ++cnt)
+    {      
+      if (cnt >= p_Max)
+      {
+        p_HasMore = true;
+        break;
+      }
+
+      Xapian::Document doc = m_Database->get_document(*it);
+      docIds.push_back(doc.get_data());
+    }
+  }
+  catch (const Xapian::QueryParserError& queryParserError)
+  {
+    const std::string& msg = queryParserError.get_msg();
+    LOG_WARNING("query parser error \"%s\"", msg.c_str());
   }
 
   return docIds;
