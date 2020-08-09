@@ -274,8 +274,16 @@ void ImapIndex::Process()
     else
     {
       // have lock
-      uint32_t progress = (m_QueueSize > 2) ? (((m_QueueSize - (m_AddQueue.size() + m_DeleteQueue.size())) * 100) / m_QueueSize)
-        : 0;
+      uint32_t progress = 0;
+      if (m_QueueSize > 1)
+      {
+        int32_t completed = (int)m_QueueSize - ((int)m_AddQueue.size() + (int)m_DeleteQueue.size());
+        if (completed > 0)
+        {
+          progress = (completed * 100) / m_QueueSize;
+        }
+      }
+
       SetStatus(Status::FlagIndexing, progress);
       if (!deleteFolder.empty())
       {
