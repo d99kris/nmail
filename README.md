@@ -413,7 +413,8 @@ Email Search
 
 Press `/` in the message list view to search for an email. The search engine
 supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`, `AND`
-and `OR`.
+and `OR`. By default search query words are combined with `AND` unless
+specified.
 
 Press `<` or `Left` to exit search results and go back to current folder message list.
 

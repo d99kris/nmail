@@ -66,6 +66,7 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
   {
     Xapian::QueryParser queryParser;
     queryParser.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
+    queryParser.set_default_op(Xapian::Query::op::OP_AND);
 
     Xapian::Query query = queryParser.parse_query(p_QueryStr);
 
