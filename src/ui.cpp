@@ -4243,7 +4243,7 @@ void Ui::ImportMessage()
 
 void Ui::SearchMessage()
 {
-  std::string query;
+  std::string query = m_MessageListSearch ? m_MessageListSearchQuery : "";
   if (PromptString("Search Emails: ", "Search", query))
   {
     if (!query.empty())
