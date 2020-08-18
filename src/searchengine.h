@@ -20,7 +20,7 @@ public:
   explicit SearchEngine(const std::string& p_DbPath);
   virtual ~SearchEngine();
   
-  void Index(const std::string& p_DocId, const std::vector<std::string>& p_Strs);
+  void Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs);
   void Remove(const std::string& p_DocId);
   void Commit();
 
@@ -37,4 +37,5 @@ private:
   std::unique_ptr<Xapian::WritableDatabase> m_WritableDatabase;  
   std::mutex m_DatabaseMutex;
   std::mutex m_WritableDatabaseMutex;
+  const Xapian::valueno m_DateSlot = 1;
 };

@@ -20,7 +20,7 @@ SearchEngine::~SearchEngine()
 {
 }
   
-void SearchEngine::Index(const std::string& p_DocId, const std::vector<std::string>& p_Strs)
+void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs)
 {
   Xapian::TermGenerator termGenerator;
   termGenerator.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
@@ -40,6 +40,7 @@ void SearchEngine::Index(const std::string& p_DocId, const std::vector<std::stri
 
   doc.set_data(p_DocId);
   doc.add_boolean_term(p_DocId);
+  doc.add_value(m_DateSlot, Xapian::sortable_serialise((double)p_Time));
 
   std::lock_guard<std::mutex> writableDatabaseLock(m_WritableDatabaseMutex);
   m_WritableDatabase->replace_document(p_DocId, doc);
@@ -72,6 +73,7 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
     m_Database->reopen();
     Xapian::Enquire enquire(*m_Database);
     enquire.set_query(query);
+    enquire.set_sort_by_value(m_DateSlot, true /* reverse */);
 
     p_HasMore = false;
     size_t cnt = 0;

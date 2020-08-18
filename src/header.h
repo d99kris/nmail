@@ -18,6 +18,7 @@ public:
   std::string GetData() const;
   std::string GetDateTime();
   std::string GetDateOrTime(const std::string& p_CurrentDate);
+  time_t GetTimeStamp();
   std::string GetFrom();
   std::string GetShortFrom();
   std::string GetTo();
@@ -46,6 +47,7 @@ private:
   std::string m_Date;
   std::string m_DateTime;
   std::string m_Time;
+  time_t m_TimeStamp;
   std::string m_From;
   std::string m_ShortFrom;
   std::string m_To;

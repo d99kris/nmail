@@ -404,9 +404,10 @@ void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
         const std::string& addresses = Util::Join(ToVector(header.GetAddresses()), ", ");
         const std::string& subject = header.GetSubject();
         const std::string& bodyText = body.GetTextPlain();
+        const int64_t timeStamp = header.GetTimeStamp();
 
         std::vector<std::string> docStrs({addresses, subject, bodyText});
-        m_SearchEngine->Index(docId, docStrs);
+        m_SearchEngine->Index(docId, timeStamp, docStrs);
 
         // @todo: decouple addressbook population from cache index
         AddressBook::Add(header.GetUniqueId(), header.GetAddresses());
@@ -485,7 +486,7 @@ std::string ImapIndex::GetCacheIndexDbTempDir()
 
 void ImapIndex::InitCacheIndexDir()
 {
-  static const int version = 1;
+  static const int version = 3; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
   Util::MkDir(GetCacheIndexDbDir());

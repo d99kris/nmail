@@ -40,6 +40,12 @@ std::string Header::GetDateOrTime(const std::string& p_CurrentDate)
   return (m_Date == p_CurrentDate) ? m_Time : m_Date;
 }
 
+time_t Header::GetTimeStamp()
+{
+  Parse();
+  return m_TimeStamp;
+}
+
 std::string Header::GetFrom()
 {
   Parse();
@@ -143,6 +149,7 @@ void Header::Parse()
                     m_Date = sentdate;
                     m_DateTime = sentdate + std::string(" ") + senttime;
                     m_Time = senttime;
+                    m_TimeStamp = rawtime;
                   }
                   break;
 

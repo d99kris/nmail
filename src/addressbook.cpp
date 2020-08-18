@@ -142,7 +142,7 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 
 void AddressBook::InitCacheDir()
 {
-  static const int version = 2; // bumped for sqlite storage
+  static const int version = 3; // note: keep synchronized with ImapIndex (for now)
   const std::string cacheDir = GetAddressBookCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_AddressBookEncrypt);
 }
