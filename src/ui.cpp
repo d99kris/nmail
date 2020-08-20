@@ -62,6 +62,7 @@ void Ui::Init()
     {"postpone_without_confirm", "0"},
     {"show_embedded_images", "1"},
     {"show_rich_header", "0"},
+    {"markdown_html_compose", "0"},
     {"key_prev_msg", "p"},
     {"key_next_msg", "n"},
     {"key_reply", "r"},
@@ -91,6 +92,7 @@ void Ui::Init()
     {"key_view_html", "KEY_CTRLV"},
     {"key_search", "/"},
     {"key_sync", "s"},
+    {"key_toggle_markdown_compose", "KEY_CTRLN"},
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -99,6 +101,7 @@ void Ui::Init()
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
+  m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_KeyPrevMsg = Util::GetKeyCode(m_Config.Get("key_prev_msg"));
   m_KeyNextMsg = Util::GetKeyCode(m_Config.Get("key_next_msg"));
   m_KeyReply = Util::GetKeyCode(m_Config.Get("key_reply"));
@@ -128,6 +131,7 @@ void Ui::Init()
   m_KeyViewHtml = Util::GetKeyCode(m_Config.Get("key_view_html"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
+  m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
@@ -465,6 +469,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyDeleteLine), "DelLine",
       GetKeyDisplay(m_KeyExternalEditor), "ExtEdit",
       GetKeyDisplay(m_KeyRichHeader), "RichHdr",
+      GetKeyDisplay(m_KeyToggleMarkdownCompose), "TgMkDown",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -2455,10 +2460,21 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeyViewHtml)
     {
-      std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
-      std::string htmlStr = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
-      Util::WriteFile(tempFilePath, htmlStr);
-      Util::OpenInExtViewer(tempFilePath);
+      if (m_CurrentMarkdownHtmlCompose)
+      {
+        std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
+        std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+        Util::WriteFile(tempFilePath, htmlStr);
+        Util::OpenInExtViewer(tempFilePath);
+      }
+      else
+      {
+        SetDialogMessage("Markdown compose is not enabled");
+      }
+    }
+    else if (p_Key == m_KeyToggleMarkdownCompose)
+    {
+      m_CurrentMarkdownHtmlCompose = !m_CurrentMarkdownHtmlCompose;
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -2693,6 +2709,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeDraftUid = 0;
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
+    m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -2773,6 +2790,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessagePos = 0;
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
+    m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -2841,6 +2859,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessagePos = 0;
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
+    m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -3519,9 +3538,9 @@ std::string Ui::GetStateStr()
       }
     case StateGotoFolder: return "Goto Folder";
     case StateMoveToFolder: return "Move To Folder";
-    case StateComposeMessage: return "Compose";
-    case StateReplyMessage: return "Reply";
-    case StateForwardMessage: return "Forward";
+    case StateComposeMessage: return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateReplyMessage: return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateForwardMessage: return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateAddressList: return "Address Book";
     case StateFileList: return "File Selection";
     case StateViewPartList: return "Message Parts";
@@ -3545,7 +3564,7 @@ void Ui::SendComposedMessage()
   smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
   smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
                                                        : m_ComposeMessageStr);
-  smtpAction.m_HtmlBody = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
+  smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
   smtpAction.m_RefMsgId = m_ComposeHeaderRef;
   smtpAction.m_ComposeTempDirectory = m_ComposeTempDirectory;
   smtpAction.m_ComposeDraftUid = m_ComposeDraftUid;
@@ -3566,7 +3585,7 @@ void Ui::UploadDraftMessage()
     smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
     smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
                                                          : m_ComposeMessageStr);
-    smtpAction.m_HtmlBody = Util::ConvertTextToHtml(Util::ToString(m_ComposeMessageStr));
+    smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
@@ -4430,4 +4449,11 @@ void Ui::StartSync()
   {
     SetDialogMessage("Cannot sync while offline", true /* p_Warn */);
   }
+}
+
+std::string Ui::MakeHtmlPart(const std::string& p_Text)
+{
+  if (!m_CurrentMarkdownHtmlCompose) return std::string();
+
+  return Util::ConvertTextToHtml(p_Text);
 }

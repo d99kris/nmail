@@ -16,7 +16,7 @@ Features
 - Local cache using AES256-encrypted custom Maildir format
 - Multi-threaded (email fetch and send done in background)
 - Address book auto-generated based on email messages
-- Viewing HTML emails
+- Viewing HTML emails (converted to text in terminal, or in external web browser)
 - Opening/viewing attachments in external program
 - Simple setup wizard for Gmail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
@@ -204,7 +204,6 @@ Full example of a config file `~/.nmail/main.conf`:
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
-    markdown_html_compose=0
     name=Firstname Lastname
     pager_cmd=
     prefetch_level=2
@@ -289,12 +288,6 @@ IMAP port. Required for fetching emails.
 
 IMAP inbox folder name. Required for nmail to open the proper default folder.
 
-### markdown_html_compose
-
-Controls whether nmail shall generate a plain/html message part based on
-processing the composed message as Markdown, when sending sending emails from
-nmail. Disabled by default.
-
 ### name
 
 Real name of sender. Recommended when sending emails.
@@ -321,7 +314,7 @@ triggered at run-time by pressing `s` from the message list.
 
 ### save_pass
 
-Specified whether nmail shall store the password(s). Default 1 (enabled).
+Specified whether nmail shall store the password(s) (default enabled).
 
 ### sent
 
@@ -347,7 +340,7 @@ used.
 ### text_to_html_cmd
 
 This field allows overriding which external program to use for converting
-composed plain text markdown message to corresponding plain/html part. If not
+composed plain text markdown message to corresponding text/html part. If not
 specified, nmail will use the program `markdown` if present on the system.
 
 ### trash
@@ -387,13 +380,15 @@ The built-in email compose editor in nmail supports the following:
 
     Arrow keys     move the cursor
     Page Up/Down   move the cursor page up / down
-    Ctrl-K         delete current line
     Ctrl-C         cancel message
-    Ctrl-O         postpone message
-    Ctrl-X         send message
     Ctrl-E         edit message in external editor
-    Ctrl-T         to select, from address book / from file dialog
+    Ctrl-K         delete current line
+    Ctrl-N         toggle markdown editing
+    Ctrl-O         postpone message
     Ctrl-R         toggle rich headers (bcc)
+    Ctrl-T         to select, from address book / from file dialog
+    Ctrl-V         preview html part (generated from markdown to html conversion)
+    Ctrl-X         send message
     Backspace      backspace
     Delete         delete
     Enter          new line
@@ -411,10 +406,11 @@ Attachment paths may be local (just filename) or absolute (full path).
 Email Search
 ============
 
-Press `/` in the message list view to search for an email. The search engine
-supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`, `AND`
-and `OR`. By default search query words are combined with `AND` unless
-specified.
+Press `/` in the message list view to search the local cache for an email. The
+local cache can be fully syncronized with server by pressing `s`. The search
+engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
+`AND` and `OR`. By default search query words are combined with `AND` unless
+specified. Results are sorted by email timestamp.
 
 Press `<` or `Left` to exit search results and go back to current folder message list.
 
@@ -516,9 +512,11 @@ file:
     key_send=KEY_CTRLX
     key_sync=s
     key_to_select=KEY_CTRLT
+    key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t
     key_toggle_unread=u
     key_view_html=KEY_CTRLV
+    markdown_html_compose=0
     new_msg_bell=1
     persist_folder_filter=1
     plain_text=1
@@ -528,6 +526,74 @@ file:
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
+
+### cancel_without_confirm
+
+Allow canceling email compose without confirmation prompt (default disabled).
+
+### compose_hardwrap
+
+Hard-wrap composed emails at terminal width (default disabled).
+
+### help_enabled
+
+Show supported keyboard shortcuts at bottom of screen (default enabled).
+
+### key_
+
+Keyboard bindings for various functions (default see above).
+
+### markdown_html_compose
+
+Default value for each new email, whether nmail shall enable markdown HTML
+compose. I.e. whether nmail shall generate a text/html message part based on
+processing the composed message as Markdown, when sending sending emails from
+nmail. This can be overridden on a per-email basis by pressing CTRL-N when
+editing an email (default disabled).
+
+### new_msg_bell
+
+Indicate new messages with terminal bell (default enabled).
+
+### persist_folder_filter
+
+Determines whether to persist move-to-folder list filter (default enabled).
+
+### plain_text
+
+Determines whether showing plain text (vs. html converted to text) is
+preferred. If the preferred email part is not present, nmail automatically
+attempts to show the other. This option can be re-configured at run-time
+by pressing `t` when viewing an email (default enabled).
+
+### postpone_without_confirm
+
+Allow postponing email compose without confirmation prompt (default disabled).
+
+### quit_without_confirm
+
+Allow exiting nmail without confirmation prompt (default enabled).
+
+### send_without_confirm
+
+Allow sending email during compose without confirmation prompt (default disabled).
+
+### show_embedded_images
+
+Determines whether to show embedded images in text/html part when viewing it using
+external viewer; press right arrow when viewing a message to go to parts view, and
+then select the text/html part and press right arrow again (default enabled).
+
+### show_progress
+
+Determines whether nmail shall show a progress indication (in percentage) when
+fetching emails (default enabled).
+
+### show_rich_header
+
+Determines whether to show rich headers (bcc field) during email compose. This
+option can be re-configured in run-time by pressing `CTRL-R` when composing
+an email (default disabled).
 
 
 Email Service Providers

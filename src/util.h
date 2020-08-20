@@ -148,7 +148,6 @@ public:
   static void SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd);
   static std::string GetDefaultTextToHtmlConvertCmd();
   static std::string ConvertTextToHtml(const std::string& p_Text);
-  static void SetComposeGenerateHtml(bool p_Enable);
   static std::string GetExtViewerCmd();
   static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
   static std::string GetDefaultExtViewerCmd();
@@ -230,7 +229,6 @@ private:
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;
-  static bool m_ComposeGenerateHtml;
   static int m_OrgStdErr;
   static int m_NewStdErr;
 };

@@ -137,7 +137,6 @@ int main(int argc, char* argv[])
     {"verbose_logging", "0"},
     {"pager_cmd", ""},
     {"editor_cmd", ""},
-    {"markdown_html_compose", "0"},
     {"folders_exclude", ""},
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
@@ -195,7 +194,6 @@ int main(int argc, char* argv[])
   Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
-  Util::SetComposeGenerateHtml(mainConfig->Get("markdown_html_compose") == "1");
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
 
   // Set logging verbosity level

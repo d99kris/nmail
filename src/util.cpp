@@ -45,7 +45,6 @@ std::string Util::m_ExtViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
-bool Util::m_ComposeGenerateHtml = false;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 
@@ -365,8 +364,6 @@ std::string Util::GetDefaultTextToHtmlConvertCmd()
 
 std::string Util::ConvertTextToHtml(const std::string& p_Text)
 {
-  if (!m_ComposeGenerateHtml) return std::string();
-
   std::string text = p_Text;
   ReplaceString(text, "\n", "  \n"); // prepend line-breaks with double spaces to enforce them
   const std::string& tempPath = GetTempFilename(".md");
@@ -377,11 +374,6 @@ std::string Util::ConvertTextToHtml(const std::string& p_Text)
   Util::DeleteFile(tempPath);
 
   return htmlText;
-}
-
-void Util::SetComposeGenerateHtml(bool p_Enable)
-{
-  m_ComposeGenerateHtml = p_Enable;
 }
 
 std::string Util::GetExtViewerCmd()

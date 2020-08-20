@@ -154,6 +154,7 @@ private:
   void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
   int GetCurrentHeaderField();
   void StartSync();
+  std::string MakeHtmlPart(const std::string& p_Text);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -228,7 +229,9 @@ private:
   int m_MessageViewLineOffset = 0;
   bool m_PersistFolderFilter = true;
   bool m_Plaintext = true;
-  
+  bool m_MarkdownHtmlCompose = false;
+  bool m_CurrentMarkdownHtmlCompose = false;
+
   int m_FolderListCurrentIndex = 0;
   std::string m_FolderListCurrentFolder;
 
@@ -266,6 +269,7 @@ private:
   int m_KeyViewHtml = 0;
   int m_KeySearch = 0;
   int m_KeySync = 0;
+  int m_KeyToggleMarkdownCompose = 0;
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
