@@ -53,6 +53,7 @@ void Ui::Init()
     {"compose_hardwrap", "0"},
     {"help_enabled", "1"},
     {"persist_folder_filter", "1"},
+    {"persist_search_query", "0"},
     {"plain_text", "1"},
     {"show_progress", "1"},
     {"new_msg_bell", "1"},
@@ -100,6 +101,7 @@ void Ui::Init()
   m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
+  m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_KeyPrevMsg = Util::GetKeyCode(m_Config.Get("key_prev_msg"));
@@ -4262,7 +4264,7 @@ void Ui::ImportMessage()
 
 void Ui::SearchMessage()
 {
-  std::string query = m_MessageListSearch ? m_MessageListSearchQuery : "";
+  std::string query = (m_MessageListSearch && m_PersistSearchQuery) ? m_MessageListSearchQuery : "";
   if (PromptString("Search Emails: ", "Search", query))
   {
     if (!query.empty())

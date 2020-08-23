@@ -228,6 +228,7 @@ private:
   
   int m_MessageViewLineOffset = 0;
   bool m_PersistFolderFilter = true;
+  bool m_PersistSearchQuery = false;
   bool m_Plaintext = true;
   bool m_MarkdownHtmlCompose = false;
   bool m_CurrentMarkdownHtmlCompose = false;

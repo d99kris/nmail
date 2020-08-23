@@ -519,6 +519,7 @@ file:
     markdown_html_compose=0
     new_msg_bell=1
     persist_folder_filter=1
+    persist_search_query=0
     plain_text=1
     postpone_without_confirm=0
     quit_without_confirm=1
@@ -558,6 +559,11 @@ Indicate new messages with terminal bell (default enabled).
 ### persist_folder_filter
 
 Determines whether to persist move-to-folder list filter (default enabled).
+
+### persist_search_query
+
+Controls whether to start with previous search query when performing repeated
+search queries (default disabled).
 
 ### plain_text
 
