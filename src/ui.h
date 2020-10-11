@@ -277,6 +277,7 @@ private:
   bool m_SendWithoutConfirm = false;
   bool m_CancelWithoutConfirm = false;
   bool m_PostponeWithoutConfirm = false;
+  bool m_DeleteWithoutConfirm = false;
   bool m_ShowEmbeddedImages = true;
   bool m_ShowRichHeader = false;
 

@@ -485,6 +485,7 @@ file:
 
     cancel_without_confirm=0
     compose_hardwrap=0
+    delete_without_confirm=0
     help_enabled=1
     key_back=,
     key_cancel=KEY_CTRLC
@@ -535,6 +536,11 @@ Allow canceling email compose without confirmation prompt (default disabled).
 ### compose_hardwrap
 
 Hard-wrap composed emails at terminal width (default disabled).
+
+### delete_without_confirm
+
+Allow deleting emails (moving to trash folder) without confirmation
+prompt (default disabled).
 
 ### help_enabled
 

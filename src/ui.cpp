@@ -61,6 +61,7 @@ void Ui::Init()
     {"send_without_confirm", "0"},
     {"cancel_without_confirm", "0"},
     {"postpone_without_confirm", "0"},
+    {"delete_without_confirm", "0"},
     {"show_embedded_images", "1"},
     {"show_rich_header", "0"},
     {"markdown_html_compose", "0"},
@@ -140,6 +141,7 @@ void Ui::Init()
   m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
   m_CancelWithoutConfirm = m_Config.Get("cancel_without_confirm") == "1";
   m_PostponeWithoutConfirm = m_Config.Get("postpone_without_confirm") == "1";
+  m_DeleteWithoutConfirm = m_Config.Get("delete_without_confirm") == "1";
   m_ShowEmbeddedImages = m_Config.Get("show_embedded_images") == "1";
   m_ShowRichHeader = m_Config.Get("show_rich_header") == "1";
   
@@ -3620,20 +3622,23 @@ bool Ui::DeleteMessage()
 
     if (folder != m_TrashFolder)
     {
-      MoveMessage(uid, folder, m_TrashFolder);
-
-      m_MessageViewLineOffset = 0;
-      UpdateUidFromIndex(true /* p_UserTriggered */);    
-
-      bool isMsgDateUidsEmpty = false;
+      if (m_DeleteWithoutConfirm || Ui::PromptYesNo("Delete message (y/n)?"))
       {
-        std::lock_guard<std::mutex> lock(m_Mutex);
-        isMsgDateUidsEmpty = m_MsgDateUids[folder].empty();
-      }
+        MoveMessage(uid, folder, m_TrashFolder);
 
-      if (isMsgDateUidsEmpty)
-      {
-        SetState(StateViewMessageList);
+        m_MessageViewLineOffset = 0;
+        UpdateUidFromIndex(true /* p_UserTriggered */);    
+
+        bool isMsgDateUidsEmpty = false;
+        {
+          std::lock_guard<std::mutex> lock(m_Mutex);
+          isMsgDateUidsEmpty = m_MsgDateUids[folder].empty();
+        }
+
+        if (isMsgDateUidsEmpty)
+        {
+          SetState(StateViewMessageList);
+        }
       }
     }
     else
