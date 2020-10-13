@@ -162,7 +162,7 @@ void Ui::Cleanup()
 void Ui::InitWindows()
 {
   getmaxyx(stdscr, m_ScreenHeight, m_ScreenWidth);
-  m_MaxLineLength = m_ScreenWidth - 1;
+  m_MaxLineLength = m_ScreenWidth;
   wclear(stdscr);
   wrefresh(stdscr);
   const int topHeight = 1;
@@ -1260,25 +1260,17 @@ void Ui::DrawComposeMessage()
   
   for (int i = 0; i < (int)headerLines.size(); ++i)
   {
-    if (i != m_ComposeHeaderLine)
+    if (m_IsComposeHeader && (i == m_ComposeHeaderLine) && (cursX >= m_ScreenWidth))
     {
-      std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
+      std::wstring line = headerLines.at(i) +
+        m_ComposeHeaderStr.at(i).substr(cursX - m_ScreenWidth + 1);
       composeLines.push_back(line.substr(0, m_ScreenWidth));
+      cursX = m_ScreenWidth - 1;
     }
     else
     {
-      if (cursX >= m_ScreenWidth)
-      {
-        std::wstring line = headerLines.at(i) +
-          m_ComposeHeaderStr.at(i).substr(cursX - m_ScreenWidth + 1);
-        composeLines.push_back(line.substr(0, m_ScreenWidth));
-        cursX = m_ScreenWidth - 1;
-      }
-      else
-      {
-        std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
-        composeLines.push_back(line.substr(0, m_ScreenWidth));
-      }
+      std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
+      composeLines.push_back(line.substr(0, m_ScreenWidth));
     }
   }
 
@@ -3178,7 +3170,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         }
       }
 
-      const int maxBodysFetchRequest = 1; // XXX evaluate
+      const int maxBodysFetchRequest = 1;
       if (!prefetchBodys.empty())
       {
         std::set<uint32_t> subsetPrefetchBodys;
@@ -3918,21 +3910,20 @@ void Ui::ComposeMessagePrevLine()
 {
   if (m_ComposeMessageWrapLine > 0)
   {
+    int stepsBack = 0;
     if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() >
         m_ComposeMessageWrapPos)
     {
-      int stepsBack = m_ComposeMessageWrapPos + 1 +
-        (m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() -
-         m_ComposeMessageWrapPos);
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
-                                        (int)m_ComposeMessageStr.size());
+      stepsBack = m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() + 1;
     }
     else
     {
-      int stepsBack = m_ComposeMessageWrapPos + 1;
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
-                                        (int)m_ComposeMessageStr.size());
+      stepsBack = m_ComposeMessageWrapPos + 1;
     }
+
+    stepsBack = std::min(stepsBack, m_MaxLineLength);
+    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
+                                      (int)m_ComposeMessageStr.size());
   }
   else
   {
@@ -3955,6 +3946,8 @@ void Ui::ComposeMessageNextLine()
     {
       stepsForward += m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
     }
+
+    stepsForward = std::min(stepsForward, m_MaxLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
                                       (int)m_ComposeMessageStr.size());
   }
@@ -3962,6 +3955,8 @@ void Ui::ComposeMessageNextLine()
   {
     int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
       m_ComposeMessageWrapPos;
+
+    stepsForward = std::min(stepsForward, m_MaxLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
                                       (int)m_ComposeMessageStr.size());
   }

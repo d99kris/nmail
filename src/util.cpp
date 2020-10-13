@@ -799,13 +799,16 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                          bool p_WrapQuoteLines,
-                                         int p_Pos, int &p_WrapLine, int &p_WrapPos)
+                                         int p_Pos, int& p_WrapLine, int& p_WrapPos)
 {
   std::wostringstream wrapped;
   std::vector<std::wstring> lines;
 
   p_WrapLine = 0;
   p_WrapPos = 0;
+
+  const unsigned wrapLineLength = p_LineLength - 1; // lines with spaces allowed to width - 1
+  const unsigned overflowLineLength = p_LineLength; // overflowing/long lines allowed to full width
 
   {
     std::wstring line;
@@ -815,10 +818,10 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
       std::wstring linePart = line;
       while (true)
       {
-        if ((linePart.size() >= p_LineLength) &&
+        if ((linePart.size() >= wrapLineLength) &&
             (p_WrapQuoteLines || (linePart.rfind(L">", 0) != 0)))
         {
-          size_t spacePos = linePart.rfind(L' ', p_LineLength);
+          size_t spacePos = linePart.rfind(L' ', wrapLineLength);
           if (spacePos != std::wstring::npos)
           {
             lines.push_back(linePart.substr(0, spacePos));
@@ -833,10 +836,10 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
           }
           else
           {
-            lines.push_back(linePart.substr(0, p_LineLength));
-            if (linePart.size() > p_LineLength)
+            lines.push_back(linePart.substr(0, overflowLineLength));
+            if (linePart.size() > overflowLineLength)
             {
-              linePart = linePart.substr(p_LineLength);
+              linePart = linePart.substr(overflowLineLength);
             }
             else
             {
@@ -858,7 +861,7 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
   {
     if (p_Pos > 0)
     {
-      int lineLength = line.size() + 1;
+      int lineLength = std::min((unsigned)line.size() + 1, overflowLineLength);
       if (lineLength <= p_Pos)
       {
         p_Pos -= lineLength;
