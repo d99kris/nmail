@@ -64,6 +64,12 @@ std::string Header::GetTo()
   return m_To;
 }
 
+std::string Header::GetShortTo()
+{
+  Parse();
+  return m_ShortTo;
+}
+
 std::string Header::GetCc()
 {
   Parse();
@@ -165,6 +171,8 @@ void Header::Parse()
                   addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_To = Util::Join(addrs, ", ");
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list, true));
+                  m_ShortTo = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_CC:
@@ -219,7 +227,8 @@ std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list *p_Ma
   return strs;
 }
 
-std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_AddrList)
+std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_AddrList,
+                                                      const bool p_Short)
 {
   std::vector<std::string> strs;
   for (clistiter* it = clist_begin(p_AddrList->ad_list); it != NULL; it = clist_next(it))
@@ -229,11 +238,11 @@ std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_Ad
     switch (addr->ad_type)
     {
       case MAILIMF_ADDRESS_GROUP:
-        strs.push_back(GroupToString(addr->ad_data.ad_group));
+        strs.push_back(GroupToString(addr->ad_data.ad_group, p_Short));
         break;
 
       case MAILIMF_ADDRESS_MAILBOX:
-        strs.push_back(MailboxToString(addr->ad_data.ad_mailbox));
+        strs.push_back(MailboxToString(addr->ad_data.ad_mailbox, p_Short));
         break;
 
       default:
@@ -274,7 +283,7 @@ std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Sho
   return str;
 }
 
-std::string Header::GroupToString(mailimf_group *p_Group)
+std::string Header::GroupToString(mailimf_group *p_Group, const bool p_Short)
 {
   std::string str;
   str += std::string(p_Group->grp_display_name) + std::string(": ");
@@ -283,7 +292,7 @@ std::string Header::GroupToString(mailimf_group *p_Group)
        it = clist_next(it))
   {
     struct mailimf_mailbox* mb = (struct mailimf_mailbox*)clist_content(it);
-    str += MailboxToString(mb);
+    str += MailboxToString(mb, p_Short);
   }
 
   str += std::string("; ");

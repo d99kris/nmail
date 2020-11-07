@@ -861,8 +861,15 @@ void Ui::DrawMessageList()
       {
         Header& header = headers.at(uid);
         shortDate = header.GetDateOrTime(currentDate);
-        shortFrom = header.GetShortFrom();
         subject = header.GetSubject();
+        if (m_CurrentFolder == m_SentFolder)
+        {
+          shortFrom = header.GetShortTo();
+        }
+        else
+        {
+          shortFrom = header.GetShortFrom();
+        }
       }
 
       seenFlag = Util::TrimPadString(seenFlag, 1);

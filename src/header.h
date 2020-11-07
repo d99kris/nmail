@@ -22,6 +22,7 @@ public:
   std::string GetFrom();
   std::string GetShortFrom();
   std::string GetTo();
+  std::string GetShortTo();
   std::string GetCc();
   std::string GetReplyTo();
   std::string GetSubject();
@@ -35,10 +36,12 @@ private:
   void Parse();
   std::vector<std::string> MailboxListToStrings(struct mailimf_mailbox_list* p_MailboxList,
                                                 const bool p_Short = false);
-  std::vector<std::string> AddressListToStrings(struct mailimf_address_list* p_AddrList);
+  std::vector<std::string> AddressListToStrings(struct mailimf_address_list* p_AddrList,
+                                                const bool p_Short = false);
   std::string MailboxToString(struct mailimf_mailbox* p_Mailbox,
                               const bool p_Short = false);
-  std::string GroupToString(struct mailimf_group* p_Group);
+  std::string GroupToString(struct mailimf_group* p_Group,
+                            const bool p_Short = false);
 
 private:
   std::string m_Data;
@@ -51,6 +54,7 @@ private:
   std::string m_From;
   std::string m_ShortFrom;
   std::string m_To;
+  std::string m_ShortTo;
   std::string m_Cc;
   std::string m_ReplyTo;
   std::string m_Subject;
