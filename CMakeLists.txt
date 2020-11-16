@@ -1,6 +1,7 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "1.98" LANGUAGES CXX)
+project(nmail VERSION "1.99" LANGUAGES CXX C)
+include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
 # Ccache
@@ -93,9 +94,12 @@ target_include_directories(nmail PRIVATE "ext")
 # Compiler flags
 set_target_properties(nmail PROPERTIES COMPILE_FLAGS
                       "-Wall -Wextra -Wpedantic -Wshadow -Wpointer-arith \
-                       -Wcast-qual -Wno-missing-braces -Wswitch-default -Wunreachable-code \
-                       -Wundef -Wuninitialized -Wcast-align")
-target_compile_definitions(nmail PRIVATE PROJECT_VERSION="${PROJECT_VERSION}" LIBETPAN_IOS_DISABLE_SSL=0 WIN32=0)
+                       -Wcast-qual -Wno-missing-braces -Wswitch-default \
+                       -Wunreachable-code -Wundef -Wuninitialized -Wcast-align")
+target_compile_definitions(nmail PRIVATE
+                           PROJECT_VERSION="${PROJECT_VERSION}"
+                           LIBETPAN_IOS_DISABLE_SSL=0
+                           WIN32=0)
 
 # Dependency ncurses
 set(CURSES_NEED_NCURSES TRUE)
@@ -127,6 +131,11 @@ else()
 endif()
 
 include_directories(${LIBETPAN_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr")
+
+CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
+if(FOUND_EXECINFO)
+  target_compile_definitions(nmail PRIVATE HAVE_EXECINFO_H=1)
+endif()
 
 # Linking
 target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3 ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} pthread ${CMAKE_DL_LIBS})

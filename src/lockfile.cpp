@@ -7,6 +7,7 @@
 
 #include "lockfile.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <sys/file.h>

@@ -14,7 +14,9 @@
 
 #include <cxxabi.h>
 #include <dlfcn.h>
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 #include <libgen.h>
 #include <termios.h>
 #include <unistd.h>
@@ -1028,7 +1030,11 @@ void Util::SignalHandler(int p_Signal)
 {
   const std::string& threadLabel = "\nthread " + ThreadRegister::GetName() + "\n";
   void *callstack[64];
+#ifdef HAVE_EXECINFO_H
   int size = backtrace(callstack, sizeof(callstack));
+#else
+  int size = 0;
+#endif
   const std::string& callstackStr = BacktraceSymbolsStr(callstack, size);
 
   if (p_Signal != SIGUSR1)
