@@ -619,7 +619,14 @@ In order to enable IMAP access go to the Gmail web interface - typically
 [mail.google.com](https://mail.google.com) - and navigate to 
 `Settings -> Forwarding and POP/IMAP -> IMAP access` and select: `Enable IMAP`
 
-To enable password-authenticated IMAP access go to
+To enable password-authenticated IMAP access, one must either set up an
+"app password" or enable "less secure app access".
+
+To set up an "app password", navigate to
+[https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+and select app "Mail" and an appropriate device, e.g. "Mac", then click Generate.
+
+To enable "less secure app access", go to
 [myaccount.google.com/security](https://myaccount.google.com/security) and under
 `Less secure app access` click `Turn on access (not recommended)`.
 
