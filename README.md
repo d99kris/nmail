@@ -28,6 +28,7 @@ Features
 
 Not Supported / Out of Scope
 ----------------------------
+- Local mailbox downloaded by third-party application (OfflineIMAP, fdm, etc)
 - Multiple email accounts in a single session
 - Special handling for Gmail labels
 - Threaded view
