@@ -98,7 +98,7 @@ Linux / Ubuntu
 
 Required:
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules
 
 Optional:
 
