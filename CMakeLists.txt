@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "1.99" LANGUAGES CXX C)
+project(nmail VERSION "2.10" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -60,6 +60,8 @@ add_executable(nmail
   src/loghelp.cpp
   src/loghelp.h
   src/main.cpp
+  src/sasl.cpp
+  src/sasl.h
   src/searchengine.cpp
   src/searchengine.h
   src/serialized.cpp
@@ -85,7 +87,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   FIND_LIBRARY(CARBON_LIBRARY CoreFoundation)
   FIND_LIBRARY(CARBON_LIBRARY CFNetwork)
   FIND_LIBRARY(CARBON_LIBRARY Security)
-  target_link_libraries(nmail PUBLIC sasl2 iconv z "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+  target_link_libraries(nmail PUBLIC iconv z "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
 endif()
 
 # Headers
@@ -95,11 +97,10 @@ target_include_directories(nmail PRIVATE "ext")
 set_target_properties(nmail PROPERTIES COMPILE_FLAGS
                       "-Wall -Wextra -Wpedantic -Wshadow -Wpointer-arith \
                        -Wcast-qual -Wno-missing-braces -Wswitch-default \
-                       -Wunreachable-code -Wundef -Wuninitialized -Wcast-align")
-target_compile_definitions(nmail PRIVATE
-                           PROJECT_VERSION="${PROJECT_VERSION}"
-                           LIBETPAN_IOS_DISABLE_SSL=0
-                           WIN32=0)
+                       -Wunreachable-code -Wuninitialized -Wcast-align")
+# todo: add -Wundef
+
+target_compile_definitions(nmail PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 
 # Dependency ncurses
 set(CURSES_NEED_NCURSES TRUE)
@@ -127,10 +128,14 @@ find_library(LIBETPAN_LIBRARY
 if(NOT LIBETPAN_INCLUDE_DIR OR NOT LIBETPAN_LIBRARY)
   message(FATAL_ERROR "ERROR: Could not find libetpan")
 else()
-  message(STATUS "Found libetpan")
+  message(STATUS "Found libetpan: ${LIBETPAN_LIBRARY}")
 endif()
 
-include_directories(${LIBETPAN_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr")
+find_library(CYRUS_SASL_LIBRARY sasl2)
+find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
+find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
+
+include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr")
 
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
 if(FOUND_EXECINFO)
@@ -138,7 +143,10 @@ if(FOUND_EXECINFO)
 endif()
 
 # Linking
-target_link_libraries(nmail PUBLIC ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3 ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} pthread ${CMAKE_DL_LIBS})
+target_link_libraries(nmail PUBLIC
+                      ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3
+                      ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
+                      pthread ${CMAKE_DL_LIBS})
 
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)

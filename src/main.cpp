@@ -17,6 +17,7 @@
 #include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
+#include "sasl.h"
 #include "serialized.h"
 #include "sethelp.h"
 #include "smtpmanager.h"
@@ -511,6 +512,9 @@ void LogSystemInfo()
 
   const std::string libetpanVersion = Util::GetLibetpanVersion();
   LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
+
+  const std::string saslMechs = Sasl::GetMechanisms();
+  LOG_DEBUG("saslmechs: %s", saslMechs.c_str());
 
   const std::string libxapianVersion = SearchEngine::GetXapianVersion();
   LOG_DEBUG("libxapian: %s", libxapianVersion.c_str());
