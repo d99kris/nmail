@@ -3247,6 +3247,7 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
     if (!p_Action.m_MoveDestination.empty())
     {
       SetDialogMessage("Move message failed", true /* p_Warn */);
+      LOG_WARNING("move destination = %s", p_Action.m_MoveDestination.c_str());
     }
     else if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
     {
