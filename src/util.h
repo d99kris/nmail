@@ -151,7 +151,6 @@ public:
   static std::string GetExtViewerCmd();
   static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
   static std::string GetDefaultExtViewerCmd();
-  static int OpenInExtViewer(const std::string& p_Path);
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static std::string ReduceIndent(const std::string& p_Str, int p_Cnt);

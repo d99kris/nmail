@@ -145,6 +145,7 @@ private:
   void InvalidateUiCache(const std::string& p_Folder);
   void ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void ExternalPager();
+  int ExternalViewer(const std::string& p_Path);
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();

@@ -403,12 +403,6 @@ std::string Util::GetDefaultExtViewerCmd()
 #endif
 }
 
-int Util::OpenInExtViewer(const std::string& p_Path)
-{
-  std::string cmd = GetExtViewerCmd() + " \"" + p_Path + "\"";
-  return system(cmd.c_str());
-}
-
 void Util::ReplaceString(std::string &p_Str, const std::string &p_Search,
                          const std::string &p_Replace)
 {

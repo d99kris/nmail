@@ -2468,7 +2468,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
         std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
         Util::WriteFile(tempFilePath, htmlStr);
-        Util::OpenInExtViewer(tempFilePath);
+        ExternalViewer(tempFilePath);
       }
       else
       {
@@ -2600,7 +2600,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
       SetDialogMessage("Waiting for external viewer to exit");
       DrawDialog();
-      int rv = Util::OpenInExtViewer(tempFilePath);
+      int rv = ExternalViewer(tempFilePath);
       if (rv != 0)
       {
         SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
@@ -4177,6 +4177,33 @@ void Ui::ExternalPager()
   {
     // Discard any remaining input
   }
+}
+
+int Ui::ExternalViewer(const std::string& p_Path)
+{
+  endwin();
+  const std::string& viewer = Util::GetExtViewerCmd();
+  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  LOG_DEBUG("launching external viewer: %s", cmd.c_str());
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    LOG_DEBUG("external pager exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("external pager exited with %d", rv);
+  }
+
+  refresh();
+
+  wint_t key = 0;
+  while (get_wch(&key) != ERR)
+  {
+    // Discard any remaining input
+  }
+
+  return rv;
 }
 
 void Ui::SetLastStateOrMessageList()
