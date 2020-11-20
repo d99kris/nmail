@@ -2617,7 +2617,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       tempFilePath = Util::GetAttachmentsTempDir() + fileName;
       LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
       Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
-      LOG_DEBUG("opening \"%s\" (unknown etension) in external viewer", tempFilePath.c_str());
+      LOG_DEBUG("opening \"%s\" (unknown extension) in external viewer", tempFilePath.c_str());
 
       SetDialogMessage("Waiting for external viewer to exit");
       DrawDialog();
