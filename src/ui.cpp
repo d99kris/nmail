@@ -2545,75 +2545,74 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     if (!m_PartListCurrentPart.m_Filename.empty())
     {
       ext = Util::GetFileExt(m_PartListCurrentPart.m_Filename);
-      err = "Cannot determine file extension for " + m_PartListCurrentPart.m_Filename;
       fileName = m_PartListCurrentPart.m_Filename;
+      if (ext.empty())
+      {
+        LOG_DEBUG("cannot determine file extension for %s", m_PartListCurrentPart.m_Filename.c_str());
+      }
     }
     else
     {
       ext = Util::ExtensionForMimeType(m_PartListCurrentPart.m_MimeType);
-      err = "Unknown MIME type " + m_PartListCurrentPart.m_MimeType;
       fileName = std::to_string(m_PartListCurrentIndex) + ext;
       isUnamedTextHtml = (m_PartListCurrentPart.m_MimeType == "text/html");
+      if (ext.empty())
+      {
+        LOG_DEBUG("no file extension for MIME type %s", m_PartListCurrentPart.m_MimeType.c_str());
+      }
     }
 
-    if (!ext.empty())
-    {
-      std::string tempFilePath;
+    std::string tempFilePath;
         
-      if (m_ShowEmbeddedImages && isUnamedTextHtml)
+    if (m_ShowEmbeddedImages && isUnamedTextHtml)
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      const std::string& folder = m_CurrentFolderUid.first;
+      const int uid = m_CurrentFolderUid.second;
+      std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+      std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+      if (bodyIt != bodys.end())
       {
-        std::lock_guard<std::mutex> lock(m_Mutex);
-        const std::string& folder = m_CurrentFolderUid.first;
-        const int uid = m_CurrentFolderUid.second;
-        std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-        std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
-        if (bodyIt != bodys.end())
+        Body& body = bodyIt->second;
+        const std::map<ssize_t, Part>& parts = body.GetParts();
+        for (auto& part : parts)
         {
-          Body& body = bodyIt->second;
-          const std::map<ssize_t, Part>& parts = body.GetParts();
-          for (auto& part : parts)
+          if (!part.second.m_ContentId.empty())
           {
-            if (!part.second.m_ContentId.empty())
-            {
-              const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
-              LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
-              Util::WriteFile(tempPartFilePath, part.second.m_Data);
-            }
+            const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
+            LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
+            Util::WriteFile(tempPartFilePath, part.second.m_Data);
           }
         }
-
-        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-        std::string partData = m_PartListCurrentPart.m_Data;
-        Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
-        Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
-        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-        Util::WriteFile(tempFilePath, partData);
-      }
-      else
-      {
-        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-        Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
       }
 
-      LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
-
-      SetDialogMessage("Waiting for external viewer to exit");
-      DrawDialog();
-      int rv = ExternalViewer(tempFilePath);
-      if (rv != 0)
-      {
-        SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
-      }
-      else
-      {
-        LOG_DEBUG("external viewer exited successfully");
-        SetDialogMessage("");
-      }
+      tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+      std::string partData = m_PartListCurrentPart.m_Data;
+      Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
+      Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
+      LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+      Util::WriteFile(tempFilePath, partData);
     }
     else
     {
-      SetDialogMessage(err, true /* p_Warn */);
+      tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+      LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+      Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
+    }
+
+    LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
+
+    SetDialogMessage("Waiting for external viewer to exit");
+    DrawDialog();
+    int rv = ExternalViewer(tempFilePath);
+    if (rv != 0)
+    {
+      SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
+    }
+    else
+    {
+      LOG_DEBUG("external viewer exited successfully");
+      SetDialogMessage("");
     }
   }
   else if (p_Key == m_KeySaveFile)
