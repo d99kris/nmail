@@ -326,7 +326,7 @@ private:
 
   int m_MaxLineLength = 0;
 
-  int m_Pipe[2] = {-1, -1};
+  int m_Pipe[2] = { -1, -1 };
 
   bool m_MessageListSearch = false;
   std::string m_MessageListSearchQuery;

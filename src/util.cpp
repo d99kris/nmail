@@ -50,7 +50,7 @@ std::string Util::m_EditorCmd;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 
-bool Util::Exists(const std::string &p_Path)
+bool Util::Exists(const std::string& p_Path)
 {
   struct stat sb;
   return (stat(p_Path.c_str(), &sb) == 0);
@@ -62,7 +62,7 @@ bool Util::NotEmpty(const std::string& p_Path)
   return (stat(p_Path.c_str(), &sb) == 0) && (sb.st_size > 0);
 }
 
-std::string Util::ReadFile(const std::string &p_Path)
+std::string Util::ReadFile(const std::string& p_Path)
 {
   std::ifstream file(p_Path, std::ios::binary);
   std::stringstream ss;
@@ -70,14 +70,14 @@ std::string Util::ReadFile(const std::string &p_Path)
   return ss.str();
 }
 
-void Util::WriteFile(const std::string &p_Path, const std::string &p_Str)
+void Util::WriteFile(const std::string& p_Path, const std::string& p_Str)
 {
   MkDir(DirName(p_Path));
   std::ofstream file(p_Path, std::ios::binary);
   file << p_Str;
 }
 
-std::wstring Util::ReadWFile(const std::string &p_Path)
+std::wstring Util::ReadWFile(const std::string& p_Path)
 {
   std::locale::global(std::locale(""));
   std::wifstream file(p_Path, std::ios::binary);
@@ -86,7 +86,7 @@ std::wstring Util::ReadWFile(const std::string &p_Path)
   return wss.str();
 }
 
-void Util::WriteWFile(const std::string &p_Path, const std::wstring &p_WStr)
+void Util::WriteWFile(const std::string& p_Path, const std::wstring& p_WStr)
 {
   MkDir(DirName(p_Path));
   std::locale::global(std::locale(""));
@@ -94,7 +94,7 @@ void Util::WriteWFile(const std::string &p_Path, const std::wstring &p_WStr)
   file << p_WStr;
 }
 
-std::string Util::BaseName(const std::string &p_Path)
+std::string Util::BaseName(const std::string& p_Path)
 {
   char* path = strdup(p_Path.c_str());
   char* bname = basename(path);
@@ -119,9 +119,9 @@ std::string Util::GetFileExt(const std::string& p_Path)
   return p_Path.substr(lastPeriod);
 }
 
-std::string Util::DirName(const std::string &p_Path)
+std::string Util::DirName(const std::string& p_Path)
 {
-  char *buf = strdup(p_Path.c_str());
+  char* buf = strdup(p_Path.c_str());
   std::string rv = std::string(dirname(buf));
   free(buf);
   return rv;
@@ -173,12 +173,12 @@ std::string Util::AbsolutePath(const std::string& p_Path)
   return apathy::Path(p_Path).absolute().sanitize().string();
 }
 
-void Util::MkDir(const std::string &p_Path)
+void Util::MkDir(const std::string& p_Path)
 {
   apathy::Path::makedirs(p_Path);
 }
 
-void Util::RmDir(const std::string &p_Path)
+void Util::RmDir(const std::string& p_Path)
 {
   if (!p_Path.empty())
   {
@@ -186,7 +186,7 @@ void Util::RmDir(const std::string &p_Path)
   }
 }
 
-void Util::Touch(const std::string &p_Path)
+void Util::Touch(const std::string& p_Path)
 {
   utimensat(0, p_Path.c_str(), NULL, 0);
 }
@@ -196,7 +196,7 @@ std::string Util::GetApplicationDir()
   return m_ApplicationDir;
 }
 
-void Util::SetApplicationDir(const std::string &p_Path)
+void Util::SetApplicationDir(const std::string& p_Path)
 {
   m_ApplicationDir = p_Path + "/";
 }
@@ -237,7 +237,7 @@ void Util::CleanupPreviewTempDir()
   Util::RmDir(GetPreviewTempDir());
 }
 
-std::string Util::GetTempFilename(const std::string &p_Suffix)
+std::string Util::GetTempFilename(const std::string& p_Suffix)
 {
   std::string name = GetTempDir() + std::string("tmpfile.XX" "XX" "XX") + p_Suffix;
   char* cname = strdup(name.c_str());
@@ -272,12 +272,12 @@ std::string Util::GetTempDirectory()
   return name;
 }
 
-void Util::DeleteFile(const std::string &p_Path)
+void Util::DeleteFile(const std::string& p_Path)
 {
   unlink(p_Path.c_str());
 }
 
-time_t Util::MailtimeToTimet(mailimf_date_time *p_Dt)
+time_t Util::MailtimeToTimet(mailimf_date_time* p_Dt)
 {
   char buf[128];
   snprintf(buf, sizeof(buf), "%04i-%02i-%02i %02i:%02i:%02i",
@@ -308,7 +308,7 @@ std::string Util::GetHtmlToTextConvertCmd()
   return defaultHtmlToTextConvertCmd;
 }
 
-void Util::SetHtmlToTextConvertCmd(const std::string &p_HtmlToTextConvertCmd)
+void Util::SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd)
 {
   m_HtmlToTextConvertCmd = p_HtmlToTextConvertCmd;
 }
@@ -403,8 +403,8 @@ std::string Util::GetDefaultExtViewerCmd()
 #endif
 }
 
-void Util::ReplaceString(std::string &p_Str, const std::string &p_Search,
-                         const std::string &p_Replace)
+void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,
+                         const std::string& p_Replace)
 {
   size_t pos = 0;
   while ((pos = p_Str.find(p_Search, pos)) != std::string::npos)
@@ -414,7 +414,7 @@ void Util::ReplaceString(std::string &p_Str, const std::string &p_Search,
   }
 }
 
-std::string Util::ReduceIndent(const std::string &p_Str, int p_Cnt)
+std::string Util::ReduceIndent(const std::string& p_Str, int p_Cnt)
 {
   std::string tmpstr = "\n" + p_Str;
   std::string findstr = "\n ";
@@ -427,7 +427,7 @@ std::string Util::ReduceIndent(const std::string &p_Str, int p_Cnt)
   return tmpstr.substr(1);
 }
 
-std::string Util::AddIndent(const std::string &p_Str, const std::string &p_Indent)
+std::string Util::AddIndent(const std::string& p_Str, const std::string& p_Indent)
 {
   std::string tmpstr = "\n" + p_Str;
   std::string findstr = "\n";
@@ -437,7 +437,7 @@ std::string Util::AddIndent(const std::string &p_Str, const std::string &p_Inden
   return tmpstr.substr(1);
 }
 
-std::string Util::MakeReplySubject(const std::string &p_Str)
+std::string Util::MakeReplySubject(const std::string& p_Str)
 {
   std::set<std::string> replyPrefixes = { "re:", "sv:" };
   std::string oldPrefix = ToLower(p_Str.substr(0, 3));
@@ -448,10 +448,10 @@ std::string Util::MakeReplySubject(const std::string &p_Str)
   return p_Str;
 }
 
-std::string Util::MakeForwardSubject(const std::string &p_Str)
+std::string Util::MakeForwardSubject(const std::string& p_Str)
 {
   std::set<std::string> replyPrefixes = { "fw", "fwd", "vb" };
-  std::vector<std::string> oldSubjectSplit= Split(p_Str, ':');
+  std::vector<std::string> oldSubjectSplit = Split(p_Str, ':');
   bool hasFwdPrefix = false;
   if (oldSubjectSplit.size() > 1)
   {
@@ -506,7 +506,7 @@ std::wstring Util::ToWString(const std::string& p_Str)
   }
 }
 
-std::string Util::TrimPadString(const std::string &p_Str, size_t p_Len)
+std::string Util::TrimPadString(const std::string& p_Str, size_t p_Len)
 {
   std::string str = p_Str;
   if (str.size() > p_Len)
@@ -520,7 +520,7 @@ std::string Util::TrimPadString(const std::string &p_Str, size_t p_Len)
   return str;
 }
 
-std::wstring Util::TrimPadWString(const std::wstring &p_Str, size_t p_Len)
+std::wstring Util::TrimPadWString(const std::wstring& p_Str, size_t p_Len)
 {
   std::wstring str = p_Str;
   if (str.size() > p_Len)
@@ -534,14 +534,14 @@ std::wstring Util::TrimPadWString(const std::wstring &p_Str, size_t p_Len)
   return str;
 }
 
-std::string Util::ToLower(const std::string &p_Str)
+std::string Util::ToLower(const std::string& p_Str)
 {
   std::string lower = p_Str;
   std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
   return lower;
 }
 
-std::vector<std::string> Util::Split(const std::string &p_Str, char p_Sep)
+std::vector<std::string> Util::Split(const std::string& p_Str, char p_Sep)
 {
   std::vector<std::string> vec;
   if (!p_Str.empty())
@@ -592,7 +592,7 @@ std::vector<std::string> Util::SplitQuoted(const std::string& p_Str)
   return words;
 }
 
-std::string Util::Trim(const std::string &p_Str)
+std::string Util::Trim(const std::string& p_Str)
 {
   std::string space = " ";
   const auto strBegin = p_Str.find_first_not_of(space);
@@ -618,149 +618,149 @@ std::vector<std::string> Util::Trim(const std::vector<std::string>& p_Strs)
 int Util::GetKeyCode(const std::string& p_KeyName)
 {
   static std::map<std::string, int> keyCodes =
-    {
-      // additional keys
-      { "KEY_TAB", KEY_TAB},
-      { "KEY_RETURN", KEY_RETURN},
-      { "KEY_SPACE", KEY_SPACE},
+  {
+    // additional keys
+    { "KEY_TAB", KEY_TAB },
+    { "KEY_RETURN", KEY_RETURN },
+    { "KEY_SPACE", KEY_SPACE },
 
-      // ctrl keys
-      { "KEY_CTRL@", 0},
-      { "KEY_CTRLA", 1},
-      { "KEY_CTRLB", 2},
-      { "KEY_CTRLC", 3},
-      { "KEY_CTRLD", 4},
-      { "KEY_CTRLE", 5},
-      { "KEY_CTRLF", 6},
-      { "KEY_CTRLG", 7},
-      { "KEY_CTRLH", 8},
-      { "KEY_CTRLI", 9},
-      { "KEY_CTRLJ", 10},
-      { "KEY_CTRLK", 11},
-      { "KEY_CTRLL", 12},
-      { "KEY_CTRLM", 13},
-      { "KEY_CTRLN", 14},
-      { "KEY_CTRLO", 15},
-      { "KEY_CTRLP", 16},
-      { "KEY_CTRLQ", 17},
-      { "KEY_CTRLR", 18},
-      { "KEY_CTRLS", 19},
-      { "KEY_CTRLT", 20},
-      { "KEY_CTRLU", 21},
-      { "KEY_CTRLV", 22},
-      { "KEY_CTRLW", 23},
-      { "KEY_CTRLX", 24},
-      { "KEY_CTRLY", 25},
-      { "KEY_CTRLZ", 26},
-      { "KEY_CTRL[", 27},
-      { "KEY_CTRL\\", 28},
-      { "KEY_CTRL]", 29},
-      { "KEY_CTRL^", 30},
-      { "KEY_CTRL_", 31},
+    // ctrl keys
+    { "KEY_CTRL@", 0 },
+    { "KEY_CTRLA", 1 },
+    { "KEY_CTRLB", 2 },
+    { "KEY_CTRLC", 3 },
+    { "KEY_CTRLD", 4 },
+    { "KEY_CTRLE", 5 },
+    { "KEY_CTRLF", 6 },
+    { "KEY_CTRLG", 7 },
+    { "KEY_CTRLH", 8 },
+    { "KEY_CTRLI", 9 },
+    { "KEY_CTRLJ", 10 },
+    { "KEY_CTRLK", 11 },
+    { "KEY_CTRLL", 12 },
+    { "KEY_CTRLM", 13 },
+    { "KEY_CTRLN", 14 },
+    { "KEY_CTRLO", 15 },
+    { "KEY_CTRLP", 16 },
+    { "KEY_CTRLQ", 17 },
+    { "KEY_CTRLR", 18 },
+    { "KEY_CTRLS", 19 },
+    { "KEY_CTRLT", 20 },
+    { "KEY_CTRLU", 21 },
+    { "KEY_CTRLV", 22 },
+    { "KEY_CTRLW", 23 },
+    { "KEY_CTRLX", 24 },
+    { "KEY_CTRLY", 25 },
+    { "KEY_CTRLZ", 26 },
+    { "KEY_CTRL[", 27 },
+    { "KEY_CTRL\\", 28 },
+    { "KEY_CTRL]", 29 },
+    { "KEY_CTRL^", 30 },
+    { "KEY_CTRL_", 31 },
 
-      // ncurses keys
-      { "KEY_DOWN", KEY_DOWN },
-      { "KEY_UP", KEY_UP },
-      { "KEY_LEFT", KEY_LEFT },
-      { "KEY_RIGHT", KEY_RIGHT },
-      { "KEY_HOME", KEY_HOME },
-      { "KEY_BACKSPACE", KEY_BACKSPACE },
-      { "KEY_F0", KEY_F0 },
-      { "KEY_F1", KEY_F(1) },
-      { "KEY_F2", KEY_F(2) },
-      { "KEY_F3", KEY_F(3) },
-      { "KEY_F4", KEY_F(4) },
-      { "KEY_F5", KEY_F(5) },
-      { "KEY_F6", KEY_F(6) },
-      { "KEY_F7", KEY_F(7) },
-      { "KEY_F8", KEY_F(8) },
-      { "KEY_F9", KEY_F(9) },
-      { "KEY_F10", KEY_F(10) },
-      { "KEY_F11", KEY_F(11) },
-      { "KEY_F12", KEY_F(12) },
-      { "KEY_DL", KEY_DL },
-      { "KEY_IL", KEY_IL },
-      { "KEY_DC", KEY_DC },
-      { "KEY_IC", KEY_IC },
-      { "KEY_EIC", KEY_EIC },
-      { "KEY_CLEAR", KEY_CLEAR },
-      { "KEY_EOS", KEY_EOS },
-      { "KEY_EOL", KEY_EOL },
-      { "KEY_SF", KEY_SF },
-      { "KEY_SR", KEY_SR },
-      { "KEY_NPAGE", KEY_NPAGE },
-      { "KEY_PPAGE", KEY_PPAGE },
-      { "KEY_STAB", KEY_STAB },
-      { "KEY_CTAB", KEY_CTAB },
-      { "KEY_CATAB", KEY_CATAB },
-      { "KEY_ENTER", KEY_ENTER },
-      { "KEY_PRINT", KEY_PRINT },
-      { "KEY_LL", KEY_LL },
-      { "KEY_A1", KEY_A1 },
-      { "KEY_A3", KEY_A3 },
-      { "KEY_B2", KEY_B2 },
-      { "KEY_C1", KEY_C1 },
-      { "KEY_C3", KEY_C3 },
-      { "KEY_BTAB", KEY_BTAB },
-      { "KEY_BEG", KEY_BEG },
-      { "KEY_CANCEL", KEY_CANCEL },
-      { "KEY_CLOSE", KEY_CLOSE },
-      { "KEY_COMMAND", KEY_COMMAND },
-      { "KEY_COPY", KEY_COPY },
-      { "KEY_CREATE", KEY_CREATE },
-      { "KEY_END", KEY_END },
-      { "KEY_EXIT", KEY_EXIT },
-      { "KEY_FIND", KEY_FIND },
-      { "KEY_HELP", KEY_HELP },
-      { "KEY_MARK", KEY_MARK },
-      { "KEY_MESSAGE", KEY_MESSAGE },
-      { "KEY_MOVE", KEY_MOVE },
-      { "KEY_NEXT", KEY_NEXT },
-      { "KEY_OPEN", KEY_OPEN },
-      { "KEY_OPTIONS", KEY_OPTIONS },
-      { "KEY_PREVIOUS", KEY_PREVIOUS },
-      { "KEY_REDO", KEY_REDO },
-      { "KEY_REFERENCE", KEY_REFERENCE },
-      { "KEY_REFRESH", KEY_REFRESH },
-      { "KEY_REPLACE", KEY_REPLACE },
-      { "KEY_RESTART", KEY_RESTART },
-      { "KEY_RESUME", KEY_RESUME },
-      { "KEY_SAVE", KEY_SAVE },
-      { "KEY_SBEG", KEY_SBEG },
-      { "KEY_SCANCEL", KEY_SCANCEL },
-      { "KEY_SCOMMAND", KEY_SCOMMAND },
-      { "KEY_SCOPY", KEY_SCOPY },
-      { "KEY_SCREATE", KEY_SCREATE },
-      { "KEY_SDC", KEY_SDC },
-      { "KEY_SDL", KEY_SDL },
-      { "KEY_SELECT", KEY_SELECT },
-      { "KEY_SEND", KEY_SEND },
-      { "KEY_SEOL", KEY_SEOL },
-      { "KEY_SEXIT", KEY_SEXIT },
-      { "KEY_SFIND", KEY_SFIND },
-      { "KEY_SHELP", KEY_SHELP },
-      { "KEY_SHOME", KEY_SHOME },
-      { "KEY_SIC", KEY_SIC },
-      { "KEY_SLEFT", KEY_SLEFT },
-      { "KEY_SMESSAGE", KEY_SMESSAGE },
-      { "KEY_SMOVE", KEY_SMOVE },
-      { "KEY_SNEXT", KEY_SNEXT },
-      { "KEY_SOPTIONS", KEY_SOPTIONS },
-      { "KEY_SPREVIOUS", KEY_SPREVIOUS },
-      { "KEY_SPRINT", KEY_SPRINT },
-      { "KEY_SREDO", KEY_SREDO },
-      { "KEY_SREPLACE", KEY_SREPLACE },
-      { "KEY_SRIGHT", KEY_SRIGHT },
-      { "KEY_SRSUME", KEY_SRSUME },
-      { "KEY_SSAVE", KEY_SSAVE },
-      { "KEY_SSUSPEND", KEY_SSUSPEND },
-      { "KEY_SUNDO", KEY_SUNDO },
-      { "KEY_SUSPEND", KEY_SUSPEND },
-      { "KEY_UNDO", KEY_UNDO },
-      { "KEY_MOUSE", KEY_MOUSE },
-      { "KEY_RESIZE", KEY_RESIZE },
-      { "KEY_EVENT", KEY_EVENT },
-    };
+    // ncurses keys
+    { "KEY_DOWN", KEY_DOWN },
+    { "KEY_UP", KEY_UP },
+    { "KEY_LEFT", KEY_LEFT },
+    { "KEY_RIGHT", KEY_RIGHT },
+    { "KEY_HOME", KEY_HOME },
+    { "KEY_BACKSPACE", KEY_BACKSPACE },
+    { "KEY_F0", KEY_F0 },
+    { "KEY_F1", KEY_F(1) },
+    { "KEY_F2", KEY_F(2) },
+    { "KEY_F3", KEY_F(3) },
+    { "KEY_F4", KEY_F(4) },
+    { "KEY_F5", KEY_F(5) },
+    { "KEY_F6", KEY_F(6) },
+    { "KEY_F7", KEY_F(7) },
+    { "KEY_F8", KEY_F(8) },
+    { "KEY_F9", KEY_F(9) },
+    { "KEY_F10", KEY_F(10) },
+    { "KEY_F11", KEY_F(11) },
+    { "KEY_F12", KEY_F(12) },
+    { "KEY_DL", KEY_DL },
+    { "KEY_IL", KEY_IL },
+    { "KEY_DC", KEY_DC },
+    { "KEY_IC", KEY_IC },
+    { "KEY_EIC", KEY_EIC },
+    { "KEY_CLEAR", KEY_CLEAR },
+    { "KEY_EOS", KEY_EOS },
+    { "KEY_EOL", KEY_EOL },
+    { "KEY_SF", KEY_SF },
+    { "KEY_SR", KEY_SR },
+    { "KEY_NPAGE", KEY_NPAGE },
+    { "KEY_PPAGE", KEY_PPAGE },
+    { "KEY_STAB", KEY_STAB },
+    { "KEY_CTAB", KEY_CTAB },
+    { "KEY_CATAB", KEY_CATAB },
+    { "KEY_ENTER", KEY_ENTER },
+    { "KEY_PRINT", KEY_PRINT },
+    { "KEY_LL", KEY_LL },
+    { "KEY_A1", KEY_A1 },
+    { "KEY_A3", KEY_A3 },
+    { "KEY_B2", KEY_B2 },
+    { "KEY_C1", KEY_C1 },
+    { "KEY_C3", KEY_C3 },
+    { "KEY_BTAB", KEY_BTAB },
+    { "KEY_BEG", KEY_BEG },
+    { "KEY_CANCEL", KEY_CANCEL },
+    { "KEY_CLOSE", KEY_CLOSE },
+    { "KEY_COMMAND", KEY_COMMAND },
+    { "KEY_COPY", KEY_COPY },
+    { "KEY_CREATE", KEY_CREATE },
+    { "KEY_END", KEY_END },
+    { "KEY_EXIT", KEY_EXIT },
+    { "KEY_FIND", KEY_FIND },
+    { "KEY_HELP", KEY_HELP },
+    { "KEY_MARK", KEY_MARK },
+    { "KEY_MESSAGE", KEY_MESSAGE },
+    { "KEY_MOVE", KEY_MOVE },
+    { "KEY_NEXT", KEY_NEXT },
+    { "KEY_OPEN", KEY_OPEN },
+    { "KEY_OPTIONS", KEY_OPTIONS },
+    { "KEY_PREVIOUS", KEY_PREVIOUS },
+    { "KEY_REDO", KEY_REDO },
+    { "KEY_REFERENCE", KEY_REFERENCE },
+    { "KEY_REFRESH", KEY_REFRESH },
+    { "KEY_REPLACE", KEY_REPLACE },
+    { "KEY_RESTART", KEY_RESTART },
+    { "KEY_RESUME", KEY_RESUME },
+    { "KEY_SAVE", KEY_SAVE },
+    { "KEY_SBEG", KEY_SBEG },
+    { "KEY_SCANCEL", KEY_SCANCEL },
+    { "KEY_SCOMMAND", KEY_SCOMMAND },
+    { "KEY_SCOPY", KEY_SCOPY },
+    { "KEY_SCREATE", KEY_SCREATE },
+    { "KEY_SDC", KEY_SDC },
+    { "KEY_SDL", KEY_SDL },
+    { "KEY_SELECT", KEY_SELECT },
+    { "KEY_SEND", KEY_SEND },
+    { "KEY_SEOL", KEY_SEOL },
+    { "KEY_SEXIT", KEY_SEXIT },
+    { "KEY_SFIND", KEY_SFIND },
+    { "KEY_SHELP", KEY_SHELP },
+    { "KEY_SHOME", KEY_SHOME },
+    { "KEY_SIC", KEY_SIC },
+    { "KEY_SLEFT", KEY_SLEFT },
+    { "KEY_SMESSAGE", KEY_SMESSAGE },
+    { "KEY_SMOVE", KEY_SMOVE },
+    { "KEY_SNEXT", KEY_SNEXT },
+    { "KEY_SOPTIONS", KEY_SOPTIONS },
+    { "KEY_SPREVIOUS", KEY_SPREVIOUS },
+    { "KEY_SPRINT", KEY_SPRINT },
+    { "KEY_SREDO", KEY_SREDO },
+    { "KEY_SREPLACE", KEY_SREPLACE },
+    { "KEY_SRIGHT", KEY_SRIGHT },
+    { "KEY_SRSUME", KEY_SRSUME },
+    { "KEY_SSAVE", KEY_SSAVE },
+    { "KEY_SSUSPEND", KEY_SSUSPEND },
+    { "KEY_SUNDO", KEY_SUNDO },
+    { "KEY_SUSPEND", KEY_SUSPEND },
+    { "KEY_UNDO", KEY_UNDO },
+    { "KEY_MOUSE", KEY_MOUSE },
+    { "KEY_RESIZE", KEY_RESIZE },
+    { "KEY_EVENT", KEY_EVENT },
+  };
 
   int keyCode = -1;
   std::map<std::string, int>::iterator it = keyCodes.find(p_KeyName);
@@ -943,7 +943,7 @@ std::string Util::ToHexString(int p_Val)
   return "0x" + stream.str();
 }
 
-void Util::DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar)
+void Util::DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar)
 {
   size_t endPos = p_Str.find(p_EndChar, p_StartPos);
   p_Str.erase(p_StartPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_StartPos + 1));
@@ -981,10 +981,10 @@ std::string Util::GetCompiler()
   return "msvc-" + std::to_string(_MSC_VER);
 #elif defined(__clang__)
   return "clang-" + std::to_string(__clang_major__) + "." + std::to_string(__clang_minor__)
-    + "." + std::to_string(__clang_patchlevel__);
+         + "." + std::to_string(__clang_patchlevel__);
 #elif defined(__GNUC__)
   return "gcc-" + std::to_string(__GNUC__) + "." + std::to_string(__GNUC_MINOR__)
-    + "." + std::to_string(__GNUC_PATCHLEVEL__);
+         + "." + std::to_string(__GNUC_PATCHLEVEL__);
 #else
   return "Unknown Compiler";
 #endif
@@ -996,9 +996,9 @@ std::string Util::GetSigName(int p_Signal)
   {
     { SIGABRT, "SIGABRT" },
     { SIGSEGV, "SIGSEGV" },
-    { SIGBUS,  "SIGBUS" },
-    { SIGILL,  "SIGILL" },
-    { SIGFPE,  "SIGFPE" },
+    { SIGBUS, "SIGBUS" },
+    { SIGILL, "SIGILL" },
+    { SIGFPE, "SIGFPE" },
     { SIGTRAP, "SIGTRAP" },
     { SIGUSR1, "SIGUSR1" },
   };
@@ -1011,9 +1011,9 @@ void Util::RegisterSignalHandler()
 {
   signal(SIGABRT, SignalHandler);
   signal(SIGSEGV, SignalHandler);
-  signal(SIGBUS,  SignalHandler);
-  signal(SIGILL,  SignalHandler);
-  signal(SIGFPE,  SignalHandler);
+  signal(SIGBUS, SignalHandler);
+  signal(SIGILL, SignalHandler);
+  signal(SIGFPE, SignalHandler);
   signal(SIGTRAP, SignalHandler);
   signal(SIGUSR1, SignalHandler);
 }
@@ -1023,7 +1023,7 @@ static std::mutex s_SignalMutex;
 void Util::SignalHandler(int p_Signal)
 {
   const std::string& threadLabel = "\nthread " + ThreadRegister::GetName() + "\n";
-  void *callstack[64];
+  void* callstack[64];
 #ifdef HAVE_EXECINFO_H
   int size = backtrace(callstack, sizeof(callstack));
 #else
@@ -1069,7 +1069,7 @@ std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)
   {
     ss << std::left << std::setw(2) << std::setfill(' ') << i << "  ";
     ss << "0x" << std::hex << std::setw(16) << std::setfill('0') << std::right
-       << (unsigned long long) p_Callstack[i] << "  ";
+       << (unsigned long long)p_Callstack[i] << "  ";
 
     Dl_info dlinfo;
     if (dladdr(p_Callstack[i], &dlinfo) && dlinfo.dli_sname)
@@ -1212,11 +1212,11 @@ std::string Util::RunCommand(const std::string& p_Cmd)
 
 std::string Util::GetSystemOs()
 {
-#if defined (__APPLE__)
+#if defined(__APPLE__)
   const std::string& name = RunCommand("sw_vers -productName | tr -d '\n'");
   const std::string& version = RunCommand("sw_vers -productVersion | tr -d '\n'");
   return name + " " + version;
-#elif defined (__linux__)
+#elif defined(__linux__)
   return RunCommand("grep PRETTY_NAME /etc/os-release 2> /dev/null | "
                     "cut -d= -f2 | sed -e \"s/\\\"//g\" | tr -d '\n'");
 #else
@@ -1226,9 +1226,9 @@ std::string Util::GetSystemOs()
 
 std::string Util::GetLinkedLibs(const std::string& p_Prog)
 {
-#if defined (__APPLE__)
+#if defined(__APPLE__)
   return RunCommand("otool -L " + p_Prog + " 2> /dev/null | tail -n +2 | awk '{$1=$1};1'");
-#elif defined (__linux__)
+#elif defined(__linux__)
   return RunCommand("ldd " + p_Prog + " 2> /dev/null | awk '{$1=$1};1'");
 #else
   (void)p_Prog;
@@ -1238,13 +1238,13 @@ std::string Util::GetLinkedLibs(const std::string& p_Prog)
 
 std::string Util::GetSelfPath()
 {
-#if defined (__APPLE__)
+#if defined(__APPLE__)
   char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
   if (proc_pidpath(getpid(), pathbuf, sizeof(pathbuf)) > 0)
   {
     return std::string(pathbuf);
   }
-#elif defined (__linux__)
+#elif defined(__linux__)
   char pathbuf[PATH_MAX];
   ssize_t count = readlink("/proc/self/exe", pathbuf, sizeof(pathbuf));
   if (count > 0)
@@ -1269,14 +1269,14 @@ std::string Util::GetLibetpanVersion()
 
 std::string Util::GetUname()
 {
-#if defined (__APPLE__) || defined (__linux__)
+#if defined(__APPLE__) || defined(__linux__)
   return RunCommand("uname -a 2> /dev/null");
 #else
   return "";
 #endif
 }
 
-std::string Util::MimeToUtf8(const std::string &p_Str)
+std::string Util::MimeToUtf8(const std::string& p_Str)
 {
   const char* charset = "UTF-8";
   char* cdecoded = NULL;

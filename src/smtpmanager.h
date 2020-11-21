@@ -86,5 +86,5 @@ private:
   std::deque<Action> m_Actions;
   std::mutex m_QueueMutex;
 
-  int m_Pipe[2] = {-1, -1};
+  int m_Pipe[2] = { -1, -1 };
 };

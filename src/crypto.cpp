@@ -35,7 +35,7 @@ std::string Crypto::GetVersion()
   return std::string(SSLeay_version(SSLEAY_VERSION));
 }
 
-std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string &p_Pass)
+std::string Crypto::AESEncrypt(const std::string& p_Plaintext, const std::string& p_Pass)
 {
   unsigned char salt[8] = { 0 };
   RAND_bytes(salt, sizeof(salt));
@@ -47,13 +47,13 @@ std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string
 
   std::string ciphertext;
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
   if (ctx != NULL)
   {
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
     {
       int buflen = p_Plaintext.size() + 256;
-      unsigned char* buf = (unsigned char*) calloc(buflen, 1);
+      unsigned char* buf = (unsigned char*)calloc(buflen, 1);
       if (buf != NULL)
       {
         int len = 0;
@@ -71,7 +71,7 @@ std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string
             memcpy(buf, "Salted__", 8);
             memcpy(buf + 8, salt, 8);
 
-            ciphertext = std::string((char*) buf, buflen);
+            ciphertext = std::string((char*)buf, buflen);
           }
         }
 
@@ -85,14 +85,14 @@ std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string
   return ciphertext;
 }
 
-std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::string &p_Pass)
+std::string Crypto::AESDecrypt(const std::string& p_Ciphertext, const std::string& p_Pass)
 {
   if (p_Ciphertext.empty()) return std::string();
 
   unsigned char salt[8] = { 0 };
   unsigned char* ciphertext = (unsigned char*)const_cast<char*>(p_Ciphertext.c_str());
   int ciphertextlen = p_Ciphertext.size();
-  if (strncmp((const char*) ciphertext, "Salted__", 8) == 0)
+  if (strncmp((const char*)ciphertext, "Salted__", 8) == 0)
   {
     memcpy(salt, &ciphertext[8], 8);
     ciphertext += 16;
@@ -105,13 +105,13 @@ std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::strin
                  (unsigned char*)const_cast<char*>(p_Pass.c_str()), p_Pass.size(), 1, key, iv);
 
   std::string plaintext;
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
   if (ctx != NULL)
   {
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
     {
       int len = 0;
-      unsigned char* buf = (unsigned char*) calloc(ciphertextlen + 256, 1);
+      unsigned char* buf = (unsigned char*)calloc(ciphertextlen + 256, 1);
       if (buf != NULL)
       {
         if (EVP_DecryptUpdate(ctx, buf, &len, ciphertext, ciphertextlen) == 1)
@@ -120,7 +120,7 @@ std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::strin
           if (EVP_DecryptFinal_ex(ctx, buf + len, &len) == 1)
           {
             plaintextlen += len;
-            plaintext = std::string((char*) buf, plaintextlen);
+            plaintext = std::string((char*)buf, plaintextlen);
           }
         }
 
@@ -135,7 +135,7 @@ std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::strin
   return plaintext;
 }
 
-std::string Crypto::SHA256(const std::string &p_Str)
+std::string Crypto::SHA256(const std::string& p_Str)
 {
   unsigned char hash[SHA256_DIGEST_LENGTH];
   SHA256_CTX sha256;
@@ -145,16 +145,17 @@ std::string Crypto::SHA256(const std::string &p_Str)
   return Serialized::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
 }
 
-bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass)
+bool Crypto::AESEncryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass)
 {
   unsigned char salt[8] = { 0 };
   RAND_bytes(salt, sizeof(salt));
 
   unsigned char key[32] = { 0 };
   unsigned char iv[32] = { 0 };
-  EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()), p_Pass.size(), 1, key, iv);
+  EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()),
+                 p_Pass.size(), 1, key, iv);
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
   if (ctx != NULL)
   {
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
@@ -171,7 +172,7 @@ bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_Ou
       outStream.open(p_OutPath, std::ios::binary);
 
       outStream.write("Salted__", 8);
-      outStream.write((char *)salt, 8);
+      outStream.write((char*)salt, 8);
 
       const std::streamsize inBufLen = 64 * 1024;
       std::vector<char> inBuf(inBufLen);
@@ -185,7 +186,8 @@ bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_Ou
         inStream.read(inBuf.data(), readLen);
 
         int writeLen = 0;
-        if (EVP_EncryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(), readLen) == 0)
+        if (EVP_EncryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(),
+                              readLen) == 0)
         {
           EVP_CIPHER_CTX_free(ctx);
           return false;
@@ -219,9 +221,9 @@ bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_Ou
   return true;
 }
 
-bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass)
+bool Crypto::AESDecryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass)
 {
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
   if (ctx != NULL)
   {
     // @todo: add file error handling
@@ -251,12 +253,13 @@ bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_Ou
     }
 
     unsigned char salt[8] = { 0 };
-    inStream.read((char *)salt, 8);
+    inStream.read((char*)salt, 8);
     inFileRemainingLen -= 8;
 
     unsigned char key[32] = { 0 };
     unsigned char iv[32] = { 0 };
-    EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()), p_Pass.size(), 1, key, iv);
+    EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, (unsigned char*)const_cast<char*>(p_Pass.c_str()),
+                   p_Pass.size(), 1, key, iv);
 
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) == 1)
     {
@@ -269,7 +272,8 @@ bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_Ou
         inStream.read(inBuf.data(), readLen);
 
         int writeLen = 0;
-        if (EVP_DecryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(), readLen) == 0)
+        if (EVP_DecryptUpdate(ctx, (unsigned char*)outBuf.data(), &writeLen, (unsigned char*)inBuf.data(),
+                              readLen) == 0)
         {
           EVP_CIPHER_CTX_free(ctx);
           return false;
@@ -303,4 +307,3 @@ bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_Ou
 
   return true;
 }
-

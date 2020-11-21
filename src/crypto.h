@@ -21,6 +21,6 @@ public:
 
   static std::string SHA256(const std::string& p_Str);
 
-  static bool AESEncryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass);
-  static bool AESDecryptFile(const std::string &p_InPath, const std::string &p_OutPath, const std::string &p_Pass);
+  static bool AESEncryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass);
+  static bool AESDecryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass);
 };

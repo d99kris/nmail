@@ -14,7 +14,7 @@ std::string Log::m_Path;
 int Log::m_VerboseLevel = 0;
 std::mutex Log::m_Mutex;
 
-void Log::SetPath(const std::string &p_Path)
+void Log::SetPath(const std::string& p_Path)
 {
   m_Path = p_Path;
   remove(m_Path.c_str());
@@ -25,7 +25,7 @@ void Log::SetVerboseLevel(int p_Level)
   m_VerboseLevel = p_Level;
 }
 
-void Log::Trace(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+void Log::Trace(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 {
   if (m_VerboseLevel >= TRACE_LEVEL)
   {
@@ -36,7 +36,7 @@ void Log::Trace(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
   }
 }
 
-void Log::Debug(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+void Log::Debug(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 {
   if (m_VerboseLevel >= DEBUG_LEVEL)
   {
@@ -47,7 +47,7 @@ void Log::Debug(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
   }
 }
 
-void Log::Info(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+void Log::Info(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 {
   va_list vaList;
   va_start(vaList, p_Format);
@@ -55,7 +55,7 @@ void Log::Info(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
   va_end(vaList);
 }
 
-void Log::Warning(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+void Log::Warning(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 {
   va_list vaList;
   va_start(vaList, p_Format);
@@ -63,7 +63,7 @@ void Log::Warning(const char* p_Filename, int p_LineNo, const char *p_Format, ..
   va_end(vaList);
 }
 
-void Log::Error(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
+void Log::Error(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 {
   va_list vaList;
   va_start(vaList, p_Format);
@@ -71,7 +71,7 @@ void Log::Error(const char* p_Filename, int p_LineNo, const char *p_Format, ...)
   va_end(vaList);
 }
 
-void Log::Dump(const char *p_Str)
+void Log::Dump(const char* p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_Path.empty())
@@ -87,7 +87,7 @@ void Log::Dump(const char *p_Str)
   }
 }
 
-void Log::Write(const char* p_Filename, int p_LineNo, const char *p_Level, const char *p_Format, va_list p_VaList)
+void Log::Write(const char* p_Filename, int p_LineNo, const char* p_Level, const char* p_Format, va_list p_VaList)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_Path.empty())

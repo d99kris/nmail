@@ -12,7 +12,7 @@
 #include "serialized.h"
 #include "util.h"
 
-bool CacheUtil::CommonInitCacheDir(const std::string &p_Dir, int p_Version, bool p_Encrypted)
+bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool p_Encrypted)
 {
   const std::string& dirVersionPath = p_Dir + "version";
   int encrypted = p_Encrypted ? 1 : 0;

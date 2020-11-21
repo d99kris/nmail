@@ -122,19 +122,13 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
   if (p_Filter.empty())
   {
     *m_Db << "SELECT address FROM addresses ORDER BY usages DESC;" >>
-      [&](const std::string& address)
-      {
-        addresses.push_back(address);
-      };
+      [&](const std::string& address) { addresses.push_back(address); };
   }
   else
   {
     // @todo: strip out any % from p_Filter?
     *m_Db << "SELECT address FROM addresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
-      [&](const std::string& address)
-      {
-        addresses.push_back(address);
-      };
+      [&](const std::string& address) { addresses.push_back(address); };
   }
 
   return addresses;

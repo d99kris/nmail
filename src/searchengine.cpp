@@ -58,7 +58,8 @@ void SearchEngine::Commit()
   m_WritableDatabase->commit();
 }
 
-std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max, bool& p_HasMore)
+std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, const unsigned p_Offset,
+                                              const unsigned p_Max, bool& p_HasMore)
 {
   std::vector<std::string> docIds;
 

@@ -34,7 +34,7 @@ public:
   std::string ReadCacheFile(const std::string& p_Path);
   void WriteCacheFile(const std::string& p_Path, const std::string& p_Str);
 
-  void DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids);
+  void DeleteCacheExceptUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
   void PruneCacheFolders(const std::set<std::string>& p_KeepFolders);
 
 private:

@@ -73,4 +73,3 @@ private:
   std::map<std::string, std::set<uint32_t>> m_DeleteQueue;
   size_t m_QueueSize = 0;
 };
-

@@ -635,12 +635,20 @@ To enable "less secure app access", go to
 Technical Details
 =================
 
+Third-party Libraries
+---------------------
 nmail is implemented in C++. Its source tree includes the source code of the
 following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) - MIT License
 - [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) - Boost License
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) - MIT License
+
+Code Formatting
+---------------
+Uncrustify is used to maintain consistent source code formatting, example:
+
+    uncrustify -c etc/uncrustify.cfg --replace --no-backup src/*.cpp src/*.h
 
 
 License

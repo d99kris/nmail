@@ -18,7 +18,7 @@
 #include "sethelp.h"
 #include "util.h"
 
-void Header::SetData(const std::string &p_Data)
+void Header::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
 }
@@ -214,7 +214,7 @@ void Header::Parse()
   }
 }
 
-std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list *p_MailboxList,
+std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list* p_MailboxList,
                                                       const bool p_Short)
 {
   std::vector<std::string> strs;
@@ -227,7 +227,7 @@ std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list *p_Ma
   return strs;
 }
 
-std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_AddrList,
+std::vector<std::string> Header::AddressListToStrings(mailimf_address_list* p_AddrList,
                                                       const bool p_Short)
 {
   std::vector<std::string> strs;
@@ -253,7 +253,7 @@ std::vector<std::string> Header::AddressListToStrings(mailimf_address_list *p_Ad
   return strs;
 }
 
-std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Short)
+std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Short)
 {
   std::string str;
   if (p_Short)
@@ -283,12 +283,12 @@ std::string Header::MailboxToString(mailimf_mailbox *p_Mailbox, const bool p_Sho
   return str;
 }
 
-std::string Header::GroupToString(mailimf_group *p_Group, const bool p_Short)
+std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
 {
   std::string str;
   str += std::string(p_Group->grp_display_name) + std::string(": ");
 
-  for (clistiter *it = clist_begin(p_Group->grp_mb_list->mb_list); it != NULL;
+  for (clistiter* it = clist_begin(p_Group->grp_mb_list->mb_list); it != NULL;
        it = clist_next(it))
   {
     struct mailimf_mailbox* mb = (struct mailimf_mailbox*)clist_content(it);

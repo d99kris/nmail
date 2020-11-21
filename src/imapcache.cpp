@@ -49,7 +49,7 @@ void ImapCache::InitImapCacheDir()
   CacheUtil::CommonInitCacheDir(imapCacheDir, version, m_CacheEncrypt);
 }
 
-std::string ImapCache::GetFolderCacheDir(const std::string &p_Folder)
+std::string ImapCache::GetFolderCacheDir(const std::string& p_Folder)
 {
   if (m_CacheEncrypt)
   {
@@ -62,12 +62,12 @@ std::string ImapCache::GetFolderCacheDir(const std::string &p_Folder)
   }
 }
 
-std::string ImapCache::GetFolderUidsCachePath(const std::string &p_Folder)
+std::string ImapCache::GetFolderUidsCachePath(const std::string& p_Folder)
 {
   return GetFolderCacheDir(p_Folder) + std::string("uids");
 }
 
-std::string ImapCache::GetFolderFlagsCachePath(const std::string &p_Folder)
+std::string ImapCache::GetFolderFlagsCachePath(const std::string& p_Folder)
 {
   return GetFolderCacheDir(p_Folder) + std::string("flags");
 }
@@ -77,31 +77,31 @@ std::string ImapCache::GetFoldersCachePath()
   return GetImapCacheDir() + std::string("folders");
 }
 
-std::string ImapCache::GetMessageCachePath(const std::string &p_Folder, uint32_t p_Uid,
-                                      const std::string &p_Suffix)
+std::string ImapCache::GetMessageCachePath(const std::string& p_Folder, uint32_t p_Uid,
+                                           const std::string& p_Suffix)
 {
   const std::string& path = GetFolderCacheDir(p_Folder) + std::string("/") +
     std::to_string(p_Uid) + p_Suffix;
   return path;
 }
 
-std::string ImapCache::GetHeaderCachePath(const std::string &p_Folder, uint32_t p_Uid)
+std::string ImapCache::GetHeaderCachePath(const std::string& p_Folder, uint32_t p_Uid)
 {
   return GetMessageCachePath(p_Folder, p_Uid, ".hdr");
 }
 
-std::string ImapCache::GetBodyCachePath(const std::string &p_Folder, uint32_t p_Uid)
+std::string ImapCache::GetBodyCachePath(const std::string& p_Folder, uint32_t p_Uid)
 {
   return GetMessageCachePath(p_Folder, p_Uid, ".eml");
 }
 
-bool ImapCache::InitFolderCacheDir(const std::string &p_Folder, int p_UidValidity)
+bool ImapCache::InitFolderCacheDir(const std::string& p_Folder, int p_UidValidity)
 {
   const std::string folderCacheDir = GetFolderCacheDir(p_Folder);
   return CacheUtil::CommonInitCacheDir(folderCacheDir, p_UidValidity, m_CacheEncrypt);
 }
 
-std::string ImapCache::ReadCacheFile(const std::string &p_Path)
+std::string ImapCache::ReadCacheFile(const std::string& p_Path)
 {
   if (m_CacheEncrypt)
   {
@@ -113,7 +113,7 @@ std::string ImapCache::ReadCacheFile(const std::string &p_Path)
   }
 }
 
-void ImapCache::WriteCacheFile(const std::string &p_Path, const std::string &p_Str)
+void ImapCache::WriteCacheFile(const std::string& p_Path, const std::string& p_Str)
 {
   if (m_CacheEncrypt)
   {
@@ -125,7 +125,7 @@ void ImapCache::WriteCacheFile(const std::string &p_Path, const std::string &p_S
   }
 }
 
-void ImapCache::DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids)
+void ImapCache::DeleteCacheExceptUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   const std::vector<std::string>& cacheFiles = Util::ListDir(GetFolderCacheDir(p_Folder));
   for (auto& cacheFile : cacheFiles)
@@ -142,7 +142,9 @@ void ImapCache::DeleteCacheExceptUids(const std::string &p_Folder, const std::se
     }
   }
 
-  std::map<uint32_t, uint32_t> flags = Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
+  std::map<uint32_t,
+           uint32_t> flags =
+    Deserialize<std::map<uint32_t, uint32_t>>(ReadCacheFile(GetFolderFlagsCachePath(p_Folder)));
   for (auto flag = flags.begin(); flag != flags.end(); /* increment in loop */)
   {
     uint32_t uid = flag->first;

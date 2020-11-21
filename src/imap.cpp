@@ -18,7 +18,7 @@
 #include "serialized.h"
 #include "util.h"
 
-Imap::Imap(const std::string &p_User, const std::string &p_Pass, const std::string &p_Host,
+Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
            const uint16_t p_Port, const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
            const std::set<std::string>& p_FoldersExclude,
            const std::function<void(const StatusUpdate&)>& p_StatusHandler)
@@ -177,7 +177,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   return false;
 }
 
-bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids)
+bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Cached, p_Uids));
 
@@ -211,13 +211,13 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   int rv = LOG_IF_IMAP_ERR(mailimap_fetch(m_Imap, set, fetch_type, &fetch_result));
   if (rv == MAILIMAP_NO_ERROR)
   {
-    for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+    for (clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
     {
       struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-      for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+      for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
       {
-        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item*)clist_content(ait);
         if (item->att_type != MAILIMAP_MSG_ATT_ITEM_STATIC) continue;
 
         if (item->att_data.att_static->att_type != MAILIMAP_MSG_ATT_UID) continue;
@@ -244,7 +244,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                       const bool p_Cached, const bool p_Prefetch,
                       std::map<uint32_t, Header>& p_Headers)
 {
@@ -310,15 +310,15 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
     rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
     if (rv == MAILIMAP_NO_ERROR)
     {
-      for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+      for (clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
       {
         struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
         uint32_t uid = 0;
         Header header;
-        for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+        for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
-          struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+          struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item*)clist_content(ait);
 
           if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
 
@@ -374,7 +374,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+bool Imap::GetFlags(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                     const bool p_Cached, std::map<uint32_t, uint32_t>& p_Flags)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Cached, p_Flags));
@@ -382,7 +382,9 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   if (p_Cached)
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    p_Flags = Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
+    p_Flags =
+      Deserialize<std::map<uint32_t,
+                           uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     return true;
   }
 
@@ -422,7 +424,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
       uint32_t flag = 0;
       for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
       {
-        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item *)clist_content(ait);
+        struct mailimap_msg_att_item* item = (struct mailimap_msg_att_item*)clist_content(ait);
 
         if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
         {
@@ -432,7 +434,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
                  dit = clist_next(dit))
             {
               struct mailimap_flag_fetch* flag_fetch =
-                (struct mailimap_flag_fetch*) clist_content(dit);
+                (struct mailimap_flag_fetch*)clist_content(dit);
               if (flag_fetch && flag_fetch->fl_flag)
               {
                 switch (flag_fetch->fl_flag->fl_type)
@@ -472,7 +474,9 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     std::map<uint32_t, uint32_t> oldFlags;
 
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    oldFlags = Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
+    oldFlags =
+      Deserialize<std::map<uint32_t,
+                           uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     newFlags.insert(oldFlags.begin(), oldFlags.end());
     // cache combined flags of previously cached and newly fetched, in case requesting flags for not all messages
     m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder), Serialize(newFlags));
@@ -484,7 +488,7 @@ bool Imap::GetFlags(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+bool Imap::GetBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                     const bool p_Cached, const bool p_Prefetch,
                     std::map<uint32_t, Body>& p_Bodys)
 {
@@ -543,7 +547,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
 
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
     struct mailimap_fetch_att* body_att =
-        mailimap_fetch_att_new_body_peek_section(mailimap_section_new(NULL));
+      mailimap_fetch_att_new_body_peek_section(mailimap_section_new(NULL));
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, body_att);
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
 
@@ -552,16 +556,16 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
     if (rv == MAILIMAP_NO_ERROR)
     {
-      for(clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
+      for (clistiter* it = clist_begin(fetch_result); it != NULL; it = clist_next(it))
       {
         struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
         uint32_t uid = 0;
         Body body;
-        for(clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
+        for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
           struct mailimap_msg_att_item* item =
-            (struct mailimap_msg_att_item *) clist_content(ait);
+            (struct mailimap_msg_att_item*)clist_content(ait);
 
           if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) continue;
 
@@ -617,7 +621,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+bool Imap::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                        bool p_Value)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Value));
@@ -639,8 +643,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
   }
 
   struct mailimap_store_att_flags* storeflags = p_Value
-    ? mailimap_store_att_flags_new_add_flags(flaglist)
-    : mailimap_store_att_flags_new_remove_flags(flaglist);
+    ? mailimap_store_att_flags_new_add_flags(flaglist) : mailimap_store_att_flags_new_remove_flags(flaglist);
 
   int rv = LOG_IF_IMAP_ERR(mailimap_uid_store(m_Imap, set, storeflags));
 
@@ -655,7 +658,8 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::map<uint32_t, uint32_t> flags =
-      Deserialize<std::map<uint32_t, uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
+      Deserialize<std::map<uint32_t,
+                           uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder)));
     for (auto& uid : p_Uids)
     {
       if (p_Value)
@@ -674,7 +678,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::SetFlagDeleted(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
+bool Imap::SetFlagDeleted(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                           bool p_Value)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Value));
@@ -696,8 +700,7 @@ bool Imap::SetFlagDeleted(const std::string &p_Folder, const std::set<uint32_t> 
   }
 
   struct mailimap_store_att_flags* storeflags = p_Value
-    ? mailimap_store_att_flags_new_add_flags(flaglist)
-    : mailimap_store_att_flags_new_remove_flags(flaglist);
+    ? mailimap_store_att_flags_new_add_flags(flaglist) : mailimap_store_att_flags_new_remove_flags(flaglist);
 
   int rv = LOG_IF_IMAP_ERR(mailimap_uid_store(m_Imap, set, storeflags));
 
@@ -711,8 +714,8 @@ bool Imap::SetFlagDeleted(const std::string &p_Folder, const std::set<uint32_t> 
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p_Uids,
-                        const std::string &p_DestFolder)
+bool Imap::MoveMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                        const std::string& p_DestFolder)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_DestFolder));
 
@@ -752,7 +755,7 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
   return (rv == MAILIMAP_NO_ERROR);
 }
 
-bool Imap::DeleteMessages(const std::string &p_Folder, const std::set<uint32_t> &p_Uids)
+bool Imap::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
@@ -850,7 +853,7 @@ void Imap::Search(const std::string& p_QueryStr, const unsigned p_Offset, const 
   return m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
 }
 
-bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
+bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Force));
 
@@ -861,7 +864,8 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
     {
       std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
       m_SelectedFolder = p_Folder;
-      m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_has_exists == 1) && (m_Imap->imap_selection_info->sel_exists == 0);
+      m_SelectedFolderIsEmpty = (m_Imap->imap_selection_info->sel_has_exists == 1) &&
+        (m_Imap->imap_selection_info->sel_exists == 0);
       const bool cachedUidValid = m_ImapCache->InitFolderCacheDir(p_Folder, GetUidValidity());
       if (!cachedUidValid)
       {

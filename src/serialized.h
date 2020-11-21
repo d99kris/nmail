@@ -30,7 +30,7 @@ public:
   void Load(const std::string& p_Path);
   void Save(const std::string& p_Path = std::string());
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator<<(Serialized& p_Serialized, const T& p_Value)
   {
     std::string string;
@@ -40,7 +40,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator<<(Serialized& p_Serialized, const std::vector<T>& p_Vector)
   {
     for (auto& value : p_Vector)
@@ -54,7 +54,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator<<(Serialized& p_Serialized, const std::set<T>& p_Set)
   {
     for (auto& value : p_Set)
@@ -68,7 +68,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T, typename U>
+  template<typename T, typename U>
   friend Serialized& operator<<(Serialized& p_Serialized, const std::map<T, U>& p_Map)
   {
     for (auto& value : p_Map)
@@ -84,7 +84,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator>>(Serialized& p_Serialized, T& p_Value)
   {
     std::istringstream iss(p_Serialized.m_String);
@@ -98,7 +98,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator>>(Serialized& p_Serialized, std::vector<T>& p_Vector)
   {
     std::istringstream iss(p_Serialized.m_String);
@@ -120,7 +120,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T>
+  template<typename T>
   friend Serialized& operator>>(Serialized& p_Serialized, std::set<T>& p_Set)
   {
     std::istringstream iss(p_Serialized.m_String);
@@ -142,7 +142,7 @@ public:
     return p_Serialized;
   }
 
-  template <typename T, typename U>
+  template<typename T, typename U>
   friend Serialized& operator>>(Serialized& p_Serialized, std::map<T, U>& p_Map)
   {
     std::istringstream iss(p_Serialized.m_String);
@@ -171,14 +171,14 @@ public:
   static std::string FromHex(const std::string& p_String);
 
 private:
-  template <typename T>
+  template<typename T>
   static void ToVal(const std::string& p_String, T& p_Value)
   {
     std::istringstream iss(p_String);
     iss >> p_Value;
   }
 
-  template <typename T>
+  template<typename T>
   static void FromVal(const T& p_Value, std::string& p_String)
   {
     std::ostringstream oss;
@@ -192,20 +192,20 @@ private:
 };
 
 
-template <>
+template<>
 inline void Serialized::ToVal(const std::string& p_String, std::string& p_Value)
 {
   p_Value = p_String;
 }
 
-template <>
+template<>
 inline void Serialized::FromVal(const std::string& p_Value, std::string& p_String)
 {
   p_String = p_Value;
 }
 
 
-template <typename T>
+template<typename T>
 static void SerializeToFile(const std::string& p_Path, const T& p_Value)
 {
   Serialized serialized;
@@ -213,7 +213,7 @@ static void SerializeToFile(const std::string& p_Path, const T& p_Value)
   serialized.Save(p_Path);
 }
 
-template <typename T, typename U>
+template<typename T, typename U>
 static void SerializeToFile(const std::string& p_Path, const T& p_TVal, const U& p_UVal)
 {
   Serialized serialized;
@@ -222,7 +222,7 @@ static void SerializeToFile(const std::string& p_Path, const T& p_TVal, const U&
   serialized.Save(p_Path);
 }
 
-template <typename T>
+template<typename T>
 static void DeserializeFromFile(const std::string& p_Path, T& p_Value)
 {
   Serialized serialized;
@@ -230,7 +230,7 @@ static void DeserializeFromFile(const std::string& p_Path, T& p_Value)
   serialized >> p_Value;
 }
 
-template <typename T, typename U>
+template<typename T, typename U>
 static void DeserializeFromFile(const std::string& p_Path, T& p_TVal, U& p_UVal)
 {
   Serialized serialized;
@@ -239,7 +239,7 @@ static void DeserializeFromFile(const std::string& p_Path, T& p_TVal, U& p_UVal)
   serialized >> p_UVal;
 }
 
-template <typename T>
+template<typename T>
 static std::string Serialize(const T& p_Value)
 {
   Serialized serialized;
@@ -247,7 +247,7 @@ static std::string Serialize(const T& p_Value)
   return serialized.ToString();
 }
 
-template <typename T>
+template<typename T>
 static T Deserialize(const std::string& p_String)
 {
   Serialized serialized;

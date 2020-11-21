@@ -12,12 +12,12 @@
 #include "loghelp.h"
 #include "smtp.h"
 
-SmtpManager::SmtpManager(const std::string &p_User, const std::string &p_Pass,
-                         const std::string &p_Host, const uint16_t p_Port,
-                         const std::string &p_Name, const std::string &p_Address,
+SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
+                         const std::string& p_Host, const uint16_t p_Port,
+                         const std::string& p_Name, const std::string& p_Address,
                          const bool p_Connect,
-                         const std::function<void (const SmtpManager::Result &)> &p_ResultHandler,
-                         const std::function<void (const StatusUpdate &)> &p_StatusHandler)
+                         const std::function<void(const SmtpManager::Result&)>& p_ResultHandler,
+                         const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
@@ -61,7 +61,7 @@ void SmtpManager::Start()
   m_Thread = std::thread(&SmtpManager::Process, this);
 }
 
-void SmtpManager::AsyncAction(const SmtpManager::Action &p_Action)
+void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
 {
   if (m_Connect)
   {
@@ -153,7 +153,7 @@ void SmtpManager::Process()
   m_ExitedCond.notify_one();
 }
 
-SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action &p_Action)
+SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Action)
 {
   Result result;
   result.m_Action = p_Action;

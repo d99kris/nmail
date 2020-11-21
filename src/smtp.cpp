@@ -14,8 +14,8 @@
 #include "log.h"
 #include "loghelp.h"
 
-Smtp::Smtp(const std::string &p_User, const std::string &p_Pass, const std::string &p_Host,
-           const uint16_t p_Port, const std::string &p_Name, const std::string &p_Address)
+Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
+           const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
@@ -54,7 +54,7 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   return SendMessage(data, recipients);
 }
 
-bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_Recipients)
+bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients)
 {
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Data, p_Recipients));
@@ -64,7 +64,7 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   const bool enableEsmtp = true;
   const bool enableLmtp = !enableEsmtp;
 
-  mailsmtp *smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
+  mailsmtp* smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return false;
 
   if (Log::GetTraceEnabled())
@@ -146,14 +146,14 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
 
   if (rv != MAILSMTP_NO_ERROR) return false;
 
-  clist *recipients = clist_new();
+  clist* recipients = clist_new();
   for (auto& recipient : p_Recipients)
   {
     char* r = strdup(recipient.GetAddress().c_str());
     if (esmtpMode)
     {
       rv = LOG_IF_SMTP_ERR(mailesmtp_rcpt(smtp, r,
-                                          MAILSMTP_DSN_NOTIFY_FAILURE|MAILSMTP_DSN_NOTIFY_DELAY,
+                                          MAILSMTP_DSN_NOTIFY_FAILURE | MAILSMTP_DSN_NOTIFY_DELAY,
                                           NULL));
     }
     else
@@ -175,7 +175,7 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
 
   if (enableLmtp)
   {
-    int *retcodes = (int *)malloc((clist_count(recipients) * sizeof(int)));
+    int* retcodes = (int*)malloc((clist_count(recipients) * sizeof(int)));
 
     rv = LOG_IF_SMTP_ERR(maillmtp_data_message(smtp, p_Data.c_str(), p_Data.size(),
                                                recipients, retcodes));
@@ -184,7 +184,7 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
 
     for (int i = 0; i < clist_count(recipients); i++)
     {
-      LOG_WARNING("recipient \"%s\" returned %d", (char *)clist_nth_data(recipients, i),
+      LOG_WARNING("recipient \"%s\" returned %d", (char*)clist_nth_data(recipients, i),
                   retcodes[i]);
     }
 
@@ -223,7 +223,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
     std::string toaddr = to.GetAddress();
     struct mailimf_mailbox* mbto = mailimf_mailbox_new(toname.empty()
                                                        ? NULL : strdup(tonamemime.c_str()),
-                                                       strdup(toaddr.c_str()));
+                                                         strdup(toaddr.c_str()));
     struct mailimf_address* addrto = mailimf_address_new(MAILIMF_ADDRESS_MAILBOX, mbto, NULL);
     clist_append(tolist, addrto);
   }
@@ -241,7 +241,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
       std::string ccaddr = cc.GetAddress();
       struct mailimf_mailbox* mbcc = mailimf_mailbox_new(ccname.empty()
                                                          ? NULL : strdup(ccnamemime.c_str()),
-                                                         strdup(ccaddr.c_str()));
+                                                           strdup(ccaddr.c_str()));
       struct mailimf_address* addrcc = mailimf_address_new(MAILIMF_ADDRESS_MAILBOX, mbcc, NULL);
       clist_append(cclist, addrcc);
     }
@@ -294,12 +294,12 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   }
 
   struct mailimf_fields* fields =
-      mailimf_fields_new_with_data_all(datenow,
-                                       mblistfrom, NULL, addrlistreplyto,
-                                       addrlistto, addrlistcc, addrlistbcc,
-                                       messageid,
-                                       clist_inreplyto, clist_references,
-                                       subjectcstr);
+    mailimf_fields_new_with_data_all(datenow,
+                                     mblistfrom, NULL, addrlistreplyto,
+                                     addrlistto, addrlistcc, addrlistbcc,
+                                     messageid,
+                                     clist_inreplyto, clist_references,
+                                     subjectcstr);
 
   int col = 0;
   MMAPString* mmstr = mmap_string_new(NULL);
@@ -312,20 +312,19 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   return out;
 }
 
-std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_HtmlMessage,
-                          const std::vector<std::string> &p_AttachmentPaths)
+std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_HtmlMessage,
+                          const std::vector<std::string>& p_AttachmentPaths)
 {
-#if 0
-  mainMultipart (content for message, subType="mixed")
-    ->htmlAndTextBodyPart (bodyPart1 for mainMultipart)
-      ->htmlAndTextMultipart (content for htmlAndTextBodyPart, subType="alternative")
-        ->textBodyPart (bodyPart2 for the htmlAndTextMultipart)
-          ->text (content for textBodyPart)
-        ->htmlBodyPart (bodyPart1 for htmlAndTextMultipart)
-          ->html (content for htmlBodyPart)
-    ->fileBodyPart1 (bodyPart2 for the mainMultipart)
-      ->FileDataHandler (content for fileBodyPart1 )
-#endif
+  // html and text message part layout:
+  // mainMultipart (content for message, subType="mixed")
+  // ->htmlAndTextBodyPart (bodyPart1 for mainMultipart)
+  // --->htmlAndTextMultipart (content for htmlAndTextBodyPart, subType="alternative")
+  // ----->textBodyPart (bodyPart2 for the htmlAndTextMultipart)
+  // ------->text (content for textBodyPart)
+  // ----->htmlBodyPart (bodyPart1 for htmlAndTextMultipart)
+  // ------->html (content for htmlBodyPart)
+  // ->fileBodyPart1 (bodyPart2 for the mainMultipart)
+  // --->FileDataHandler (content for fileBodyPart1 )
 
   struct mailmime* mainMultipart =
     GetMimePart(mailmime_content_new_with_str("multipart/mixed"),
@@ -366,15 +365,15 @@ std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_Htm
   return out;
 }
 
-mailmime *Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message)
+mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message)
 {
   int encodingType = MAILMIME_MECHANISM_QUOTED_PRINTABLE;
   struct mailmime_mechanism* encoding = mailmime_mechanism_new(encodingType, NULL);
   struct mailmime_disposition* disposition =
-      mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_INLINE, NULL, NULL,
-                                         NULL, NULL, (size_t) -1);
+    mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_INLINE, NULL, NULL,
+                                       NULL, NULL, (size_t)-1);
   struct mailmime_fields* mimefields =
-      mailmime_fields_new_with_data(encoding, NULL, NULL, disposition, NULL);
+    mailmime_fields_new_with_data(encoding, NULL, NULL, disposition, NULL);
   struct mailmime_content* content = mailmime_content_new_with_str(p_MimeType);
   char* paramkey = strdup("charset");
   char* paramval = strdup("utf-8");
@@ -389,25 +388,25 @@ mailmime *Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Mes
   return mime;
 }
 
-mailmime *Smtp::GetMimeFilePart(const std::string &p_Path, const std::string &p_MimeType)
+mailmime* Smtp::GetMimeFilePart(const std::string& p_Path, const std::string& p_MimeType)
 {
   const std::string& filename = Util::BaseName(p_Path);
   char* dispositionname = strdup(filename.c_str());
   int encodingtype = MAILMIME_MECHANISM_BASE64;
   struct mailmime_disposition* disposition =
-      mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_ATTACHMENT,
-                                         dispositionname, NULL, NULL, NULL, (size_t) -1);
+    mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_ATTACHMENT,
+                                       dispositionname, NULL, NULL, NULL, (size_t)-1);
   struct mailmime_mechanism* encoding = mailmime_mechanism_new(encodingtype, NULL);
   struct mailmime_content* content = mailmime_content_new_with_str(p_MimeType.c_str());
   struct mailmime_fields* mimefields =
-      mailmime_fields_new_with_data(encoding, NULL, NULL, disposition, NULL);
-  struct mailmime * mime = GetMimePart(content, mimefields, 1);
+    mailmime_fields_new_with_data(encoding, NULL, NULL, disposition, NULL);
+  struct mailmime* mime = GetMimePart(content, mimefields, 1);
   mailmime_set_body_file(mime, strdup(p_Path.c_str()));
 
   return mime;
 }
 
-mailmime *Smtp::GetMimePart(mailmime_content *p_Content, mailmime_fields *p_MimeFields,
+mailmime* Smtp::GetMimePart(mailmime_content* p_Content, mailmime_fields* p_MimeFields,
                             bool p_ForceSingle)
 {
   clist* list = NULL;
@@ -428,7 +427,7 @@ mailmime *Smtp::GetMimePart(mailmime_content *p_Content, mailmime_fields *p_Mime
       case MAILMIME_TYPE_COMPOSITE_TYPE:
         switch (p_Content->ct_type->tp_data.tp_composite_type->ct_type)
         {
-          case MAILMIME_COMPOSITE_TYPE_MULTIPART:
+          case MAILMIME_COMPOSITE_TYPE_MULTIPART :
             mime_type = MAILMIME_MULTIPLE;
             break;
 
@@ -522,9 +521,9 @@ mailmime *Smtp::GetMimePart(mailmime_content *p_Content, mailmime_fields *p_Mime
   return mime;
 }
 
-std::string Smtp::MimeEncodeStr(const std::string &p_In)
+std::string Smtp::MimeEncodeStr(const std::string& p_In)
 {
-  if (std::all_of(p_In.cbegin(), p_In.cend(), [](char c){ return isprint(c); }))
+  if (std::all_of(p_In.cbegin(), p_In.cend(), [](char c) { return isprint(c); }))
   {
     return p_In;
   }

@@ -17,8 +17,10 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_Connect, const bool p_CacheEncrypt,
                          const bool p_CacheIndexEncrypt,
                          const std::set<std::string>& p_FoldersExclude,
-                         const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
-                         const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
+                         const std::function<void(const ImapManager::Request&,
+                                                  const ImapManager::Response&)>& p_ResponseHandler,
+                         const std::function<void(const ImapManager::Action&,
+                                                  const ImapManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler,
                          const std::function<void(const SearchQuery&,
                                                   const SearchResult&)>& p_SearchHandler)
@@ -118,7 +120,7 @@ void ImapManager::Start()
   m_SearchThread = std::thread(&ImapManager::SearchProcess, this);
 }
 
-void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
+void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
 {
   {
     std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
@@ -136,7 +138,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
   }
 }
 
-void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
+void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
 {
   if (m_Connecting || m_Imap.GetConnected())
   {
@@ -153,7 +155,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
   }
 }
 
-void ImapManager::AsyncAction(const ImapManager::Action &p_Action)
+void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
 {
   if (m_Imap.GetConnected())
   {

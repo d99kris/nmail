@@ -98,8 +98,8 @@ public:
               const uint16_t p_Port, const bool p_Connect, const bool p_CacheEncrypt,
               const bool p_CacheIndexEncrypt,
               const std::set<std::string>& p_FoldersExclude,
-              const std::function<void(const ImapManager::Request&,const ImapManager::Response&)>& p_ResponseHandler,
-              const std::function<void(const ImapManager::Action&,const ImapManager::Result&)>& p_ResultHandler,
+              const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
+              const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler,
               const std::function<void(const ImapManager::SearchQuery&,
                                        const ImapManager::SearchResult&)>& p_SearchHandler);
@@ -128,8 +128,8 @@ private:
 private:
   Imap m_Imap;
   bool m_Connect;
-  std::function<void(const ImapManager::Request&,const ImapManager::Response&)> m_ResponseHandler;
-  std::function<void(const ImapManager::Action&,const ImapManager::Result&)> m_ResultHandler;
+  std::function<void(const ImapManager::Request&, const ImapManager::Response&)> m_ResponseHandler;
+  std::function<void(const ImapManager::Action&, const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
   std::atomic<bool> m_Connecting;
@@ -158,8 +158,8 @@ private:
   std::string m_CurrentFolder = "INBOX";
   std::mutex m_Mutex;
 
-  int m_Pipe[2] = {-1, -1};
-  int m_CachePipe[2] = {-1, -1};
+  int m_Pipe[2] = { -1, -1 };
+  int m_CachePipe[2] = { -1, -1 };
 
   std::thread m_SearchThread;
   bool m_SearchRunning = false;

@@ -11,7 +11,7 @@ Contact::Contact()
 {
 }
 
-Contact::Contact(const std::string &p_Address, const std::string &p_Name)
+Contact::Contact(const std::string& p_Address, const std::string& p_Name)
   : m_Address(p_Address)
   , m_Name(p_Name)
 {
@@ -39,7 +39,7 @@ std::string Contact::ToString() const
   }
 }
 
-Contact Contact::FromString(const std::string &p_Str)
+Contact Contact::FromString(const std::string& p_Str)
 {
   std::string::size_type startBracket = p_Str.find("<");
   if (startBracket != std::string::npos)
@@ -58,7 +58,7 @@ Contact Contact::FromString(const std::string &p_Str)
   return Contact(p_Str);
 }
 
-std::vector<Contact> Contact::FromStrings(const std::vector<std::string> &p_Strs)
+std::vector<Contact> Contact::FromStrings(const std::vector<std::string>& p_Strs)
 {
   std::vector<Contact> contacts;
   for (auto& str : p_Strs)

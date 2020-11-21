@@ -24,14 +24,14 @@
 struct Fileinfo
 {
   Fileinfo()
-  : m_Name("")
-  , m_Size(0)
+    : m_Name("")
+    , m_Size(0)
   {
   }
 
   Fileinfo(const std::string& p_Name, ssize_t p_Size)
-  : m_Name(p_Name)
-  , m_Size(p_Size)
+    : m_Name(p_Name)
+    , m_Size(p_Size)
   {
   }
 
@@ -51,7 +51,7 @@ struct Fileinfo
 
 struct FileinfoCompare
 {
-  bool operator() (const Fileinfo& p_Lhs, const Fileinfo& p_Rhs) const
+  bool operator()(const Fileinfo& p_Lhs, const Fileinfo& p_Rhs) const
   {
     if (p_Lhs.IsDir() != p_Rhs.IsDir())
     {
@@ -114,8 +114,8 @@ public:
   static bool NotEmpty(const std::string& p_Path);
   static std::string ReadFile(const std::string& p_Path);
   static void WriteFile(const std::string& p_Path, const std::string& p_Str);
-  static std::wstring ReadWFile(const std::string &p_Path);
-  static void WriteWFile(const std::string &p_Path, const std::wstring &p_WStr);
+  static std::wstring ReadWFile(const std::string& p_Path);
+  static void WriteWFile(const std::string& p_Path, const std::wstring& p_WStr);
   static std::string BaseName(const std::string& p_Path);
   static std::string RemoveFileExt(const std::string& p_Path);
   static std::string GetFileExt(const std::string& p_Path);
@@ -163,7 +163,7 @@ public:
   static std::string TrimPadString(const std::string& p_Str, size_t p_Len);
   static std::wstring TrimPadWString(const std::wstring& p_Str, size_t p_Len);
 
-  template <typename T>
+  template<typename T>
   static inline T Bound(const T& p_Min, const T& p_Val, const T& p_Max)
   {
     return std::max(p_Min, std::min(p_Val, p_Max));
@@ -187,7 +187,7 @@ public:
                           const std::string& p_Delim = "\n");
 
   static std::string ToHexString(int p_Val);
-  static void DeleteToMatch(std::wstring &p_Str, const int p_StartPos, const wchar_t p_EndChar);
+  static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
   static std::string GetAppVersion();
   static std::string GetBuildOs();
   static std::string GetCompiler();

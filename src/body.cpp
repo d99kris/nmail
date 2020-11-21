@@ -13,7 +13,7 @@
 #include "loghelp.h"
 #include "util.h"
 
-void Body::SetData(const std::string &p_Data)
+void Body::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
   RemoveInvalidHeaders();
@@ -127,7 +127,7 @@ void Body::ParseHtml()
   }
 }
 
-void Body::ParseMime(mailmime *p_Mime)
+void Body::ParseMime(mailmime* p_Mime)
 {
   struct mailmime_content* content_type = p_Mime->mm_content_type;
   struct mailmime_type* type = content_type->ct_type;
@@ -205,8 +205,8 @@ void Body::ParseMime(mailmime *p_Mime)
       break;
 
     case MAILMIME_MULTIPLE:
-      for(clistiter *it = clist_begin(p_Mime->mm_data.mm_multipart.mm_mp_list); it != NULL;
-          it = clist_next(it))
+      for (clistiter* it = clist_begin(p_Mime->mm_data.mm_multipart.mm_mp_list); it != NULL;
+           it = clist_next(it))
       {
         ParseMime((struct mailmime*)clist_content(it));
       }

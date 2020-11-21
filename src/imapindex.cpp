@@ -406,7 +406,7 @@ void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
         const std::string& bodyText = body.GetTextPlain();
         const int64_t timeStamp = header.GetTimeStamp();
 
-        std::vector<std::string> docStrs({addresses, subject, bodyText});
+        std::vector<std::string> docStrs({ addresses, subject, bodyText });
         m_SearchEngine->Index(docId, timeStamp, docStrs);
 
         // @todo: decouple addressbook population from cache index

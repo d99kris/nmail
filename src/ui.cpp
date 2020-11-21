@@ -50,51 +50,51 @@ void Ui::Init()
 
   const std::map<std::string, std::string> defaultConfig =
   {
-    {"compose_hardwrap", "0"},
-    {"help_enabled", "1"},
-    {"persist_folder_filter", "1"},
-    {"persist_search_query", "0"},
-    {"plain_text", "1"},
-    {"show_progress", "1"},
-    {"new_msg_bell", "1"},
-    {"quit_without_confirm", "1"},
-    {"send_without_confirm", "0"},
-    {"cancel_without_confirm", "0"},
-    {"postpone_without_confirm", "0"},
-    {"delete_without_confirm", "0"},
-    {"show_embedded_images", "1"},
-    {"show_rich_header", "0"},
-    {"markdown_html_compose", "0"},
-    {"key_prev_msg", "p"},
-    {"key_next_msg", "n"},
-    {"key_reply", "r"},
-    {"key_forward", "f"},
-    {"key_delete", "d"},
-    {"key_compose", "c"},
-    {"key_toggle_unread", "u"},
-    {"key_move", "m"},
-    {"key_refresh", "l"},
-    {"key_quit", "q"},
-    {"key_toggle_text_html", "t"},
-    {"key_cancel", "KEY_CTRLC"},
-    {"key_send", "KEY_CTRLX"},
-    {"key_delete_line", "KEY_CTRLK"},
-    {"key_open", "."},
-    {"key_back", ","},
-    {"key_goto_folder", "g"},
-    {"key_to_select", "KEY_CTRLT"},
-    {"key_save_file", "s"},
-    {"key_external_editor", "KEY_CTRLE"},
-    {"key_external_pager", "KEY_CTRLE"},
-    {"key_postpone", "KEY_CTRLO"},
-    {"key_othercmd_help", "o"},
-    {"key_export", "e"},
-    {"key_import", "i"},
-    {"key_rich_header", "KEY_CTRLR"},
-    {"key_view_html", "KEY_CTRLV"},
-    {"key_search", "/"},
-    {"key_sync", "s"},
-    {"key_toggle_markdown_compose", "KEY_CTRLN"},
+    { "compose_hardwrap", "0" },
+    { "help_enabled", "1" },
+    { "persist_folder_filter", "1" },
+    { "persist_search_query", "0" },
+    { "plain_text", "1" },
+    { "show_progress", "1" },
+    { "new_msg_bell", "1" },
+    { "quit_without_confirm", "1" },
+    { "send_without_confirm", "0" },
+    { "cancel_without_confirm", "0" },
+    { "postpone_without_confirm", "0" },
+    { "delete_without_confirm", "0" },
+    { "show_embedded_images", "1" },
+    { "show_rich_header", "0" },
+    { "markdown_html_compose", "0" },
+    { "key_prev_msg", "p" },
+    { "key_next_msg", "n" },
+    { "key_reply", "r" },
+    { "key_forward", "f" },
+    { "key_delete", "d" },
+    { "key_compose", "c" },
+    { "key_toggle_unread", "u" },
+    { "key_move", "m" },
+    { "key_refresh", "l" },
+    { "key_quit", "q" },
+    { "key_toggle_text_html", "t" },
+    { "key_cancel", "KEY_CTRLC" },
+    { "key_send", "KEY_CTRLX" },
+    { "key_delete_line", "KEY_CTRLK" },
+    { "key_open", "." },
+    { "key_back", "," },
+    { "key_goto_folder", "g" },
+    { "key_to_select", "KEY_CTRLT" },
+    { "key_save_file", "s" },
+    { "key_external_editor", "KEY_CTRLE" },
+    { "key_external_pager", "KEY_CTRLE" },
+    { "key_postpone", "KEY_CTRLO" },
+    { "key_othercmd_help", "o" },
+    { "key_export", "e" },
+    { "key_import", "i" },
+    { "key_rich_header", "KEY_CTRLR" },
+    { "key_view_html", "KEY_CTRLV" },
+    { "key_search", "/" },
+    { "key_sync", "s" },
+    { "key_toggle_markdown_compose", "KEY_CTRLN" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -376,7 +376,7 @@ void Ui::DrawDefaultDialog()
   wrefresh(m_DialogWin);
 }
 
-void Ui::SetDialogMessage(const std::string &p_DialogMessage, bool p_Warn /*= false */)
+void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= false */)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_DialogMessage = p_DialogMessage;
@@ -546,7 +546,7 @@ void Ui::DrawHelp()
   }
 }
 
-void Ui::DrawHelpText(const std::vector<std::vector<std::string> > &p_HelpText)
+void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText)
 {
   int cols = 6;
   int width = m_ScreenWidth / cols;
@@ -1756,12 +1756,12 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   else if (p_Key == KEY_LEFT)
   {
     m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos - 1,
-                                         (int)m_FileListFilterStr.size());
+                                      (int)m_FileListFilterStr.size());
   }
   else if (p_Key == KEY_RIGHT)
   {
     m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos + 1,
-                                         (int)m_FileListFilterStr.size());
+                                      (int)m_FileListFilterStr.size());
   }
   else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
   {
@@ -2008,7 +2008,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -2170,7 +2170,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -2492,7 +2492,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else
     {
-      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
     }
   }
 
@@ -2637,7 +2637,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) +  ")");
+    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -3403,8 +3403,11 @@ void Ui::SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
   }
   else if (p_SearchQuery.m_Offset > 0)
   {
-    m_MessageListSearchResultHeaders.insert(m_MessageListSearchResultHeaders.end(), p_SearchResult.m_Headers.begin(), p_SearchResult.m_Headers.end());
-    m_MessageListSearchResultFolderUids.insert(m_MessageListSearchResultFolderUids.end(), p_SearchResult.m_FolderUids.begin(), p_SearchResult.m_FolderUids.end());
+    m_MessageListSearchResultHeaders.insert(m_MessageListSearchResultHeaders.end(),
+                                            p_SearchResult.m_Headers.begin(), p_SearchResult.m_Headers.end());
+    m_MessageListSearchResultFolderUids.insert(
+      m_MessageListSearchResultFolderUids.end(), p_SearchResult.m_FolderUids.begin(),
+      p_SearchResult.m_FolderUids.end());
     LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
   }
 
@@ -3779,7 +3782,8 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
       searchQuery.m_Offset = m_MessageListSearchOffset;
       searchQuery.m_Max = m_MessageListSearchMax;
 
-      LOG_DEBUG("search str = \"%s\" offset = %d max = %d", searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
+      LOG_DEBUG("search str = \"%s\" offset = %d max = %d",
+                searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
       m_ImapManager->AsyncSearch(searchQuery);
     }
 
@@ -3812,7 +3816,8 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
     lastUid = m_MessageListCurrentUid[m_CurrentFolder];
   }
 
-  LOG_TRACE("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
+  LOG_TRACE("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder],
+            m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 
 void Ui::UpdateIndexFromUid()
@@ -3850,7 +3855,8 @@ void Ui::UpdateIndexFromUid()
     m_CurrentFolderUid.second = m_MessageListCurrentUid[m_CurrentFolder];
   }
 
-  LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder], m_MessageListCurrentIndex[m_CurrentFolder]);
+  LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder],
+            m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 
 void Ui::AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders)
@@ -4016,14 +4022,14 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
   {
     werase(m_HelpWin);
     static std::vector<std::vector<std::string>> savePartHelp =
+    {
       {
-       {
         GetKeyDisplay(KEY_RETURN), p_Action,
-       },
-       {
+      },
+      {
         GetKeyDisplay(m_KeyCancel), "Cancel",
-       }
-      };
+      }
+    };
 
     DrawHelpText(savePartHelp);
 
@@ -4068,7 +4074,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
     else if (key == KEY_RIGHT)
     {
       m_FilenameEntryStringPos = Util::Bound(0, m_FilenameEntryStringPos + 1,
-                                           (int)m_FilenameEntryString.size());
+                                             (int)m_FilenameEntryString.size());
     }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
              (key == KEY_PPAGE) || (key == KEY_NPAGE) ||
@@ -4324,7 +4330,8 @@ void Ui::SearchMessage()
       searchQuery.m_Offset = 0;
       searchQuery.m_Max = 2 * m_MainWinHeight;
 
-      LOG_DEBUG("search str=\"%s\" offset=%d max=%d", searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
+      LOG_DEBUG("search str=\"%s\" offset=%d max=%d",
+                searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
       m_ImapManager->AsyncSearch(searchQuery);
     }
     else

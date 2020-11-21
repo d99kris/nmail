@@ -11,13 +11,13 @@ Serialized::Serialized()
 {
 }
 
-Serialized::Serialized(const std::string &p_Path)
+Serialized::Serialized(const std::string& p_Path)
   : m_Path(p_Path)
 {
   Load(p_Path);
 }
 
-Serialized::Serialized(const Serialized &p_Serialized)
+Serialized::Serialized(const Serialized& p_Serialized)
   : m_String(p_Serialized.m_String)
 {
 }
@@ -27,7 +27,7 @@ void Serialized::Clear()
   m_String.clear();
 }
 
-void Serialized::FromString(const std::string &p_String)
+void Serialized::FromString(const std::string& p_String)
 {
   m_String = p_String;
 }
@@ -37,7 +37,7 @@ std::string Serialized::ToString()
   return m_String;
 }
 
-void Serialized::Load(const std::string &p_Path)
+void Serialized::Load(const std::string& p_Path)
 {
   std::ifstream file(p_Path);
   std::stringstream ss;
@@ -45,17 +45,17 @@ void Serialized::Load(const std::string &p_Path)
   m_String = ss.str();
 }
 
-void Serialized::Save(const std::string &p_Path)
+void Serialized::Save(const std::string& p_Path)
 {
   const std::string& path = !p_Path.empty() ? p_Path : m_Path;
   std::ofstream file(path);
   file << m_String;
 }
 
-std::string Serialized::ToHex(const std::string &p_String)
+std::string Serialized::ToHex(const std::string& p_String)
 {
   std::ostringstream oss;
-  for(const char& ch : p_String)
+  for (const char& ch : p_String)
   {
     char buf[3] = { 0 };
     snprintf(buf, sizeof(buf), "%02X", (unsigned char)ch);
@@ -65,7 +65,7 @@ std::string Serialized::ToHex(const std::string &p_String)
   return oss.str();
 }
 
-std::string Serialized::FromHex(const std::string &p_String)
+std::string Serialized::FromHex(const std::string& p_String)
 {
   std::string result;
   std::istringstream iss(p_String);
