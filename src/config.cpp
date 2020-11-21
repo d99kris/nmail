@@ -27,7 +27,7 @@ Config::Config(const std::string& p_Path, const std::map<std::string, std::strin
 Config::~Config()
 {
 }
-  
+
 void Config::Load(const std::string& p_Path)
 {
   m_Path = p_Path;
@@ -40,21 +40,21 @@ void Config::Load(const std::string& p_Path)
     chmod(p_Path.c_str(), 0600);
     return;
   }
-    
+
   std::string line;
   while (std::getline(stream, line))
   {
     if (line.length() == 0) continue;
-    
+
     if (line[0] == '#') continue;
-    
+
     std::string param;
     std::istringstream linestream(line);
     if (!std::getline(linestream, param, '=')) continue;
-    
+
     std::string value;
     std::getline(linestream, value);
-    
+
     m_Map[param] = value;
   }
 }
@@ -72,7 +72,7 @@ void Config::Save(const std::string& p_Path) const
   {
     return;
   }
-  
+
   for (auto const& item : m_Map)
   {
     stream << item.first << "=" << item.second << std::endl;

@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   Util::SetApplicationDir(std::string(getenv("HOME")) + std::string("/.nmail"));
   bool online = true;
   std::string setup;
-  
+
   // Argument handling
   std::vector<std::string> args(argv + 1, argv + argc);
   for (auto it = args.begin(); it != args.end(); ++it)
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
       return 1;
     }
   }
- 
+
   if (!apathy::Path(Util::GetApplicationDir()).exists())
   {
     apathy::Path::makedirs(Util::GetApplicationDir());
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 
   THREAD_REGISTER();
   Util::RegisterSignalHandler();
-  
+
   const std::string version = Util::GetAppVersion();
   LOG_INFO("starting nmail %s", version.c_str());
 
@@ -148,14 +148,14 @@ int main(int argc, char* argv[])
   };
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
   std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
-  
+
   if (!setup.empty())
   {
     remove(mainConfigPath.c_str());
     remove(secretConfigPath.c_str());
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
     secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
-    
+
     if (setup == "gmail")
     {
       SetupGmail(mainConfig);
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     mainConfig->Delete("pass");
     secretConfig->Set("pass", encPass);
   }
-  
+
   std::string encSmtpPass;
   if (secretConfig->Exist("smtp_pass"))
   {
@@ -308,12 +308,12 @@ int main(int argc, char* argv[])
       smtpPass = Crypto::AESDecrypt(Serialized::FromHex(encSmtpPass), smtpUser);
     }
   }
-  
+
   if (!ValidatePass(smtpPass, "SMTP "))
   {
     return 1;
   }
-  
+
   Util::InitStdErrRedirect(logPath);
 
   Ui ui(inbox, address, prefetchLevel);
@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
 
   imapManager->Start();
   smtpManager->Start();
-  
+
   ui.Run();
 
   ui.ResetSmtpManager();
@@ -359,20 +359,20 @@ int main(int argc, char* argv[])
   secretConfig.reset();
 
   AddressBook::Cleanup();
-  
+
   Util::CleanupTempDir();
 
   Util::CleanupStdErrRedirect();
-  
+
   LOG_INFO("exiting nmail");
-  
-  return 0;  
+
+  return 0;
 }
 
 static void ShowHelp()
 {
   std::cout <<
-    "nmail is a console-based email client with a user interface similar to\n" 
+    "nmail is a console-based email client with a user interface similar to\n"
     "alpine / pine, supporting IMAP and SMTP.\n"
     "\n"
     "Usage: nmail [OPTION]\n"
@@ -427,19 +427,19 @@ static void SetupCommon(std::shared_ptr<Config> p_Config)
   p_Config->Set("name", name);
   p_Config->Set("address", email);
   p_Config->Set("user", email);
-  p_Config->Set("cache_encrypt", "1");  
+  p_Config->Set("cache_encrypt", "1");
   p_Config->Set("save_pass", std::to_string((int)(savepass == "y")));
 }
 
 static void SetupGmail(std::shared_ptr<Config> p_Config)
 {
   SetupCommon(p_Config);
-  
+
   p_Config->Set("imap_host", "imap.gmail.com");
   p_Config->Set("imap_port", "993");
   p_Config->Set("smtp_host", "smtp.gmail.com");
   p_Config->Set("smtp_port", "465");
-  p_Config->Set("inbox", "INBOX");  
+  p_Config->Set("inbox", "INBOX");
   p_Config->Set("trash", "[Gmail]/Trash");
   p_Config->Set("drafts", "[Gmail]/Drafts");
   p_Config->Set("sent", "[Gmail]/Sent Mail");
@@ -454,8 +454,8 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config)
   p_Config->Set("imap_port", "993");
   p_Config->Set("smtp_host", "smtp-mail.outlook.com");
   p_Config->Set("smtp_port", "587");
-  p_Config->Set("inbox", "Inbox");  
-  p_Config->Set("trash", "Deleted");  
+  p_Config->Set("inbox", "Inbox");
+  p_Config->Set("trash", "Deleted");
   p_Config->Set("drafts", "Drafts");
   p_Config->Set("sent", "Sent");
 }
@@ -521,7 +521,7 @@ void LogSystemInfo()
 
   const std::string openSSLVersion = Crypto::GetVersion();
   LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
-  
+
   const std::string sqliteVersion = Util::GetSQLiteVersion();
   LOG_DEBUG("sqlite:    %s", sqliteVersion.c_str());
 

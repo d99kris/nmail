@@ -19,7 +19,7 @@ class SearchEngine
 public:
   explicit SearchEngine(const std::string& p_DbPath);
   virtual ~SearchEngine();
-  
+
   void Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs);
   void Remove(const std::string& p_DocId);
   void Commit();
@@ -30,11 +30,11 @@ public:
   bool Exists(const std::string& p_DocId);
 
   static std::string GetXapianVersion();
-  
+
 private:
   std::string m_DbPath;
   std::unique_ptr<Xapian::Database> m_Database;
-  std::unique_ptr<Xapian::WritableDatabase> m_WritableDatabase;  
+  std::unique_ptr<Xapian::WritableDatabase> m_WritableDatabase;
   std::mutex m_DatabaseMutex;
   std::mutex m_WritableDatabaseMutex;
   const Xapian::valueno m_DateSlot = 1;

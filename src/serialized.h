@@ -50,7 +50,7 @@ public:
       p_Serialized.m_String += ToHex(string) + " ";
     }
     p_Serialized.m_String += "\n";
-    
+
     return p_Serialized;
   }
 
@@ -64,7 +64,7 @@ public:
       p_Serialized.m_String += ToHex(string) + " ";
     }
     p_Serialized.m_String += "\n";
-    
+
     return p_Serialized;
   }
 
@@ -80,7 +80,7 @@ public:
       p_Serialized.m_String += ToHex(string) + " ";
     }
     p_Serialized.m_String += "\n";
-    
+
     return p_Serialized;
   }
 
@@ -94,7 +94,7 @@ public:
       ToVal(FromHex(line), p_Value);
       p_Serialized.m_String = p_Serialized.m_String.substr(line.size() + 1);
     }
-        
+
     return p_Serialized;
   }
 
@@ -113,10 +113,10 @@ public:
         ToVal(FromHex(word), value);
         p_Vector.push_back(value);
       }
-      
+
       p_Serialized.m_String = p_Serialized.m_String.substr(line.size() + 1);
     }
-    
+
     return p_Serialized;
   }
 
@@ -135,13 +135,13 @@ public:
         ToVal(FromHex(word), value);
         p_Set.insert(value);
       }
-      
+
       p_Serialized.m_String = p_Serialized.m_String.substr(line.size() + 1);
     }
-    
+
     return p_Serialized;
   }
-  
+
   template <typename T, typename U>
   friend Serialized& operator>>(Serialized& p_Serialized, std::map<T, U>& p_Map)
   {
@@ -159,10 +159,10 @@ public:
         ToVal(FromHex(secondWord), secondValue);
         p_Map.insert(std::pair<T, U>(firstValue, secondValue));
       }
-      
+
       p_Serialized.m_String = p_Serialized.m_String.substr(line.size() + 1);
     }
-    
+
     return p_Serialized;
   }
 
@@ -185,7 +185,7 @@ private:
     oss << p_Value;
     p_String = oss.str();
   }
-  
+
 private:
   std::string m_Path;
   std::string m_String;

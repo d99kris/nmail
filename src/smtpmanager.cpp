@@ -138,7 +138,7 @@ void SmtpManager::Process()
           {
             m_ResultHandler(result);
           }
-          
+
           m_QueueMutex.lock();
         }
       }

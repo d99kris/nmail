@@ -36,8 +36,8 @@ public:
 
   void DeleteCacheExceptUids(const std::string &p_Folder, const std::set<uint32_t>& p_Uids);
   void PruneCacheFolders(const std::set<std::string>& p_KeepFolders);
-  
+
 private:
   bool m_CacheEncrypt;
-  std::string m_Pass;  
+  std::string m_Pass;
 };

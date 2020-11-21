@@ -16,7 +16,7 @@ public:
   static const int INFO_LEVEL = 0;
   static const int DEBUG_LEVEL = 1;
   static const int TRACE_LEVEL = 2;
-  
+
   static void SetPath(const std::string& p_Path);
   static void SetVerboseLevel(int p_Level);
   static inline int GetVerboseLevel()  { return m_VerboseLevel; }
@@ -33,7 +33,7 @@ public:
 
 private:
   static void Write(const char* p_Filename, int p_LineNo, const char* p_Level, const char* p_Format, va_list p_VaList);
-  
+
 private:
   static std::string m_Path;
   static int m_VerboseLevel;

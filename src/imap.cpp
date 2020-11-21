@@ -54,7 +54,7 @@ Imap::~Imap()
 
   m_ImapIndex.reset();
   m_ImapCache.reset();
-  
+
   if (m_Imap != NULL)
   {
     mailimap_free(m_Imap);
@@ -122,7 +122,7 @@ bool Imap::Logout()
 bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
 {
   LOG_DEBUG_FUNC(STR(p_Cached, p_Folders));
-  
+
   if (p_Cached)
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
@@ -207,7 +207,7 @@ bool Imap::GetUids(const std::string &p_Folder, const bool p_Cached, std::set<ui
   struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
   mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
   clist* fetch_result = NULL;
-  
+
   int rv = LOG_IF_IMAP_ERR(mailimap_fetch(m_Imap, set, fetch_type, &fetch_result));
   if (rv == MAILIMAP_NO_ERROR)
   {
@@ -306,7 +306,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
                                                mailimap_fetch_att_new_rfc822_header());
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
-    
+
     rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
     if (rv == MAILIMAP_NO_ERROR)
     {
@@ -362,7 +362,7 @@ bool Imap::GetHeaders(const std::string &p_Folder, const std::set<uint32_t> &p_U
 
         m_ImapIndex->EnqueueAddMessage(p_Folder, uid);
       }
-    
+
       mailimap_fetch_list_free(fetch_result);
     }
 
@@ -530,7 +530,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   }
 
   int rv = MAILIMAP_NO_ERROR;
-  
+
   if (needFetch)
   {
     std::lock_guard<std::mutex> imapLock(m_ImapMutex);
@@ -548,7 +548,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
 
     clist* fetch_result = NULL;
-    
+
     rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
     if (rv == MAILIMAP_NO_ERROR)
     {
@@ -613,7 +613,7 @@ bool Imap::GetBodys(const std::string &p_Folder, const std::set<uint32_t> &p_Uid
   }
 
   mailimap_set_free(set);
-  
+
   return (rv == MAILIMAP_NO_ERROR);
 }
 
@@ -641,7 +641,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
   struct mailimap_store_att_flags* storeflags = p_Value
     ? mailimap_store_att_flags_new_add_flags(flaglist)
     : mailimap_store_att_flags_new_remove_flags(flaglist);
-  
+
   int rv = LOG_IF_IMAP_ERR(mailimap_uid_store(m_Imap, set, storeflags));
 
   if (storeflags != NULL)
@@ -670,7 +670,7 @@ bool Imap::SetFlagSeen(const std::string &p_Folder, const std::set<uint32_t> &p_
 
     m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderFlagsCachePath(p_Folder), Serialize(flags));
   }
-  
+
   return (rv == MAILIMAP_NO_ERROR);
 }
 
@@ -678,7 +678,7 @@ bool Imap::SetFlagDeleted(const std::string &p_Folder, const std::set<uint32_t> 
                           bool p_Value)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Value));
-  
+
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
   if (!SelectFolder(p_Folder))
@@ -698,11 +698,11 @@ bool Imap::SetFlagDeleted(const std::string &p_Folder, const std::set<uint32_t> 
   struct mailimap_store_att_flags* storeflags = p_Value
     ? mailimap_store_att_flags_new_add_flags(flaglist)
     : mailimap_store_att_flags_new_remove_flags(flaglist);
-  
+
   int rv = LOG_IF_IMAP_ERR(mailimap_uid_store(m_Imap, set, storeflags));
 
   mailimap_set_free(set);
-  
+
   if (storeflags != NULL)
   {
     mailimap_store_att_flags_free(storeflags);
@@ -728,7 +728,7 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
   {
     mailimap_set_add_single(set, uid);
   }
-  
+
   int rv = LOG_IF_IMAP_ERR(mailimap_uid_move(m_Imap, set, p_DestFolder.c_str()));
 
   mailimap_set_free(set);
@@ -745,7 +745,7 @@ bool Imap::MoveMessages(const std::string &p_Folder, const std::set<uint32_t> &p
       Util::DeleteFile(m_ImapCache->GetBodyCachePath(p_Folder, uid));
       Util::DeleteFile(m_ImapCache->GetHeaderCachePath(p_Folder, uid));
     }
-    
+
     m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder), Serialize(uids));
   }
 
@@ -828,7 +828,7 @@ bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, 
 
   time_t nowtime = time(NULL);
   struct tm* lt = localtime(&nowtime);
-  
+
   struct mailimap_date_time* datetime =
     mailimap_date_time_new(lt->tm_mday, (lt->tm_mon + 1), (lt->tm_year + 1900),
                            lt->tm_hour, lt->tm_min, lt->tm_sec, 0 /* dt_zone */);
@@ -844,7 +844,7 @@ bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, 
 }
 
 void Imap::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
-                  std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids, 
+                  std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
                   bool& p_HasMore)
 {
   return m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
@@ -869,7 +869,7 @@ bool Imap::SelectFolder(const std::string &p_Folder, bool p_Force)
         m_ImapIndex->EnqueueDeleteFolder(p_Folder);
         m_ImapIndex->EnqueueAddFolder(p_Folder);
       }
-        
+
       LOG_DEBUG("folder %s = %d", p_Folder.c_str(),
                 (m_Imap->imap_selection_info->sel_has_exists == 1) ? m_Imap->imap_selection_info->sel_exists : -1);
     }
@@ -931,7 +931,7 @@ bool Imap::LockSelectedFolder(bool p_DoLock)
   }
 
   return true;
-}  
+}
 
 uint32_t Imap::GetUidValidity()
 {
@@ -941,7 +941,7 @@ uint32_t Imap::GetUidValidity()
 void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData)
 {
   if (p_LogType == MAILSTREAM_LOG_TYPE_DATA_SENT_PRIVATE) return; // dont log private data, like passwords
-  
+
   (void)p_Imap;
   (void)p_UserData;
   char* buffer = (char*)malloc(p_Size + 1);

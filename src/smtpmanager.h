@@ -60,7 +60,7 @@ public:
   void AsyncAction(const Action& p_Action);
   Result SyncAction(const Action& p_Action);
   std::string GetAddress();
-  
+
 private:
   void Process();
   Result PerformAction(const Action& p_Action);
@@ -79,12 +79,12 @@ private:
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::atomic<bool> m_Running;
   std::thread m_Thread;
-  
+
   std::condition_variable m_ExitedCond;
   std::mutex m_ExitedCondMutex;
 
   std::deque<Action> m_Actions;
   std::mutex m_QueueMutex;
-  
+
   int m_Pipe[2] = {-1, -1};
 };

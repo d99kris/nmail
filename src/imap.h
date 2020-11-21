@@ -26,7 +26,7 @@ public:
        const std::set<std::string>& p_FoldersExclude,
        const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~Imap();
-  
+
   bool Login();
   bool Logout();
 

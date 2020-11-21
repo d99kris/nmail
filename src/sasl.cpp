@@ -38,7 +38,7 @@ std::string Sasl::GetMechanisms()
   {
     mechstr += std::string((i == 0) ? "" : ", ") + std::string(mechs[i]);
   }
-  
+
   rv = sasl_client_done();
   if (rv != SASL_OK)
   {

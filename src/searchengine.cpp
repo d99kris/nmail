@@ -19,7 +19,7 @@ SearchEngine::SearchEngine(const std::string& p_DbPath)
 SearchEngine::~SearchEngine()
 {
 }
-  
+
 void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs)
 {
   Xapian::TermGenerator termGenerator;
@@ -80,7 +80,7 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
     size_t cnt = 0;
     Xapian::MSet mset = enquire.get_mset(p_Offset, p_Max + 1);
     for (Xapian::MSetIterator it = mset.begin(); it != mset.end(); ++it, ++cnt)
-    {      
+    {
       if (cnt >= p_Max)
       {
         p_HasMore = true;

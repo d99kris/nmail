@@ -16,7 +16,7 @@ public:
   Config();
   Config(const std::string& p_Path, const std::map<std::string, std::string>& p_Default);
   virtual ~Config();
-  
+
   void Load(const std::string& p_Path);
   void Save() const;
   void Save(const std::string& p_Path) const;

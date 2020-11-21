@@ -89,7 +89,7 @@ void Body::ParseText()
     {
       partText = Util::ConvertEncoding(part.m_Charset, "utf-8", partText);
     }
-    
+
     m_TextPlain = partText;
   }
 }
@@ -253,13 +253,13 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
     {
       contentId = std::string(fields.fld_id);
     }
-    
+
     if (fields.fld_content_charset != NULL)
     {
       charset = Util::ToLower(std::string(fields.fld_content_charset));
     }
   }
-  
+
   switch (data->dt_type)
   {
     case MAILMIME_DATA_TEXT:
@@ -270,7 +270,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
         int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data,
                                      data->dt_data.dt_text.dt_length, &index,
                                      data->dt_encoding, &parsedStr, &parsedLen);
-        
+
         if (rv == MAILIMF_NO_ERROR)
         {
           Part part;
@@ -285,7 +285,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
           part.m_MimeType = p_MimeType;
           part.m_Filename = Util::MimeToUtf8(filename);
           part.m_ContentId = contentId;
-          
+
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
             m_TextPlainIndex = index;

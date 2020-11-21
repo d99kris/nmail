@@ -53,7 +53,7 @@ void ScopedDirLock::Unlock()
 int PathLock::Lock(const std::string& p_Path)
 {
   if (p_Path.empty()) return -1;
-  
+
   int fd = open(p_Path.c_str(), O_RDONLY | O_NOCTTY);
   if (fd >= 0)
   {
@@ -83,7 +83,7 @@ bool PathLock::Unlock(int p_Fd)
 int PathLock::TryLock(const std::string& p_Path)
 {
   if (p_Path.empty()) return -1;
-  
+
   int fd = open(p_Path.c_str(), O_RDONLY | O_NOCTTY);
   if (fd >= 0)
   {

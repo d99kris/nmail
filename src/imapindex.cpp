@@ -32,12 +32,12 @@ ImapIndex::ImapIndex(const bool p_CacheIndexEncrypt, const bool p_CacheEncrypt,
   LOG_DEBUG_FUNC(STR(p_CacheEncrypt, p_Folders));
 
   m_ImapCache.reset(new ImapCache(p_CacheEncrypt, m_Pass));
-  
+
   for (const auto& folder : p_Folders)
   {
     EnqueueAddFolder(folder);
   }
-    
+
   LOG_DEBUG("start thread");
   m_Running = true;
   m_Thread = std::thread(&ImapIndex::Process, this);
@@ -83,14 +83,14 @@ void ImapIndex::EnqueueSyncFolders(std::set<std::string>& p_Folders)
   {
     EnqueueDeleteFolder(deleteFolder);
   }
-    
+
   for (const auto& addFolder : addFolders)
   {
     EnqueueAddFolder(addFolder);
   }
 }
 
-void ImapIndex::EnqueueAddFolder(const std::string& p_Folder) 
+void ImapIndex::EnqueueAddFolder(const std::string& p_Folder)
 {
   LOG_DEBUG_FUNC(STR(p_Folder));
 
@@ -141,7 +141,7 @@ void ImapIndex::EnqueueDeleteMessages(const std::string& p_Folder, const std::se
 }
 
 void ImapIndex::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
-                       std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids, 
+                       std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
                        bool& p_HasMore)
 {
   LOG_DEBUG_FUNC(STR(p_QueryStr, p_Offset, p_Max, p_HasMore));
@@ -169,7 +169,7 @@ void ImapIndex::Search(const std::string& p_QueryStr, const unsigned p_Offset, c
     }
   }
 }
-  
+
 void ImapIndex::Process()
 {
   LOG_DEBUG("start process");
@@ -254,12 +254,12 @@ void ImapIndex::Process()
               m_AddQueue.erase(addFolder);
               performCommit = true;
             }
-            
+
             break;
           }
         }
       }
-        
+
     }
 
     if (processLockFd == -1)
@@ -323,14 +323,14 @@ void ImapIndex::Process()
         m_SearchEngine->Commit();
         lastCommit = std::chrono::system_clock::now();
       }
-      
+
       // unlock
       PathLock::TryUnlock(processLockFd);
     }
   }
 
   LOG_DEBUG("exiting loop");
-    
+
   m_SearchEngine.reset();
   if (m_CacheIndexEncrypt)
   {
@@ -379,7 +379,7 @@ void ImapIndex::DeleteFolder(const std::string& p_Folder)
     }
   }
 }
-  
+
 void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
 {
   LOG_TRACE_FUNC(STR(p_Folder, p_Uid));
@@ -436,7 +436,7 @@ void ImapIndex::DeleteMessages(const std::string& p_Folder, const std::set<uint3
     }
   }
 }
-  
+
 std::string ImapIndex::GetDocId(const std::string& p_Folder, const uint32_t p_Uid)
 {
   return p_Folder + "_" + std::to_string(p_Uid);
@@ -468,7 +468,7 @@ uint32_t ImapIndex::GetUidFromDocId(const std::string& p_DocId)
     return 0;
   }
 }
-  
+
 std::string ImapIndex::GetCacheIndexDir()
 {
   return Util::GetApplicationDir() + std::string("cache/") + std::string("index/");

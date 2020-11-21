@@ -267,7 +267,7 @@ std::string Util::GetTempDirectory()
   {
     name = "";
   }
-  
+
   free(cname);
   return name;
 }
@@ -304,7 +304,7 @@ std::string Util::GetHtmlToTextConvertCmd()
   if (!m_HtmlToTextConvertCmd.empty()) return m_HtmlToTextConvertCmd;
 
   static std::string defaultHtmlToTextConvertCmd = GetDefaultHtmlToTextConvertCmd();
-  
+
   return defaultHtmlToTextConvertCmd;
 }
 
@@ -383,7 +383,7 @@ std::string Util::GetExtViewerCmd()
   if (!m_ExtViewerCmd.empty()) return m_ExtViewerCmd;
 
   static std::string defaultExtViewerCmd = GetDefaultExtViewerCmd();
-  
+
   return defaultExtViewerCmd;
 }
 
@@ -476,7 +476,7 @@ std::string Util::ToString(const std::wstring& p_WStr)
 {
   size_t len = std::wcstombs(nullptr, p_WStr.c_str(), 0);
   if (len != static_cast<std::size_t>(-1))
-  {  
+  {
     std::vector<char> cstr(len + 1);
     std::wcstombs(&cstr[0], p_WStr.c_str(), len);
     std::string str(&cstr[0], len);
@@ -910,7 +910,7 @@ std::wstring Util::Join(const std::vector<std::wstring>& p_Lines)
     {
       first = false;
     }
-      
+
     str += line;
   }
   return str;
@@ -930,7 +930,7 @@ std::string Util::Join(const std::vector<std::string>& p_Lines, const std::strin
     {
       first = false;
     }
-      
+
     str += line;
   }
   return str;
@@ -1014,8 +1014,8 @@ void Util::RegisterSignalHandler()
   signal(SIGBUS,  SignalHandler);
   signal(SIGILL,  SignalHandler);
   signal(SIGFPE,  SignalHandler);
-  signal(SIGTRAP, SignalHandler); 
-  signal(SIGUSR1, SignalHandler); 
+  signal(SIGTRAP, SignalHandler);
+  signal(SIGUSR1, SignalHandler);
 }
 
 static std::mutex s_SignalMutex;
@@ -1070,7 +1070,7 @@ std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)
     ss << std::left << std::setw(2) << std::setfill(' ') << i << "  ";
     ss << "0x" << std::hex << std::setw(16) << std::setfill('0') << std::right
        << (unsigned long long) p_Callstack[i] << "  ";
-    
+
     Dl_info dlinfo;
     if (dladdr(p_Callstack[i], &dlinfo) && dlinfo.dli_sname)
     {
@@ -1308,7 +1308,7 @@ std::vector<std::string> Util::MimeToUtf8(const std::vector<std::string>& p_Strs
 std::string Util::ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
                                   const std::string& p_SrcStr)
 {
-  std::string str; 
+  std::string str;
   char* convStr = NULL;
   size_t convLen = 0;
   if ((charconv_buffer(p_DstEnc.c_str(), p_SrcEnc.c_str(), p_SrcStr.c_str(), p_SrcStr.size(),

@@ -44,7 +44,7 @@ public:
   void Update(const StatusUpdate& p_StatusUpdate);
   bool IsSet(const Flag& p_Flag);
   std::string ToString(bool p_ShowProgress);
-  
+
 private:
   uint32_t m_Flags = 0;
   int32_t m_Progress = 0;

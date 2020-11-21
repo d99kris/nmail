@@ -34,7 +34,7 @@ struct Fileinfo
   , m_Size(p_Size)
   {
   }
-  
+
   inline bool IsDir() const
   {
     return (m_Size == -1);
@@ -116,7 +116,7 @@ public:
   static void WriteFile(const std::string& p_Path, const std::string& p_Str);
   static std::wstring ReadWFile(const std::string &p_Path);
   static void WriteWFile(const std::string &p_Path, const std::wstring &p_WStr);
-  static std::string BaseName(const std::string& p_Path); 
+  static std::string BaseName(const std::string& p_Path);
   static std::string RemoveFileExt(const std::string& p_Path);
   static std::string GetFileExt(const std::string& p_Path);
   static std::string DirName(const std::string& p_Path);
@@ -162,7 +162,7 @@ public:
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, size_t p_Len);
   static std::wstring TrimPadWString(const std::wstring& p_Str, size_t p_Len);
-  
+
   template <typename T>
   static inline T Bound(const T& p_Min, const T& p_Val, const T& p_Max)
   {

@@ -48,13 +48,13 @@ private:
 
   static void Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
                      void* p_UserData);
-  
+
 private:
   std::mutex m_Mutex;
   std::string m_User;
   std::string m_Pass;
   std::string m_Host;
-  uint16_t m_Port = 0;  
+  uint16_t m_Port = 0;
   std::string m_Name;
   std::string m_Address;
 };

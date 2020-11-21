@@ -25,7 +25,7 @@ class AddressBook
 public:
   static void Init(const bool p_AddressBookEncrypt, const std::string& p_Pass);
   static void Cleanup();
-  
+
   static void Add(const std::string& p_MsgId, const std::set<std::string>& p_Addresses);
   static std::vector<std::string> Get(const std::string& p_Filter);
 

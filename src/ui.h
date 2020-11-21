@@ -80,7 +80,7 @@ public:
   void StatusHandler(const StatusUpdate& p_StatusUpdate);
   void SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
                      const ImapManager::SearchResult& p_SearchResult);
-  
+
 private:
   void Init();
   void Cleanup();
@@ -172,9 +172,9 @@ private:
 
   std::string m_CurrentFolder = "INBOX";
   std::string m_PreviousFolder;
-    
+
   std::mutex m_Mutex;
-  Status m_Status;  
+  Status m_Status;
   std::set<std::string> m_Folders;
   std::map<std::string, std::set<uint32_t>> m_Uids;
   std::map<std::string, std::map<uint32_t, Header>> m_Headers;
@@ -201,7 +201,7 @@ private:
 
   std::string m_CurrentDir;
   std::set<Fileinfo, FileinfoCompare> m_Files;
-  
+
   WINDOW* m_TopWin = NULL;
   WINDOW* m_MainWin = NULL;
   WINDOW* m_DialogWin = NULL;
@@ -213,7 +213,7 @@ private:
 
   std::string m_DialogMessage;
   std::chrono::time_point<std::chrono::system_clock> m_DialogMessageTime;
-  
+
   std::map<std::string, int32_t> m_MessageListCurrentIndex;
   std::map<std::string, int32_t> m_MessageListCurrentUid;
   std::map<std::string, bool> m_MessageListUidSet;
@@ -226,7 +226,7 @@ private:
 
   int m_PartListCurrentIndex = 0;
   Part m_PartListCurrentPart;
-  
+
   int m_MessageViewLineOffset = 0;
   bool m_PersistFolderFilter = true;
   bool m_PersistSearchQuery = false;
@@ -293,7 +293,7 @@ private:
 
   int m_FilenameEntryStringPos = 0;
   std::wstring m_FilenameEntryString;
-  
+
   std::map<uint32_t, std::wstring> m_ComposeHeaderStr;
   int m_ComposeHeaderLine = 0;
   int m_ComposeHeaderPos = 0;
@@ -325,7 +325,7 @@ private:
   std::string m_CurrentMessageViewText;
 
   int m_MaxLineLength = 0;
-  
+
   int m_Pipe[2] = {-1, -1};
 
   bool m_MessageListSearch = false;

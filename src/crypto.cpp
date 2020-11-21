@@ -88,7 +88,7 @@ std::string Crypto::AESEncrypt(const std::string &p_Plaintext, const std::string
 std::string Crypto::AESDecrypt(const std::string &p_Ciphertext, const std::string &p_Pass)
 {
   if (p_Ciphertext.empty()) return std::string();
-  
+
   unsigned char salt[8] = { 0 };
   unsigned char* ciphertext = (unsigned char*)const_cast<char*>(p_Ciphertext.c_str());
   int ciphertextlen = p_Ciphertext.size();
@@ -166,7 +166,7 @@ bool Crypto::AESEncryptFile(const std::string &p_InPath, const std::string &p_Ou
       inStream.seekg(0, std::ios::end);
       std::streamsize inFileRemainingLen = inStream.tellg();
       inStream.seekg(0, std::ios::beg);
-      
+
       std::ofstream outStream;
       outStream.open(p_OutPath, std::ios::binary);
 
@@ -231,7 +231,7 @@ bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_Ou
     inStream.seekg(0, std::ios::end);
     std::streamsize inFileRemainingLen = inStream.tellg();
     inStream.seekg(0, std::ios::beg);
-      
+
     std::ofstream outStream;
     outStream.open(p_OutPath, std::ios::binary);
 
@@ -242,7 +242,7 @@ bool Crypto::AESDecryptFile(const std::string &p_InPath, const std::string &p_Ou
     {
       return false;
     }
-  
+
     inStream.read(inBuf.data(), 8);
     inFileRemainingLen -= 8;
     if (strncmp((const char*)inBuf.data(), "Salted__", 8) != 0)

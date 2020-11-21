@@ -71,7 +71,7 @@ bool Smtp::SendMessage(const std::string &p_Data, const std::vector<Contact> &p_
   {
     mailsmtp_set_logger(smtp, Logger, NULL);
   }
-  
+
   int rv = MAILSMTP_NO_ERROR;
   if (enableSsl)
   {
@@ -326,7 +326,7 @@ std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_Htm
     ->fileBodyPart1 (bodyPart2 for the mainMultipart)
       ->FileDataHandler (content for fileBodyPart1 )
 #endif
- 
+
   struct mailmime* mainMultipart =
     GetMimePart(mailmime_content_new_with_str("multipart/mixed"),
                 mailmime_fields_new_empty(), 0);
@@ -345,7 +345,7 @@ std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_Htm
   }
 
   mailmime_smart_add_part(mainMultipart, htmlAndTextMultipart);
-  
+
   for (auto& path : p_AttachmentPaths)
   {
     struct mailmime* fileBodyPart = GetMimeFilePart(path);
@@ -362,7 +362,7 @@ std::string Smtp::GetBody(const std::string &p_Message, const std::string& p_Htm
 
   mmap_string_free(mmstr);
   mailmime_free(msg_mime);
-  
+
   return out;
 }
 
@@ -385,7 +385,7 @@ mailmime *Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Mes
 
   free(paramkey);
   free(paramval);
-  
+
   return mime;
 }
 
@@ -528,7 +528,7 @@ std::string Smtp::MimeEncodeStr(const std::string &p_In)
   {
     return p_In;
   }
-  
+
   int col = 0;
   MMAPString* mmstr = mmap_string_new(NULL);
   mailmime_quoted_printable_write_mem(mmstr, &col, 1, p_In.c_str(), p_In.size());
@@ -542,7 +542,7 @@ void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t 
                   void* p_UserData)
 {
   if (p_LogType == MAILSTREAM_LOG_TYPE_DATA_SENT_PRIVATE) return; // dont log private data, like passwords
-  
+
   (void)p_Smtp;
   (void)p_UserData;
   char* buffer = (char*)malloc(p_Size + 1);

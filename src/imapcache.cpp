@@ -167,7 +167,7 @@ void ImapCache::PruneCacheFolders(const std::set<std::string>& p_KeepFolders)
     LOG_DEBUG("skip prune delete (empty folder list)");
     return;
   }
-  
+
   std::set<std::string> keepPaths = { "folders", "version" };
   for (const auto& keepFolder : p_KeepFolders)
   {

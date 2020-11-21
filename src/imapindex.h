@@ -38,7 +38,7 @@ public:
   void Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
               std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
               bool& p_HasMore);
-  
+
 private:
   void Process();
   void AddFolder(const std::string& p_Folder);
@@ -56,7 +56,7 @@ private:
   void CleanupCacheTempDir();
   void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
-  
+
 private:
   std::unique_ptr<SearchEngine> m_SearchEngine;
   std::unique_ptr<ImapCache> m_ImapCache;

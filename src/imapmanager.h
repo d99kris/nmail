@@ -37,7 +37,7 @@ public:
     ResponseStatusGetBodysFailed = (1 << 4),
     ResponseStatusLoginFailed = (1 << 5),
   };
-  
+
   struct Request
   {
     uint32_t m_PrefetchLevel = 0;
@@ -106,14 +106,14 @@ public:
   virtual ~ImapManager();
 
   void Start();
-  
+
   void AsyncRequest(const Request& p_Request);
   void PrefetchRequest(const Request& p_Request);
   void AsyncAction(const Action& p_Action);
   void AsyncSearch(const SearchQuery& p_SearchQuery);
 
   void SetCurrentFolder(const std::string& p_Folder);
-  
+
 private:
   bool ProcessIdle();
   void Process();

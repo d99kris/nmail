@@ -79,7 +79,7 @@ public:
     return p_Rv;
   }
 
-  static inline int LogSmtp(int p_Rv, const char* p_Expr, const char* p_File, int p_Line) 
+  static inline int LogSmtp(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
   {
     if (p_Rv != MAILSMTP_NO_ERROR)
     {
@@ -98,7 +98,7 @@ public:
 
   template <typename T>
   static inline T LogIfNotEqual(T p_Rv, typename identity<T>::type p_Expect, const char* p_Expr,
-                                const char* p_File, int p_Line) 
+                                const char* p_File, int p_Line)
   {
     if (p_Rv != p_Expect)
     {
@@ -114,7 +114,7 @@ public:
 
   template <typename T>
   static inline T LogIfEqual(T p_Rv, typename identity<T>::type p_Expect, const char* p_Expr,
-                             const char* p_File, int p_Line) 
+                             const char* p_File, int p_Line)
   {
     if (p_Rv == p_Expect)
     {

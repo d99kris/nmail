@@ -35,7 +35,7 @@ bool Status::IsSet(const Status::Flag& p_Flag)
 std::string Status::ToString(bool p_ShowProgress)
 {
   std::string str;
-  
+
   if (m_Flags & FlagConnecting)
   {
     str = "Connecting";

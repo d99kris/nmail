@@ -56,7 +56,7 @@ ImapManager::~ImapManager()
     {
       LOG_DEBUG("queues not cleared");
     }
-  
+
     m_Running = false;
     write(m_Pipe[1], "1", 1);
 
@@ -76,7 +76,7 @@ ImapManager::~ImapManager()
 
     m_CacheRunning = false;
     write(m_CachePipe[1], "1", 1);
-    
+
     if (m_ExitedCacheCond.wait_for(lock, std::chrono::seconds(2)) != std::cv_status::timeout)
     {
       m_CacheThread.join();
@@ -98,7 +98,7 @@ ImapManager::~ImapManager()
   if (m_SearchThread.joinable())
   {
     m_SearchThread.join();
-  }  
+  }
 
   close(m_Pipe[0]);
   close(m_Pipe[1]);
@@ -114,8 +114,8 @@ void ImapManager::Start()
   m_SearchRunning = true;
   LOG_DEBUG("start threads");
   m_Thread = std::thread(&ImapManager::Process, this);
-  m_CacheThread = std::thread(&ImapManager::CacheProcess, this);  
-  m_SearchThread = std::thread(&ImapManager::SearchProcess, this);  
+  m_CacheThread = std::thread(&ImapManager::CacheProcess, this);
+  m_SearchThread = std::thread(&ImapManager::SearchProcess, this);
 }
 
 void ImapManager::AsyncRequest(const ImapManager::Request &p_Request)
@@ -148,7 +148,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request &p_Request)
     {
       m_PrefetchRequestsTotal += it->second.size();
     }
-       
+
     m_PrefetchRequestsDone = 0;
   }
 }
@@ -227,7 +227,7 @@ bool ImapManager::ProcessIdle()
 
     m_Imap.IdleDone();
     ClearStatus(Status::FlagIdle);
-    
+
     if ((selrv != 0) && FD_ISSET(idlefd, &fds))
     {
       LOG_DEBUG("idle notification");
@@ -262,7 +262,7 @@ bool ImapManager::ProcessIdle()
 void ImapManager::Process()
 {
   THREAD_REGISTER();
-  
+
   if (m_Connect)
   {
     if (m_Imap.Login())
@@ -347,7 +347,7 @@ void ImapManager::Process()
         }
 
         m_QueueMutex.unlock();
-        ClearStatus(Status::FlagFetching);        
+        ClearStatus(Status::FlagFetching);
         m_QueueMutex.lock();
 
         while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() && m_Running)
@@ -403,9 +403,9 @@ void ImapManager::Process()
         {
           LOG_DEBUG("retry connect");
           connected = m_Imap.Login();
-          
+
           if (connected && m_Running)
-          {            
+          {
             m_Connecting = false;
             SetStatus(Status::FlagConnected);
             ClearStatus(Status::FlagConnecting);
@@ -424,7 +424,7 @@ void ImapManager::Process()
   }
 
   LOG_DEBUG("exiting loop");
-  
+
   if (m_Connect)
   {
     LOG_DEBUG("logout start");
@@ -439,7 +439,7 @@ void ImapManager::Process()
 void ImapManager::CacheProcess()
 {
   THREAD_REGISTER();
-  
+
   LOG_DEBUG("entering cache loop");
   while (m_CacheRunning)
   {
@@ -482,7 +482,7 @@ void ImapManager::CacheProcess()
   }
 
   LOG_DEBUG("exiting cache loop");
-  
+
   std::unique_lock<std::mutex> lock(m_ExitedCacheCondMutex);
   m_ExitedCacheCond.notify_one();
 }

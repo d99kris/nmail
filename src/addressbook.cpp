@@ -115,7 +115,7 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
 std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  
+
   if (!m_Db) return std::vector<std::string>();
 
   std::vector<std::string> addresses;

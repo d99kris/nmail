@@ -23,7 +23,7 @@ public:
   std::string ToString() const;
   static Contact FromString(const std::string& p_Str);
   static std::vector<Contact> FromStrings(const std::vector<std::string>& p_Strs);
-  
+
 private:
   std::string m_Address;
   std::string m_Name;
