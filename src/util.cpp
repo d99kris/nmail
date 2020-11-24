@@ -1204,10 +1204,22 @@ std::string Util::RunCommand(const std::string& p_Cmd)
   else
   {
     LOG_WARNING("external command failed: %s", command.c_str());
+    DetectCommandNotPresent(command);
   }
 
   Util::DeleteFile(outPath);
   return output;
+}
+
+void Util::DetectCommandNotPresent(const std::string& p_Cmd)
+{
+  std::vector<std::string> cmdVec = Split(p_Cmd, ' ');
+  const std::string programName = (cmdVec.size() > 0) ? cmdVec.at(0) : "";
+  const std::string whichCmd = "which " + programName + " > /dev/null 2>&1";
+  if (system(whichCmd.c_str()) != 0)
+  {
+    LOG_WARNING("program not found, please ensure '%s' is installed", programName.c_str());
+  }
 }
 
 std::string Util::GetSystemOs()

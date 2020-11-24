@@ -4142,6 +4142,7 @@ void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessage
   else
   {
     LOG_WARNING("external editor exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
   }
 
   Util::DeleteFile(tempPath);
@@ -4171,6 +4172,7 @@ void Ui::ExternalPager()
   else
   {
     LOG_WARNING("external pager exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
   }
 
   Util::DeleteFile(tempPath);
@@ -4193,11 +4195,12 @@ int Ui::ExternalViewer(const std::string& p_Path)
   int rv = system(cmd.c_str());
   if (rv == 0)
   {
-    LOG_DEBUG("external pager exited successfully");
+    LOG_DEBUG("external viewer exited successfully");
   }
   else
   {
-    LOG_WARNING("external pager exited with %d", rv);
+    LOG_WARNING("external viewer exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
   }
 
   refresh();

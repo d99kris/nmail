@@ -209,6 +209,7 @@ public:
   static std::string Strip(const std::string& p_Str, const char p_Char);
   static std::string TrimRight(const std::string& p_Str, const std::string& p_Trim);
   static std::string RunCommand(const std::string& p_Cmd);
+  static void DetectCommandNotPresent(const std::string& p_Cmd);
   static std::string GetSystemOs();
   static std::string GetLinkedLibs(const std::string& p_Prog);
   static std::string GetSelfPath();
