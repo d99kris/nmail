@@ -397,10 +397,15 @@ std::string Util::GetDefaultExtViewerCmd()
 #if defined(__APPLE__)
   return "open";
 #elif defined(__linux__)
-  return "xdg-open";
+  return "xdg-open >/dev/null 2>&1";
 #else
   return "";
 #endif
+}
+
+bool Util::IsDefaultExtViewerCmd()
+{
+  return m_ExtViewerCmd.empty();
 }
 
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,

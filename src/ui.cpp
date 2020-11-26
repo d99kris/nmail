@@ -4188,7 +4188,12 @@ void Ui::ExternalPager()
 
 int Ui::ExternalViewer(const std::string& p_Path)
 {
-  endwin();
+  const bool isDefaultExtViewerCmd = Util::IsDefaultExtViewerCmd();
+  if (!isDefaultExtViewerCmd)
+  {
+    endwin();
+  }
+  
   const std::string& viewer = Util::GetExtViewerCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
@@ -4203,12 +4208,15 @@ int Ui::ExternalViewer(const std::string& p_Path)
     Util::DetectCommandNotPresent(cmd);
   }
 
-  refresh();
-
-  wint_t key = 0;
-  while (get_wch(&key) != ERR)
+  if (!isDefaultExtViewerCmd)
   {
-    // Discard any remaining input
+    refresh();
+
+    wint_t key = 0;
+    while (get_wch(&key) != ERR)
+    {
+      // Discard any remaining input
+    }
   }
 
   return rv;

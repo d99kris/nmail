@@ -255,8 +255,8 @@ specified, nmail will use the editor specified by the environment variable
 ### ext_viewer_cmd
 
 This field allows overriding the external viewer used when viewing email
-parts and attachments. By default nmail uses `open` on macOS and `xdg-open`
-on Linux.
+parts and attachments. By default nmail uses `open` on macOS and
+`xdg-open >/dev/null 2>&1` on Linux.
 
 ### folders_exclude
 
