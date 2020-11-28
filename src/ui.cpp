@@ -926,7 +926,7 @@ void Ui::DrawMessageList()
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
       std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
-      int subjectWidth = m_ScreenWidth - headerLeft.size() - 1;
+      int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
@@ -1095,7 +1095,7 @@ void Ui::DrawMessageListSearch()
     shortDate = Util::TrimPadString(shortDate, 10);
     shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
     std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
-    int subjectWidth = m_ScreenWidth - headerLeft.size() - 1;
+    int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
     subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
     std::string header = headerLeft + subject + " ";
 
