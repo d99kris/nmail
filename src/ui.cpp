@@ -95,6 +95,17 @@ void Ui::Init()
     { "key_search", "/" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
+#if defined(__APPLE__)
+    { "key_backward_word", "\\033\\142" },       // opt-left
+    { "key_forward_word", "\\033\\146" },        // opt-right
+    { "key_backward_kill_word", "\\033\\177" },  // opt-backspace
+    { "key_kill_word", "\\033\\010" },           // opt-delete
+#else // defined(__linux__)
+    { "key_backward_word", "0x21f" },            // alt-left
+    { "key_forward_word", "0x22e" },             // alt-right
+    { "key_backward_kill_word", "\\033\\177" },  // alt-backspace
+    { "key_kill_word", "0x205" },                // alt-delete
+#endif
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -135,6 +146,12 @@ void Ui::Init()
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
+
+  m_KeyBackwardWord = Util::GetKeyCode(m_Config.Get("key_backward_word"));
+  m_KeyForwardWord = Util::GetKeyCode(m_Config.Get("key_forward_word"));
+  m_KeyBackwardKillWord = Util::GetKeyCode(m_Config.Get("key_backward_kill_word"));
+  m_KeyKillWord = Util::GetKeyCode(m_Config.Get("key_kill_word"));
+
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
@@ -2386,6 +2403,42 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyDeleteLine)
     {
       Util::DeleteToMatch(m_ComposeMessageStr, m_ComposeMessagePos, '\n');
+    }
+    else if (p_Key == m_KeyBackwardWord)
+    {
+      size_t searchPos = (m_ComposeMessagePos > 0) ? (m_ComposeMessagePos - 2) : 0;
+      size_t prevSpacePos = m_ComposeMessageStr.rfind(' ', searchPos);
+      if (prevSpacePos != std::string::npos)
+      {
+        m_ComposeMessagePos = Util::Bound(0, (int)prevSpacePos + 1, (int)m_ComposeMessageStr.size());
+      }
+      else
+      {
+        m_ComposeMessagePos = 0;
+      }
+    }
+    else if (p_Key == m_KeyForwardWord)
+    {
+      size_t searchPos = m_ComposeMessagePos + 1;
+      size_t nextSpacePos = m_ComposeMessageStr.find(' ', searchPos);
+      if (nextSpacePos != std::string::npos)
+      {
+        m_ComposeMessagePos = Util::Bound(0, (int)nextSpacePos, (int)m_ComposeMessageStr.size());
+      }
+      else
+      {
+        m_ComposeMessagePos = m_ComposeMessageStr.size();
+      }
+    }
+    else if (p_Key == m_KeyBackwardKillWord)
+    {
+      Util::DeleteToPrevMatch(m_ComposeMessageStr, m_ComposeMessagePos, ' ');
+      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
+    }
+    else if (p_Key == m_KeyKillWord)
+    {
+      Util::DeleteToNextMatch(m_ComposeMessageStr, m_ComposeMessagePos, ' ');
+      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
     }
     else
     {

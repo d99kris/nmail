@@ -175,6 +175,7 @@ public:
   static std::vector<std::string> SplitQuoted(const std::string& p_Str);
   static std::string Trim(const std::string& p_Str);
   static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
+  static int ReserveVirtualKeyCode();
   static int GetKeyCode(const std::string& p_KeyName);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
@@ -188,7 +189,10 @@ public:
                           const std::string& p_Delim = "\n");
 
   static std::string ToHexString(int p_Val);
+  static std::string FromOctString(const std::string& p_Str);
   static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
+  static void DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
+  static void DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
   static std::string GetAppVersion();
   static std::string GetBuildOs();
   static std::string GetCompiler();

@@ -33,7 +33,7 @@ void Config::Load(const std::string& p_Path)
   m_Path = p_Path;
 
   std::ifstream stream;
-  stream.open(p_Path);
+  stream.open(p_Path, std::ios::binary);
   if (stream.fail())
   {
     Save();
@@ -67,7 +67,7 @@ void Config::Save() const
 void Config::Save(const std::string& p_Path) const
 {
   std::ofstream stream;
-  stream.open(p_Path);
+  stream.open(p_Path, std::ios::binary);
   if (stream.fail())
   {
     return;

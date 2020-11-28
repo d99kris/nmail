@@ -379,8 +379,12 @@ Compose Editor
 
 The built-in email compose editor in nmail supports the following:
 
+    Alt-Backspace  delete previous word
+    Alt-Delete     delete next word
+    Alt-Left       move the cursor backward one word
+    Alt-Right      move the cursor forward one word
     Arrow keys     move the cursor
-    Page Up/Down   move the cursor page up / down
+    Backspace      backspace
     Ctrl-C         cancel message
     Ctrl-E         edit message in external editor
     Ctrl-K         delete current line
@@ -390,9 +394,9 @@ The built-in email compose editor in nmail supports the following:
     Ctrl-T         to select, from address book / from file dialog
     Ctrl-V         preview html part (generated from markdown to html conversion)
     Ctrl-X         send message
-    Backspace      backspace
     Delete         delete
     Enter          new line
+    Page Up/Down   move the cursor page up / down
 
 The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.:
 
@@ -482,13 +486,15 @@ configure nmail.
 ~/.nmail/ui.conf
 ----------------
 This configuration file controls the UI aspects of nmail. Default configuration
-file:
+file (platform-dependent defaults are left empty below):
 
     cancel_without_confirm=0
     compose_hardwrap=0
     delete_without_confirm=0
     help_enabled=1
     key_back=,
+    key_backward_kill_word=
+    key_backward_word=
     key_cancel=KEY_CTRLC
     key_compose=c
     key_delete=d
@@ -497,8 +503,10 @@ file:
     key_external_editor=KEY_CTRLE
     key_external_pager=KEY_CTRLE
     key_forward=f
+    key_forward_word=
     key_goto_folder=g
     key_import=i
+    key_kill_word=
     key_move=m
     key_next_msg=n
     key_open=.
@@ -549,7 +557,12 @@ Show supported keyboard shortcuts at bottom of screen (default enabled).
 
 ### key_
 
-Keyboard bindings for various functions (default see above).
+Keyboard bindings for various functions (default see above). The keyboard
+bindings may be specified in the following formats:
+- Ncurses macro (ex: `KEY_CTRLK`)
+- Hex key code (ex: `0x22e`)
+- Oct key code sequence (ex: `\033\177`)
+- Plain-text lower-case ASCII (ex: `r`)
 
 ### markdown_html_compose
 
@@ -660,4 +673,3 @@ Keywords
 ========
 command line, console based, linux, macos, email client, ncurses, terminal,
 alternative to alpine.
-

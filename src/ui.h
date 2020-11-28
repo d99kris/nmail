@@ -272,6 +272,11 @@ private:
   int m_KeySearch = 0;
   int m_KeySync = 0;
   int m_KeyToggleMarkdownCompose = 0;
+  int m_KeyBackwardWord = 0;
+  int m_KeyForwardWord = 0;
+  int m_KeyBackwardKillWord = 0;
+  int m_KeyKillWord = 0;
+  
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;

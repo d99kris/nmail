@@ -620,6 +620,12 @@ std::vector<std::string> Util::Trim(const std::vector<std::string>& p_Strs)
   return trimStrs;
 }
 
+int Util::ReserveVirtualKeyCode()
+{
+  static int keyCode = 0x8000;
+  return keyCode++;
+}
+
 int Util::GetKeyCode(const std::string& p_KeyName)
 {
   static std::map<std::string, int> keyCodes =
@@ -766,26 +772,36 @@ int Util::GetKeyCode(const std::string& p_KeyName)
     { "KEY_RESIZE", KEY_RESIZE },
     { "KEY_EVENT", KEY_EVENT },
   };
-
+  
   int keyCode = -1;
   std::map<std::string, int>::iterator it = keyCodes.find(p_KeyName);
   if (it != keyCodes.end())
   {
     keyCode = it->second;
+    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else if ((p_KeyName.size() > 2) && (p_KeyName.substr(0, 2) == "0x"))
   {
     keyCode = strtol(p_KeyName.c_str(), 0, 16);
+    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
-  else if (p_KeyName.size() == 1)
+  else if ((p_KeyName.size() == 1) && isprint((int)p_KeyName.at(0)))
   {
     keyCode = (int)p_KeyName.at(0);
+    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+  }
+  else if ((p_KeyName.size() > 1) && (p_KeyName.substr(0, 1) == "\\"))
+  {
+    keyCode = ReserveVirtualKeyCode();
+    std::string keyStr = Util::FromOctString(p_KeyName);
+    define_key(keyStr.c_str(), keyCode);
+    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else
   {
     LOG_WARNING("warning: unknown key \"%s\"", p_KeyName.c_str());
   }
-
+ 
   return keyCode;
 }
 
@@ -948,11 +964,40 @@ std::string Util::ToHexString(int p_Val)
   return "0x" + stream.str();
 }
 
+std::string Util::FromOctString(const std::string& p_Str)
+{
+  std::string rv;
+  std::vector<std::string> parts = Split(p_Str, '\\');
+  for (auto& part : parts)
+  {
+    if (part.empty()) continue;
+
+    int val = 0;
+    std::istringstream(part) >> std::oct >> val;
+    rv += (char)val;
+  }
+
+  return rv;
+}
+
 void Util::DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar)
 {
   size_t endPos = p_Str.find(p_EndChar, p_StartPos);
   p_Str.erase(p_StartPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_StartPos + 1));
-  return;
+}
+
+void Util::DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar)
+{
+  size_t endPos = p_Str.find(p_EndChar, p_CurPos + 1);
+  p_Str.erase(p_CurPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_CurPos));
+}
+
+void Util::DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar)
+{
+  size_t startPos = p_Str.rfind(p_EndChar, (p_CurPos > 1) ? (p_CurPos - 2) : p_CurPos);
+  startPos = (startPos == std::wstring::npos) ? 0 : startPos + 1;
+  p_Str.erase(startPos, (p_CurPos - startPos));
+  p_CurPos -= (p_CurPos - startPos);
 }
 
 std::string Util::GetAppVersion()
