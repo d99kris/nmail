@@ -190,6 +190,7 @@ public:
 
   static std::string ToHexString(int p_Val);
   static std::string FromOctString(const std::string& p_Str);
+  static void HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint32_t& p_B);
   static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
   static void DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
   static void DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
@@ -226,6 +227,8 @@ public:
   static std::string ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
                                      const std::string& p_SrcStr);
   static std::string GetSQLiteVersion();
+  static int AddColor(const std::string& p_Hex);
+  static int AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

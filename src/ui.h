@@ -276,7 +276,7 @@ private:
   int m_KeyForwardWord = 0;
   int m_KeyBackwardKillWord = 0;
   int m_KeyKillWord = 0;
-  
+
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
@@ -286,6 +286,8 @@ private:
   bool m_DeleteWithoutConfirm = false;
   bool m_ShowEmbeddedImages = true;
   bool m_ShowRichHeader = false;
+  bool m_ColorsEnabled = false;
+  int m_ColorMessageQuoted = -1;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

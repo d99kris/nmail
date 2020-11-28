@@ -96,16 +96,17 @@ void Ui::Init()
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
 #if defined(__APPLE__)
-    { "key_backward_word", "\\033\\142" },       // opt-left
-    { "key_forward_word", "\\033\\146" },        // opt-right
-    { "key_backward_kill_word", "\\033\\177" },  // opt-backspace
-    { "key_kill_word", "\\033\\010" },           // opt-delete
+    { "key_backward_word", "\\033\\142" }, // opt-left
+    { "key_forward_word", "\\033\\146" }, // opt-right
+    { "key_backward_kill_word", "\\033\\177" }, // opt-backspace
+    { "key_kill_word", "\\033\\010" }, // opt-delete
 #else // defined(__linux__)
-    { "key_backward_word", "0x21f" },            // alt-left
-    { "key_forward_word", "0x22e" },             // alt-right
-    { "key_backward_kill_word", "\\033\\177" },  // alt-backspace
-    { "key_kill_word", "0x205" },                // alt-delete
+    { "key_backward_word", "0x21f" }, // alt-left
+    { "key_forward_word", "0x22e" }, // alt-right
+    { "key_backward_kill_word", "\\033\\177" }, // alt-backspace
+    { "key_kill_word", "0x205" }, // alt-delete
 #endif
+    { "colors_enabled", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -161,6 +162,38 @@ void Ui::Init()
   m_DeleteWithoutConfirm = m_Config.Get("delete_without_confirm") == "1";
   m_ShowEmbeddedImages = m_Config.Get("show_embedded_images") == "1";
   m_ShowRichHeader = m_Config.Get("show_rich_header") == "1";
+
+  m_ColorsEnabled = m_Config.Get("colors_enabled") == "1";
+  if (m_ColorsEnabled)
+  {
+    if (!has_colors())
+    {
+      LOG_WARNING("terminal does not support colors");
+      m_ColorsEnabled = false;
+    }
+    else if (!can_change_color())
+    {
+      LOG_WARNING("terminal does not support changing colors");
+      m_ColorsEnabled = false;
+    }
+  }
+  
+  if (m_ColorsEnabled)
+  {
+    start_color();
+    assume_default_colors(-1, -1);
+
+    const std::map<std::string, std::string> defaultColorsConfig =
+    {
+      { "color_message_quoted_fg", "0xa0a0a0" },
+    };
+    const std::string colorsConfigPath(Util::GetApplicationDir() + std::string("colors.conf"));
+    Config colorsConfig = Config(colorsConfigPath, defaultColorsConfig);
+
+    m_ColorMessageQuoted = Util::AddColorPair(colorsConfig.Get("color_message_quoted_fg"), "");
+
+    colorsConfig.Save();
+  }
 
   m_Running = true;
 }
@@ -1200,7 +1233,19 @@ void Ui::DrawMessage()
       {
         const std::wstring& wdispStr = wlines.at(i + m_MessageViewLineOffset);
         const std::string& dispStr = Util::ToString(wdispStr);
+        const bool isQuote = (dispStr.rfind(">", 0) == 0);
+
+        if (m_ColorsEnabled && isQuote)
+        {
+          wattron(m_MainWin, COLOR_PAIR(m_ColorMessageQuoted));
+        }
+
         mvwprintw(m_MainWin, i, 0, "%s", dispStr.c_str());
+
+        if (m_ColorsEnabled && isQuote)
+        {
+          wattroff(m_MainWin, COLOR_PAIR(m_ColorMessageQuoted));
+        }
       }
 
       markSeen = true;
@@ -4246,7 +4291,7 @@ int Ui::ExternalViewer(const std::string& p_Path)
   {
     endwin();
   }
-  
+
   const std::string& viewer = Util::GetExtViewerCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());

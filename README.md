@@ -480,7 +480,7 @@ the source code. Only store the password if measurements are taken to ensure
 Configuration
 =============
 
-Aside from `main.conf` covered above, the following file can be used to
+Aside from `main.conf` covered above, the following files can be used to
 configure nmail.
 
 ~/.nmail/ui.conf
@@ -489,6 +489,7 @@ This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
     cancel_without_confirm=0
+    colors_enabled=0
     compose_hardwrap=0
     delete_without_confirm=0
     help_enabled=1
@@ -542,6 +543,10 @@ file (platform-dependent defaults are left empty below):
 
 Allow canceling email compose without confirmation prompt (default disabled).
 
+### colors_enabled
+
+Enable terminal color output (default disabled).
+
 ### compose_hardwrap
 
 Hard-wrap composed emails at terminal width (default disabled).
@@ -561,8 +566,20 @@ Keyboard bindings for various functions (default see above). The keyboard
 bindings may be specified in the following formats:
 - Ncurses macro (ex: `KEY_CTRLK`)
 - Hex key code (ex: `0x22e`)
-- Oct key code sequence (ex: `\033\177`)
+- Octal key code sequence (ex: `\033\177`)
 - Plain-text lower-case ASCII (ex: `r`)
+
+Octal key code sequence for a key combination can be determined for example
+using the command `sed -n l` and pressing the combination, e.g. `alt-left`
+and then `enter`. The keycode for non-printable keys is then displayed in
+octal format in the terminal, for example:
+
+    \033b$
+
+The trailing `$` shall be ignored, and to comply with `nmail` config required
+input format, the printable `b` needs to be converted to octal format. A quick
+lookup using `man ascii` shows `b` is 142 in octal format. The resulting key
+code to use in the config file is `\033\142`.
 
 ### markdown_html_compose
 
@@ -620,6 +637,19 @@ fetching emails (default enabled).
 Determines whether to show rich headers (bcc field) during email compose. This
 option can be re-configured in run-time by pressing `CTRL-R` when composing
 an email (default disabled).
+
+
+~/.nmail/colors.conf
+--------------------
+This configuration file controls the configurable colors of nmail. Colors must
+be specified using six digit hex format with 0x prefix, e.g. `0xffffff`. Default
+configuration file:
+
+    color_message_quoted_fg=0xa0a0a0
+
+### color_message_quoted_fg
+
+Text color of quoted message text (lines starting with `>`).
 
 
 Email Service Providers

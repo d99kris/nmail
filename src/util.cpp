@@ -772,7 +772,7 @@ int Util::GetKeyCode(const std::string& p_KeyName)
     { "KEY_RESIZE", KEY_RESIZE },
     { "KEY_EVENT", KEY_EVENT },
   };
-  
+
   int keyCode = -1;
   std::map<std::string, int>::iterator it = keyCodes.find(p_KeyName);
   if (it != keyCodes.end())
@@ -801,7 +801,7 @@ int Util::GetKeyCode(const std::string& p_KeyName)
   {
     LOG_WARNING("warning: unknown key \"%s\"", p_KeyName.c_str());
   }
- 
+
   return keyCode;
 }
 
@@ -978,6 +978,17 @@ std::string Util::FromOctString(const std::string& p_Str)
   }
 
   return rv;
+}
+
+void Util::HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint32_t& p_B)
+{
+  std::stringstream ss(p_Str);
+  int val;
+  ss >> std::hex >> val;
+
+  p_R = (val / 0x10000);
+  p_G = (val / 0x100) % 0x100;
+  p_B = (val % 0x100);
 }
 
 void Util::DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar)
@@ -1391,4 +1402,36 @@ std::string Util::ConvertEncoding(const std::string& p_SrcEnc, const std::string
 std::string Util::GetSQLiteVersion()
 {
   return std::string(SQLITE_VERSION);
+}
+
+int Util::AddColor(const std::string& p_Hex)
+{
+  static int colorId = 31;
+
+  if (p_Hex.empty()) return -1;
+  
+  if ((p_Hex.size() == 8) && (p_Hex.substr(0, 2) == "0x"))
+  {
+    uint32_t r = 0, g = 0, b = 0;
+    Util::HexToRGB(p_Hex, r, g, b);
+
+    if ((r <= 255) && (g <= 255) && (b <= 255))
+    {
+      colorId++;
+      init_color(colorId, ((r * 1000) / 255), ((g * 1000) / 255), ((b * 1000) / 255));
+      return colorId;
+    }
+  }
+
+  LOG_WARNING("warning: unsupported color hex code \"%s\"", p_Hex.c_str());
+
+  return -1;
+}
+
+int Util::AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex)
+{
+  static int colorPairId = 0;
+  colorPairId++;
+  init_pair(colorPairId, AddColor(p_FgHex), AddColor(p_BgHex));
+  return colorPairId;
 }
