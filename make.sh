@@ -83,6 +83,7 @@ fi
 
 # build
 if [[ "${BUILD}" == "1" ]]; then
+  OS="$(uname)"
   MAKEARGS=""
   if [ "${OS}" == "Linux" ]; then
     MAKEARGS="-j$(nproc)"

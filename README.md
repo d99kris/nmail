@@ -84,7 +84,7 @@ Supported Platforms
 nmail is developed and tested on Linux and macOS. Current version has been
 tested on:
 
-- macOS 10.15 Catalina
+- macOS Big Sur 11.0
 - Ubuntu 20.04 LTS
 
 
