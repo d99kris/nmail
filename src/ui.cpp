@@ -2241,6 +2241,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
 void Ui::ComposeMessageKeyHandler(int p_Key)
 {
   bool continueProcess = false;
+  bool asyncRedraw = false;
 
   // process state-specific key handling first
   if (m_IsComposeHeader)
@@ -2587,6 +2588,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       {
         m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, p_Key);
       }
+
+      asyncRedraw = true;
     }
     else
     {
@@ -2594,7 +2597,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
   }
 
-  DrawAll();
+  if (asyncRedraw)
+  {
+    AsyncUiRequest(UiRequestDrawAll);
+  }
+  else
+  {
+    DrawAll();
+  }
 }
 
 void Ui::ViewPartListKeyHandler(int p_Key)
