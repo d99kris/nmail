@@ -347,8 +347,16 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
 
   for (auto& path : p_AttachmentPaths)
   {
-    struct mailmime* fileBodyPart = GetMimeFilePart(path);
-    mailmime_smart_add_part(mainMultipart, fileBodyPart);
+    if (Util::Exists(path))
+    {
+      struct mailmime* fileBodyPart = GetMimeFilePart(path);
+      mailmime_smart_add_part(mainMultipart, fileBodyPart);
+      LOG_DEBUG("attachment path \"%s\" added", path.c_str());
+    }
+    else
+    {
+      LOG_WARNING("attachment path \"%s\" does not exist", path.c_str());
+    }
   }
 
   struct mailmime* msg_mime = mailmime_new_message_data(NULL);

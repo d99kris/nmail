@@ -2730,6 +2730,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     {
       if (!filename.empty())
       {
+        filename = Util::ExpandPath(filename);
         Util::WriteFile(filename, m_PartListCurrentPart.m_Data);
         SetDialogMessage("File saved");
       }
@@ -4362,6 +4363,7 @@ void Ui::ExportMessage()
   {
     if (!filename.empty())
     {
+      filename = Util::ExpandPath(filename);
       std::unique_lock<std::mutex> lock(m_Mutex);
       const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
       if (bodys.find(uid) != bodys.end())
@@ -4394,6 +4396,7 @@ void Ui::ImportMessage()
   {
     if (!filename.empty())
     {
+      filename = Util::ExpandPath(filename);
       if (Util::NotEmpty(filename))
       {
         const std::string& msg = Util::ReadFile(filename);

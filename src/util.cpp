@@ -20,6 +20,7 @@
 #include <libgen.h>
 #include <termios.h>
 #include <unistd.h>
+#include <wordexp.h>
 
 #ifdef __APPLE__
 #include <libproc.h>
@@ -101,6 +102,37 @@ std::string Util::BaseName(const std::string& p_Path)
   std::string rv(bname);
   free(path);
   return rv;
+}
+
+std::string Util::ExpandPath(const std::string& p_Path)
+{
+  wordexp_t exp;
+  std::string rv;
+  if ((wordexp(p_Path.c_str(), &exp, WRDE_NOCMD) == 0) && (exp.we_wordc > 0))
+  {
+    rv = std::string(exp.we_wordv[0]);
+    for (size_t i = 1; i < exp.we_wordc; ++i)
+    {
+      rv += " " + std::string(exp.we_wordv[i]);
+    }
+    wordfree(&exp);
+  }
+  else
+  {
+    rv = p_Path;
+  }
+
+  return rv;
+}
+
+std::vector<std::string> Util::ExpandPaths(const std::vector<std::string>& p_Paths)
+{
+  std::vector<std::string> expPaths;
+  for (auto& path : p_Paths)
+  {
+    expPaths.push_back(ExpandPath(path));
+  }
+  return expPaths;
 }
 
 std::string Util::RemoveFileExt(const std::string& p_Path)

@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "2.22" LANGUAGES CXX C)
+project(nmail VERSION "2.23" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
