@@ -1,6 +1,6 @@
 // ui.h
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -288,6 +288,8 @@ private:
   bool m_ShowRichHeader = false;
   bool m_ColorsEnabled = false;
   int m_ColorMessageQuoted = -1;
+
+  std::string m_AttachmentIndicator;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

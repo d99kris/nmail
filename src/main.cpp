@@ -1,6 +1,6 @@
 // main.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -139,6 +139,7 @@ int main(int argc, char* argv[])
     { "pager_cmd", "" },
     { "editor_cmd", "" },
     { "folders_exclude", "" },
+    { "server_timestamps", "0" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -196,6 +197,7 @@ int main(int argc, char* argv[])
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
+  Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -406,7 +408,7 @@ static void ShowVersion()
   std::cout <<
     "nmail " << Util::GetAppVersion() << "\n"
     "\n"
-    "Copyright (c) 2019-2020 Kristofer Berggren\n"
+    "Copyright (c) 2019-2021 Kristofer Berggren\n"
     "\n"
     "nmail is distributed under the MIT license.\n"
     "\n"

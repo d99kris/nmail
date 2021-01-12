@@ -1,12 +1,13 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include "imap.h"
 
+#include <libetpan/imapdriver_tools.h>
 #include <libetpan/libetpan.h>
 
 #include "crypto.h"
@@ -303,9 +304,10 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
     }
 
     struct mailimap_fetch_type* fetch_type = mailimap_fetch_type_new_fetch_att_list_empty();
-    mailimap_fetch_type_new_fetch_att_list_add(fetch_type,
-                                               mailimap_fetch_att_new_rfc822_header());
+    mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_rfc822_header());
     mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_uid());
+    mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_internaldate());
+    mailimap_fetch_type_new_fetch_att_list_add(fetch_type, mailimap_fetch_att_new_bodystructure());
 
     rv = LOG_IF_IMAP_ERR(mailimap_uid_fetch(m_Imap, set, fetch_type, &fetch_result));
     if (rv == MAILIMAP_NO_ERROR)
@@ -314,7 +316,10 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
       {
         struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
+        std::string data;
         uint32_t uid = 0;
+        time_t time = 0;
+        bool hasAttachments = false;
         Header header;
         for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
@@ -326,14 +331,35 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
           {
             if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_RFC822_HEADER)
             {
-              std::string data(item->att_data.att_static->att_data.att_rfc822_header.att_content,
-                               item->att_data.att_static->att_data.att_rfc822_header.att_length);
-              header.SetData(data);
+              data = std::string(item->att_data.att_static->att_data.att_rfc822_header.att_content,
+                                 item->att_data.att_static->att_data.att_rfc822_header.att_length);
             }
-
-            if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
+            else if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
             {
               uid = item->att_data.att_static->att_data.att_uid;
+            }
+            else if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_INTERNALDATE)
+            {
+              struct mailimap_date_time* datetime =
+                item->att_data.att_static->att_data.att_internal_date;
+              if (datetime != NULL)
+              {
+                struct mailimf_date_time imftime;
+                Util::MailimapTimeToMailimfTime(datetime, &imftime);
+                time = Util::MailtimeToTimet(&imftime);
+              }
+            }
+            else if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_BODYSTRUCTURE)
+            {
+              struct mailmime* mime = NULL;
+              if ((imap_body_to_body(item->att_data.att_static->att_data.att_bodystructure,
+                                     &mime) == MAILIMAP_NO_ERROR) &&
+                  (mime != NULL))
+              {
+                Body body;
+                body.FromMime(mime);
+                hasAttachments = body.HasAttachments();
+              }
             }
           }
         }
@@ -343,6 +369,8 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
           LOG_WARNING("skip header uid = %d", uid);
           continue;
         }
+
+        header.SetHeaderData(data, time, hasAttachments);
 
         if (header.GetData().empty())
         {

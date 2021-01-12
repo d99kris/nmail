@@ -1,6 +1,6 @@
 // body.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -12,6 +12,14 @@
 #include "log.h"
 #include "loghelp.h"
 #include "util.h"
+
+void Body::FromMime(mailmime* p_Mime)
+{
+  // when using this function regular SetData/GetData cannot be used
+  // @todo: consider making it a constructor
+  ParseMime(p_Mime);
+  m_Parsed = true;
+}
 
 void Body::SetData(const std::string& p_Data)
 {
@@ -56,6 +64,20 @@ std::map<ssize_t, Part> Body::GetParts()
 {
   Parse();
   return m_Parts;
+}
+
+bool Body::HasAttachments()
+{
+  Parse();
+  for (const auto& part : m_Parts)
+  {
+    if (part.second.m_IsAttachment)
+    {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void Body::Parse()
@@ -234,11 +256,21 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   std::string filename;
   std::string contentId;
   std::string charset;
+  bool isAttachment = false;
 
   memset(&fields, 0, sizeof(mailmime_single_fields));
   if (p_Mime->mm_mime_fields != NULL)
   {
     mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
+
+    if (fields.fld_disposition != NULL)
+    {
+      struct mailmime_disposition_type* type = fields.fld_disposition->dsp_type;
+      if (type != NULL)
+      {
+        isAttachment = (type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
+      }
+    }
 
     if (fields.fld_disposition_filename != NULL)
     {
@@ -258,6 +290,21 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
     {
       charset = Util::ToLower(std::string(fields.fld_content_charset));
     }
+  }
+
+  if (data == NULL)
+  {
+    Part part;
+    static size_t index = 0;
+
+    part.m_Charset = charset;
+    part.m_MimeType = p_MimeType;
+    part.m_Filename = Util::MimeToUtf8(filename);
+    part.m_ContentId = contentId;
+    part.m_IsAttachment = isAttachment;
+
+    m_Parts[index++] = part;
+    return;
   }
 
   switch (data->dt_type)
@@ -285,6 +332,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
           part.m_MimeType = p_MimeType;
           part.m_Filename = Util::MimeToUtf8(filename);
           part.m_ContentId = contentId;
+          part.m_IsAttachment = isAttachment;
 
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {

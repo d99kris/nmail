@@ -1,6 +1,6 @@
 // header.h
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -15,6 +15,7 @@ class Header
 {
 public:
   void SetData(const std::string& p_Data);
+  void SetHeaderData(const std::string& p_Data, time_t p_ServerTime, bool p_HasAttachments);
   std::string GetData() const;
   std::string GetDateTime();
   std::string GetDateOrTime(const std::string& p_CurrentDate);
@@ -29,6 +30,7 @@ public:
   std::string GetUniqueId();
   std::string GetMessageId();
   std::set<std::string> GetAddresses();
+  bool GetHasAttachments();
 
   static std::string GetCurrentDate();
 
@@ -50,7 +52,7 @@ private:
   std::string m_Date;
   std::string m_DateTime;
   std::string m_Time;
-  time_t m_TimeStamp;
+  time_t m_TimeStamp = 0;
   std::string m_From;
   std::string m_ShortFrom;
   std::string m_To;
@@ -61,6 +63,7 @@ private:
   std::string m_MessageId;
   std::string m_UniqueId;
   std::set<std::string> m_Addresses;
+  bool m_HasAttachments = false;
 };
 
 std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header);

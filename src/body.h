@@ -1,6 +1,6 @@
 // body.h
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,6 +10,8 @@
 #include <map>
 #include <string>
 
+#include <libetpan/mailmime_types.h>
+
 struct Part
 {
   std::string m_MimeType;
@@ -17,16 +19,19 @@ struct Part
   std::string m_Filename;
   std::string m_ContentId;
   std::string m_Charset;
+  bool m_IsAttachment = false;
 };
 
 class Body
 {
 public:
+  void FromMime(mailmime* p_Mime);
   void SetData(const std::string& p_Data);
   std::string GetData() const;
   std::string GetTextPlain();
   std::string GetTextHtml();
   std::map<ssize_t, Part> GetParts();
+  bool HasAttachments();
 
 private:
   void Parse();

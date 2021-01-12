@@ -1,6 +1,6 @@
 // imapcache.cpp
 //
-// Copyright (c) 2020 Kristofer Berggren
+// Copyright (c) 2020-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -32,7 +32,7 @@ std::string ImapCache::GetCacheDir()
 
 void ImapCache::InitCacheDir()
 {
-  static const int version = 1;
+  static const int version = 3;
   const std::string cacheDir = GetCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, false /* p_Encrypted */);
 }
@@ -44,7 +44,7 @@ std::string ImapCache::GetImapCacheDir()
 
 void ImapCache::InitImapCacheDir()
 {
-  static const int version = 1;
+  static const int version = 3;
   const std::string imapCacheDir = GetImapCacheDir();
   CacheUtil::CommonInitCacheDir(imapCacheDir, version, m_CacheEncrypt);
 }

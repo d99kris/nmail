@@ -1,6 +1,6 @@
 // header.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -18,9 +18,20 @@
 #include "sethelp.h"
 #include "util.h"
 
+static const std::string labelServerTime("X-Nmail-ServerTime: ");
+static const std::string labelAttachment("X-Nmail-Attachment: ");
+
 void Header::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
+}
+
+void Header::SetHeaderData(const std::string& p_Data, time_t p_ServerTime, bool p_HasAttachments)
+{
+  m_Data =
+    labelServerTime + std::to_string(p_ServerTime) + "\n" +
+    labelAttachment + std::to_string(p_HasAttachments ? 1 : 0) + "\n" +
+    p_Data;
 }
 
 std::string Header::GetData() const
@@ -106,6 +117,12 @@ std::set<std::string> Header::GetAddresses()
   return m_Addresses;
 }
 
+bool Header::GetHasAttachments()
+{
+  Parse();
+  return m_HasAttachments;
+}
+
 std::string Header::GetCurrentDate()
 {
   time_t nowtime = time(NULL);
@@ -119,9 +136,50 @@ void Header::Parse()
 {
   if (!m_Parsed)
   {
+    time_t headerTimeStamp = 0;
+    time_t serverTimeStamp = 0;
+
+    bool error = false;
+    std::stringstream sstream(m_Data);
+    std::string line;
+    for (int i = 0; i < 2; ++i)
+    {
+      if (std::getline(sstream, line))
+      {
+        if ((line.rfind(labelServerTime, 0) == 0) && (line.size() > labelServerTime.size()))
+        {
+          std::string serverTime = line.substr(labelServerTime.size());
+          serverTimeStamp = std::stoi(serverTime);
+        }
+        else if ((line.rfind(labelAttachment, 0) == 0) && (line.size() > labelAttachment.size()))
+        {
+          std::string attachment = line.substr(labelAttachment.size());
+          m_HasAttachments = (attachment == "1");
+        }
+        else
+        {
+          LOG_WARNING("unexpected hdr content \"%s\"", line.c_str());
+          error = true;
+          break;
+        }
+      }
+      else
+      {
+        LOG_WARNING("unexpected empty hdr");
+        error = true;
+        break;
+      }
+    }
+
+    if (error)
+    {
+      sstream.clear();
+      sstream.seekg(0);
+    }
+
     struct mailmime* mime = NULL;
     size_t current_index = 0;
-    mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
+    mailmime_parse(sstream.str().c_str(), sstream.str().size(), &current_index, &mime);
 
     if (mime != NULL)
     {
@@ -141,21 +199,7 @@ void Header::Parse()
                 case MAILIMF_FIELD_ORIG_DATE:
                   {
                     struct mailimf_date_time* dt = field->fld_data.fld_orig_date->dt_date_time;
-                    time_t rawtime = Util::MailtimeToTimet(dt);
-                    struct tm* timeinfo = localtime(&rawtime);
-
-                    char senttimestr[64];
-                    strftime(senttimestr, sizeof(senttimestr), "%H:%M", timeinfo);
-                    std::string senttime(senttimestr);
-
-                    char sentdatestr[64];
-                    strftime(sentdatestr, sizeof(sentdatestr), "%Y-%m-%d", timeinfo);
-                    std::string sentdate(sentdatestr);
-
-                    m_Date = sentdate;
-                    m_DateTime = sentdate + std::string(" ") + senttime;
-                    m_Time = senttime;
-                    m_TimeStamp = rawtime;
+                    headerTimeStamp = Util::MailtimeToTimet(dt);
                   }
                   break;
 
@@ -208,6 +252,32 @@ void Header::Parse()
       }
 
       mailmime_free(mime);
+    }
+
+    static const bool useServerTime = Util::GetUseServerTimestamps();
+    time_t timeStamp = useServerTime ? serverTimeStamp : headerTimeStamp;
+    if (timeStamp == 0)
+    {
+      // fall back to other option
+      timeStamp = useServerTime ? headerTimeStamp : serverTimeStamp;
+    }
+
+    if (timeStamp != 0)
+    {
+      struct tm* timeinfo = localtime(&timeStamp);
+
+      char senttimestr[64];
+      strftime(senttimestr, sizeof(senttimestr), "%H:%M", timeinfo);
+      std::string senttime(senttimestr);
+
+      char sentdatestr[64];
+      strftime(sentdatestr, sizeof(sentdatestr), "%Y-%m-%d", timeinfo);
+      std::string sentdate(sentdatestr);
+
+      m_TimeStamp = timeStamp;
+      m_Date = sentdate;
+      m_DateTime = sentdate + std::string(" ") + senttime;
+      m_Time = senttime;
     }
 
     m_Parsed = true;

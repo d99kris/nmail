@@ -1,6 +1,6 @@
 // util.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -50,6 +50,7 @@ std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
+bool Util::m_UseServerTimestamps = false;
 
 bool Util::Exists(const std::string& p_Path)
 {
@@ -329,6 +330,17 @@ time_t Util::MailtimeToTimet(mailimf_date_time* p_Dt)
   t -= offs_m * 60;
 
   return t;
+}
+
+void Util::MailimapTimeToMailimfTime(mailimap_date_time* p_Src, mailimf_date_time* p_Dst)
+{
+  p_Dst->dt_day = p_Src->dt_day;
+  p_Dst->dt_month = p_Src->dt_month;
+  p_Dst->dt_year = p_Src->dt_year;
+  p_Dst->dt_hour = p_Src->dt_hour;
+  p_Dst->dt_min = p_Src->dt_min;
+  p_Dst->dt_sec = p_Src->dt_sec;
+  p_Dst->dt_zone = p_Src->dt_zone;
 }
 
 std::string Util::GetHtmlToTextConvertCmd()
@@ -1441,7 +1453,7 @@ int Util::AddColor(const std::string& p_Hex)
   static int colorId = 31;
 
   if (p_Hex.empty()) return -1;
-  
+
   if ((p_Hex.size() == 8) && (p_Hex.substr(0, 2) == "0x"))
   {
     uint32_t r = 0, g = 0, b = 0;
@@ -1466,4 +1478,14 @@ int Util::AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex)
   colorPairId++;
   init_pair(colorPairId, AddColor(p_FgHex), AddColor(p_BgHex));
   return colorPairId;
+}
+
+void Util::SetUseServerTimestamps(bool p_Enable)
+{
+  m_UseServerTimestamps = p_Enable;
+}
+
+bool Util::GetUseServerTimestamps()
+{
+  return m_UseServerTimestamps;
 }

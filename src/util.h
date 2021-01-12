@@ -1,6 +1,6 @@
 // util.h
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -13,6 +13,8 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#include <libetpan/mailimap.h>
 
 #define KEY_TAB 9
 #define KEY_RETURN 10
@@ -143,6 +145,7 @@ public:
   static std::string GetTempDirectory();
   static void DeleteFile(const std::string& p_Path);
   static time_t MailtimeToTimet(struct mailimf_date_time* p_Dt);
+  static void MailimapTimeToMailimfTime(mailimap_date_time* p_Src, mailimf_date_time* p_Dst);
   static std::string GetHtmlToTextConvertCmd();
   static void SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd);
   static std::string GetDefaultHtmlToTextConvertCmd();
@@ -231,6 +234,8 @@ public:
   static std::string GetSQLiteVersion();
   static int AddColor(const std::string& p_Hex);
   static int AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex);
+  static void SetUseServerTimestamps(bool p_Enable);
+  static bool GetUseServerTimestamps();
 
 private:
   static std::string m_HtmlToTextConvertCmd;
@@ -241,4 +246,5 @@ private:
   static std::string m_EditorCmd;
   static int m_OrgStdErr;
   static int m_NewStdErr;
+  static bool m_UseServerTimestamps;
 };

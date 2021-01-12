@@ -1,6 +1,6 @@
 // addressbook.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -136,7 +136,7 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 
 void AddressBook::InitCacheDir()
 {
-  static const int version = 3; // note: keep synchronized with ImapIndex (for now)
+  static const int version = 4; // note: keep synchronized with ImapIndex (for now)
   const std::string cacheDir = GetAddressBookCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_AddressBookEncrypt);
 }

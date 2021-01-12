@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2020 Kristofer Berggren
+// Copyright (c) 2019-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -107,6 +107,7 @@ void Ui::Init()
     { "key_kill_word", "0x205" }, // alt-delete
 #endif
     { "colors_enabled", "0" },
+    { "attachment_indicator", "+" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -177,7 +178,7 @@ void Ui::Init()
       m_ColorsEnabled = false;
     }
   }
-  
+
   if (m_ColorsEnabled)
   {
     start_color();
@@ -194,6 +195,8 @@ void Ui::Init()
 
     colorsConfig.Save();
   }
+
+  m_AttachmentIndicator = m_Config.Get("attachment_indicator");
 
   m_Running = true;
 }
@@ -907,6 +910,7 @@ void Ui::DrawMessageList()
       std::string shortDate;
       std::string shortFrom;
       std::string subject;
+      std::string attachFlag;
       if (headers.find(uid) != headers.end())
       {
         Header& header = headers.at(uid);
@@ -920,12 +924,20 @@ void Ui::DrawMessageList()
         {
           shortFrom = header.GetShortFrom();
         }
+
+        if (!m_AttachmentIndicator.empty())
+        {
+          static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
+          static const int indicatorWidth = wcswidth(wIndicator.c_str(), wIndicator.size());
+          attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
+                                                  : std::string(indicatorWidth, ' ');
+        }
       }
 
       seenFlag = Util::TrimPadString(seenFlag, 1);
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
@@ -1084,17 +1096,26 @@ void Ui::DrawMessageListSearch()
     std::string shortDate;
     std::string shortFrom;
     std::string subject;
+    std::string attachFlag;
     {
       Header header = headers.at(i);
       shortDate = header.GetDateOrTime(currentDate);
       shortFrom = header.GetShortFrom();
       subject = header.GetSubject();
+
+      if (!m_AttachmentIndicator.empty())
+      {
+        static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
+        static const int indicatorWidth = wcswidth(wIndicator.c_str(), wIndicator.size());
+        attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
+                                                : std::string(indicatorWidth, ' ');
+      }
     }
 
     seenFlag = Util::TrimPadString(seenFlag, 1);
     shortDate = Util::TrimPadString(shortDate, 10);
     shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-    std::string headerLeft = " " + seenFlag + "  " + shortDate + "  " + shortFrom + "  ";
+    std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
     int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
     subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
     std::string header = headerLeft + subject + " ";

@@ -1,6 +1,6 @@
 // cacheutil.cpp
 //
-// Copyright (c) 2020 Kristofer Berggren
+// Copyright (c) 2020-2021 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -14,19 +14,18 @@
 
 bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool p_Encrypted)
 {
-  const std::string& dirVersionPath = p_Dir + "version";
-  int encrypted = p_Encrypted ? 1 : 0;
+  const std::string& versionPath = p_Dir + "version";
+  const int currentVersion = (p_Version * 10) + (p_Encrypted ? 1 : 0);
   if (Util::Exists(p_Dir))
   {
-    int dirVersion = -1;
-    int dirEncrypted = encrypted; // @todo: eventually this backward-compatibility can be dropped
-    DeserializeFromFile(dirVersionPath, dirVersion, dirEncrypted);
-    if ((dirVersion != p_Version) || (dirEncrypted != encrypted))
+    int storedVersion = -1;
+    DeserializeFromFile(versionPath, storedVersion);
+    if (storedVersion != currentVersion)
     {
       LOG_DEBUG("re-init %s", p_Dir.c_str());
       Util::RmDir(p_Dir);
       Util::MkDir(p_Dir);
-      SerializeToFile(dirVersionPath, p_Version, encrypted);
+      SerializeToFile(versionPath, currentVersion);
       return false;
     }
   }
@@ -34,7 +33,7 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
   {
     LOG_DEBUG("init %s", p_Dir.c_str());
     Util::MkDir(p_Dir);
-    SerializeToFile(dirVersionPath, p_Version, encrypted);
+    SerializeToFile(versionPath, currentVersion);
   }
 
   return true;

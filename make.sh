@@ -2,7 +2,7 @@
 
 # make.sh
 #
-# Copyright (C) 2020 Kristofer Berggren
+# Copyright (C) 2020-2021 Kristofer Berggren
 # All rights reserved.
 #
 # See LICENSE for redistribution information.

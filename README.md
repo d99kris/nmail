@@ -210,6 +210,7 @@ Full example of a config file `~/.nmail/main.conf`:
     prefetch_level=2
     save_pass=1
     sent=Sent
+    server_timestamps=0
     smtp_host=smtp.example.com
     smtp_port=587
     smtp_user=
@@ -321,6 +322,11 @@ Specified whether nmail shall store the password(s) (default enabled).
 
 IMAP sent folder name. Used by nmail if `client_store_sent` is enabled to store
 copies of outgoing emails. 
+
+### server_timestamps
+
+Use server timestamps for messages, rather than the timestamp in the message
+header (default disabled).
 
 ### smtp_host
 
@@ -447,6 +453,7 @@ Extra verbose logging can also be enabled by setting `verbose_logging=2` in
 
 Email List
 ==========
+
 An email list is available for users to discuss nmail usage and related topics.
 Feel free to [subscribe](http://www.freelists.org/list/nmail-users) and send
 messages to [nmail-users@freelists.org](mailto:nmail-users@freelists.org).
@@ -488,6 +495,7 @@ configure nmail.
 This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
+    attachment_indicator=+
     cancel_without_confirm=0
     colors_enabled=0
     compose_hardwrap=0
@@ -538,6 +546,12 @@ file (platform-dependent defaults are left empty below):
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
+
+### attachment_indicator
+
+Control which character to indicate that an email has attachments
+(default: `+`). For a less compact layout one can add space before the
+character, like ` 📎`.
 
 ### cancel_without_confirm
 
@@ -675,6 +689,30 @@ To enable "less secure app access", go to
 `Less secure app access` click `Turn on access (not recommended)`.
 
 
+Accessing Email Cache using Other Email Clients
+===============================================
+
+With cache encryption disabled (`cache_encrypt=0` in main.conf), nmail stores
+the locally cached messages in a format similar to Maildir. While individual
+messages (`.eml` files) can be opened using many email clients, a script is
+provided to export a Maildir copy of the entire nmail cache. Example usage:
+
+    ./util/nmail_to_maildir.sh ~/.nmail ~/Maildir
+
+A basic `~/.muttrc` config file for reading the exported Maildir in `mutt`:
+
+    set mbox_type=Maildir
+    set spoolfile="~/Maildir"
+    set folder="~/Maildir"
+    set mask=".*"
+
+Note: nmail is not designed for working with other email clients, this export
+option is mainly available as a data recovery option in case access to an
+email account is lost, and one needs a local Maildir archive to import into
+a new email account. Such import is not supported by nmail, but is supported
+by some other email clients, like Thunderbird.
+
+
 Technical Details
 =================
 
@@ -696,10 +734,12 @@ Uncrustify is used to maintain consistent source code formatting, example:
 
 License
 =======
+
 nmail is distributed under the MIT license. See [LICENSE](/LICENSE) file.
 
 
 Keywords
 ========
+
 command line, console based, linux, macos, email client, ncurses, terminal,
 alternative to alpine.
