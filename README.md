@@ -451,12 +451,11 @@ Extra verbose logging can also be enabled by setting `verbose_logging=2` in
 `~/.nmail/main.conf`.
 
 
-Email List
-==========
+Telegram Group
+==============
 
-An email list is available for users to discuss nmail usage and related topics.
-Feel free to [subscribe](http://www.freelists.org/list/nmail-users) and send
-messages to [nmail-users@freelists.org](mailto:nmail-users@freelists.org).
+A Telegram group [https://t.me/nmailusers](https://t.me/nmailusers) is
+available for users to discuss nmail usage and related topics.
 
 Bug reports, feature requests and usage questions directed at the nmail
 maintainer(s) should however be reported using
