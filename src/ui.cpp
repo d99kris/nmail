@@ -737,6 +737,13 @@ void Ui::DrawAddressList()
       }
 
       std::wstring waddress = Util::ToWString(address);
+      size_t maxWidth = m_ScreenWidth - 4;
+      if (waddress.size() > maxWidth)
+      {
+        static const std::wstring suffix = L"...";
+        waddress = waddress.substr(0, maxWidth - suffix.size()) + suffix;
+      }
+
       mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), waddress.size());
 
       if (i == m_AddressListCurrentIndex)
