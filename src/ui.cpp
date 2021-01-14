@@ -215,6 +215,9 @@ void Ui::Cleanup()
 void Ui::InitWindows()
 {
   getmaxyx(stdscr, m_ScreenHeight, m_ScreenWidth);
+  m_ScreenWidth = std::max(m_ScreenWidth, 40);
+  m_ScreenHeight = std::max(m_ScreenHeight, 8);
+
   m_MaxLineLength = m_ScreenWidth;
   wclear(stdscr);
   wrefresh(stdscr);
@@ -1450,11 +1453,12 @@ void Ui::DrawPartList()
         std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 30);
         std::string line = leftPad + sizeStrPadded + mimeTypePadded;
         std::string filenamePadded =
-          Util::TrimPadString(part.m_Filename, m_ScreenWidth - line.size());
+          Util::TrimPadString(part.m_Filename, std::max(m_ScreenWidth - (int)line.size(), 0));
         line = line + filenamePadded;
 
         std::wstring wline = Util::ToWString(line);
-        mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(), wline.size());
+        mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(),
+                    std::min((int)wline.size(), m_ScreenWidth));
 
         if (i == m_PartListCurrentIndex)
         {
