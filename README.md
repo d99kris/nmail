@@ -419,7 +419,8 @@ The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.
     Attchmnt: localpath.txt, /tmp/absolutepath.txt
     Subject : Hello world
 
-Attachment paths may be local (just filename) or absolute (full path).
+Attachment paths may be local (just filename) or absolute (full path). Shell
+path expansion, like e.g. `~` and `$HOME`, is also supported.
 
 
 Email Search
@@ -432,6 +433,7 @@ engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
 specified. Results are sorted by email timestamp.
 
 Press `<` or `Left` to exit search results and go back to current folder message list.
+Using `/` to search with an empty query also goes back to current folder message list.
 
 
 Troubleshooting
