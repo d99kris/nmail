@@ -134,6 +134,7 @@ int main(int argc, char* argv[])
     { "html_to_text_cmd", "" },
     { "text_to_html_cmd", "" },
     { "ext_viewer_cmd", "" },
+    { "html_viewer_cmd", "" },
     { "prefetch_level", "2" },
     { "verbose_logging", "0" },
     { "pager_cmd", "" },
@@ -194,6 +195,7 @@ int main(int argc, char* argv[])
   Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
   Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
   Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
+  Util::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));

@@ -60,6 +60,20 @@ std::string Body::GetTextHtml()
   }
 }
 
+std::string Body::GetHtml()
+{
+  Parse();
+
+  if (!m_Html.empty())
+  {
+    return m_Html;
+  }
+  else
+  {
+    return "<pre>" + m_TextPlain + "</pre>";
+  }
+}
+
 std::map<ssize_t, Part> Body::GetParts()
 {
   Parse();
@@ -122,6 +136,8 @@ void Body::ParseHtml()
   {
     const Part& part = m_Parts.at(m_TextHtmlIndex);
     std::string partHtml = part.m_Data;
+    m_Html = partHtml;
+
     if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
     {
       partHtml = Util::ConvertEncoding(part.m_Charset, "utf-8", partHtml);

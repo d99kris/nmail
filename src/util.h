@@ -157,6 +157,10 @@ public:
   static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
   static std::string GetDefaultExtViewerCmd();
   static bool IsDefaultExtViewerCmd();
+  static std::string GetHtmlViewerCmd();
+  static void SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd);
+  static std::string GetDefaultHtmlViewerCmd();
+  static bool IsDefaultHtmlViewerCmd();
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static std::string ReduceIndent(const std::string& p_Str, int p_Cnt);
@@ -241,6 +245,7 @@ private:
   static std::string m_HtmlToTextConvertCmd;
   static std::string m_TextToHtmlConvertCmd;
   static std::string m_ExtViewerCmd;
+  static std::string m_HtmlViewerCmd;
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;

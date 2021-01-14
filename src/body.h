@@ -30,6 +30,7 @@ public:
   std::string GetData() const;
   std::string GetTextPlain();
   std::string GetTextHtml();
+  std::string GetHtml();
   std::map<ssize_t, Part> GetParts();
   bool HasAttachments();
 
@@ -50,6 +51,7 @@ private:
   ssize_t m_TextHtmlIndex = -1;
   std::string m_TextHtml;
   std::string m_TextPlain;
+  std::string m_Html;
 };
 
 std::ostream& operator<<(std::ostream& p_Stream, const Body& p_Body);

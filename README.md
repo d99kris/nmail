@@ -202,6 +202,7 @@ Full example of a config file `~/.nmail/main.conf`:
     ext_viewer_cmd=
     folders_exclude=
     html_to_text_cmd=
+    html_viewer_cmd=
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
@@ -277,6 +278,13 @@ used is one of:
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -dump`
 - `elinks -dump-charset utf-8 -dump`
 - `links -codepage utf-8 -dump`
+
+### html_viewer_cmd
+
+This field allows overriding the external viewer used when viewing message
+as html and previewing messages composed using markdown. The viewer may be
+a terminal-based program, e.g. `w3m -o confirm_qq=false`. By default nmail
+uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux.
 
 ### imap_host
 
@@ -507,9 +515,9 @@ file (platform-dependent defaults are left empty below):
     key_compose=c
     key_delete=d
     key_delete_line=KEY_CTRLK
-    key_export=e
+    key_export=x
     key_external_editor=KEY_CTRLE
-    key_external_pager=KEY_CTRLE
+    key_external_pager=e
     key_forward=f
     key_forward_word=
     key_goto_folder=g
@@ -521,6 +529,7 @@ file (platform-dependent defaults are left empty below):
     key_othercmd_help=o
     key_postpone=KEY_CTRLO
     key_prev_msg=p
+    key_preview_html=KEY_CTRLV
     key_quit=q
     key_refresh=l
     key_reply=r
@@ -533,7 +542,7 @@ file (platform-dependent defaults are left empty below):
     key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t
     key_toggle_unread=u
-    key_view_html=KEY_CTRLV
+    key_view_html=v
     markdown_html_compose=0
     new_msg_bell=1
     persist_folder_filter=1

@@ -85,13 +85,14 @@ void Ui::Init()
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
     { "key_external_editor", "KEY_CTRLE" },
-    { "key_external_pager", "KEY_CTRLE" },
+    { "key_external_pager", "e" },
     { "key_postpone", "KEY_CTRLO" },
     { "key_othercmd_help", "o" },
-    { "key_export", "e" },
+    { "key_export", "x" },
     { "key_import", "i" },
     { "key_rich_header", "KEY_CTRLR" },
-    { "key_view_html", "KEY_CTRLV" },
+    { "key_view_html", "v" },
+    { "key_preview_html", "KEY_CTRLV" },
     { "key_search", "/" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
@@ -145,6 +146,7 @@ void Ui::Init()
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
   m_KeyViewHtml = Util::GetKeyCode(m_Config.Get("key_view_html"));
+  m_KeyPreviewHtml = Util::GetKeyCode(m_Config.Get("key_preview_html"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
@@ -481,6 +483,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
+      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
     },
   };
 
@@ -506,6 +509,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
       GetKeyDisplay(m_KeyExternalPager), "ExtView",
+      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
@@ -535,7 +539,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCancel), "Cancel",
       GetKeyDisplay(m_KeyPostpone), "Postpone",
       GetKeyDisplay(m_KeyToSelect), "ToSelect",
-      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
+      GetKeyDisplay(m_KeyPreviewHtml), "ViewHtml",
     },
   };
 
@@ -1081,6 +1085,7 @@ void Ui::DrawMessageListSearch()
   int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
   const std::string& currentDate = Header::GetCurrentDate();
   std::map<std::string, std::set<uint32_t>> fetchFlagUids;
+  std::map<std::string, std::set<uint32_t>> fetchBodyUids;
 
   werase(m_MainWin);
   for (int i = idxOffs; i < idxMax; ++i)
@@ -1142,6 +1147,23 @@ void Ui::DrawMessageListSearch()
     {
       wattroff(m_MainWin, A_REVERSE);
     }
+
+    if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+      std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
+
+      if ((bodys.find(uid) == bodys.end()) &&
+          (requestedBodys.find(uid) == requestedBodys.end()))
+      {
+        if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
+        {
+          requestedBodys.insert(uid);
+          fetchBodyUids[folder].insert(uid);
+        }
+      }
+    }
   }
 
   for (auto& fetchFlagUid : fetchFlagUids)
@@ -1151,6 +1173,16 @@ void Ui::DrawMessageListSearch()
     request.m_GetFlags = fetchFlagUid.second;
 
     LOG_DEBUG_VAR("async request flags =", request.m_GetFlags);
+    m_ImapManager->AsyncRequest(request);
+  }
+
+  for (auto& fetchBodyUid : fetchBodyUids)
+  {
+    ImapManager::Request request;
+    request.m_Folder = fetchBodyUid.first;
+    request.m_GetBodys = fetchBodyUid.second;
+
+    LOG_DEBUG_VAR("async request bodys =", request.m_GetBodys);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -2100,6 +2132,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     StartSync();
   }
+  else if (p_Key == m_KeyViewHtml)
+  {
+    ExternalHtmlViewer();
+  }
   else
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
@@ -2261,6 +2297,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyExternalPager)
   {
     ExternalPager();
+  }
+  else if (p_Key == m_KeyViewHtml)
+  {
+    ExternalHtmlViewer();
   }
   else
   {
@@ -2592,14 +2632,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       SetComposeStr(HeaderAtt, att);
       SetComposeStr(HeaderSub, sub);
     }
-    else if (p_Key == m_KeyViewHtml)
+    else if (p_Key == m_KeyPreviewHtml)
     {
       if (m_CurrentMarkdownHtmlCompose)
       {
         std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
         std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
         Util::WriteFile(tempFilePath, htmlStr);
-        ExternalViewer(tempFilePath);
+        ExternalHtmlViewer(tempFilePath);
       }
       else
       {
@@ -4327,6 +4367,35 @@ void Ui::ExternalPager()
   }
 }
 
+void Ui::ExternalHtmlViewer()
+{
+  static const std::string& tempPath = Util::GetTempDir() + std::string("htmlview/1.html");
+  Util::DeleteFile(tempPath);
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+    if (bodyIt != bodys.end())
+    {
+      Body& body = bodyIt->second;
+      const std::string& html = body.GetHtml(); // falls back to text/plain if no html
+      Util::WriteFile(tempPath, html);
+    }
+  }
+
+  if (Util::Exists(tempPath))
+  {
+    ExternalHtmlViewer(tempPath);
+  }
+  else
+  {
+    SetDialogMessage("View html failed (message not available)", true /* p_Warn */);
+  }
+}
+
 int Ui::ExternalViewer(const std::string& p_Path)
 {
   const bool isDefaultExtViewerCmd = Util::IsDefaultExtViewerCmd();
@@ -4350,6 +4419,42 @@ int Ui::ExternalViewer(const std::string& p_Path)
   }
 
   if (!isDefaultExtViewerCmd)
+  {
+    refresh();
+
+    wint_t key = 0;
+    while (get_wch(&key) != ERR)
+    {
+      // Discard any remaining input
+    }
+  }
+
+  return rv;
+}
+
+int Ui::ExternalHtmlViewer(const std::string& p_Path)
+{
+  const bool isDefaultHtmlViewerCmd = Util::IsDefaultHtmlViewerCmd();
+  if (!isDefaultHtmlViewerCmd)
+  {
+    endwin();
+  }
+
+  const std::string& viewer = Util::GetHtmlViewerCmd();
+  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  LOG_DEBUG("launching html viewer: %s", cmd.c_str());
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    LOG_DEBUG("html viewer exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("html viewer exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
+  }
+
+  if (!isDefaultHtmlViewerCmd)
   {
     refresh();
 

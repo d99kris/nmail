@@ -45,6 +45,7 @@ std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 std::string Util::m_HtmlToTextConvertCmd;
 std::string Util::m_TextToHtmlConvertCmd;
 std::string Util::m_ExtViewerCmd;
+std::string Util::m_HtmlViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
@@ -450,6 +451,36 @@ std::string Util::GetDefaultExtViewerCmd()
 bool Util::IsDefaultExtViewerCmd()
 {
   return m_ExtViewerCmd.empty();
+}
+
+std::string Util::GetHtmlViewerCmd()
+{
+  if (!m_HtmlViewerCmd.empty()) return m_HtmlViewerCmd;
+
+  static std::string defaultHtmlViewerCmd = GetDefaultHtmlViewerCmd();
+
+  return defaultHtmlViewerCmd;
+}
+
+void Util::SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd)
+{
+  m_HtmlViewerCmd = p_HtmlViewerCmd;
+}
+
+std::string Util::GetDefaultHtmlViewerCmd()
+{
+#if defined(__APPLE__)
+  return "open";
+#elif defined(__linux__)
+  return "xdg-open >/dev/null 2>&1";
+#else
+  return "";
+#endif
+}
+
+bool Util::IsDefaultHtmlViewerCmd()
+{
+  return m_HtmlViewerCmd.empty();
 }
 
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,
