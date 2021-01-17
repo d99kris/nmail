@@ -299,7 +299,7 @@ Real name of sender. Recommended when sending emails.
 ### pager_cmd
 
 The field `pager_cmd` allows overriding which external pager / text viewer to
-use when viewing an email using an external pager (`Ctrl-E`). If not specified,
+use when viewing an email using an external pager (`E`). If not specified,
 nmail will use the pager specified by the environment variable `$PAGER`.
 If `$PAGER` is not set, nmail will use `less`.
 
@@ -516,8 +516,10 @@ file (platform-dependent defaults are left empty below):
     key_delete=d
     key_delete_line=KEY_CTRLK
     key_export=x
-    key_external_editor=KEY_CTRLE
-    key_external_pager=e
+    key_ext_editor=KEY_CTRLE
+    key_ext_html_preview=KEY_CTRLV
+    key_ext_html_viewer=v
+    key_ext_pager=e
     key_forward=f
     key_forward_word=
     key_goto_folder=g
@@ -529,7 +531,6 @@ file (platform-dependent defaults are left empty below):
     key_othercmd_help=o
     key_postpone=KEY_CTRLO
     key_prev_msg=p
-    key_preview_html=KEY_CTRLV
     key_quit=q
     key_refresh=l
     key_reply=r
@@ -542,7 +543,6 @@ file (platform-dependent defaults are left empty below):
     key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t
     key_toggle_unread=u
-    key_view_html=v
     markdown_html_compose=0
     new_msg_bell=1
     persist_folder_filter=1

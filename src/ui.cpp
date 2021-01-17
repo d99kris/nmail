@@ -84,15 +84,15 @@ void Ui::Init()
     { "key_goto_folder", "g" },
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
-    { "key_external_editor", "KEY_CTRLE" },
-    { "key_external_pager", "e" },
+    { "key_ext_editor", "KEY_CTRLE" },
+    { "key_ext_pager", "e" },
     { "key_postpone", "KEY_CTRLO" },
     { "key_othercmd_help", "o" },
     { "key_export", "x" },
     { "key_import", "i" },
     { "key_rich_header", "KEY_CTRLR" },
-    { "key_view_html", "v" },
-    { "key_preview_html", "KEY_CTRLV" },
+    { "key_ext_html_viewer", "v" },
+    { "key_ext_html_preview", "KEY_CTRLV" },
     { "key_search", "/" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
@@ -138,15 +138,15 @@ void Ui::Init()
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
   m_KeyToSelect = Util::GetKeyCode(m_Config.Get("key_to_select"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
-  m_KeyExternalEditor = Util::GetKeyCode(m_Config.Get("key_external_editor"));
-  m_KeyExternalPager = Util::GetKeyCode(m_Config.Get("key_external_pager"));
+  m_KeyExtEditor = Util::GetKeyCode(m_Config.Get("key_ext_editor"));
+  m_KeyExtPager = Util::GetKeyCode(m_Config.Get("key_ext_pager"));
   m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
   m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
   m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
   m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
   m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
-  m_KeyViewHtml = Util::GetKeyCode(m_Config.Get("key_view_html"));
-  m_KeyPreviewHtml = Util::GetKeyCode(m_Config.Get("key_preview_html"));
+  m_KeyExtHtmlViewer = Util::GetKeyCode(m_Config.Get("key_ext_html_viewer"));
+  m_KeyExtHtmlPreview = Util::GetKeyCode(m_Config.Get("key_ext_html_preview"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
@@ -483,7 +483,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
-      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ViewHtml",
     },
   };
 
@@ -508,8 +508,8 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
-      GetKeyDisplay(m_KeyExternalPager), "ExtView",
-      GetKeyDisplay(m_KeyViewHtml), "ViewHtml",
+      GetKeyDisplay(m_KeyExtPager), "ExtPager",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ViewHtml",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
@@ -531,7 +531,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeySend), "Send",
       GetKeyDisplay(m_KeyDeleteLine), "DelLine",
-      GetKeyDisplay(m_KeyExternalEditor), "ExtEdit",
+      GetKeyDisplay(m_KeyExtEditor), "ExtEdit",
       GetKeyDisplay(m_KeyRichHeader), "RichHdr",
       GetKeyDisplay(m_KeyToggleMarkdownCompose), "TgMkDown",
     },
@@ -539,7 +539,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCancel), "Cancel",
       GetKeyDisplay(m_KeyPostpone), "Postpone",
       GetKeyDisplay(m_KeyToSelect), "ToSelect",
-      GetKeyDisplay(m_KeyPreviewHtml), "ViewHtml",
+      GetKeyDisplay(m_KeyExtHtmlPreview), "ViewHtml",
     },
   };
 
@@ -2132,7 +2132,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     StartSync();
   }
-  else if (p_Key == m_KeyViewHtml)
+  else if (p_Key == m_KeyExtHtmlViewer)
   {
     ExternalHtmlViewer();
   }
@@ -2294,11 +2294,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     ExportMessage();
   }
-  else if (p_Key == m_KeyExternalPager)
+  else if (p_Key == m_KeyExtPager)
   {
-    ExternalPager();
+    ExtPager();
   }
-  else if (p_Key == m_KeyViewHtml)
+  else if (p_Key == m_KeyExtHtmlViewer)
   {
     ExternalHtmlViewer();
   }
@@ -2611,9 +2611,9 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         }
       }
     }
-    else if (p_Key == m_KeyExternalEditor)
+    else if (p_Key == m_KeyExtEditor)
     {
-      ExternalEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+      ExtEditor(m_ComposeMessageStr, m_ComposeMessagePos);
     }
     else if (p_Key == m_KeyRichHeader)
     {
@@ -2632,7 +2632,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       SetComposeStr(HeaderAtt, att);
       SetComposeStr(HeaderSub, sub);
     }
-    else if (p_Key == m_KeyPreviewHtml)
+    else if (p_Key == m_KeyExtHtmlPreview)
     {
       if (m_CurrentMarkdownHtmlCompose)
       {
@@ -4305,7 +4305,7 @@ void Ui::InvalidateUiCache(const std::string& p_Folder)
   m_RequestedFlags[p_Folder].clear();
 }
 
-void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
+void Ui::ExtEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
 {
   endwin();
   const std::string& tempPath = Util::GetTempFilename(".txt");
@@ -4337,7 +4337,7 @@ void Ui::ExternalEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessage
   }
 }
 
-void Ui::ExternalPager()
+void Ui::ExtPager()
 {
   endwin();
   const std::string& tempPath = Util::GetTempFilename(".txt");
