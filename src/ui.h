@@ -282,6 +282,8 @@ private:
   int m_KeyForwardWord = 0;
   int m_KeyBackwardKillWord = 0;
   int m_KeyKillWord = 0;
+  int m_KeyPrevPage = 0;
+  int m_KeyNextPage = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;

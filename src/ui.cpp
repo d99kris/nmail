@@ -108,6 +108,8 @@ void Ui::Init()
     { "key_backward_kill_word", "\\033\\177" }, // alt-backspace
     { "key_kill_word", "0x205" }, // alt-delete
 #endif
+    { "key_prev_page", "KEY_PPAGE" },
+    { "key_next_page", "KEY_NPAGE" },
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
   };
@@ -157,6 +159,9 @@ void Ui::Init()
   m_KeyForwardWord = Util::GetKeyCode(m_Config.Get("key_forward_word"));
   m_KeyBackwardKillWord = Util::GetKeyCode(m_Config.Get("key_backward_kill_word"));
   m_KeyKillWord = Util::GetKeyCode(m_Config.Get("key_kill_word"));
+
+  m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
+  m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -1655,11 +1660,11 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   {
     ++m_FolderListCurrentIndex;
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_FolderListCurrentIndex = m_FolderListCurrentIndex - m_MainWinHeight;
   }
-  else if (p_Key == KEY_NPAGE)
+  else if (p_Key == m_KeyNextPage)
   {
     m_FolderListCurrentIndex = m_FolderListCurrentIndex + m_MainWinHeight;
   }
@@ -1745,11 +1750,11 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   {
     ++m_AddressListCurrentIndex;
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_AddressListCurrentIndex = m_AddressListCurrentIndex - m_MainWinHeight;
   }
-  else if (p_Key == KEY_NPAGE)
+  else if (p_Key == m_KeyNextPage)
   {
     m_AddressListCurrentIndex = m_AddressListCurrentIndex + m_MainWinHeight;
   }
@@ -1826,11 +1831,11 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   {
     ++m_FileListCurrentIndex;
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_FileListCurrentIndex = m_FileListCurrentIndex - m_MainWinHeight;
   }
-  else if (p_Key == KEY_NPAGE)
+  else if (p_Key == m_KeyNextPage)
   {
     m_FileListCurrentIndex = m_FileListCurrentIndex + m_MainWinHeight;
   }
@@ -1952,13 +1957,13 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     ++m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] - m_MainWinHeight;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
+  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
@@ -2178,11 +2183,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     m_MessageViewLineOffset = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_MessageViewLineOffset = m_MessageViewLineOffset - m_MainWinHeight;
   }
-  else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
+  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
   {
     m_MessageViewLineOffset = m_MessageViewLineOffset + m_MainWinHeight;
   }
@@ -2357,12 +2362,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_IsComposeHeader = false;
       }
     }
-    else if (p_Key == KEY_PPAGE)
+    else if (p_Key == m_KeyPrevPage)
     {
       m_ComposeHeaderLine = 0;
       m_ComposeHeaderPos = 0;
     }
-    else if (p_Key == KEY_NPAGE)
+    else if (p_Key == m_KeyNextPage)
     {
       m_IsComposeHeader = false;
     }
@@ -2471,7 +2476,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       ComposeMessageNextLine();
     }
-    else if (p_Key == KEY_PPAGE)
+    else if (p_Key == m_KeyPrevPage)
     {
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
@@ -2481,7 +2486,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
-    else if (p_Key == KEY_NPAGE)
+    else if (p_Key == m_KeyNextPage)
     {
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
@@ -2705,11 +2710,11 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     ++m_PartListCurrentIndex;
   }
-  else if (p_Key == KEY_PPAGE)
+  else if (p_Key == m_KeyPrevPage)
   {
     m_PartListCurrentIndex = m_PartListCurrentIndex - m_MainWinHeight;
   }
-  else if ((p_Key == KEY_NPAGE) || (p_Key == KEY_SPACE))
+  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
   {
     m_PartListCurrentIndex = m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
   }
@@ -4277,7 +4282,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
                                              (int)m_FilenameEntryString.size());
     }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
-             (key == KEY_PPAGE) || (key == KEY_NPAGE) ||
+             (key == m_KeyPrevPage) || (key == m_KeyNextPage) ||
              (key == KEY_HOME) || (key == KEY_END))
     {
       // ignore
