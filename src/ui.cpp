@@ -2931,10 +2931,17 @@ void Ui::SetState(Ui::State p_State)
         // @todo: handle quoted commas in address name
         std::vector<std::string> tos;
         std::vector<std::string> ccs;
+        std::vector<std::string> bccs;
         if (header.GetReplyTo().empty())
         {
           tos = Util::Split(header.GetTo(), ',');
           ccs = Util::Split(header.GetCc(), ',');
+          bccs = Util::Split(header.GetBcc(), ',');
+          if (!bccs.empty())
+          {
+            // @todo: consider auto-revert to previous rich header state after send / postpone
+            m_ShowRichHeader = true;
+          }
         }
         else
         {
@@ -2943,7 +2950,7 @@ void Ui::SetState(Ui::State p_State)
 
         SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
         SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
-        SetComposeStr(HeaderBcc, L"");
+        SetComposeStr(HeaderBcc, Util::ToWString(Util::Join(bccs, ", ")));
         SetComposeStr(HeaderAtt, L"");
         SetComposeStr(HeaderSub, Util::ToWString(header.GetSubject()));
 

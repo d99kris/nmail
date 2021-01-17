@@ -87,6 +87,12 @@ std::string Header::GetCc()
   return m_Cc;
 }
 
+std::string Header::GetBcc()
+{
+  Parse();
+  return m_Bcc;
+}
+
 std::string Header::GetReplyTo()
 {
   Parse();
@@ -223,6 +229,12 @@ void Header::Parse()
                   addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_Cc = Util::Join(addrs, ", ");
+                  break;
+
+                case MAILIMF_FIELD_BCC:
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
+                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                  m_Bcc = Util::Join(addrs, ", ");
                   break;
 
                 case MAILIMF_FIELD_SUBJECT:

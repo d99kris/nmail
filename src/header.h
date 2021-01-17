@@ -25,6 +25,7 @@ public:
   std::string GetTo();
   std::string GetShortTo();
   std::string GetCc();
+  std::string GetBcc();
   std::string GetReplyTo();
   std::string GetSubject();
   std::string GetUniqueId();
@@ -58,6 +59,7 @@ private:
   std::string m_To;
   std::string m_ShortTo;
   std::string m_Cc;
+  std::string m_Bcc;
   std::string m_ReplyTo;
   std::string m_Subject;
   std::string m_MessageId;
