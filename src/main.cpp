@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     { "cache_index_encrypt", "0" },
     { "html_to_text_cmd", "" },
     { "text_to_html_cmd", "" },
-    { "ext_viewer_cmd", "" },
+    { "parts_viewer_cmd", "" },
     { "html_viewer_cmd", "" },
     { "prefetch_level", "2" },
     { "verbose_logging", "0" },
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
   const bool addressBookEncrypt = (mainConfig->Get("addressbook_encrypt") == "1");
   Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
   Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
-  Util::SetExtViewerCmd(mainConfig->Get("ext_viewer_cmd"));
+  Util::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
   Util::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));

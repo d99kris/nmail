@@ -199,7 +199,7 @@ Full example of a config file `~/.nmail/main.conf`:
     client_store_sent=0
     drafts=Drafts
     editor_cmd=
-    ext_viewer_cmd=
+    parts_viewer_cmd=
     folders_exclude=
     html_to_text_cmd=
     html_viewer_cmd=
@@ -254,7 +254,7 @@ composing / editing an email using an external editor (`Ctrl-E`). If not
 specified, nmail will use the editor specified by the environment variable
 `$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
 
-### ext_viewer_cmd
+### parts_viewer_cmd
 
 This field allows overriding the external viewer used when viewing email
 parts and attachments. By default nmail uses `open` on macOS and
@@ -419,8 +419,7 @@ The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.
     Attchmnt: localpath.txt, /tmp/absolutepath.txt
     Subject : Hello world
 
-Attachment paths may be local (just filename) or absolute (full path). Shell
-path expansion, like e.g. `~` and `$HOME`, is also supported.
+Attachment paths may be local (just filename) or absolute (full path).
 
 
 Email Search
@@ -433,7 +432,6 @@ engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
 specified. Results are sorted by email timestamp.
 
 Press `<` or `Left` to exit search results and go back to current folder message list.
-Using `/` to search with an empty query also goes back to current folder message list.
 
 
 Troubleshooting

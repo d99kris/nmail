@@ -153,10 +153,10 @@ public:
   static void SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd);
   static std::string GetDefaultTextToHtmlConvertCmd();
   static std::string ConvertTextToHtml(const std::string& p_Text);
-  static std::string GetExtViewerCmd();
-  static void SetExtViewerCmd(const std::string& p_ExtViewerCmd);
-  static std::string GetDefaultExtViewerCmd();
-  static bool IsDefaultExtViewerCmd();
+  static std::string GetPartsViewerCmd();
+  static void SetPartsViewerCmd(const std::string& p_PartsViewerCmd);
+  static std::string GetDefaultPartsViewerCmd();
+  static bool IsDefaultPartsViewerCmd();
   static std::string GetHtmlViewerCmd();
   static void SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd);
   static std::string GetDefaultHtmlViewerCmd();
@@ -244,7 +244,7 @@ public:
 private:
   static std::string m_HtmlToTextConvertCmd;
   static std::string m_TextToHtmlConvertCmd;
-  static std::string m_ExtViewerCmd;
+  static std::string m_PartsViewerCmd;
   static std::string m_HtmlViewerCmd;
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;

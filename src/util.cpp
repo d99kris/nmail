@@ -44,7 +44,7 @@ std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 
 std::string Util::m_HtmlToTextConvertCmd;
 std::string Util::m_TextToHtmlConvertCmd;
-std::string Util::m_ExtViewerCmd;
+std::string Util::m_PartsViewerCmd;
 std::string Util::m_HtmlViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
@@ -423,21 +423,21 @@ std::string Util::ConvertTextToHtml(const std::string& p_Text)
   return htmlText;
 }
 
-std::string Util::GetExtViewerCmd()
+std::string Util::GetPartsViewerCmd()
 {
-  if (!m_ExtViewerCmd.empty()) return m_ExtViewerCmd;
+  if (!m_PartsViewerCmd.empty()) return m_PartsViewerCmd;
 
-  static std::string defaultExtViewerCmd = GetDefaultExtViewerCmd();
+  static std::string defaultPartsViewerCmd = GetDefaultPartsViewerCmd();
 
-  return defaultExtViewerCmd;
+  return defaultPartsViewerCmd;
 }
 
-void Util::SetExtViewerCmd(const std::string& p_ExtViewerCmd)
+void Util::SetPartsViewerCmd(const std::string& p_PartsViewerCmd)
 {
-  m_ExtViewerCmd = p_ExtViewerCmd;
+  m_PartsViewerCmd = p_PartsViewerCmd;
 }
 
-std::string Util::GetDefaultExtViewerCmd()
+std::string Util::GetDefaultPartsViewerCmd()
 {
 #if defined(__APPLE__)
   return "open";
@@ -448,9 +448,9 @@ std::string Util::GetDefaultExtViewerCmd()
 #endif
 }
 
-bool Util::IsDefaultExtViewerCmd()
+bool Util::IsDefaultPartsViewerCmd()
 {
-  return m_ExtViewerCmd.empty();
+  return m_PartsViewerCmd.empty();
 }
 
 std::string Util::GetHtmlViewerCmd()

@@ -4398,13 +4398,13 @@ void Ui::ExternalHtmlViewer()
 
 int Ui::ExternalViewer(const std::string& p_Path)
 {
-  const bool isDefaultExtViewerCmd = Util::IsDefaultExtViewerCmd();
-  if (!isDefaultExtViewerCmd)
+  const bool isDefaultPartsViewerCmd = Util::IsDefaultPartsViewerCmd();
+  if (!isDefaultPartsViewerCmd)
   {
     endwin();
   }
 
-  const std::string& viewer = Util::GetExtViewerCmd();
+  const std::string& viewer = Util::GetPartsViewerCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
   int rv = system(cmd.c_str());
@@ -4418,7 +4418,7 @@ int Ui::ExternalViewer(const std::string& p_Path)
     Util::DetectCommandNotPresent(cmd);
   }
 
-  if (!isDefaultExtViewerCmd)
+  if (!isDefaultPartsViewerCmd)
   {
     refresh();
 
