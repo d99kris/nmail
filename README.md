@@ -199,7 +199,6 @@ Full example of a config file `~/.nmail/main.conf`:
     client_store_sent=0
     drafts=Drafts
     editor_cmd=
-    parts_viewer_cmd=
     folders_exclude=
     html_to_text_cmd=
     html_viewer_cmd=
@@ -208,6 +207,7 @@ Full example of a config file `~/.nmail/main.conf`:
     inbox=INBOX
     name=Firstname Lastname
     pager_cmd=
+    parts_viewer_cmd=
     prefetch_level=2
     save_pass=1
     sent=Sent
@@ -253,12 +253,6 @@ The field `editor_cmd` allows overriding which external editor to use when
 composing / editing an email using an external editor (`Ctrl-E`). If not
 specified, nmail will use the editor specified by the environment variable
 `$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
-
-### parts_viewer_cmd
-
-This field allows overriding the external viewer used when viewing email
-parts and attachments. By default nmail uses `open` on macOS and
-`xdg-open >/dev/null 2>&1` on Linux.
 
 ### folders_exclude
 
@@ -308,6 +302,12 @@ The field `pager_cmd` allows overriding which external pager / text viewer to
 use when viewing an email using an external pager (`Ctrl-E`). If not specified,
 nmail will use the pager specified by the environment variable `$PAGER`.
 If `$PAGER` is not set, nmail will use `less`.
+
+### parts_viewer_cmd
+
+This field allows overriding the external viewer used when viewing email
+parts and attachments. By default nmail uses `open` on macOS and
+`xdg-open >/dev/null 2>&1` on Linux.
 
 ### prefetch_level
 
