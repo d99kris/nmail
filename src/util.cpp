@@ -46,6 +46,7 @@ std::string Util::m_HtmlToTextConvertCmd;
 std::string Util::m_TextToHtmlConvertCmd;
 std::string Util::m_PartsViewerCmd;
 std::string Util::m_HtmlViewerCmd;
+std::string Util::m_MsgViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
@@ -481,6 +482,36 @@ std::string Util::GetDefaultHtmlViewerCmd()
 bool Util::IsDefaultHtmlViewerCmd()
 {
   return m_HtmlViewerCmd.empty();
+}
+
+std::string Util::GetMsgViewerCmd()
+{
+  if (!m_MsgViewerCmd.empty()) return m_MsgViewerCmd;
+
+  static std::string defaultMsgViewerCmd = GetDefaultMsgViewerCmd();
+
+  return defaultMsgViewerCmd;
+}
+
+void Util::SetMsgViewerCmd(const std::string& p_MsgViewerCmd)
+{
+  m_MsgViewerCmd = p_MsgViewerCmd;
+}
+
+std::string Util::GetDefaultMsgViewerCmd()
+{
+#if defined(__APPLE__)
+  return "open";
+#elif defined(__linux__)
+  return "xdg-open >/dev/null 2>&1";
+#else
+  return "";
+#endif
+}
+
+bool Util::IsDefaultMsgViewerCmd()
+{
+  return m_MsgViewerCmd.empty();
 }
 
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,

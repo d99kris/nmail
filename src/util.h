@@ -161,6 +161,10 @@ public:
   static void SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd);
   static std::string GetDefaultHtmlViewerCmd();
   static bool IsDefaultHtmlViewerCmd();
+  static std::string GetMsgViewerCmd();
+  static void SetMsgViewerCmd(const std::string& p_MsgViewerCmd);
+  static std::string GetDefaultMsgViewerCmd();
+  static bool IsDefaultMsgViewerCmd();
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static std::string ReduceIndent(const std::string& p_Str, int p_Cnt);
@@ -246,6 +250,7 @@ private:
   static std::string m_TextToHtmlConvertCmd;
   static std::string m_PartsViewerCmd;
   static std::string m_HtmlViewerCmd;
+  static std::string m_MsgViewerCmd;
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;

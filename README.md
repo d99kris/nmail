@@ -205,6 +205,7 @@ Full example of a config file `~/.nmail/main.conf`:
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
+    msg_viewer_cmd=
     name=Firstname Lastname
     pager_cmd=
     parts_viewer_cmd=
@@ -291,6 +292,12 @@ IMAP port. Required for fetching emails.
 ### inbox
 
 IMAP inbox folder name. Required for nmail to open the proper default folder.
+
+### msg_viewer_cmd
+
+This field allows overriding the command used for externally viewing a
+message (`.eml` file) with `W`. By default nmail uses `open` on macOS and
+`xdg-open >/dev/null 2>&1` on Linux.
 
 ### name
 
@@ -519,6 +526,7 @@ file (platform-dependent defaults are left empty below):
     key_ext_editor=KEY_CTRLE
     key_ext_html_preview=KEY_CTRLV
     key_ext_html_viewer=v
+    key_ext_msg_viewer=w
     key_ext_pager=e
     key_forward=f
     key_forward_word=

@@ -93,6 +93,7 @@ void Ui::Init()
     { "key_rich_header", "KEY_CTRLR" },
     { "key_ext_html_viewer", "v" },
     { "key_ext_html_preview", "KEY_CTRLV" },
+    { "key_ext_msg_viewer", "w" },
     { "key_search", "/" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
@@ -147,6 +148,7 @@ void Ui::Init()
   m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
   m_KeyExtHtmlViewer = Util::GetKeyCode(m_Config.Get("key_ext_html_viewer"));
   m_KeyExtHtmlPreview = Util::GetKeyCode(m_Config.Get("key_ext_html_preview"));
+  m_KeyExtMsgViewer = Util::GetKeyCode(m_Config.Get("key_ext_msg_viewer"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
@@ -483,7 +485,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
-      GetKeyDisplay(m_KeyExtHtmlViewer), "ViewHtml",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
+      GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
     },
   };
 
@@ -509,7 +512,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyToggleUnread), "TgUnread",
       GetKeyDisplay(m_KeyExport), "Export",
       GetKeyDisplay(m_KeyExtPager), "ExtPager",
-      GetKeyDisplay(m_KeyExtHtmlViewer), "ViewHtml",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
+      GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
@@ -539,7 +543,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyCancel), "Cancel",
       GetKeyDisplay(m_KeyPostpone), "Postpone",
       GetKeyDisplay(m_KeyToSelect), "ToSelect",
-      GetKeyDisplay(m_KeyExtHtmlPreview), "ViewHtml",
+      GetKeyDisplay(m_KeyExtHtmlPreview), "ExtVHtml",
     },
   };
 
@@ -2134,7 +2138,11 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyExtHtmlViewer)
   {
-    ExternalHtmlViewer();
+    ExtHtmlViewer();
+  }
+  else if (p_Key == m_KeyExtMsgViewer)
+  {
+    ExtMsgViewer();
   }
   else
   {
@@ -2300,7 +2308,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyExtHtmlViewer)
   {
-    ExternalHtmlViewer();
+    ExtHtmlViewer();
+  }
+  else if (p_Key == m_KeyExtMsgViewer)
+  {
+    ExtMsgViewer();
   }
   else
   {
@@ -2639,7 +2651,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
         std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
         Util::WriteFile(tempFilePath, htmlStr);
-        ExternalHtmlViewer(tempFilePath);
+        ExtHtmlViewer(tempFilePath);
       }
       else
       {
@@ -2784,7 +2796,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
     SetDialogMessage("Waiting for external viewer to exit");
     DrawDialog();
-    int rv = ExternalViewer(tempFilePath);
+    int rv = ExtPartsViewer(tempFilePath);
     if (rv != 0)
     {
       SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
@@ -4367,36 +4379,7 @@ void Ui::ExtPager()
   }
 }
 
-void Ui::ExternalHtmlViewer()
-{
-  static const std::string& tempPath = Util::GetTempDir() + std::string("htmlview/1.html");
-  Util::DeleteFile(tempPath);
-
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
-    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
-    if (bodyIt != bodys.end())
-    {
-      Body& body = bodyIt->second;
-      const std::string& html = body.GetHtml(); // falls back to text/plain if no html
-      Util::WriteFile(tempPath, html);
-    }
-  }
-
-  if (Util::Exists(tempPath))
-  {
-    ExternalHtmlViewer(tempPath);
-  }
-  else
-  {
-    SetDialogMessage("View html failed (message not available)", true /* p_Warn */);
-  }
-}
-
-int Ui::ExternalViewer(const std::string& p_Path)
+int Ui::ExtPartsViewer(const std::string& p_Path)
 {
   const bool isDefaultPartsViewerCmd = Util::IsDefaultPartsViewerCmd();
   if (!isDefaultPartsViewerCmd)
@@ -4432,7 +4415,36 @@ int Ui::ExternalViewer(const std::string& p_Path)
   return rv;
 }
 
-int Ui::ExternalHtmlViewer(const std::string& p_Path)
+void Ui::ExtHtmlViewer()
+{
+  static const std::string& tempPath = Util::GetTempDir() + std::string("htmlview/tmp.html");
+  Util::DeleteFile(tempPath);
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+    if (bodyIt != bodys.end())
+    {
+      Body& body = bodyIt->second;
+      const std::string& html = body.GetHtml(); // falls back to text/plain if no html
+      Util::WriteFile(tempPath, html);
+    }
+  }
+
+  if (Util::Exists(tempPath))
+  {
+    ExtHtmlViewer(tempPath);
+  }
+  else
+  {
+    SetDialogMessage("View html failed (message not available)", true /* p_Warn */);
+  }
+}
+
+int Ui::ExtHtmlViewer(const std::string& p_Path)
 {
   const bool isDefaultHtmlViewerCmd = Util::IsDefaultHtmlViewerCmd();
   if (!isDefaultHtmlViewerCmd)
@@ -4466,6 +4478,69 @@ int Ui::ExternalHtmlViewer(const std::string& p_Path)
   }
 
   return rv;
+}
+
+void Ui::ExtMsgViewer()
+{
+  static const std::string& tempPath = Util::GetTempDir() + std::string("msgview/tmp.eml");
+  Util::DeleteFile(tempPath);
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+    if (bodyIt != bodys.end())
+    {
+      Body& body = bodyIt->second;
+      const std::string& data = body.GetData(); // falls back to text/plain if no html
+      Util::WriteFile(tempPath, data);
+    }
+  }
+
+  if (Util::Exists(tempPath))
+  {
+    ExtMsgViewer(tempPath);
+  }
+  else
+  {
+    SetDialogMessage("View message failed (message not available)", true /* p_Warn */);
+  }
+}
+
+void Ui::ExtMsgViewer(const std::string& p_Path)
+{
+  const bool isDefaultMsgViewerCmd = Util::IsDefaultMsgViewerCmd();
+  if (!isDefaultMsgViewerCmd)
+  {
+    endwin();
+  }
+
+  const std::string& viewer = Util::GetMsgViewerCmd();
+  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  LOG_DEBUG("launching message viewer: %s", cmd.c_str());
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    LOG_DEBUG("message viewer exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("message viewer exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
+  }
+
+  if (!isDefaultMsgViewerCmd)
+  {
+    refresh();
+
+    wint_t key = 0;
+    while (get_wch(&key) != ERR)
+    {
+      // Discard any remaining input
+    }
+  }
 }
 
 void Ui::SetLastStateOrMessageList()

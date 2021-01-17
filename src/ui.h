@@ -145,9 +145,11 @@ private:
   void InvalidateUiCache(const std::string& p_Folder);
   void ExtEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void ExtPager();
-  void ExternalHtmlViewer();
-  int ExternalViewer(const std::string& p_Path);
-  int ExternalHtmlViewer(const std::string& p_Path);
+  int ExtPartsViewer(const std::string& p_Path);
+  void ExtHtmlViewer();
+  int ExtHtmlViewer(const std::string& p_Path);
+  void ExtMsgViewer();
+  void ExtMsgViewer(const std::string& p_Path);
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
@@ -272,6 +274,7 @@ private:
   int m_KeyRichHeader = 0;
   int m_KeyExtHtmlViewer = 0;
   int m_KeyExtHtmlPreview = 0;
+  int m_KeyExtMsgViewer = 0;
   int m_KeySearch = 0;
   int m_KeySync = 0;
   int m_KeyToggleMarkdownCompose = 0;
