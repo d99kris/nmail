@@ -465,6 +465,23 @@ private information before sharing. To enable extra verbose logging:
 Extra verbose logging can also be enabled by setting `verbose_logging=2` in
 `~/.nmail/main.conf`.
 
+Finally, for issues where the logging above does not provide sufficient
+information, it may be necessary to run nmail through a debugger and capture
+detailed backtraces for all threads when an issue occurs. A simple utility
+is provided to run `nmail` through a debugger in the source package. Example
+usage:
+
+    ./utils/debug-nmail.sh
+
+Once nmail exits, either normally or caused by a crash, the script outputs
+information on where to obtain the log file, for example:
+
+    gdb log file written to:
+    /tmp/nmail-gdb-5244.txt
+
+Review the resulting log file and ensure there are no clear text passwords
+in it, before sharing it with others.
+
 
 Telegram Group
 ==============
