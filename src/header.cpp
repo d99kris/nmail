@@ -232,9 +232,12 @@ void Header::Parse()
                   break;
 
                 case MAILIMF_FIELD_BCC:
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
-                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_Bcc = Util::Join(addrs, ", ");
+                  if (field->fld_data.fld_bcc->bcc_addr_list != nullptr)
+                  {
+                    addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
+                    m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                    m_Bcc = Util::Join(addrs, ", ");
+                  }
                   break;
 
                 case MAILIMF_FIELD_SUBJECT:
