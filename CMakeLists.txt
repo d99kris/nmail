@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "2.38" LANGUAGES CXX C)
+project(nmail VERSION "2.39" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -147,6 +147,10 @@ target_link_libraries(nmail PUBLIC
                       ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
                       pthread ${CMAKE_DL_LIBS})
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  target_link_libraries(nmail PUBLIC -rdynamic)
+endif()
 
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)
