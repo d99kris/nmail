@@ -32,7 +32,8 @@ public:
 private:
   static void InitCacheDir();
   static std::string GetAddressBookCacheDir();
-  static std::string GetAddressBookTempDir();
+  static std::string GetAddressBookCacheDbDir();
+  static std::string GetAddressBookTempDbDir();
 
 private:
   static std::mutex m_Mutex;

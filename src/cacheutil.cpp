@@ -19,7 +19,16 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
   if (Util::Exists(p_Dir))
   {
     int storedVersion = -1;
-    DeserializeFromFile(versionPath, storedVersion);
+    try
+    {
+      DeserializeFromFile(versionPath, storedVersion);
+    }
+    catch (...)
+    {
+      LOG_WARNING("failed to deserialize %s", versionPath.c_str());
+      storedVersion = -1;
+    }
+
     if (storedVersion != currentVersion)
     {
       LOG_DEBUG("re-init %s", p_Dir.c_str());

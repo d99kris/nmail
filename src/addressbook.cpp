@@ -36,15 +36,15 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
 
   if (m_AddressBookEncrypt)
   {
-    Util::RmDir(GetAddressBookTempDir());
-    Util::MkDir(GetAddressBookTempDir());
-    CacheUtil::DecryptCacheDir(m_Pass, GetAddressBookCacheDir(), GetAddressBookTempDir());
-    const std::string& dbPath = GetAddressBookTempDir() + "addresses.sqlite";
+    Util::RmDir(GetAddressBookTempDbDir());
+    Util::MkDir(GetAddressBookTempDbDir());
+    CacheUtil::DecryptCacheDir(m_Pass, GetAddressBookCacheDbDir(), GetAddressBookTempDbDir());
+    const std::string& dbPath = GetAddressBookTempDbDir() + "addresses.sqlite";
     m_Db.reset(new sqlite::database(dbPath));
   }
   else
   {
-    const std::string& dbPath = GetAddressBookCacheDir() + "addresses.sqlite";
+    const std::string& dbPath = GetAddressBookCacheDbDir() + "addresses.sqlite";
     m_Db.reset(new sqlite::database(dbPath));
   }
 
@@ -62,9 +62,9 @@ void AddressBook::Cleanup()
 
   if (m_AddressBookEncrypt)
   {
-    Util::RmDir(GetAddressBookCacheDir());
-    Util::MkDir(GetAddressBookCacheDir());
-    CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDir(), GetAddressBookCacheDir());
+    Util::RmDir(GetAddressBookCacheDbDir());
+    Util::MkDir(GetAddressBookCacheDbDir());
+    CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir());
     m_Db.reset();
   }
   else
@@ -136,9 +136,10 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 
 void AddressBook::InitCacheDir()
 {
-  static const int version = 4; // note: keep synchronized with ImapIndex (for now)
+  static const int version = 5; // note: keep synchronized with ImapIndex (for now)
   const std::string cacheDir = GetAddressBookCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_AddressBookEncrypt);
+  Util::MkDir(GetAddressBookCacheDbDir());
 }
 
 std::string AddressBook::GetAddressBookCacheDir()
@@ -146,7 +147,12 @@ std::string AddressBook::GetAddressBookCacheDir()
   return Util::GetApplicationDir() + std::string("cache/") + std::string("address/");
 }
 
-std::string AddressBook::GetAddressBookTempDir()
+std::string AddressBook::GetAddressBookCacheDbDir()
 {
-  return Util::GetTempDir() + std::string("address/");
+  return Util::GetApplicationDir() + std::string("cache/") + std::string("address/db/");
+}
+
+std::string AddressBook::GetAddressBookTempDbDir()
+{
+  return Util::GetTempDir() + std::string("addressdb/");
 }
