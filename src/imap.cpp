@@ -31,7 +31,14 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
   , m_CacheIndexEncrypt(p_CacheIndexEncrypt)
   , m_FoldersExclude(p_FoldersExclude)
 {
-  LOG_DEBUG_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
+  if (Log::GetTraceEnabled())
+  {
+    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
+  }
+  else
+  {
+    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
+  }
 
   m_Imap = LOG_IF_NULL(mailimap_new(0, NULL));
 

@@ -239,10 +239,14 @@ int main(int argc, char* argv[])
   // Crypto init
   Crypto::Init();
 
+  // Log system info
   if (Log::GetDebugEnabled())
   {
     LogSystemInfo();
   }
+
+  // Log config
+  mainConfig->LogParamsExcept(std::set<std::string>({ "name", "address", "user", "smtp_user" }));
 
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;

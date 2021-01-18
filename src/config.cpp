@@ -14,6 +14,8 @@
 
 #include <sys/stat.h>
 
+#include "loghelp.h"
+
 Config::Config()
 {
 }
@@ -97,4 +99,30 @@ void Config::Delete(const std::string& p_Param)
 bool Config::Exist(const std::string& p_Param)
 {
   return (m_Map.find(p_Param) != m_Map.end());
+}
+
+void Config::LogParams() const
+{
+  LOG_DEBUG("config %s", m_Path.c_str());
+  for (auto const& item : m_Map)
+  {
+    LOG_DEBUG("%s=%s", item.first.c_str(), item.second.c_str());
+  }
+}
+
+void Config::LogParamsExcept(const std::set<std::string>& p_Exclude) const
+{
+  LOG_DEBUG("config %s", m_Path.c_str());
+  for (auto const& item : m_Map)
+  {
+    if (p_Exclude.find(item.first) == p_Exclude.end())
+    {
+      LOG_DEBUG("%s=%s", item.first.c_str(), item.second.c_str());
+    }
+    else
+    {
+      std::string placeholder = std::string(item.second.size(), '*');
+      LOG_DEBUG("%s=%s", item.first.c_str(), placeholder.c_str());
+    }
+  }
 }

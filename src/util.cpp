@@ -884,24 +884,24 @@ int Util::GetKeyCode(const std::string& p_KeyName)
   if (it != keyCodes.end())
   {
     keyCode = it->second;
-    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+    LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else if ((p_KeyName.size() > 2) && (p_KeyName.substr(0, 2) == "0x"))
   {
     keyCode = strtol(p_KeyName.c_str(), 0, 16);
-    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+    LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else if ((p_KeyName.size() == 1) && isprint((int)p_KeyName.at(0)))
   {
     keyCode = (int)p_KeyName.at(0);
-    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+    LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else if ((p_KeyName.size() > 1) && (p_KeyName.substr(0, 1) == "\\"))
   {
     keyCode = ReserveVirtualKeyCode();
     std::string keyStr = Util::FromOctString(p_KeyName);
     define_key(keyStr.c_str(), keyCode);
-    LOG_DEBUG("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+    LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else
   {

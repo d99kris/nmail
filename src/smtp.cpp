@@ -23,7 +23,14 @@ Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::stri
   , m_Name(p_Name)
   , m_Address(p_Address)
 {
-  LOG_DEBUG_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Name, p_Address));
+  if (Log::GetTraceEnabled())
+  {
+    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Name, p_Address));
+  }
+  else
+  {
+    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, p_Host, p_Port, "***", "***"));
+  }
 }
 
 Smtp::~Smtp()

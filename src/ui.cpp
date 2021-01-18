@@ -115,6 +115,7 @@ void Ui::Init()
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
+  m_Config.LogParams();
 
   m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
@@ -199,6 +200,7 @@ void Ui::Init()
     };
     const std::string colorsConfigPath(Util::GetApplicationDir() + std::string("colors.conf"));
     Config colorsConfig = Config(colorsConfigPath, defaultColorsConfig);
+    colorsConfig.LogParams();
 
     m_ColorMessageQuoted = Util::AddColorPair(colorsConfig.Get("color_message_quoted_fg"), "");
 
