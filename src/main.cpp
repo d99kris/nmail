@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
   // Defaults
   umask(S_IRWXG | S_IRWXO);
   Util::SetApplicationDir(std::string(getenv("HOME")) + std::string("/.nmail"));
+  Log::SetVerboseLevel(Log::DEBUG_LEVEL);
   bool online = true;
   std::string setup;
 
@@ -54,10 +55,6 @@ int main(int argc, char* argv[])
       Util::SetApplicationDir(*it);
     }
     else if ((*it == "-e") || (*it == "--verbose"))
-    {
-      Log::SetVerboseLevel(Log::DEBUG_LEVEL);
-    }
-    else if ((*it == "-ee") || (*it == "--extraverbose"))
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
@@ -204,13 +201,9 @@ int main(int argc, char* argv[])
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
 
   // Set logging verbosity level
-  if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
+  if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
   {
     if (mainConfig->Get("verbose_logging") == "1")
-    {
-      Log::SetVerboseLevel(Log::DEBUG_LEVEL);
-    }
-    else if (mainConfig->Get("verbose_logging") == "2")
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }

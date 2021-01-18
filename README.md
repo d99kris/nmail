@@ -49,9 +49,6 @@ Command-line Options:
     -e, --verbose
         enable verbose logging
 
-    -ee, --extraverbose
-        enable extra verbose logging
-
     -h, --help
         display this help and exit
 
@@ -377,9 +374,8 @@ Email account username for IMAP (and SMTP).
 
 Allows forcing nmail to enable specified logging level:
 
-    0 = info, warnings, errors (default)
-    1 = debug (same as `-e`, `--verbose` - enable verbose logging)
-    2 = trace (same as `-ee`, `--extraverbose` - enable extra verbose logging
+    0 = debug, info, warnings, errors (default)
+    1 = trace (same as `-e`, `--verbose` - enable verbose logging)
 
 
 Multiple Email Accounts
@@ -444,25 +440,19 @@ Press `<` or `Left` to exit search results and go back to current folder message
 Troubleshooting
 ===============
 
-If any issues are observed, try running nmail with verbose logging
+If any issues are observed, please provide a copy of `~/.nmail/log.txt` when
+reporting the issue. The preferred way of reporting issues and asking
+questions is by opening
+[a Github issue](https://github.com/d99kris/nmail/issues/new).
+
+A verbose logging mode is supported. It produces very large log files with
+detailed information. The verbose logs typically contain actual email contents.
+Review and edit such logs to remove any private information before sharing.
+To enable verbose logging:
 
     nmail --verbose
 
-and provide a copy of ~/.nmail/log.txt when reporting the issue. The
-preferred way of reporting issues and asking questions is by opening 
-[a Github issue](https://github.com/d99kris/nmail/issues/new).
-
 Verbose logging can also be enabled by setting `verbose_logging=1` in
-`~/.nmail/main.conf`.
-
-An extra verbose logging mode is also supported. It produces very large
-log files with detailed information. The extra verbose logs typically
-contain actual email contents. Review and edit such logs to remove any
-private information before sharing. To enable extra verbose logging:
-
-    nmail --extraverbose
-
-Extra verbose logging can also be enabled by setting `verbose_logging=2` in
 `~/.nmail/main.conf`.
 
 Finally, for issues where the logging above does not provide sufficient
