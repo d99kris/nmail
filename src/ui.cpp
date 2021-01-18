@@ -971,7 +971,8 @@ void Ui::DrawMessageList()
       }
 
       std::wstring wheader = Util::ToWString(header);
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
+      int excessWidth = wcswidth(wheader.c_str(), wheader.size()) - m_ScreenWidth;
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size() - excessWidth);
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
@@ -1150,7 +1151,8 @@ void Ui::DrawMessageListSearch()
     }
 
     std::wstring wheader = Util::ToWString(header);
-    mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
+    int excessWidth = wcswidth(wheader.c_str(), wheader.size()) - m_ScreenWidth;
+    mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size() - excessWidth);
 
     if (i == m_MessageListCurrentIndex[m_CurrentFolder])
     {
