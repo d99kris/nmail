@@ -634,15 +634,25 @@ std::string Util::TrimPadString(const std::string& p_Str, size_t p_Len)
 std::wstring Util::TrimPadWString(const std::wstring& p_Str, size_t p_Len)
 {
   std::wstring str = p_Str;
-  if (str.size() > p_Len)
+  if (WStringWidth(str) > p_Len)
   {
     str = str.substr(0, p_Len);
+    int subLen = p_Len;
+    while (WStringWidth(str) > p_Len)
+    {
+      str = str.substr(0, --subLen);
+    }
   }
-  else if (str.size() < p_Len)
+  else if (WStringWidth(str) < p_Len)
   {
-    str = str + std::wstring(p_Len - str.size(), ' ');
+    str = str + std::wstring(p_Len - WStringWidth(str), ' ');
   }
   return str;
+}
+
+size_t Util::WStringWidth(const std::wstring& p_WStr)
+{
+  return wcswidth(p_WStr.c_str(), p_WStr.size());
 }
 
 std::string Util::ToLower(const std::string& p_Str)

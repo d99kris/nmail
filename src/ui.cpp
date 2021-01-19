@@ -953,7 +953,7 @@ void Ui::DrawMessageList()
         if (!m_AttachmentIndicator.empty())
         {
           static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
-          static const int indicatorWidth = wcswidth(wIndicator.c_str(), wIndicator.size());
+          static const int indicatorWidth = Util::WStringWidth(wIndicator);
           attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
                                                   : std::string(indicatorWidth, ' ');
         }
@@ -963,7 +963,7 @@ void Ui::DrawMessageList()
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
       std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
-      int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
+      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
@@ -973,8 +973,7 @@ void Ui::DrawMessageList()
       }
 
       std::wstring wheader = Util::ToWString(header);
-      int excessWidth = wcswidth(wheader.c_str(), wheader.size()) - m_ScreenWidth;
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size() - excessWidth);
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
@@ -1133,7 +1132,7 @@ void Ui::DrawMessageListSearch()
       if (!m_AttachmentIndicator.empty())
       {
         static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
-        static const int indicatorWidth = wcswidth(wIndicator.c_str(), wIndicator.size());
+        static const int indicatorWidth = Util::WStringWidth(wIndicator);
         attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
                                                 : std::string(indicatorWidth, ' ');
       }
@@ -1143,7 +1142,7 @@ void Ui::DrawMessageListSearch()
     shortDate = Util::TrimPadString(shortDate, 10);
     shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
     std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
-    int subjectWidth = m_ScreenWidth - Util::ToWString(headerLeft).size() - 1;
+    int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
     subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
     std::string header = headerLeft + subject + " ";
 
@@ -1153,8 +1152,7 @@ void Ui::DrawMessageListSearch()
     }
 
     std::wstring wheader = Util::ToWString(header);
-    int excessWidth = wcswidth(wheader.c_str(), wheader.size()) - m_ScreenWidth;
-    mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size() - excessWidth);
+    mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
 
     if (i == m_MessageListCurrentIndex[m_CurrentFolder])
     {

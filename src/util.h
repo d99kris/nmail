@@ -176,6 +176,7 @@ public:
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, size_t p_Len);
   static std::wstring TrimPadWString(const std::wstring& p_Str, size_t p_Len);
+  static size_t WStringWidth(const std::wstring& p_WStr);
 
   template<typename T>
   static inline T Bound(const T& p_Min, const T& p_Val, const T& p_Max)
