@@ -298,6 +298,7 @@ private:
   int m_ColorMessageQuoted = -1;
 
   std::string m_AttachmentIndicator;
+  bool m_BottomReply = false;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

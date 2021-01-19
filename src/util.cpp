@@ -1008,8 +1008,6 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
     }
   }
 
-  lines.push_back(L"");
-
   return lines;
 }
 

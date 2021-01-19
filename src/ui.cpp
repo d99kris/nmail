@@ -112,6 +112,7 @@ void Ui::Init()
     { "key_next_page", "KEY_NPAGE" },
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
+    { "bottom_reply", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -208,6 +209,7 @@ void Ui::Init()
   }
 
   m_AttachmentIndicator = m_Config.Get("attachment_indicator");
+  m_BottomReply = m_Config.Get("bottom_reply") == "1";
 
   m_Running = true;
 }
@@ -1299,7 +1301,8 @@ void Ui::DrawMessage()
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
-      const std::vector<std::wstring>& wlines = Util::WordWrap(wtext, m_MaxLineLength, true);
+      std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxLineLength, true);
+      wlines.push_back(L"");
       int countLines = wlines.size();
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
@@ -3022,11 +3025,25 @@ void Ui::SetState(Ui::State p_State)
       std::string indentBodyText =
         Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
 
-      m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
-                                            header.GetFrom() +
-                                            " wrote:\n\n" +
-                                            indentBodyText);
-      Util::StripCR(m_ComposeMessageStr);
+      if (!m_BottomReply)
+      {
+        m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
+                                              header.GetFrom() +
+                                              " wrote:\n\n" +
+                                              indentBodyText);
+        Util::StripCR(m_ComposeMessageStr);
+      }
+      else
+      {
+        m_ComposeMessageStr = Util::ToWString("On " + header.GetDateTime() + " " +
+                                              header.GetFrom() +
+                                              " wrote:\n\n" +
+                                              indentBodyText + "\n\n\n");
+        Util::StripCR(m_ComposeMessageStr);
+        m_ComposeMessagePos = (int)m_ComposeMessageStr.size() - 1;
+        int lineCount = Util::Split(Util::ToString(m_ComposeMessageStr), '\n').size();
+        m_ComposeMessageOffsetY = std::max(lineCount - (m_MainWinHeight / 2), 0);
+      }
 
       // @todo: handle quoted commas in address name
       std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
