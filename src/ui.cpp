@@ -358,8 +358,9 @@ void Ui::DrawTop()
   std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";
-  std::string topCenter = Util::TrimPadString(GetStateStr(),
-                                              m_ScreenWidth - topLeft.size() - topRight.size());
+  std::wstring wtopCenter = Util::TrimPadWString(Util::ToWString(GetStateStr()),
+                                                 m_ScreenWidth - topLeft.size() - topRight.size());
+  std::string topCenter = Util::ToString(wtopCenter);
   std::string topCombined = topLeft + topCenter + topRight;
 
   mvwprintw(m_TopWin, 0, 0, "%s", topCombined.c_str());
@@ -1494,12 +1495,12 @@ void Ui::DrawPartList()
         std::string sizeStr = std::to_string(part.m_Data.size()) + " bytes";
         std::string sizeStrPadded = Util::TrimPadString(sizeStr, 18);
         std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 30);
-        std::string line = leftPad + sizeStrPadded + mimeTypePadded;
-        std::string filenamePadded =
-          Util::TrimPadString(part.m_Filename, std::max(m_ScreenWidth - (int)line.size(), 0));
-        line = line + filenamePadded;
+        std::wstring wline = Util::ToWString(leftPad + sizeStrPadded + mimeTypePadded);
+        std::wstring wfilename = Util::ToWString(part.m_Filename);
+        int filenameMaxLen = std::max(m_ScreenWidth - (int)wline.size(), 0);
+        std::wstring wfilenamePadded = Util::TrimPadWString(wfilename, filenameMaxLen);
+        wline = wline + wfilenamePadded;
 
-        std::wstring wline = Util::ToWString(line);
         mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(),
                     std::min((int)wline.size(), m_ScreenWidth));
 
