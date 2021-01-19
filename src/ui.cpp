@@ -231,7 +231,8 @@ void Ui::InitWindows()
   m_ScreenWidth = std::max(m_ScreenWidth, 40);
   m_ScreenHeight = std::max(m_ScreenHeight, 8);
 
-  m_MaxLineLength = m_ScreenWidth;
+  m_MaxViewLineLength = m_ScreenWidth;
+  m_MaxComposeLineLength = m_ComposeHardwrap ? std::min(m_ScreenWidth, 72) : m_ScreenWidth;
   wclear(stdscr);
   wrefresh(stdscr);
   const int topHeight = 1;
@@ -1301,7 +1302,7 @@ void Ui::DrawMessage()
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       const std::wstring wtext = Util::ToWString(text);
-      std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxLineLength, true);
+      std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxViewLineLength, true);
       wlines.push_back(L"");
       int countLines = wlines.size();
 
@@ -1358,7 +1359,7 @@ void Ui::DrawMessage()
 
 void Ui::DrawComposeMessage()
 {
-  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
+  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
@@ -2487,7 +2488,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -2497,7 +2498,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxLineLength, true,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -3021,7 +3022,7 @@ void Ui::SetState(Ui::State p_State)
 
       std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
       std::vector<std::wstring> bodyTextLines =
-        Util::WordWrap(Util::ToWString(bodyText), (m_MaxLineLength - 8), false);
+        Util::WordWrap(Util::ToWString(bodyText), (m_MaxComposeLineLength - 8), false);
       std::string indentBodyText =
         Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
 
@@ -4159,7 +4160,7 @@ void Ui::ComposeMessagePrevLine()
       stepsBack = m_ComposeMessageWrapPos + 1;
     }
 
-    stepsBack = std::min(stepsBack, m_MaxLineLength);
+    stepsBack = std::min(stepsBack, m_MaxComposeLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
                                       (int)m_ComposeMessageStr.size());
   }
@@ -4185,7 +4186,7 @@ void Ui::ComposeMessageNextLine()
       stepsForward += m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
     }
 
-    stepsForward = std::min(stepsForward, m_MaxLineLength);
+    stepsForward = std::min(stepsForward, m_MaxComposeLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
                                       (int)m_ComposeMessageStr.size());
   }
@@ -4194,7 +4195,7 @@ void Ui::ComposeMessageNextLine()
     int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
       m_ComposeMessageWrapPos;
 
-    stepsForward = std::min(stepsForward, m_MaxLineLength);
+    stepsForward = std::min(stepsForward, m_MaxComposeLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
                                       (int)m_ComposeMessageStr.size());
   }

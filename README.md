@@ -593,7 +593,7 @@ Enable terminal color output (default disabled).
 
 ### compose_hardwrap
 
-Hard-wrap composed emails at terminal width (default disabled).
+Hard-wrap composed emails at 72 chars or terminal width if smaller (default disabled).
 
 ### delete_without_confirm
 
