@@ -617,22 +617,24 @@ std::wstring Util::ToWString(const std::string& p_Str)
   }
 }
 
-std::string Util::TrimPadString(const std::string& p_Str, size_t p_Len)
+std::string Util::TrimPadString(const std::string& p_Str, int p_Len)
 {
+  p_Len = std::max(p_Len, 0);
   std::string str = p_Str;
-  if (str.size() > p_Len)
+  if ((int)str.size() > p_Len)
   {
     str = str.substr(0, p_Len);
   }
-  else if (str.size() < p_Len)
+  else if ((int)str.size() < p_Len)
   {
     str = str + std::string(p_Len - str.size(), ' ');
   }
   return str;
 }
 
-std::wstring Util::TrimPadWString(const std::wstring& p_Str, size_t p_Len)
+std::wstring Util::TrimPadWString(const std::wstring& p_Str, int p_Len)
 {
+  p_Len = std::max(p_Len, 0);
   std::wstring str = p_Str;
   if (WStringWidth(str) > p_Len)
   {
@@ -650,7 +652,7 @@ std::wstring Util::TrimPadWString(const std::wstring& p_Str, size_t p_Len)
   return str;
 }
 
-size_t Util::WStringWidth(const std::wstring& p_WStr)
+int Util::WStringWidth(const std::wstring& p_WStr)
 {
   return wcswidth(p_WStr.c_str(), p_WStr.size());
 }
