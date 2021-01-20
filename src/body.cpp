@@ -311,7 +311,6 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   if (data == NULL)
   {
     Part part;
-    static size_t index = 0;
 
     part.m_Charset = charset;
     part.m_MimeType = p_MimeType;
@@ -319,7 +318,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
     part.m_ContentId = contentId;
     part.m_IsAttachment = isAttachment;
 
-    m_Parts[index++] = part;
+    m_Parts[m_NumParts++] = part;
     return;
   }
 
@@ -352,15 +351,15 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
-            m_TextPlainIndex = index;
+            m_TextPlainIndex = m_NumParts;
           }
 
           if ((m_TextHtmlIndex == -1) && (p_MimeType == "text/html"))
           {
-            m_TextHtmlIndex = index;
+            m_TextHtmlIndex = m_NumParts;
           }
 
-          m_Parts[index] = part;
+          m_Parts[m_NumParts++] = part;
         }
       }
       break;

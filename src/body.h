@@ -47,6 +47,7 @@ private:
 
   bool m_Parsed = false;
   std::map<ssize_t, Part> m_Parts;
+  size_t m_NumParts = 0;
   ssize_t m_TextPlainIndex = -1;
   ssize_t m_TextHtmlIndex = -1;
   std::string m_TextHtml;
