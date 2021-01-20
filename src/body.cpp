@@ -9,6 +9,7 @@
 
 #include <libetpan/libetpan.h>
 
+#include "header.h"
 #include "log.h"
 #include "loghelp.h"
 #include "util.h"
@@ -17,7 +18,7 @@ void Body::FromMime(mailmime* p_Mime)
 {
   // when using this function regular SetData/GetData cannot be used
   // @todo: consider making it a constructor
-  ParseMime(p_Mime);
+  ParseMime(p_Mime, 0);
   m_Parsed = true;
 }
 
@@ -104,7 +105,7 @@ void Body::Parse()
 
     if (mime != NULL)
     {
-      ParseMime(mime);
+      ParseMime(mime, 0);
       mailmime_free(mime);
     }
 
@@ -165,7 +166,7 @@ void Body::ParseHtml()
   }
 }
 
-void Body::ParseMime(mailmime* p_Mime)
+void Body::ParseMime(mailmime* p_Mime, int p_Depth)
 {
   struct mailmime_content* content_type = p_Mime->mm_content_type;
   struct mailmime_type* type = content_type->ct_type;
@@ -236,6 +237,12 @@ void Body::ParseMime(mailmime* p_Mime)
   mimeType = mimeType + std::string("/") + std::string(content_type->ct_subtype);
   mimeType = Util::ToLower(mimeType);
 
+  if (Log::GetTraceEnabled())
+  {
+    std::string mimeEntry = std::string(p_Depth, '|') + "+" + mimeType;
+    LOG_TRACE("%s", mimeEntry.c_str());
+  }
+
   switch (p_Mime->mm_type)
   {
     case MAILMIME_SINGLE:
@@ -246,7 +253,7 @@ void Body::ParseMime(mailmime* p_Mime)
       for (clistiter* it = clist_begin(p_Mime->mm_data.mm_multipart.mm_mp_list); it != NULL;
            it = clist_next(it))
       {
-        ParseMime((struct mailmime*)clist_content(it));
+        ParseMime((struct mailmime*)clist_content(it), p_Depth + 1);
       }
       break;
 
@@ -255,7 +262,50 @@ void Body::ParseMime(mailmime* p_Mime)
       {
         if (p_Mime->mm_data.mm_message.mm_msg_mime != NULL)
         {
-          ParseMime(p_Mime->mm_data.mm_message.mm_msg_mime);
+          if (p_Depth > 0)
+          {
+            // show attached/embedded emails as .eml attachments
+            if (p_Mime->mm_body != NULL)
+            {
+              int col = 0;
+              MMAPString* mmstr = mmap_string_new(NULL);
+              mailmime_data_write_mem(mmstr, &col, p_Mime->mm_body, 1);
+              std::string data = std::string(mmstr->str, mmstr->len);
+              mmap_string_free(mmstr);
+
+              Header header;
+              static const std::string serverTime("X-Nmail-ServerTime: 0");
+              static const std::string attachment("X-Nmail-Attachment: 0");
+              std::string headerData = serverTime + "\n" + attachment + "\n" + data;
+              header.SetData(headerData);
+              std::string subject = header.GetSubject();
+              if (subject.empty())
+              {
+                subject = "unnamed";
+              }
+
+              const std::string filename = subject + ".eml";
+
+              Part part;
+              part.m_Data = data;
+              part.m_MimeType = mimeType;
+              part.m_Filename = filename;
+              part.m_IsAttachment = true;
+
+              m_Parts[m_NumParts++] = part;
+            }
+            else
+            {
+              Part part;
+              part.m_IsAttachment = true;
+
+              m_Parts[m_NumParts++] = part;
+            }
+          }
+          else
+          {
+            ParseMime(p_Mime->mm_data.mm_message.mm_msg_mime, p_Depth + 1);
+          }
         }
         break;
       }
@@ -267,47 +317,13 @@ void Body::ParseMime(mailmime* p_Mime)
 
 void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 {
-  mailmime_data* data = p_Mime->mm_data.mm_single;
-  mailmime_single_fields fields;
   std::string filename;
   std::string contentId;
   std::string charset;
   bool isAttachment = false;
+  ParseMimeFields(p_Mime, filename, contentId, charset, isAttachment);
 
-  memset(&fields, 0, sizeof(mailmime_single_fields));
-  if (p_Mime->mm_mime_fields != NULL)
-  {
-    mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
-
-    if (fields.fld_disposition != NULL)
-    {
-      struct mailmime_disposition_type* type = fields.fld_disposition->dsp_type;
-      if (type != NULL)
-      {
-        isAttachment = (type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
-      }
-    }
-
-    if (fields.fld_disposition_filename != NULL)
-    {
-      filename = std::string(fields.fld_disposition_filename);
-    }
-    else if (fields.fld_content_name != NULL)
-    {
-      filename = std::string(fields.fld_content_name);
-    }
-
-    if (fields.fld_id != NULL)
-    {
-      contentId = std::string(fields.fld_id);
-    }
-
-    if (fields.fld_content_charset != NULL)
-    {
-      charset = Util::ToLower(std::string(fields.fld_content_charset));
-    }
-  }
-
+  mailmime_data* data = p_Mime->mm_data.mm_single;
   if (data == NULL)
   {
     Part part;
@@ -369,6 +385,45 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
     default:
       break;
+  }
+}
+
+void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::string& p_ContentId,
+                           std::string& p_Charset, bool& p_IsAttachment)
+{
+  mailmime_single_fields fields;
+  memset(&fields, 0, sizeof(mailmime_single_fields));
+  if (p_Mime->mm_mime_fields != NULL)
+  {
+    mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
+
+    if (fields.fld_disposition != NULL)
+    {
+      struct mailmime_disposition_type* type = fields.fld_disposition->dsp_type;
+      if (type != NULL)
+      {
+        p_IsAttachment = (type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
+      }
+    }
+
+    if (fields.fld_disposition_filename != NULL)
+    {
+      p_Filename = std::string(fields.fld_disposition_filename);
+    }
+    else if (fields.fld_content_name != NULL)
+    {
+      p_Filename = std::string(fields.fld_content_name);
+    }
+
+    if (fields.fld_id != NULL)
+    {
+      p_ContentId = std::string(fields.fld_id);
+    }
+
+    if (fields.fld_content_charset != NULL)
+    {
+      p_Charset = Util::ToLower(std::string(fields.fld_content_charset));
+    }
   }
 }
 

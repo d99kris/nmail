@@ -38,8 +38,10 @@ private:
   void Parse();
   void ParseText();
   void ParseHtml();
-  void ParseMime(struct mailmime* p_Mime);
+  void ParseMime(struct mailmime* p_Mime, int p_Depth);
   void ParseMimeData(struct mailmime* p_Mime, std::string p_MimeType);
+  void ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::string& p_ContentId,
+                       std::string& p_Charset, bool& p_IsAttachment);
   void RemoveInvalidHeaders();
 
 private:
