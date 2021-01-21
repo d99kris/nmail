@@ -273,10 +273,10 @@ void Body::ParseMime(mailmime* p_Mime, int p_Depth)
               std::string data = std::string(mmstr->str, mmstr->len);
               mmap_string_free(mmstr);
 
+              // use header parser to determine subject of attached email message
               Header header;
               static const std::string serverTime("X-Nmail-ServerTime: 0");
-              static const std::string attachment("X-Nmail-Attachment: 0");
-              std::string headerData = serverTime + "\n" + attachment + "\n" + data;
+              std::string headerData = serverTime + "\n" + data;
               header.SetData(headerData);
               std::string subject = header.GetSubject();
               if (subject.empty())

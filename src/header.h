@@ -15,7 +15,8 @@ class Header
 {
 public:
   void SetData(const std::string& p_Data);
-  void SetHeaderData(const std::string& p_Data, time_t p_ServerTime, bool p_HasAttachments);
+  void SetHeaderData(const std::string& p_HdrData, const std::string& p_StrData,
+                     const time_t p_ServerTime);
   std::string GetData() const;
   std::string GetDateTime();
   std::string GetDateOrTime(const std::string& p_CurrentDate);

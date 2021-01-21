@@ -323,10 +323,10 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
       {
         struct mailimap_msg_att* msg_att = (struct mailimap_msg_att*)clist_content(it);
 
-        std::string data;
+        std::string hdrData;
+        std::string strData;
         uint32_t uid = 0;
         time_t time = 0;
-        bool hasAttachments = false;
         Header header;
         for (clistiter* ait = clist_begin(msg_att->att_list); ait != NULL; ait = clist_next(ait))
         {
@@ -338,8 +338,8 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
           {
             if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_RFC822_HEADER)
             {
-              data = std::string(item->att_data.att_static->att_data.att_rfc822_header.att_content,
-                                 item->att_data.att_static->att_data.att_rfc822_header.att_length);
+              hdrData = std::string(item->att_data.att_static->att_data.att_rfc822_header.att_content,
+                                    item->att_data.att_static->att_data.att_rfc822_header.att_length);
             }
             else if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_UID)
             {
@@ -363,9 +363,11 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
                                      &mime) == MAILIMAP_NO_ERROR) &&
                   (mime != NULL))
               {
-                Body body;
-                body.FromMime(mime);
-                hasAttachments = body.HasAttachments();
+                int col = 0;
+                MMAPString* mmstr = mmap_string_new(NULL);
+                mailmime_write_mem(mmstr, &col, mime);
+                strData = std::string(mmstr->str, mmstr->len);
+                mmap_string_free(mmstr);
               }
             }
           }
@@ -377,7 +379,7 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
           continue;
         }
 
-        header.SetHeaderData(data, time, hasAttachments);
+        header.SetHeaderData(hdrData, strData, time);
 
         if (header.GetData().empty())
         {

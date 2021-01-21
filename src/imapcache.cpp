@@ -44,7 +44,7 @@ std::string ImapCache::GetImapCacheDir()
 
 void ImapCache::InitImapCacheDir()
 {
-  static const int version = 3;
+  static const int version = 4;
   const std::string imapCacheDir = GetImapCacheDir();
   CacheUtil::CommonInitCacheDir(imapCacheDir, version, m_CacheEncrypt);
 }

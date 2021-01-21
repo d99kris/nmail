@@ -12,6 +12,7 @@
 
 #include <libetpan/libetpan.h>
 
+#include "body.h"
 #include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
@@ -19,19 +20,19 @@
 #include "util.h"
 
 static const std::string labelServerTime("X-Nmail-ServerTime: ");
-static const std::string labelAttachment("X-Nmail-Attachment: ");
 
 void Header::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
 }
 
-void Header::SetHeaderData(const std::string& p_Data, time_t p_ServerTime, bool p_HasAttachments)
+void Header::SetHeaderData(const std::string& p_HdrData, const std::string& p_StrData,
+                           const time_t p_ServerTime)
 {
   m_Data =
     labelServerTime + std::to_string(p_ServerTime) + "\n" +
-    labelAttachment + std::to_string(p_HasAttachments ? 1 : 0) + "\n" +
-    p_Data;
+    p_HdrData +
+    p_StrData;
 }
 
 std::string Header::GetData() const
@@ -145,11 +146,9 @@ void Header::Parse()
     time_t headerTimeStamp = 0;
     time_t serverTimeStamp = 0;
 
-    bool error = false;
-    std::stringstream sstream(m_Data);
-    std::string line;
-    for (int i = 0; i < 2; ++i)
     {
+      std::stringstream sstream(m_Data);
+      std::string line;
       if (std::getline(sstream, line))
       {
         if ((line.rfind(labelServerTime, 0) == 0) && (line.size() > labelServerTime.size()))
@@ -157,35 +156,26 @@ void Header::Parse()
           std::string serverTime = line.substr(labelServerTime.size());
           serverTimeStamp = std::stoi(serverTime);
         }
-        else if ((line.rfind(labelAttachment, 0) == 0) && (line.size() > labelAttachment.size()))
-        {
-          std::string attachment = line.substr(labelAttachment.size());
-          m_HasAttachments = (attachment == "1");
-        }
         else
         {
           LOG_WARNING("unexpected hdr content \"%s\"", line.c_str());
-          error = true;
-          break;
         }
       }
       else
       {
         LOG_WARNING("unexpected empty hdr");
-        error = true;
-        break;
       }
     }
 
-    if (error)
     {
-      sstream.clear();
-      sstream.seekg(0);
+      Body body;
+      body.SetData(m_Data);
+      m_HasAttachments = body.HasAttachments();
     }
 
     struct mailmime* mime = NULL;
     size_t current_index = 0;
-    mailmime_parse(sstream.str().c_str(), sstream.str().size(), &current_index, &mime);
+    mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
 
     if (mime != NULL)
     {
