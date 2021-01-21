@@ -2138,7 +2138,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyImport)
   {
-    ImportMessage();
+    if (IsConnected())
+    {
+      ImportMessage();
+    }
+    else
+    {
+      SetDialogMessage("Cannot import while offline");
+    }
   }
   else if (p_Key == m_KeySearch)
   {
