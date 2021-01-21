@@ -22,6 +22,24 @@ void Body::FromMime(mailmime* p_Mime)
   m_Parsed = true;
 }
 
+void Body::FromHeader(const std::string& p_Data)
+{
+  if (!m_Parsed)
+  {
+    struct mailmime* mime = NULL;
+    size_t current_index = 0;
+    mailmime_parse(p_Data.c_str(), p_Data.size(), &current_index, &mime);
+
+    if (mime != NULL)
+    {
+      ParseMime(mime, 0);
+      mailmime_free(mime);
+    }
+
+    m_Parsed = true;
+  }
+}
+
 void Body::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;

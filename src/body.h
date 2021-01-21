@@ -26,6 +26,7 @@ class Body
 {
 public:
   void FromMime(mailmime* p_Mime);
+  void FromHeader(const std::string& p_Data);
   void SetData(const std::string& p_Data);
   std::string GetData() const;
   std::string GetTextPlain();

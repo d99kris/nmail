@@ -169,7 +169,7 @@ void Header::Parse()
 
     {
       Body body;
-      body.SetData(m_Data);
+      body.FromHeader(m_Data);
       m_HasAttachments = body.HasAttachments();
     }
 
