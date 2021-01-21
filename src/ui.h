@@ -347,6 +347,7 @@ private:
 
   int m_Pipe[2] = { -1, -1 };
 
+  std::mutex m_SearchMutex;
   bool m_MessageListSearch = false;
   std::string m_MessageListSearchQuery;
   size_t m_MessageListSearchOffset = 0;

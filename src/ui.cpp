@@ -1094,88 +1094,91 @@ void Ui::DrawMessageList()
 
 void Ui::DrawMessageListSearch()
 {
-  const std::vector<Header>& headers = m_MessageListSearchResultHeaders;
-  int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
-                            std::max(0, (int)headers.size() - (int)m_MainWinHeight));
-  int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
-  const std::string& currentDate = Header::GetCurrentDate();
   std::map<std::string, std::set<uint32_t>> fetchFlagUids;
   std::map<std::string, std::set<uint32_t>> fetchBodyUids;
 
-  werase(m_MainWin);
-  for (int i = idxOffs; i < idxMax; ++i)
   {
-    const std::string& folder = m_MessageListSearchResultFolderUids.at(i).first;
-    const int uid = m_MessageListSearchResultFolderUids.at(i).second;
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    const std::vector<Header>& headers = m_MessageListSearchResultHeaders;
+    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
+                              std::max(0, (int)headers.size() - (int)m_MainWinHeight));
+    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
+    const std::string& currentDate = Header::GetCurrentDate();
 
-    std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
-    std::set<uint32_t>& requestedFlags = m_RequestedFlags[folder];
-    if ((flags.find(uid) == flags.end()) &&
-        (requestedFlags.find(uid) == requestedFlags.end()))
+    werase(m_MainWin);
+    for (int i = idxOffs; i < idxMax; ++i)
     {
-      fetchFlagUids[folder].insert(uid);
-      requestedFlags.insert(uid);
-    }
+      const std::string& folder = m_MessageListSearchResultFolderUids.at(i).first;
+      const int uid = m_MessageListSearchResultFolderUids.at(i).second;
 
-    std::string seenFlag;
-    if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
-    {
-      seenFlag = std::string("N");
-    }
-
-    std::string shortDate;
-    std::string shortFrom;
-    std::string subject;
-    std::string attachFlag;
-    {
-      Header header = headers.at(i);
-      shortDate = header.GetDateOrTime(currentDate);
-      shortFrom = header.GetShortFrom();
-      subject = header.GetSubject();
-
-      if (!m_AttachmentIndicator.empty())
+      std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
+      std::set<uint32_t>& requestedFlags = m_RequestedFlags[folder];
+      if ((flags.find(uid) == flags.end()) &&
+          (requestedFlags.find(uid) == requestedFlags.end()))
       {
-        static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
-        static const int indicatorWidth = Util::WStringWidth(wIndicator);
-        attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
-                                                : std::string(indicatorWidth, ' ');
+        fetchFlagUids[folder].insert(uid);
+        requestedFlags.insert(uid);
       }
-    }
 
-    seenFlag = Util::TrimPadString(seenFlag, 1);
-    shortDate = Util::TrimPadString(shortDate, 10);
-    shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-    std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
-    int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
-    subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
-    std::string header = headerLeft + subject + " ";
-
-    if (i == m_MessageListCurrentIndex[m_CurrentFolder])
-    {
-      wattron(m_MainWin, A_REVERSE);
-    }
-
-    std::wstring wheader = Util::ToWString(header);
-    mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
-
-    if (i == m_MessageListCurrentIndex[m_CurrentFolder])
-    {
-      wattroff(m_MainWin, A_REVERSE);
-    }
-
-    if (i == m_MessageListCurrentIndex[m_CurrentFolder])
-    {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-      std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
-
-      if ((bodys.find(uid) == bodys.end()) &&
-          (requestedBodys.find(uid) == requestedBodys.end()))
+      std::string seenFlag;
+      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
       {
-        if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
+        seenFlag = std::string("N");
+      }
+
+      std::string shortDate;
+      std::string shortFrom;
+      std::string subject;
+      std::string attachFlag;
+      {
+        Header header = headers.at(i);
+        shortDate = header.GetDateOrTime(currentDate);
+        shortFrom = header.GetShortFrom();
+        subject = header.GetSubject();
+
+        if (!m_AttachmentIndicator.empty())
         {
-          requestedBodys.insert(uid);
-          fetchBodyUids[folder].insert(uid);
+          static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
+          static const int indicatorWidth = Util::WStringWidth(wIndicator);
+          attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
+            : std::string(indicatorWidth, ' ');
+        }
+      }
+
+      seenFlag = Util::TrimPadString(seenFlag, 1);
+      shortDate = Util::TrimPadString(shortDate, 10);
+      shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
+      std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
+      subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
+      std::string header = headerLeft + subject + " ";
+
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      {
+        wattron(m_MainWin, A_REVERSE);
+      }
+
+      std::wstring wheader = Util::ToWString(header);
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
+
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      {
+        wattroff(m_MainWin, A_REVERSE);
+      }
+
+      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      {
+        const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+        std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
+
+        if ((bodys.find(uid) == bodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
+        {
+          if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
+          {
+            requestedBodys.insert(uid);
+            fetchBodyUids[folder].insert(uid);
+          }
         }
       }
     }
@@ -3628,23 +3631,26 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
 void Ui::SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
                        const ImapManager::SearchResult& p_SearchResult)
 {
-  if (p_SearchQuery.m_Offset == 0)
   {
-    m_MessageListSearchResultHeaders = p_SearchResult.m_Headers;
-    m_MessageListSearchResultFolderUids = p_SearchResult.m_FolderUids;
-    LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
-  }
-  else if (p_SearchQuery.m_Offset > 0)
-  {
-    m_MessageListSearchResultHeaders.insert(m_MessageListSearchResultHeaders.end(),
-                                            p_SearchResult.m_Headers.begin(), p_SearchResult.m_Headers.end());
-    m_MessageListSearchResultFolderUids.insert(
-      m_MessageListSearchResultFolderUids.end(), p_SearchResult.m_FolderUids.begin(),
-      p_SearchResult.m_FolderUids.end());
-    LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
-  }
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    if (p_SearchQuery.m_Offset == 0)
+    {
+      m_MessageListSearchResultHeaders = p_SearchResult.m_Headers;
+      m_MessageListSearchResultFolderUids = p_SearchResult.m_FolderUids;
+      LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
+    }
+    else if (p_SearchQuery.m_Offset > 0)
+    {
+      m_MessageListSearchResultHeaders.insert(m_MessageListSearchResultHeaders.end(),
+                                              p_SearchResult.m_Headers.begin(), p_SearchResult.m_Headers.end());
+      m_MessageListSearchResultFolderUids.insert(
+                                                 m_MessageListSearchResultFolderUids.end(), p_SearchResult.m_FolderUids.begin(),
+                                                 p_SearchResult.m_FolderUids.end());
+      LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
+    }
 
-  m_MessageListSearchHasMore = p_SearchResult.m_HasMore;
+    m_MessageListSearchHasMore = p_SearchResult.m_HasMore;
+  }
 
   AsyncUiRequest(UiRequestDrawAll);
   UpdateUidFromIndex(false /* p_UserTriggered */);
@@ -3989,9 +3995,9 @@ void Ui::MarkSeen()
 
 void Ui::UpdateUidFromIndex(bool p_UserTriggered)
 {
-  std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_MessageListSearch)
   {
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
     const std::vector<Header>& headers = m_MessageListSearchResultHeaders;
     m_MessageListCurrentIndex[m_CurrentFolder] =
       Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)headers.size() - 1);
@@ -4023,6 +4029,7 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
     return;
   }
 
+  std::lock_guard<std::mutex> lock(m_Mutex);
   auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
 
   m_MessageListCurrentIndex[m_CurrentFolder] =
@@ -4692,12 +4699,15 @@ void Ui::SearchMessage()
 
       m_MessageListCurrentIndex[m_CurrentFolder] = 0;
 
-      m_MessageListSearchQuery = query;
-      m_MessageListSearchOffset = 0;
-      m_MessageListSearchMax = m_MainWinHeight + m_MainWinHeight;
-      m_MessageListSearchHasMore = false;
-      m_MessageListSearchResultHeaders.clear();
-      m_MessageListSearchResultFolderUids.clear();
+      {
+        std::lock_guard<std::mutex> lock(m_SearchMutex);
+        m_MessageListSearchQuery = query;
+        m_MessageListSearchOffset = 0;
+        m_MessageListSearchMax = m_MainWinHeight + m_MainWinHeight;
+        m_MessageListSearchHasMore = false;
+        m_MessageListSearchResultHeaders.clear();
+        m_MessageListSearchResultFolderUids.clear();
+      }
 
       ImapManager::SearchQuery searchQuery;
       searchQuery.m_QueryStr = query;
