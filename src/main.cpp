@@ -386,7 +386,6 @@ static void ShowHelp()
     "Options:\n"
     "   -d, --confdir <DIR>  use a different directory than ~/.nmail\n"
     "   -e, --verbose        enable verbose logging\n"
-    "   -ee, --extraverbose  enable extra verbose logging\n"
     "   -h, --help           display this help and exit\n"
     "   -o, --offline        run in offline mode\n"
     "   -s, --setup <SERV>   setup wizard for specified service, supported\n"
