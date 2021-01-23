@@ -563,6 +563,7 @@ file (platform-dependent defaults are left empty below):
     key_toggle_unread=u
     markdown_html_compose=0
     new_msg_bell=1
+    persist_file_selection_dir=1
     persist_folder_filter=1
     persist_search_query=0
     plain_text=1
@@ -636,6 +637,10 @@ editing an email (default disabled).
 ### new_msg_bell
 
 Indicate new messages with terminal bell (default enabled).
+
+### persist_file_selection_dir
+
+Determines whether file selection view shall remember previous directory (default enabled).
 
 ### persist_folder_filter
 

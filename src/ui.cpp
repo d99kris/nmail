@@ -52,6 +52,7 @@ void Ui::Init()
   {
     { "compose_hardwrap", "0" },
     { "help_enabled", "1" },
+    { "persist_file_selection_dir", "1" },
     { "persist_folder_filter", "1" },
     { "persist_search_query", "0" },
     { "plain_text", "1" },
@@ -120,6 +121,7 @@ void Ui::Init()
 
   m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
+  m_PersistFileSelectionDir = m_Config.Get("persist_file_selection_dir") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
   m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
@@ -3181,7 +3183,11 @@ void Ui::SetState(Ui::State p_State)
     curs_set(1);
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
-    m_CurrentDir = Util::GetCurrentWorkingDir();
+    if (m_CurrentDir.empty() || !m_PersistFileSelectionDir)
+    {
+      m_CurrentDir = Util::GetCurrentWorkingDir();
+    }
+
     m_Files = Util::ListPaths(m_CurrentDir);
     m_FileListCurrentIndex = 0;
     m_FileListCurrentFile.m_Name = "";

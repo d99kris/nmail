@@ -232,6 +232,7 @@ private:
   Part m_PartListCurrentPart;
 
   int m_MessageViewLineOffset = 0;
+  bool m_PersistFileSelectionDir = true;
   bool m_PersistFolderFilter = true;
   bool m_PersistSearchQuery = false;
   bool m_Plaintext = true;
