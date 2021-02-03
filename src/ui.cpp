@@ -19,6 +19,8 @@
 #include "sethelp.h"
 #include "status.h"
 
+bool Ui::s_Running = false;
+
 Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel)
   : m_Inbox(p_Inbox)
   , m_Address(p_Address)
@@ -37,7 +39,6 @@ Ui::~Ui()
 
 void Ui::Init()
 {
-  signal(SIGINT, SIG_IGN);
   setlocale(LC_ALL, "");
   initscr();
   noecho();
@@ -213,7 +214,7 @@ void Ui::Init()
   m_AttachmentIndicator = m_Config.Get("attachment_indicator");
   m_BottomReply = m_Config.Get("bottom_reply") == "1";
 
-  m_Running = true;
+  SetRunning(true);
 }
 
 void Ui::Cleanup()
@@ -1556,7 +1557,7 @@ void Ui::Run()
   int64_t uiIdleTime = 0;
   LOG_DEBUG("entering loop");
 
-  while (m_Running)
+  while (s_Running)
   {
     fd_set fds;
     FD_ZERO(&fds);
@@ -3201,7 +3202,7 @@ void Ui::SetState(Ui::State p_State)
 
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
-  if (!m_Running) return;
+  if (!s_Running) return;
 
   char uiRequest = UiRequestNone;
 
@@ -3299,7 +3300,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       std::lock_guard<std::mutex> lock(m_Mutex);
       for (auto& folder : p_Response.m_Folders)
       {
-        if (!m_Running)
+        if (!s_Running)
         {
           break;
         }
@@ -3374,7 +3375,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         std::set<uint32_t> subsetPrefetchHeaders;
         for (auto it = prefetchHeaders.begin(); it != prefetchHeaders.end(); ++it)
         {
-          if (!m_Running) break;
+          if (!s_Running) break;
 
           subsetPrefetchHeaders.insert(*it);
           if ((subsetPrefetchHeaders.size() == maxHeadersFetchRequest) ||
@@ -3399,7 +3400,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         std::set<uint32_t> subsetPrefetchFlags;
         for (auto it = prefetchFlags.begin(); it != prefetchFlags.end(); ++it)
         {
-          if (!m_Running) break;
+          if (!s_Running) break;
 
           subsetPrefetchFlags.insert(*it);
           if ((subsetPrefetchFlags.size() == maxFlagsFetchRequest) ||
@@ -3424,7 +3425,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         std::set<uint32_t> subsetPrefetchBodys;
         for (auto it = prefetchBodys.begin(); it != prefetchBodys.end(); ++it)
         {
-          if (!m_Running) break;
+          if (!s_Running) break;
 
           subsetPrefetchBodys.insert(*it);
           if ((subsetPrefetchBodys.size() == maxBodysFetchRequest) ||
@@ -4742,7 +4743,7 @@ void Ui::Quit()
 {
   if (m_QuitWithoutConfirm || Ui::PromptYesNo("Quit nmail (y/n)?"))
   {
-    m_Running = false;
+    SetRunning(false);
     LOG_DEBUG("stop thread");
   }
 }
@@ -4889,4 +4890,9 @@ std::string Ui::MakeHtmlPart(const std::string& p_Text)
   if (!m_CurrentMarkdownHtmlCompose) return std::string();
 
   return Util::ConvertTextToHtml(p_Text);
+}
+
+void Ui::SetRunning(bool p_Running)
+{
+  s_Running = p_Running;
 }

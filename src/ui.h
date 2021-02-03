@@ -81,6 +81,9 @@ public:
   void SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
                      const ImapManager::SearchResult& p_SearchResult);
 
+public:
+  static void SetRunning(bool p_Running);
+
 private:
   void Init();
   void Cleanup();
@@ -168,7 +171,6 @@ private:
   std::string m_DraftsFolder;
   std::string m_SentFolder;
   bool m_ClientStoreSent = false;
-  bool m_Running = false;
 
   std::string m_Inbox;
   std::string m_Address;
@@ -358,4 +360,7 @@ private:
   std::vector<std::pair<std::string, uint32_t>> m_MessageListSearchResultFolderUids;
 
   std::pair<std::string, int32_t> m_CurrentFolderUid = std::make_pair("", -1);
+
+private:
+  static bool s_Running;
 };

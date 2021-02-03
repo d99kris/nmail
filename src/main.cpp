@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
   Log::SetPath(logPath);
 
   THREAD_REGISTER();
-  Util::RegisterSignalHandler();
+  Util::RegisterSignalHandlers();
 
   const std::string version = Util::GetAppVersion();
   LOG_INFO("starting nmail %s", version.c_str());

@@ -38,6 +38,7 @@
 
 #include "loghelp.h"
 #include "serialized.h"
+#include "ui.h"
 
 std::mutex ThreadRegister::m_Mutex;
 std::map<pthread_t, std::string> ThreadRegister::m_Threads;
@@ -1167,37 +1168,80 @@ std::string Util::GetCompiler()
 #endif
 }
 
-std::string Util::GetSigName(int p_Signal)
+std::map<int, std::string> Util::GetCrashingSignals()
 {
-  static std::map<int, std::string> signames =
+  static const std::map<int, std::string> crashingSignals =
   {
     { SIGABRT, "SIGABRT" },
-    { SIGSEGV, "SIGSEGV" },
     { SIGBUS, "SIGBUS" },
-    { SIGILL, "SIGILL" },
     { SIGFPE, "SIGFPE" },
+    { SIGILL, "SIGILL" },
+    { SIGQUIT, "SIGQUIT" },
+    { SIGSEGV, "SIGSEGV" },
+    { SIGSYS, "SIGSYS" },
     { SIGTRAP, "SIGTRAP" },
     { SIGUSR1, "SIGUSR1" },
   };
+  return crashingSignals;
+}
 
+std::map<int, std::string> Util::GetTerminatingSignals()
+{
+  static const std::map<int, std::string> terminatingSignals =
+  {
+    { SIGALRM, "SIGALRM" },
+    { SIGHUP, "SIGHUP" },
+    { SIGPROF, "SIGPROF" },
+    { SIGTERM, "SIGTERM" },
+    { SIGUSR2, "SIGUSR2" },
+    { SIGVTALRM, "SIGVTALRM" },
+    { SIGXCPU, "SIGXCPU" },
+    { SIGXFSZ, "SIGXFSZ" },
+  };
+  return terminatingSignals;
+}
+
+std::map<int, std::string> Util::GetIgnoredSignals()
+{
+  static const std::map<int, std::string> ignoredSignals =
+  {
+    { SIGINT, "SIGINT" },
+    { SIGPIPE, "SIGPIPE" },
+  };
+  return ignoredSignals;
+}
+
+std::string Util::GetSigName(int p_Signal)
+{
+  const std::map<int, std::string>& signames = GetTerminatingSignals();
   auto it = signames.find(p_Signal);
   return (it != signames.end()) ? it->second : std::to_string(p_Signal);
 }
 
-void Util::RegisterSignalHandler()
+void Util::RegisterSignalHandlers()
 {
-  signal(SIGABRT, SignalHandler);
-  signal(SIGSEGV, SignalHandler);
-  signal(SIGBUS, SignalHandler);
-  signal(SIGILL, SignalHandler);
-  signal(SIGFPE, SignalHandler);
-  signal(SIGTRAP, SignalHandler);
-  signal(SIGUSR1, SignalHandler);
+  const std::map<int, std::string>& crashingSignals = GetCrashingSignals();
+  for (const auto& crashingSignal : crashingSignals)
+  {
+    signal(crashingSignal.first, SignalCrashHandler);
+  }
+
+  const std::map<int, std::string>& terminatingSignals = GetTerminatingSignals();
+  for (const auto& terminatingSignal : terminatingSignals)
+  {
+    signal(terminatingSignal.first, SignalTerminateHandler);
+  }
+
+  const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
+  for (const auto& ignoredSignal : ignoredSignals)
+  {
+    signal(ignoredSignal.first, SIG_IGN);
+  }
 }
 
 static std::mutex s_SignalMutex;
 
-void Util::SignalHandler(int p_Signal)
+void Util::SignalCrashHandler(int p_Signal)
 {
   const std::string& threadLabel = "\nthread " + ThreadRegister::GetName() + "\n";
   void* callstack[64];
@@ -1223,7 +1267,7 @@ void Util::SignalHandler(int p_Signal)
       std::cerr << logMsg << "\n" << callstackStr << "\n";
     }
 
-    if (Log::GetDebugEnabled())
+    if (Log::GetTraceEnabled())
     {
       ThreadRegister::SignalThreads(SIGUSR1);
       sleep(1);
@@ -1237,6 +1281,13 @@ void Util::SignalHandler(int p_Signal)
     LOG_DUMP(threadLabel.c_str());
     LOG_DUMP(callstackStr.c_str());
   }
+}
+
+void Util::SignalTerminateHandler(int p_Signal)
+{
+  const std::string& logMsg = "termination requested: " + GetSigName(p_Signal);
+  LOG_WARNING("%s", logMsg.c_str());
+  Ui::SetRunning(false);
 }
 
 std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)

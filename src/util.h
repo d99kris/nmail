@@ -212,8 +212,9 @@ public:
   static std::string GetBuildOs();
   static std::string GetCompiler();
 
-  static void RegisterSignalHandler();
-  static void SignalHandler(int p_Signal);
+  static void RegisterSignalHandlers();
+  static void SignalCrashHandler(int p_Signal);
+  static void SignalTerminateHandler(int p_Signal);
   static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
 
   static bool IsInteger(const std::string& p_Str);
@@ -235,6 +236,9 @@ public:
   static std::string GetSelfPath();
   static std::string GetLibetpanVersion();
   static std::string GetUname();
+  static std::map<int, std::string> GetCrashingSignals();
+  static std::map<int, std::string> GetTerminatingSignals();
+  static std::map<int, std::string> GetIgnoredSignals();
   static std::string GetSigName(int p_Signal);
   static std::string MimeToUtf8(const std::string& p_Str);
   static std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
