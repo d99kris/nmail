@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PROG="$(which nmail)"
-ARGS="" # ex: "-d ~/.nmail-altconf" for other nmail dir path
+ARGS="$@"
 
 # Detect debugger
 DBG="$(which gdb | head -1)"
@@ -29,11 +29,13 @@ set logging off
 quit
 EOF
   echo "gdb -q -x \"${GDBSCRIPT}\" \"${PROG}\""
-  gdb -q -x "${GDBSCRIPT}" "${PROG}"
+  OUTFILE="/tmp/nmail-gdb-${$}.txt"
+  echo "stderr:" > ${OUTFILE}
+  gdb -q -x "${GDBSCRIPT}" "${PROG}" 2>> ${OUTFILE}
   reset
   clear
-  OUTFILE="/tmp/nmail-gdb-${$}.txt"
-  cp ${TMPDIR}/log.txt ${OUTFILE}
+  echo "gdb:" >> ${OUTFILE}
+  cat ${TMPDIR}/log.txt >> ${OUTFILE}
   rm -rf ${TMPDIR}
   echo ""
   echo "gdb log file written to:"

@@ -1144,7 +1144,7 @@ void Ui::DrawMessageListSearch()
           static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
           static const int indicatorWidth = Util::WStringWidth(wIndicator);
           attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
-            : std::string(indicatorWidth, ' ');
+                                                  : std::string(indicatorWidth, ' ');
         }
       }
 
@@ -3650,8 +3650,8 @@ void Ui::SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
     {
       m_MessageListSearchResultHeaders.insert(m_MessageListSearchResultHeaders.end(),
                                               p_SearchResult.m_Headers.begin(), p_SearchResult.m_Headers.end());
-      m_MessageListSearchResultFolderUids.insert(
-                                                 m_MessageListSearchResultFolderUids.end(), p_SearchResult.m_FolderUids.begin(),
+      m_MessageListSearchResultFolderUids.insert(m_MessageListSearchResultFolderUids.end(),
+                                                 p_SearchResult.m_FolderUids.begin(),
                                                  p_SearchResult.m_FolderUids.end());
       LOG_DEBUG("search result offset = %d", p_SearchQuery.m_Offset);
     }

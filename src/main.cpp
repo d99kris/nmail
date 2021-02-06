@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
   ScopedDirLock dirLock(Util::GetApplicationDir());
   if (!dirLock.IsLocked())
   {
-    std::cout <<
+    std::cerr <<
       "error: unable to acquire lock for " << Util::GetApplicationDir() << "\n" <<
       "       only one nmail session per account/confdir is supported.\n";
     return 1;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-      std::cout << "error: unsupported email service \"" << setup << "\".\n\n";
+      std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
       ShowHelp();
       return 1;
     }
@@ -482,7 +482,7 @@ bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix)
 {
   if (p_Pass.empty())
   {
-    std::cout << "error: " << p_ErrorPrefix << "pass not specified.\n\n";
+    std::cerr << "error: " << p_ErrorPrefix << "pass not specified.\n\n";
     return false;
   }
 
@@ -492,7 +492,7 @@ bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix)
 bool ReportConfigError(const std::string& p_Param)
 {
   const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
-  std::cout << "error: " << p_Param << " not specified in config file (" << configPath
+  std::cerr << "error: " << p_Param << " not specified in config file (" << configPath
             << ").\n\n";
   return false;
 }

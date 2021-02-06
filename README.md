@@ -463,6 +463,11 @@ usage:
 
     ./utils/debug-nmail.sh
 
+The utility also supports passing arguments to nmail, enabling running nmail
+with a custom config directory, for example:
+
+    ./utils/debug-nmail.sh -d ~/.nmail-hm
+
 Once nmail exits, either normally or caused by a crash, the script outputs
 information on where to obtain the log file, for example:
 
