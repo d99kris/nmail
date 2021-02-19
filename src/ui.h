@@ -165,6 +165,9 @@ private:
   void StartSync();
   std::string MakeHtmlPart(const std::string& p_Text);
   void HandleConnected();
+  void StartComposeBackup();
+  void StopComposeBackup();
+  void ComposeBackupProcess();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -362,6 +365,12 @@ private:
   std::vector<std::pair<std::string, uint32_t>> m_MessageListSearchResultFolderUids;
 
   std::pair<std::string, int32_t> m_CurrentFolderUid = std::make_pair("", -1);
+
+  uint32_t m_ComposeBackupInterval = 0;
+  std::thread m_ComposeBackupThread;
+  bool m_ComposeBackupRunning = false;
+  std::condition_variable m_ComposeBackupCond;
+  std::mutex m_ComposeBackupMutex;
 
 private:
   static bool s_Running;

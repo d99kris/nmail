@@ -19,16 +19,24 @@ public:
 
   static void PushDraftMessage(const std::string& p_Str);
   static void PushOutboxMessage(const std::string& p_Str);
+  static void PushComposeMessage(const std::string& p_Str);
   static std::vector<std::string> PopDraftMessages();
   static std::vector<std::string> PopOutboxMessages();
+  static std::vector<std::string> PopComposeMessages();
 
 private:
   static std::string GetQueueDir();
   static void InitQueueDir();
+
   static std::string GetDraftQueueDir();
   static void InitDraftQueueDir();
+
   static std::string GetOutboxQueueDir();
   static void InitOutboxQueueDir();
+
+  static std::string GetComposeQueueDir();
+  static void InitComposeQueueDir();
+
   static std::string ReadCacheFile(const std::string& p_Path);
   static void WriteCacheFile(const std::string& p_Path, const std::string& p_Str);
 

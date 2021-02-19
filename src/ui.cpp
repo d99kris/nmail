@@ -116,6 +116,7 @@ void Ui::Init()
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
+    { "compose_backup_interval", "60" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -214,6 +215,14 @@ void Ui::Init()
 
   m_AttachmentIndicator = m_Config.Get("attachment_indicator");
   m_BottomReply = m_Config.Get("bottom_reply") == "1";
+
+  try
+  {
+    m_ComposeBackupInterval = std::stoll(m_Config.Get("compose_backup_interval"));
+  }
+  catch (...)
+  {
+  }
 
   SetRunning(true);
 }
@@ -2576,6 +2585,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
         Util::RmDir(m_ComposeTempDirectory);
+        StopComposeBackup();
       }
     }
     else if (p_Key == m_KeySend)
@@ -2593,6 +2603,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         {
           SetLastStateOrMessageList();
         }
+
+        StopComposeBackup();
       }
     }
     else if (p_Key == m_KeyPostpone)
@@ -2610,6 +2622,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         {
           SetLastStateOrMessageList();
         }
+
+        StopComposeBackup();
       }
     }
     else if (p_Key == m_KeyExtEditor)
@@ -2884,6 +2898,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    StartComposeBackup();
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
     m_ComposeHeaderRef.clear();
@@ -2975,6 +2990,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    StartComposeBackup();
     m_ComposeHeaderLine = 3;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
@@ -3058,6 +3074,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    StartComposeBackup();
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
@@ -4974,4 +4991,74 @@ void Ui::HandleConnected()
       m_SmtpManager->AsyncAction(smtpAction);
     }
   }
+}
+
+void Ui::StartComposeBackup()
+{
+  if (m_ComposeBackupInterval != 0)
+  {
+    m_ComposeBackupRunning = true;
+    m_ComposeBackupThread = std::thread(&Ui::ComposeBackupProcess, this);
+  }
+}
+
+void Ui::StopComposeBackup()
+{
+  if (m_ComposeBackupInterval != 0)
+  {
+    m_ComposeBackupRunning = false;
+    {
+      std::unique_lock<std::mutex> lock(m_ComposeBackupMutex);
+      m_ComposeBackupCond.notify_one();
+    }
+    m_ComposeBackupThread.join();
+  }
+}
+
+void Ui::ComposeBackupProcess()
+{
+  LOG_DEBUG("starting backup thread");
+  while (m_ComposeBackupRunning)
+  {
+    bool timedOut = false;
+
+    {
+      std::unique_lock<std::mutex> lock(m_ComposeBackupMutex);
+      if (m_ComposeBackupCond.wait_for(lock, std::chrono::seconds(m_ComposeBackupInterval)) ==
+          std::cv_status::timeout)
+      {
+        timedOut = true;
+      }
+    }
+
+    if (timedOut)
+    {
+      SmtpManager::Action smtpAction;
+      smtpAction.m_IsCreateMessage = true;
+      smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
+      smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
+      smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
+      smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
+      smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
+      smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
+                                                           : m_ComposeMessageStr);
+      smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+      smtpAction.m_RefMsgId = m_ComposeHeaderRef;
+
+      SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+      if (smtpResult.m_Result)
+      {
+        OfflineQueue::PushComposeMessage(smtpResult.m_Message);
+        LOG_DEBUG("backup thread message saved");
+      }
+      else
+      {
+        LOG_WARNING("backup thread message creation failed");
+      }
+    }
+  }
+
+  OfflineQueue::PopComposeMessages();
+
+  LOG_DEBUG("stopping backup thread");
 }
