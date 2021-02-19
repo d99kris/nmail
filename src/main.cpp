@@ -139,6 +139,7 @@ int main(int argc, char* argv[])
     { "editor_cmd", "" },
     { "folders_exclude", "" },
     { "server_timestamps", "0" },
+    { "network_timeout", "30" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -251,11 +252,13 @@ int main(int argc, char* argv[])
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
   uint32_t prefetchLevel = 0;
+  uint64_t networkTimeout = 0;
   try
   {
     imapPort = std::stoi(mainConfig->Get("imap_port"));
     smtpPort = std::stoi(mainConfig->Get("smtp_port"));
     prefetchLevel = std::stoi(mainConfig->Get("prefetch_level"));
+    networkTimeout = std::stoll(mainConfig->Get("network_timeout"));
   }
   catch (...)
   {
@@ -323,6 +326,7 @@ int main(int argc, char* argv[])
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
+                                  networkTimeout,
                                   cacheEncrypt, cacheIndexEncrypt,
                                   foldersExclude,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1,
@@ -335,6 +339,7 @@ int main(int argc, char* argv[])
 
   std::shared_ptr<SmtpManager> smtpManager =
     std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
+                                  networkTimeout,
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 

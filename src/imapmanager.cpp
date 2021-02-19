@@ -14,7 +14,8 @@
 
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const std::string& p_Host, const uint16_t p_Port,
-                         const bool p_Connect, const bool p_CacheEncrypt,
+                         const bool p_Connect, const int64_t p_Timeout,
+                         const bool p_CacheEncrypt,
                          const bool p_CacheIndexEncrypt,
                          const std::set<std::string>& p_FoldersExclude,
                          const std::function<void(const ImapManager::Request&,
@@ -24,8 +25,8 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler,
                          const std::function<void(const SearchQuery&,
                                                   const SearchResult&)>& p_SearchHandler)
-  : m_Imap(p_User, p_Pass, p_Host, p_Port, p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude,
-           p_StatusHandler)
+  : m_Imap(p_User, p_Pass, p_Host, p_Port, p_Timeout,
+           p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude, p_StatusHandler)
   , m_Connect(p_Connect)
   , m_ResponseHandler(p_ResponseHandler)
   , m_ResultHandler(p_ResultHandler)
@@ -128,7 +129,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
     write(m_CachePipe[1], "1", 1);
   }
 
-  if (m_Imap.GetConnected() || m_Connecting)
+  if (m_Connecting || m_OnceConnected)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
@@ -136,11 +137,15 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
     m_RequestsTotal = m_Requests.size();
     m_RequestsDone = 0;
   }
+  else
+  {
+    LOG_WARNING("async request not permitted while offline");
+  }
 }
 
 void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
 {
-  if (m_Connecting || m_Imap.GetConnected())
+  if (m_Connecting || m_OnceConnected)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
@@ -153,11 +158,15 @@ void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
 
     m_PrefetchRequestsDone = 0;
   }
+  else
+  {
+    LOG_WARNING("prefetch request not permitted while offline");
+  }
 }
 
 void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
 {
-  if (m_Imap.GetConnected())
+  if (m_Connecting || m_OnceConnected)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Actions.push_front(p_Action);
@@ -165,7 +174,7 @@ void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
   }
   else
   {
-    LOG_WARNING("action not permitted while offline");
+    LOG_WARNING("async action not permitted while offline");
   }
 }
 
@@ -194,11 +203,17 @@ bool ImapManager::ProcessIdle()
   if (true)
   {
     // Check mail before enter idle
-    ImapManager::Request request;
+    Request request;
     request.m_Folder = currentFolder;
     request.m_GetUids = true;
-    rv = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */);
+    Response response;
+    rv = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response);
 
+    if (rv)
+    {
+      SendRequestResponse(request, response);
+    }
+    
     if (!rv)
     {
       return rv;
@@ -270,6 +285,7 @@ void ImapManager::Process()
     if (m_Imap.Login())
     {
       SetStatus(Status::FlagConnected);
+      m_OnceConnected = true;
     }
     else
     {
@@ -317,21 +333,49 @@ void ImapManager::Process()
       while (m_Running &&
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
-        while (!m_Actions.empty() && m_Running)
+        bool isConnected = true;
+        
+        while (!m_Actions.empty() && m_Running && isConnected)
         {
-          const Action action = m_Actions.front();
+          Action action = m_Actions.front();
           m_Actions.pop_front();
           m_QueueMutex.unlock();
 
-          rv &= PerformAction(action);
+          bool result = PerformAction(action);
+          
+          bool retry = false;
+          if (!result)
+          {
+            if (!m_Imap.CheckConnection())
+            {
+              LOG_WARNING("action failed due to connection lost");
+              isConnected = false;
+            }
+            else if (action.m_TryCount < 2)
+            {
+              ++action.m_TryCount;
+              LOG_WARNING("action retry %d", action.m_TryCount);
+              retry = true;
+            }
+          }
+
+          if (!retry)
+          {
+            SendActionResult(action, result);
+          }
 
           m_QueueMutex.lock();
+
+          if (retry)
+          {
+            m_Actions.push_front(action);
+          }
         }
 
         const int progressReportMinTasks = 2;
-        while (!m_Requests.empty() && m_Running)
+        while (!m_Requests.empty() && m_Running && isConnected)
         {
-          const Request request = m_Requests.front();
+          Request request = m_Requests.front();
           m_Requests.pop_front();
 
           uint32_t progress = (m_RequestsTotal >= progressReportMinTasks) ?
@@ -341,20 +385,52 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagFetching, progress);
 
-          rv &= PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */);
+          Response response;
+          bool result = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */,
+                                       response);
+
+          bool retry = false;
+          if (!result)
+          {
+            if (!m_Imap.CheckConnection())
+            {
+              LOG_WARNING("request failed due to connection lost");
+              isConnected = false;
+              retry = true;
+            }
+            else if (request.m_TryCount < 2)
+            {
+              ++request.m_TryCount;
+              LOG_WARNING("request retry %d", request.m_TryCount);
+              retry = true;
+            }
+          }
+
+          if (!retry)
+          {
+            SendRequestResponse(request, response);
+          }
 
           m_QueueMutex.lock();
 
-          ++m_RequestsDone;
+          if (retry)
+          {
+            m_Requests.push_front(request);
+          }
+          else
+          {
+            ++m_RequestsDone;
+          }
         }
 
         m_QueueMutex.unlock();
         ClearStatus(Status::FlagFetching);
         m_QueueMutex.lock();
 
-        while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() && m_Running)
+        while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() &&
+               m_Running && isConnected)
         {
-          const Request request = m_PrefetchRequests.begin()->second.front();
+          Request request = m_PrefetchRequests.begin()->second.front();
           m_PrefetchRequests.begin()->second.pop_front();
           if (m_PrefetchRequests.begin()->second.empty())
           {
@@ -368,22 +444,67 @@ void ImapManager::Process()
 
           SetStatus(Status::FlagPrefetching, progress);
 
-          rv &= PerformRequest(request, false /* p_Cached */, true /* p_Prefetch */);
+          Response response;
+          bool result = PerformRequest(request, false /* p_Cached */, true /* p_Prefetch */,
+                                       response);
 
+          bool retry = false;
+          if (!result)
+          {
+            if (!m_Imap.CheckConnection())
+            {
+              LOG_WARNING("prefetch request failed due to connection lost");
+              isConnected = false;
+              retry = true;
+            }
+            else if (request.m_TryCount < 2)
+            {
+              ++request.m_TryCount;
+              LOG_WARNING("prefetch request retry %d", request.m_TryCount);
+              retry = true;
+            }
+          }
+
+          if (!retry)
+          {
+            SendRequestResponse(request, response);
+          }
+          
           m_QueueMutex.lock();
 
-          ++m_PrefetchRequestsDone;
+          if (retry)
+          {
+            m_PrefetchRequests[request.m_PrefetchLevel].push_front(request);
+          }
+          else
+          {
+            ++m_PrefetchRequestsDone;
+          }
         }
 
         m_QueueMutex.unlock();
         ClearStatus(Status::FlagPrefetching);
+
+        if (!isConnected)
+        {
+          LOG_DEBUG("checking connectivity");
+          CheckConnectivityAndReconnect();
+        }
+
         m_QueueMutex.lock();
       }
 
-      m_RequestsTotal = 0;
-      m_RequestsDone = 0;
-      m_PrefetchRequestsTotal = 0;
-      m_PrefetchRequestsDone = 0;
+      if (m_Requests.empty())
+      {
+        m_RequestsTotal = 0;
+        m_RequestsDone = 0;
+      }
+
+      if (m_PrefetchRequests.empty())
+      {
+        m_PrefetchRequestsTotal = 0;
+        m_PrefetchRequestsDone = 0;
+      }
 
       m_QueueMutex.unlock();
     }
@@ -391,37 +512,7 @@ void ImapManager::Process()
     if (!rv)
     {
       LOG_DEBUG("checking connectivity");
-
-      if (!m_Imap.CheckConnection())
-      {
-        m_Connecting = true;
-        SetStatus(Status::FlagConnecting);
-        ClearStatus(Status::FlagConnected);
-        LOG_WARNING("connection lost");
-
-        m_Imap.Logout();
-        bool connected = false;
-        while (m_Running)
-        {
-          LOG_DEBUG("retry connect");
-          connected = m_Imap.Login();
-
-          if (connected && m_Running)
-          {
-            m_Connecting = false;
-            SetStatus(Status::FlagConnected);
-            ClearStatus(Status::FlagConnecting);
-            LOG_INFO("connected");
-            break;
-          }
-
-          int retryDelay = 15;
-          while (m_Running && (retryDelay-- > 0))
-          {
-            sleep(1);
-          }
-        }
-      }
+      CheckConnectivityAndReconnect();
     }
   }
 
@@ -436,6 +527,40 @@ void ImapManager::Process()
 
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
   m_ExitedCond.notify_one();
+}
+
+void ImapManager::CheckConnectivityAndReconnect()
+{
+  if (!m_Imap.CheckConnection())
+  {
+    m_Connecting = true;
+    SetStatus(Status::FlagConnecting);
+    ClearStatus(Status::FlagConnected);
+    LOG_WARNING("connection lost");
+
+    m_Imap.Logout();
+    bool connected = false;
+    while (m_Running)
+    {
+      LOG_DEBUG("retry connect");
+      connected = m_Imap.Login();
+
+      if (connected && m_Running)
+      {
+        m_Connecting = false;
+        SetStatus(Status::FlagConnected);
+        ClearStatus(Status::FlagConnecting);
+        LOG_INFO("connected");
+        break;
+      }
+
+      int retryDelay = 15;
+      while (m_Running && (retryDelay-- > 0))
+      {
+        sleep(1);
+      }
+    }
+  }
 }
 
 void ImapManager::CacheProcess()
@@ -473,7 +598,15 @@ void ImapManager::CacheProcess()
 
           m_CacheQueueMutex.unlock();
 
-          PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */);
+          Response response;
+          bool result = PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */,
+                                       response);
+          if (!result)
+          {
+            LOG_WARNING("cache request failed");
+          }
+          
+          SendRequestResponse(request, response);
 
           m_CacheQueueMutex.lock();
         }
@@ -518,102 +651,89 @@ void ImapManager::SearchProcess()
   LOG_DEBUG("exiting loop");
 }
 
-bool ImapManager::PerformRequest(const ImapManager::Request& p_Request, bool p_Cached,
-                                 bool p_Prefetch)
+bool ImapManager::PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch,
+                                 Response& p_Response)
 {
-  Response response;
+  p_Response.m_ResponseStatus = ResponseStatusOk;
+  p_Response.m_Folder = p_Request.m_Folder;
+  p_Response.m_Cached = p_Cached;
 
-  response.m_ResponseStatus = ResponseStatusOk;
-  response.m_Folder = p_Request.m_Folder;
-  response.m_Cached = p_Cached;
   if (p_Request.m_GetFolders)
   {
-    const bool rv = m_Imap.GetFolders(p_Cached, response.m_Folders);
-    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFoldersFailed;
+    const bool rv = m_Imap.GetFolders(p_Cached, p_Response.m_Folders);
+    p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFoldersFailed;
   }
 
   if (p_Request.m_GetUids)
   {
-    const bool rv = m_Imap.GetUids(p_Request.m_Folder, p_Cached, response.m_Uids);
-    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetUidsFailed;
+    const bool rv = m_Imap.GetUids(p_Request.m_Folder, p_Cached, p_Response.m_Uids);
+    p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetUidsFailed;
   }
 
   if (!p_Request.m_GetHeaders.empty())
   {
     const bool rv = m_Imap.GetHeaders(p_Request.m_Folder, p_Request.m_GetHeaders, p_Cached,
-                                      p_Prefetch, response.m_Headers);
-    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetHeadersFailed;
+                                      p_Prefetch, p_Response.m_Headers);
+    p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetHeadersFailed;
   }
 
   if (!p_Request.m_GetFlags.empty())
   {
     const bool rv = m_Imap.GetFlags(p_Request.m_Folder, p_Request.m_GetFlags, p_Cached,
-                                    response.m_Flags);
-    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFlagsFailed;
+                                    p_Response.m_Flags);
+    p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFlagsFailed;
   }
 
   if (!p_Request.m_GetBodys.empty())
   {
     const bool rv = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached,
-                                    p_Prefetch, response.m_Bodys);
-    response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetBodysFailed;
+                                    p_Prefetch, p_Response.m_Bodys);
+    p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetBodysFailed;
   }
 
-  if (m_ResponseHandler)
-  {
-    m_ResponseHandler(p_Request, response);
-  }
-
-  return (response.m_ResponseStatus == ResponseStatusOk);
+  return (p_Response.m_ResponseStatus == ResponseStatusOk);
 }
 
 bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
 {
-  Result result;
-  result.m_Result = true;
+  bool rv = true;
 
   if (!p_Action.m_MoveDestination.empty())
   {
     SetStatus(Status::FlagMoving);
-    result.m_Result &= m_Imap.MoveMessages(p_Action.m_Folder, p_Action.m_Uids,
-                                           p_Action.m_MoveDestination);
+    rv &= m_Imap.MoveMessages(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_MoveDestination);
     ClearStatus(Status::FlagMoving);
   }
 
   if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
   {
     SetStatus(Status::FlagUpdatingFlags);
-    result.m_Result &= m_Imap.SetFlagSeen(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_SetSeen);
+    rv &= m_Imap.SetFlagSeen(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_SetSeen);
     ClearStatus(Status::FlagUpdatingFlags);
   }
 
   if (p_Action.m_UploadDraft)
   {
     SetStatus(Status::FlagSaving);
-    result.m_Result &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, true);
+    rv &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, true);
     ClearStatus(Status::FlagSaving);
   }
 
   if (p_Action.m_UploadMessage)
   {
     SetStatus(Status::FlagSaving);
-    result.m_Result &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, false);
+    rv &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, false);
     ClearStatus(Status::FlagSaving);
   }
 
   if (p_Action.m_DeleteMessages)
   {
     SetStatus(Status::FlagDeleting);
-    result.m_Result &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
+    rv &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
     ClearStatus(Status::FlagDeleting);
   }
 
-  if (m_ResultHandler)
-  {
-    m_ResultHandler(p_Action, result);
-  }
-
-  return (result.m_Result);
+  return rv;
 }
 
 void ImapManager::PerformSearch(const SearchQuery& p_SearchQuery)
@@ -625,6 +745,25 @@ void ImapManager::PerformSearch(const SearchQuery& p_SearchQuery)
   if (m_SearchHandler)
   {
     m_SearchHandler(p_SearchQuery, searchResult);
+  }
+}
+
+void ImapManager::SendRequestResponse(const Request& p_Request, const Response& p_Response)
+{
+  if (m_ResponseHandler)
+  {
+    m_ResponseHandler(p_Request, p_Response);
+  }
+}
+
+void ImapManager::SendActionResult(const Action& p_Action, bool p_Result)
+{
+  Result result;
+  result.m_Result = p_Result;
+
+  if (m_ResultHandler)
+  {
+    m_ResultHandler(p_Action, result);
   }
 }
 

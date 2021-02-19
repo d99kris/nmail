@@ -20,7 +20,8 @@
 #include "util.h"
 
 Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-           const uint16_t p_Port, const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
+           const uint16_t p_Port, const int64_t p_Timeout,
+           const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
            const std::set<std::string>& p_FoldersExclude,
            const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_User(p_User)
@@ -48,6 +49,8 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
   {
     mailimap_set_logger(m_Imap, Logger, NULL);
   }
+
+  mailimap_set_timeout(m_Imap, p_Timeout);
 
   std::set<std::string> folders;
   GetFolders(true /* p_Cached */, folders);

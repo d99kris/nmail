@@ -19,7 +19,8 @@ class Smtp
 {
 public:
   Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-       const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address);
+       const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address,
+       const int64_t p_Timeout);
   virtual ~Smtp();
 
   bool Send(const std::string& p_Subject, const std::string& p_Message,
@@ -57,4 +58,5 @@ private:
   uint16_t m_Port = 0;
   std::string m_Name;
   std::string m_Address;
+  int64_t m_Timeout = 0;
 };

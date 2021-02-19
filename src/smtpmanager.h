@@ -51,7 +51,7 @@ public:
 public:
   SmtpManager(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
               const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address,
-              const bool p_Connect,
+              const bool p_Connect, const int64_t p_Timeout,
               const std::function<void(const SmtpManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~SmtpManager();
@@ -71,10 +71,11 @@ private:
   std::string m_User;
   std::string m_Pass;
   std::string m_Host;
-  uint16_t m_Port;
+  uint16_t m_Port = 0;
   std::string m_Name;
   std::string m_Address;
-  bool m_Connect;
+  bool m_Connect = false;
+  int64_t m_Timeout = 0;
   std::function<void(const SmtpManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::atomic<bool> m_Running;

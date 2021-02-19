@@ -15,13 +15,15 @@
 #include "loghelp.h"
 
 Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-           const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address)
+           const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address,
+           const int64_t p_Timeout)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
   , m_Port(p_Port)
   , m_Name(p_Name)
   , m_Address(p_Address)
+  , m_Timeout(p_Timeout)
 {
   if (Log::GetTraceEnabled())
   {
@@ -78,6 +80,8 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
   {
     mailsmtp_set_logger(smtp, Logger, NULL);
   }
+
+  mailsmtp_set_timeout(smtp, m_Timeout);
 
   int rv = MAILSMTP_NO_ERROR;
   if (enableSsl)

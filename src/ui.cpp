@@ -4865,6 +4865,7 @@ void Ui::StartSync()
     if (m_PrefetchLevel < PrefetchLevelFullSync)
     {
       LOG_DEBUG("manual full sync started");
+      m_PrefetchLevel = PrefetchLevelFullSync;
 
       ImapManager::Request request;
       request.m_PrefetchLevel = PrefetchLevelFullSync;

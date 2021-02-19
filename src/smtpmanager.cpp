@@ -15,7 +15,7 @@
 SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
                          const std::string& p_Host, const uint16_t p_Port,
                          const std::string& p_Name, const std::string& p_Address,
-                         const bool p_Connect,
+                         const bool p_Connect, const int64_t p_Timeout,
                          const std::function<void(const SmtpManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_User(p_User)
@@ -25,6 +25,7 @@ SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
   , m_Name(p_Name)
   , m_Address(p_Address)
   , m_Connect(p_Connect)
+  , m_Timeout(p_Timeout)
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_Running(false)
@@ -164,7 +165,7 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   const std::string& ref = p_Action.m_RefMsgId;
   const std::vector<std::string> att = Util::ExpandPaths(Util::Trim(Util::Split(p_Action.m_Att)));
 
-  Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address);
+  Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address, m_Timeout);
 
   if (p_Action.m_IsSendMessage)
   {

@@ -47,6 +47,7 @@ public:
     std::set<uint32_t> m_GetHeaders;
     std::set<uint32_t> m_GetFlags;
     std::set<uint32_t> m_GetBodys;
+    uint32_t m_TryCount = 0;
   };
 
   struct Response
@@ -72,6 +73,7 @@ public:
     bool m_DeleteMessages = false;
     std::string m_MoveDestination;
     std::string m_Msg;
+    uint32_t m_TryCount = 0;
   };
 
   struct Result
@@ -95,7 +97,8 @@ public:
 
 public:
   ImapManager(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-              const uint16_t p_Port, const bool p_Connect, const bool p_CacheEncrypt,
+              const uint16_t p_Port, const bool p_Connect, const int64_t p_Timeout,
+              const bool p_CacheEncrypt,
               const bool p_CacheIndexEncrypt,
               const std::set<std::string>& p_FoldersExclude,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
@@ -117,11 +120,14 @@ public:
 private:
   bool ProcessIdle();
   void Process();
+  void CheckConnectivityAndReconnect();
   void CacheProcess();
   void SearchProcess();
-  bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch);
+  bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch, Response& p_Response);
   bool PerformAction(const Action& p_Action);
   void PerformSearch(const SearchQuery& p_SearchQuery);
+  void SendRequestResponse(const Request& p_Request, const Response& p_Response);
+  void SendActionResult(const Action& p_Action, bool p_Result);
   void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
 
@@ -166,4 +172,6 @@ private:
   std::deque<SearchQuery> m_SearchQueue;
   std::condition_variable m_SearchCond;
   std::mutex m_SearchMutex;
+
+  bool m_OnceConnected = false;
 };
