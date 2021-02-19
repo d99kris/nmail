@@ -350,6 +350,7 @@ void ImapManager::Process()
             if (!m_Imap.CheckConnection())
             {
               LOG_WARNING("action failed due to connection lost");
+              SetStatus(Status::FlagConnecting);
               isConnected = false;
             }
             else if (action.m_TryCount < 2)
@@ -396,6 +397,7 @@ void ImapManager::Process()
             if (!m_Imap.CheckConnection())
             {
               LOG_WARNING("request failed due to connection lost");
+              SetStatus(Status::FlagConnecting);
               isConnected = false;
               retry = true;
             }
@@ -455,6 +457,7 @@ void ImapManager::Process()
             if (!m_Imap.CheckConnection())
             {
               LOG_WARNING("prefetch request failed due to connection lost");
+              SetStatus(Status::FlagConnecting);
               isConnected = false;
               retry = true;
             }
@@ -488,8 +491,8 @@ void ImapManager::Process()
 
         if (!isConnected)
         {
-          LOG_DEBUG("checking connectivity");
-          CheckConnectivityAndReconnect();
+          LOG_WARNING("processing failed");
+          CheckConnectivityAndReconnect(!isConnected);
         }
 
         m_QueueMutex.lock();
@@ -512,8 +515,8 @@ void ImapManager::Process()
 
     if (!rv)
     {
-      LOG_DEBUG("checking connectivity");
-      CheckConnectivityAndReconnect();
+      LOG_WARNING("idle failed");
+      CheckConnectivityAndReconnect(false);
     }
   }
 
@@ -530,14 +533,15 @@ void ImapManager::Process()
   m_ExitedCond.notify_one();
 }
 
-void ImapManager::CheckConnectivityAndReconnect()
+void ImapManager::CheckConnectivityAndReconnect(bool p_SkipCheck)
 {
-  if (!m_Imap.CheckConnection())
+  if (p_SkipCheck || !m_Imap.CheckConnection())
   {
+    LOG_WARNING("connection lost");
+
     m_Connecting = true;
     SetStatus(Status::FlagConnecting);
     ClearStatus(Status::FlagConnected);
-    LOG_WARNING("connection lost");
 
     m_Imap.Logout();
     bool connected = false;

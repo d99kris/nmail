@@ -120,7 +120,7 @@ public:
 private:
   bool ProcessIdle();
   void Process();
-  void CheckConnectivityAndReconnect();
+  void CheckConnectivityAndReconnect(bool p_SkipCheck);
   void CacheProcess();
   void SearchProcess();
   bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch, Response& p_Response);
