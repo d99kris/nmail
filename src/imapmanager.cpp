@@ -226,7 +226,7 @@ bool ImapManager::ProcessIdle()
   while (m_Running && (selrv == 0))
   {
     int idlefd = m_Imap.IdleStart(currentFolder);
-    if (idlefd == -1)
+    if ((idlefd == -1) || !m_Running)
     {
       rv = false;
       break;
@@ -245,7 +245,7 @@ bool ImapManager::ProcessIdle()
     m_Imap.IdleDone();
     ClearStatus(Status::FlagIdle);
 
-    if ((selrv != 0) && FD_ISSET(idlefd, &fds))
+    if ((selrv != 0) && FD_ISSET(idlefd, &fds) && !m_Running)
     {
       LOG_DEBUG("idle notification");
 
