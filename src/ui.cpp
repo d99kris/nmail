@@ -3903,6 +3903,8 @@ void Ui::UploadDraftMessage()
         {
           MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
         }
+
+        m_HasRequestedUids[m_DraftsFolder] = false;
       }
       else
       {
@@ -4971,6 +4973,8 @@ void Ui::HandleConnected()
       imapAction.m_Folder = m_DraftsFolder;
       imapAction.m_Msg = draftMsg;
       m_ImapManager->AsyncAction(imapAction);
+
+      m_HasRequestedUids[m_DraftsFolder] = false;
     }
 
     std::vector<std::string> outboxMsgs = OfflineQueue::PopOutboxMessages();
