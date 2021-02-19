@@ -304,7 +304,10 @@ Real name of sender. Recommended when sending emails.
 
 ### network_timeout
 
-Specify timeout for IMAP and SMTP operations in seconds. Default 30 seconds.
+Specify timeout for IMAP and SMTP operations in seconds. If using a very slow
+network connection and sending very large emails it may be necessary to increase
+this timeout. By setting it to 0 network operations will not time out.
+Default 30 seconds.
 
 ### pager_cmd
 
