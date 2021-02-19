@@ -3293,7 +3293,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     }
   }
 
-  if (m_PrefetchLevel == PrefetchLevelFullSync)
+  if (p_Request.m_PrefetchLevel == PrefetchLevelFullSync)
   {
     if (p_Request.m_GetFolders && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetFoldersFailed))
     {
@@ -3305,7 +3305,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           break;
         }
 
-        if (!m_HasRequestedUids[folder] && !m_HasPrefetchRequestedUids[folder])
+        if (!m_HasPrefetchRequestedUids[folder])
         {
           ImapManager::Request request;
           request.m_PrefetchLevel = PrefetchLevelFullSync;
@@ -4865,7 +4865,6 @@ void Ui::StartSync()
     if (m_PrefetchLevel < PrefetchLevelFullSync)
     {
       LOG_DEBUG("manual full sync started");
-      m_PrefetchLevel = PrefetchLevelFullSync;
 
       ImapManager::Request request;
       request.m_PrefetchLevel = PrefetchLevelFullSync;
