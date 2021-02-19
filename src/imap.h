@@ -51,7 +51,7 @@ public:
 
   bool GetConnected();
   int IdleStart(const std::string& p_Folder);
-  void IdleDone();
+  bool IdleDone();
   bool UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft);
 
   void Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,

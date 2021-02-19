@@ -243,8 +243,14 @@ bool ImapManager::ProcessIdle()
     struct timeval idletv = {(29 * 60), 0};
     selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
 
-    m_Imap.IdleDone();
+    bool idleRv = m_Imap.IdleDone();
     ClearStatus(Status::FlagIdle);
+
+    if (!idleRv)
+    {
+      rv = false;
+      break;
+    }
 
     if ((selrv != 0) && FD_ISSET(idlefd, &fds) && !m_Running)
     {
@@ -313,11 +319,11 @@ void ImapManager::Process()
     int maxfd = m_Pipe[0];
     struct timeval tv = {15, 0};
     int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
-    bool rv = true;
+    bool idleRv = true;
 
     if ((selrv == 0) && m_Imap.GetConnected())
     {
-      rv &= ProcessIdle();
+      idleRv &= ProcessIdle();
     }
     else if ((FD_ISSET(m_Pipe[0], &fds)) && m_Imap.GetConnected())
     {
@@ -513,7 +519,7 @@ void ImapManager::Process()
       m_QueueMutex.unlock();
     }
 
-    if (!rv)
+    if (!idleRv)
     {
       LOG_WARNING("idle failed");
       CheckConnectivityAndReconnect(false);

@@ -847,13 +847,14 @@ int Imap::IdleStart(const std::string& p_Folder)
   return -1;
 }
 
-void Imap::IdleDone()
+bool Imap::IdleDone()
 {
   LOG_DEBUG_FUNC(STR());
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
-  mailimap_idle_done(m_Imap);
+  int rv = LOG_IF_IMAP_ERR(mailimap_idle_done(m_Imap));
   m_ImapIndex->NotifyIdle(false);
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
 bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft)
