@@ -204,9 +204,11 @@ Full example of a config file `~/.nmail/main.conf`:
     inbox=INBOX
     msg_viewer_cmd=
     name=Firstname Lastname
+    network_timeout=30
     pager_cmd=
     parts_viewer_cmd=
     prefetch_level=2
+    queue_encrypt=1
     save_pass=1
     sent=Sent
     server_timestamps=0
@@ -300,6 +302,10 @@ message (`.eml` file) with `W`. By default nmail uses `open` on macOS and
 
 Real name of sender. Recommended when sending emails.
 
+### network_timeout
+
+Specify timeout for IMAP and SMTP operations in seconds. Default 30 seconds.
+
 ### pager_cmd
 
 The field `pager_cmd` allows overriding which external pager / text viewer to
@@ -325,6 +331,11 @@ setting. The following levels are supported:
 
 With level 0-2 configured, pre-fetch level 3 - a single full sync - may be
 triggered at run-time by pressing `s` from the message list.
+
+### queue_encrypt
+
+Indicates whether nmail shall encrypt local message offline queue or not
+(default enabled).
 
 ### save_pass
 

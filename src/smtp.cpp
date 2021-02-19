@@ -63,6 +63,20 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   return SendMessage(data, recipients);
 }
 
+bool Smtp::Send(const std::string& p_Data, const std::vector<Contact>& p_To,
+                const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc)
+{
+  LOG_DEBUG_FUNC(STR());
+  LOG_TRACE_FUNC(STR(p_Data, p_To, p_Cc, p_Bcc));
+
+  std::vector<Contact> recipients;
+  recipients.insert(recipients.end(), p_To.begin(), p_To.end());
+  recipients.insert(recipients.end(), p_Cc.begin(), p_Cc.end());
+  recipients.insert(recipients.end(), p_Bcc.begin(), p_Bcc.end());
+
+  return SendMessage(p_Data, recipients);
+}
+
 bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients)
 {
   LOG_DEBUG_FUNC(STR());

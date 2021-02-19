@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "loghelp.h"
+#include "serialized.h"
 #include "util.h"
 
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
@@ -139,7 +140,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
   }
   else
   {
-    LOG_WARNING("async request not permitted while offline");
+    LOG_DEBUG("async request ignored in offline mode");
   }
 }
 
@@ -160,7 +161,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
   }
   else
   {
-    LOG_WARNING("prefetch request not permitted while offline");
+    LOG_DEBUG("prefetch request ignored in offline mode");
   }
 }
 

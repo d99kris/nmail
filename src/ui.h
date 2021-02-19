@@ -39,6 +39,7 @@ public:
     UiRequestNone = 0,
     UiRequestDrawAll = (1 << 0),
     UiRequestDrawError = (1 << 1),
+    UiRequestHandleConnected = (1 << 2),
   };
 
   enum PrefetchLevel
@@ -163,6 +164,7 @@ private:
   int GetCurrentHeaderField();
   void StartSync();
   std::string MakeHtmlPart(const std::string& p_Text);
+  void HandleConnected();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;

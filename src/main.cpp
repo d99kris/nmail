@@ -17,6 +17,7 @@
 #include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
+#include "offlinequeue.h"
 #include "sasl.h"
 #include "serialized.h"
 #include "sethelp.h"
@@ -140,6 +141,7 @@ int main(int argc, char* argv[])
     { "folders_exclude", "" },
     { "server_timestamps", "0" },
     { "network_timeout", "30" },
+    { "queue_encrypt", "1" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -200,6 +202,7 @@ int main(int argc, char* argv[])
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
+  const bool queueEncrypt = (mainConfig->Get("queue_encrypt") == "1");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
@@ -344,6 +347,7 @@ int main(int argc, char* argv[])
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
   AddressBook::Init(addressBookEncrypt, pass);
+  OfflineQueue::Init(queueEncrypt, pass);
 
   ui.SetImapManager(imapManager);
   ui.SetTrashFolder(trash);
@@ -369,6 +373,7 @@ int main(int argc, char* argv[])
   secretConfig->Save();
   secretConfig.reset();
 
+  OfflineQueue::Cleanup();
   AddressBook::Cleanup();
 
   Util::CleanupTempDir();

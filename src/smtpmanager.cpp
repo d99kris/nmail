@@ -64,7 +64,7 @@ void SmtpManager::Start()
 
 void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
 {
-  if (m_Connect)
+  if (m_Connect || p_Action.m_IsCreateMessage)
   {
     m_Actions.push_front(p_Action);
     write(m_Pipe[1], "1", 1);
@@ -77,7 +77,7 @@ void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
 
 SmtpManager::Result SmtpManager::SyncAction(const SmtpManager::Action& p_Action)
 {
-  if (m_Connect)
+  if (m_Connect || p_Action.m_IsCreateMessage)
   {
     return PerformAction(p_Action);
   }
@@ -180,6 +180,12 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
     const std::string& body = smtp.GetBody(p_Action.m_Body, p_Action.m_HtmlBody, att);
     result.m_Message = header + body;
     result.m_Result = !result.m_Message.empty();
+  }
+  else if (p_Action.m_IsSendCreatedMessage)
+  {
+    SetStatus(Status::FlagSending);
+    result.m_Result = smtp.Send(p_Action.m_CreatedMsg, to, cc, bcc);
+    ClearStatus(Status::FlagSending);
   }
   else
   {

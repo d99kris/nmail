@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "2.59" LANGUAGES CXX C)
+project(nmail VERSION "2.60" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -60,6 +60,8 @@ add_executable(nmail
   src/loghelp.cpp
   src/loghelp.h
   src/main.cpp
+  src/offlinequeue.cpp
+  src/offlinequeue.h
   src/sasl.cpp
   src/sasl.h
   src/searchengine.cpp

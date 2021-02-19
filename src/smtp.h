@@ -31,6 +31,8 @@ public:
             const std::string& p_RefMsgId,
             const std::vector<std::string>& p_AttachmentPaths,
             std::string& p_ResultMessage);
+  bool Send(const std::string& p_Data, const std::vector<Contact>& p_To,
+            const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
   std::string GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
                         const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
                         const std::string& p_RefMsgId);

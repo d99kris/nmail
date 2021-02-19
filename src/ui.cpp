@@ -16,6 +16,7 @@
 #include "flag.h"
 #include "loghelp.h"
 #include "maphelp.h"
+#include "offlinequeue.h"
 #include "sethelp.h"
 #include "status.h"
 
@@ -1549,6 +1550,11 @@ void Ui::PerformUiRequest(char p_UiRequest)
       SmtpResultHandlerError(result);
     }
   }
+
+  if (p_UiRequest & UiRequestHandleConnected)
+  {
+    HandleConnected();
+  }
 }
 
 void Ui::Run()
@@ -2035,65 +2041,44 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyCompose)
   {
-    if (IsConnected())
-    {
-      SetState(StateComposeMessage);
-    }
-    else
-    {
-      SetDialogMessage("Cannot compose while offline");
-    }
+    SetState(StateComposeMessage);
   }
   else if (p_Key == m_KeyReply)
   {
-    if (IsConnected())
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
     {
-      const int uid = m_CurrentFolderUid.second;
-      if (uid != -1)
+      if (CurrentMessageBodyAvailable())
       {
-        if (CurrentMessageBodyAvailable())
-        {
-          SetState(StateReplyMessage);
-        }
-        else
-        {
-          SetDialogMessage("Cannot reply message not fetched");
-        }
+        SetState(StateReplyMessage);
       }
       else
       {
-        SetDialogMessage("No message to reply");
+        SetDialogMessage("Cannot reply message not fetched");
       }
     }
     else
     {
-      SetDialogMessage("Cannot reply while offline");
+      SetDialogMessage("No message to reply");
     }
   }
   else if (p_Key == m_KeyForward)
   {
-    if (IsConnected())
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
     {
-      const int uid = m_CurrentFolderUid.second;
-      if (uid != -1)
+      if (CurrentMessageBodyAvailable())
       {
-        if (CurrentMessageBodyAvailable())
-        {
-          SetState(StateForwardMessage);
-        }
-        else
-        {
-          SetDialogMessage("Cannot forward message not fetched");
-        }
+        SetState(StateForwardMessage);
       }
       else
       {
-        SetDialogMessage("No message to forward");
+        SetDialogMessage("Cannot forward message not fetched");
       }
     }
     else
     {
-      SetDialogMessage("Cannot forward while offline");
+      SetDialogMessage("No message to forward");
     }
   }
   else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
@@ -2244,49 +2229,28 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyCompose)
   {
-    if (IsConnected())
-    {
-      SetState(StateComposeMessage);
-    }
-    else
-    {
-      SetDialogMessage("Cannot compose while offline");
-    }
+    SetState(StateComposeMessage);
   }
   else if (p_Key == m_KeyReply)
   {
-    if (IsConnected())
+    if (CurrentMessageBodyAvailable())
     {
-      if (CurrentMessageBodyAvailable())
-      {
-        SetState(StateReplyMessage);
-      }
-      else
-      {
-        SetDialogMessage("Cannot reply message not fetched");
-      }
+      SetState(StateReplyMessage);
     }
     else
     {
-      SetDialogMessage("Cannot reply while offline");
+      SetDialogMessage("Cannot reply message not fetched");
     }
   }
   else if (p_Key == m_KeyForward)
   {
-    if (IsConnected())
+    if (CurrentMessageBodyAvailable())
     {
-      if (CurrentMessageBodyAvailable())
-      {
-        SetState(StateForwardMessage);
-      }
-      else
-      {
-        SetDialogMessage("Cannot forward message not fetched");
-      }
+      SetState(StateForwardMessage);
     }
     else
     {
-      SetDialogMessage("Cannot forward while offline");
+      SetDialogMessage("Cannot forward message not fetched");
     }
   }
   else if (p_Key == m_KeyToggleTextHtml)
@@ -3632,7 +3596,13 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
     m_ImapManager->PrefetchRequest(request);
   }
 
-  AsyncUiRequest(UiRequestDrawAll);
+  char uiRequest = UiRequestDrawAll;
+  if (p_StatusUpdate.SetFlags & Status::FlagConnected)
+  {
+    uiRequest |= UiRequestHandleConnected;
+  }
+
+  AsyncUiRequest(uiRequest);
 }
 
 void Ui::SearchHandler(const ImapManager::SearchQuery& p_SearchQuery,
@@ -3808,7 +3778,6 @@ bool Ui::IsValidTextKey(int p_Key)
 void Ui::SendComposedMessage()
 {
   SmtpManager::Action smtpAction;
-  smtpAction.m_IsSendMessage = true;
   smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
   smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
   smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
@@ -3821,7 +3790,25 @@ void Ui::SendComposedMessage()
   smtpAction.m_ComposeTempDirectory = m_ComposeTempDirectory;
   smtpAction.m_ComposeDraftUid = m_ComposeDraftUid;
 
-  m_SmtpManager->AsyncAction(smtpAction);
+  if (IsConnected())
+  {
+    smtpAction.m_IsSendMessage = true;
+    m_SmtpManager->AsyncAction(smtpAction);
+  }
+  else
+  {
+    smtpAction.m_IsCreateMessage = true;
+    SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+    if (smtpResult.m_Result)
+    {
+      OfflineQueue::PushOutboxMessage(smtpResult.m_Message);
+      SetDialogMessage("Message queued for sending");
+    }
+    else
+    {
+      SetDialogMessage("Message creation failed", true /* p_Warn */);
+    }
+  }
 }
 
 void Ui::UploadDraftMessage()
@@ -3847,12 +3834,25 @@ void Ui::UploadDraftMessage()
       imapAction.m_UploadDraft = true;
       imapAction.m_Folder = m_DraftsFolder;
       imapAction.m_Msg = smtpResult.m_Message;
-      m_ImapManager->AsyncAction(imapAction);
 
-      if (m_ComposeDraftUid != 0)
+      if (IsConnected())
       {
-        MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+        m_ImapManager->AsyncAction(imapAction);
+
+        if (m_ComposeDraftUid != 0)
+        {
+          MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+        }
       }
+      else
+      {
+        OfflineQueue::PushDraftMessage(smtpResult.m_Message);
+        SetDialogMessage("Message queued for draft upload");
+      }
+    }
+    else
+    {
+      SetDialogMessage("Message creation failed", true /* p_Warn */);
     }
   }
   else
@@ -4895,4 +4895,40 @@ std::string Ui::MakeHtmlPart(const std::string& p_Text)
 void Ui::SetRunning(bool p_Running)
 {
   s_Running = p_Running;
+}
+
+void Ui::HandleConnected()
+{
+  if (IsConnected())
+  {
+    std::vector<std::string> draftMsgs = OfflineQueue::PopDraftMessages();
+    for (const auto& draftMsg : draftMsgs)
+    {
+      SetDialogMessage("Uploading queued draft messages");
+
+      ImapManager::Action imapAction;
+      imapAction.m_UploadDraft = true;
+      imapAction.m_Folder = m_DraftsFolder;
+      imapAction.m_Msg = draftMsg;
+      m_ImapManager->AsyncAction(imapAction);
+    }
+
+    std::vector<std::string> outboxMsgs = OfflineQueue::PopOutboxMessages();
+    for (const auto& outboxMsg : outboxMsgs)
+    {
+      SetDialogMessage("Sending queued messages");
+
+      Header header;
+      header.SetData(outboxMsg);
+
+      SmtpManager::Action smtpAction;
+      smtpAction.m_CreatedMsg = outboxMsg;
+      smtpAction.m_To = header.GetTo();
+      smtpAction.m_Cc = header.GetCc();
+      smtpAction.m_Bcc = header.GetBcc();
+      smtpAction.m_IsSendCreatedMessage = true;
+
+      m_SmtpManager->AsyncAction(smtpAction);
+    }
+  }
 }
