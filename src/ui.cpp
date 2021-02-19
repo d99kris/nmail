@@ -3461,7 +3461,8 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
     }
     else if (p_Action.m_UploadDraft)
     {
-      SetDialogMessage("Saving draft message failed", true /* p_Warn */);
+      SetDialogMessage("Saving draft failed, message queued for upload", true /* p_Warn */);
+      OfflineQueue::PushDraftMessage(p_Action.m_Msg);
     }
     else if (p_Action.m_UploadMessage)
     {
@@ -3480,43 +3481,85 @@ void Ui::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::R
 
 void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
 {
+  bool saveDraft = false;
+  SmtpManager::Action smtpAction = p_Result.m_Action;
+  std::string draftMessage;
+
   if (!m_DraftsFolder.empty())
   {
-    SmtpManager::Action smtpAction = p_Result.m_Action;
-    const std::string msg =
-      (smtpAction.m_ComposeDraftUid != 0)
-      ? "Send message failed. Overwrite draft (y/n)?"
-      : "Send message failed. Save draft (y/n)?";
-    if (PromptYesNo(msg))
+    if (smtpAction.m_IsSendCreatedMessage)
     {
-      smtpAction.m_IsSendMessage = false;
-      smtpAction.m_IsCreateMessage = true;
-
-      SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-      if (smtpResult.m_Result)
+      SetDialogMessage("Failed sending queued message, uploading draft");
+      saveDraft = true;
+      draftMessage = smtpAction.m_CreatedMsg;
+    }
+    else
+    {
+      const std::string msg =
+        (smtpAction.m_ComposeDraftUid != 0)
+        ? "Send message failed. Overwrite draft (y) or queue send (n)?"
+        : "Send message failed. Save draft (y) or queue send (n)?";
+      if (PromptYesNo(msg))
       {
-        ImapManager::Action imapAction;
-        imapAction.m_UploadDraft = true;
-        imapAction.m_Folder = m_DraftsFolder;
-        imapAction.m_Msg = smtpResult.m_Message;
-        m_ImapManager->AsyncAction(imapAction);
+        saveDraft = true;
+        smtpAction.m_IsSendMessage = false;
+        smtpAction.m_IsCreateMessage = true;
 
-        if (smtpAction.m_ComposeDraftUid != 0)
+        SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+        if (smtpResult.m_Result)
         {
-          MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
-          m_HasRequestedUids[m_TrashFolder] = false;
+          draftMessage = smtpResult.m_Message;
         }
-
-        m_HasRequestedUids[m_DraftsFolder] = false;
+        else
+        {
+          SetDialogMessage("Message creation failed", true /* p_Warn */);
+          return;
+        }
       }
     }
+  }
 
-    AsyncUiRequest(UiRequestDrawAll);
+  if (saveDraft)
+  {
+    ImapManager::Action imapAction;
+    imapAction.m_UploadDraft = true;
+    imapAction.m_Folder = m_DraftsFolder;
+    imapAction.m_Msg = draftMessage;
+    m_ImapManager->AsyncAction(imapAction);
+
+    if (smtpAction.m_ComposeDraftUid != 0)
+    {
+      MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+      m_HasRequestedUids[m_TrashFolder] = false;
+    }
+
+    m_HasRequestedUids[m_DraftsFolder] = false;
   }
   else
   {
-    SetDialogMessage("Send message failed", true /* p_Warn */);
+    if (!smtpAction.m_IsSendCreatedMessage)
+    {
+      smtpAction.m_IsSendMessage = false;
+      smtpAction.m_IsCreateMessage = true;
+      SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
+      if (smtpResult.m_Result)
+      {
+        draftMessage = smtpResult.m_Message;
+      }
+      else
+      {
+        SetDialogMessage("Message creation failed", true /* p_Warn */);
+      }
+    }
+
+    if (!draftMessage.empty())
+    {
+      OfflineQueue::PushOutboxMessage(draftMessage);
+      SetDialogMessage("Message queued for sending");
+    }
   }
+
+  AsyncUiRequest(UiRequestDrawAll);
 }
 
 void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
