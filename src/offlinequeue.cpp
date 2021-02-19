@@ -11,6 +11,7 @@
 
 #include "cacheutil.h"
 #include "crypto.h"
+#include "loghelp.h"
 #include "serialized.h"
 #include "util.h"
 
@@ -71,9 +72,12 @@ void OfflineQueue::PushComposeMessage(const std::string& p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
+  std::string tmpPath = Util::GetTempDir() + "compose.eml";
+  WriteCacheFile(tmpPath, p_Str);
+
   int i = 0;
   std::string msgPath = GetComposeQueueDir() + std::to_string(i) + ".eml";
-  WriteCacheFile(msgPath, p_Str);
+  Util::Move(tmpPath, msgPath);
 }
 
 std::vector<std::string> OfflineQueue::PopDraftMessages()

@@ -536,7 +536,7 @@ file (platform-dependent defaults are left empty below):
     bottom_reply=0
     cancel_without_confirm=0
     colors_enabled=0
-    compose_backup_interval=60
+    compose_backup_interval=10
     compose_hardwrap=0
     delete_without_confirm=0
     help_enabled=1
@@ -611,7 +611,7 @@ Enable terminal color output (default disabled).
 
 ### compose_backup_interval
 
-Specify interval in seconds for local backups during compose (default 60).
+Specify interval in seconds for local backups during compose (default 10).
 If the system running nmail is unexpectedly shutdown while user is composing
 an email, then upon next nmail startup any backuped compose message will be
 automatically uploaded to the draft folder.

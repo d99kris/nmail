@@ -222,6 +222,11 @@ void Util::RmDir(const std::string& p_Path)
   }
 }
 
+void Util::Move(const std::string& p_From, const std::string& p_To)
+{
+  apathy::Path::move(p_From, p_To);
+}
+
 void Util::Touch(const std::string& p_Path)
 {
   utimensat(0, p_Path.c_str(), NULL, 0);

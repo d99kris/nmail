@@ -116,7 +116,7 @@ void Ui::Init()
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
-    { "compose_backup_interval", "60" },
+    { "compose_backup_interval", "10" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);

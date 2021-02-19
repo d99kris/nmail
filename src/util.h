@@ -131,6 +131,7 @@ public:
   static std::string AbsolutePath(const std::string& p_Path);
   static void MkDir(const std::string& p_Path);
   static void RmDir(const std::string& p_Path);
+  static void Move(const std::string& p_From, const std::string& p_To);
   static void Touch(const std::string& p_Path);
   static std::string GetApplicationDir();
   static void SetApplicationDir(const std::string& p_Path);
