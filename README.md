@@ -25,6 +25,7 @@ Features
 - Saving and continuing draft messages
 - Compose HTML emails using Markdown (see `markdown_html_compose` option)
 - Email search
+- Compose emails while offline
 
 Not Supported / Out of Scope
 ----------------------------
