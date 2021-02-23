@@ -229,7 +229,7 @@ bool ImapManager::ProcessIdle()
     {
       SendRequestResponse(request, response);
     }
-    
+
     if (!rv)
     {
       return rv;
@@ -357,7 +357,7 @@ void ImapManager::Process()
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
         bool isConnected = true;
-        
+
         while (!m_Actions.empty() && m_Running && isConnected)
         {
           Action action = m_Actions.front();
@@ -365,7 +365,7 @@ void ImapManager::Process()
           m_QueueMutex.unlock();
 
           bool result = PerformAction(action);
-          
+
           bool retry = false;
           if (!result)
           {
@@ -495,7 +495,7 @@ void ImapManager::Process()
           {
             SendRequestResponse(request, response);
           }
-          
+
           m_QueueMutex.lock();
 
           if (retry)
@@ -647,7 +647,7 @@ void ImapManager::CacheProcess()
           {
             LOG_WARNING("cache request failed");
           }
-          
+
           SendRequestResponse(request, response);
 
           m_CacheQueueMutex.lock();
