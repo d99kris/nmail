@@ -120,6 +120,7 @@ public:
 private:
   bool ProcessIdle();
   void Process();
+  bool CheckConnectivity();
   void CheckConnectivityAndReconnect(bool p_SkipCheck);
   void CacheProcess();
   void SearchProcess();

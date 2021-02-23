@@ -40,6 +40,10 @@ std::string Status::ToString(bool p_ShowProgress)
   {
     str = "Connecting";
   }
+  else if (m_Flags & FlagChecking)
+  {
+    str = "Checking";
+  }
   else if (m_Flags & FlagFetching)
   {
     if (p_ShowProgress && (m_Progress > 0))
