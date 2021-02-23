@@ -66,10 +66,17 @@ Imap::~Imap()
   m_ImapIndex.reset();
   m_ImapCache.reset();
 
-  if (m_Imap != NULL)
+  if (m_Aborting)
   {
-    mailimap_free(m_Imap);
-    m_Imap = NULL;
+    LOG_DEBUG("skip cleanup");
+  }
+  else
+  {
+    if (m_Imap != NULL)
+    {
+      mailimap_free(m_Imap);
+      m_Imap = NULL;
+    }
   }
 }
 
@@ -892,6 +899,11 @@ void Imap::Search(const std::string& p_QueryStr, const unsigned p_Offset, const 
                   bool& p_HasMore)
 {
   return m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
+}
+
+void Imap::SetAborting(bool p_Aborting)
+{
+  m_Aborting = p_Aborting;
 }
 
 bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)

@@ -36,6 +36,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
+  , m_Aborting(false)
 {
   pipe(m_Pipe);
   pipe(m_CachePipe);
@@ -64,7 +65,7 @@ ImapManager::~ImapManager()
     m_Running = false;
     write(m_Pipe[1], "1", 1);
 
-    if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
+    if (m_ExitedCond.wait_for(lock, std::chrono::seconds(3)) != std::cv_status::timeout)
     {
       m_Thread.join();
       LOG_DEBUG("process thread joined");
@@ -72,6 +73,20 @@ ImapManager::~ImapManager()
     else
     {
       LOG_WARNING("process thread exit timeout");
+
+      LOG_DEBUG("process thread abort");
+      m_Aborting = true;
+      m_Imap.SetAborting(true);
+      pthread_kill(m_ThreadId, SIGUSR2);
+      if (m_ExitedCond.wait_for(lock, std::chrono::seconds(1)) != std::cv_status::timeout)
+      {
+        m_Thread.join();
+        LOG_DEBUG("process thread joined");
+      }
+      else
+      {
+        LOG_WARNING("process thread abort timeout");
+      }
     }
   }
 
@@ -286,6 +301,7 @@ bool ImapManager::ProcessIdle()
 void ImapManager::Process()
 {
   THREAD_REGISTER();
+  m_ThreadId = pthread_self();
 
   if (m_Connect)
   {
@@ -519,7 +535,7 @@ void ImapManager::Process()
       m_QueueMutex.unlock();
     }
 
-    if (!idleRv)
+    if (m_Running && !idleRv)
     {
       LOG_WARNING("idle failed");
       CheckConnectivityAndReconnect(false);
@@ -528,11 +544,18 @@ void ImapManager::Process()
 
   LOG_DEBUG("exiting loop");
 
-  if (m_Connect)
+  if (m_Aborting)
   {
-    LOG_DEBUG("logout start");
-    m_Imap.Logout();
-    LOG_DEBUG("logout complete");
+    LOG_DEBUG("skip logout");
+  }
+  else
+  {
+    if (m_Connect)
+    {
+      LOG_DEBUG("logout start");
+      m_Imap.Logout();
+      LOG_DEBUG("logout complete");
+    }
   }
 
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);

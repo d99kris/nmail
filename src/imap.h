@@ -58,6 +58,8 @@ public:
               std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
               bool& p_HasMore);
 
+  void SetAborting(bool p_Aborting);
+
 private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);
   bool SelectedFolderIsEmpty();
@@ -85,6 +87,7 @@ private:
 
   std::mutex m_ConnectedMutex;
   bool m_Connected = false;
+  bool m_Aborting = false;
 
   std::unique_ptr<ImapCache> m_ImapCache;
   std::unique_ptr<ImapIndex> m_ImapIndex;

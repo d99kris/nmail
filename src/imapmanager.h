@@ -142,8 +142,10 @@ private:
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
   std::atomic<bool> m_CacheRunning;
+  std::atomic<bool> m_Aborting;
   std::thread m_Thread;
   std::thread m_CacheThread;
+  pthread_t m_ThreadId;
 
   std::deque<Request> m_Requests;
   std::deque<Request> m_CacheRequests;
