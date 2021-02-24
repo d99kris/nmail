@@ -249,6 +249,9 @@ private:
   int m_FolderListCurrentIndex = 0;
   std::string m_FolderListCurrentFolder;
 
+  int m_PersistedFolderListCurrentIndex = 0;
+  std::string m_PersistedFolderListCurrentFolder;
+
   Config m_Config;
 
   bool m_ComposeHardwrap = false;
@@ -310,6 +313,9 @@ private:
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;
+
+  int m_PersistedFolderListFilterPos = 0;
+  std::wstring m_PersistedFolderListFilterStr;
 
   int m_AddressListFilterPos = 0;
   std::wstring m_AddressListFilterStr;

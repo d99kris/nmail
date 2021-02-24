@@ -1730,6 +1730,14 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetState(m_LastState);
       }
+
+      if (m_PersistFolderFilter)
+      {
+        m_PersistedFolderListFilterPos = m_FolderListFilterPos;
+        m_PersistedFolderListFilterStr = m_FolderListFilterStr;
+        m_PersistedFolderListCurrentFolder = m_FolderListCurrentFolder;
+        m_PersistedFolderListCurrentIndex = m_FolderListCurrentIndex;
+      }
     }
   }
   else if (p_Key == KEY_LEFT)
@@ -2871,7 +2879,14 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateMoveToFolder)
   {
     curs_set(1);
-    if (!m_PersistFolderFilter)
+    if (m_PersistFolderFilter)
+    {
+      m_FolderListFilterPos = m_PersistedFolderListFilterPos;
+      m_FolderListFilterStr = m_PersistedFolderListFilterStr;
+      m_FolderListCurrentFolder = m_PersistedFolderListCurrentFolder;
+      m_FolderListCurrentIndex = m_PersistedFolderListCurrentIndex;
+    }
+    else
     {
       m_FolderListFilterPos = 0;
       m_FolderListFilterStr.clear();
