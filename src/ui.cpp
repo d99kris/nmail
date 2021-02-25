@@ -4270,7 +4270,7 @@ void Ui::ComposeMessagePrevLine()
 
 void Ui::ComposeMessageNextLine()
 {
-  if ((m_ComposeMessageWrapLine + 1) < (int)m_ComposeMessageLines.size())
+  if ((m_ComposeMessageWrapLine + 1) <= (int)m_ComposeMessageLines.size())
   {
     int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
       m_ComposeMessageWrapPos + 1;
