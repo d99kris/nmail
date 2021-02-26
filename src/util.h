@@ -186,6 +186,7 @@ public:
   }
 
   static std::string ToLower(const std::string& p_Str);
+  static std::wstring ToLower(const std::wstring& p_WStr);
   static std::vector<std::string> Split(const std::string& p_Str, char p_Sep = ',');
   static std::vector<std::string> SplitQuoted(const std::string& p_Str);
   static std::string Trim(const std::string& p_Str);

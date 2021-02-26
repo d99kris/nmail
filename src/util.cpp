@@ -670,6 +670,13 @@ std::string Util::ToLower(const std::string& p_Str)
   return lower;
 }
 
+std::wstring Util::ToLower(const std::wstring& p_WStr)
+{
+  std::wstring lower = p_WStr;
+  std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+  return lower;
+}
+
 std::vector<std::string> Util::Split(const std::string& p_Str, char p_Sep)
 {
   std::vector<std::string> vec;

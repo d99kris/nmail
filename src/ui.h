@@ -158,6 +158,8 @@ private:
   void ExportMessage();
   void ImportMessage();
   void SearchMessage();
+  void MessageFind();
+  void MessageFindNext();
   void Quit();
   std::wstring GetComposeStr(int p_HeaderField);
   void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
@@ -240,6 +242,7 @@ private:
 
   int m_MessageViewLineOffset = 0;
   bool m_PersistFileSelectionDir = true;
+  bool m_PersistFindQuery = false;
   bool m_PersistFolderFilter = true;
   bool m_PersistSearchQuery = false;
   bool m_Plaintext = true;
@@ -287,6 +290,8 @@ private:
   int m_KeyExtHtmlPreview = 0;
   int m_KeyExtMsgViewer = 0;
   int m_KeySearch = 0;
+  int m_KeyFind = 0;
+  int m_KeyFindNext = 0;
   int m_KeySync = 0;
   int m_KeyToggleMarkdownCompose = 0;
   int m_KeyBackwardWord = 0;
@@ -377,6 +382,10 @@ private:
   bool m_ComposeBackupRunning = false;
   std::condition_variable m_ComposeBackupCond;
   std::mutex m_ComposeBackupMutex;
+
+  int m_MessageFindMatchLine = -1;
+  int m_MessageFindMatchPos = 0;
+  std::string m_MessageFindQuery;
 
 private:
   static bool s_Running;

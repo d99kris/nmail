@@ -55,6 +55,7 @@ void Ui::Init()
     { "compose_hardwrap", "0" },
     { "help_enabled", "1" },
     { "persist_file_selection_dir", "1" },
+    { "persist_find_query", "0" },
     { "persist_folder_filter", "1" },
     { "persist_search_query", "0" },
     { "plain_text", "1" },
@@ -98,6 +99,8 @@ void Ui::Init()
     { "key_ext_html_preview", "KEY_CTRLV" },
     { "key_ext_msg_viewer", "w" },
     { "key_search", "/" },
+    { "key_find", "/" },
+    { "key_find_next", "?" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
 #if defined(__APPLE__)
@@ -125,6 +128,7 @@ void Ui::Init()
   m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   m_PersistFileSelectionDir = m_Config.Get("persist_file_selection_dir") == "1";
+  m_PersistFindQuery = m_Config.Get("persist_find_query") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
   m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
@@ -159,6 +163,8 @@ void Ui::Init()
   m_KeyExtHtmlPreview = Util::GetKeyCode(m_Config.Get("key_ext_html_preview"));
   m_KeyExtMsgViewer = Util::GetKeyCode(m_Config.Get("key_ext_msg_viewer"));
   m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
+  m_KeyFind = Util::GetKeyCode(m_Config.Get("key_find"));
+  m_KeyFindNext = Util::GetKeyCode(m_Config.Get("key_find_next"));
   m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
   m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
 
@@ -541,6 +547,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
     },
     {
+      GetKeyDisplay(m_KeyFind), "Find",
+      GetKeyDisplay(m_KeyFindNext), "FindNext",
     },
   };
 
@@ -1335,7 +1343,25 @@ void Ui::DrawMessage()
           wattron(m_MainWin, COLOR_PAIR(m_ColorMessageQuoted));
         }
 
-        mvwprintw(m_MainWin, i, 0, "%s", dispStr.c_str());
+        if (!m_MessageFindQuery.empty() && (m_MessageFindMatchLine == (i + m_MessageViewLineOffset)))
+        {
+          // search match
+          const std::wstring wquery = Util::ToWString(m_MessageFindQuery);
+          std::wstring beforeMatch = wdispStr.substr(0, m_MessageFindMatchPos);
+          std::wstring match = wdispStr.substr(m_MessageFindMatchPos, wquery.size());
+          std::wstring afterMatch = wdispStr.substr(m_MessageFindMatchPos + wquery.size());
+
+          mvwaddnwstr(m_MainWin, i, 0, beforeMatch.c_str(), beforeMatch.size());
+          wattron(m_MainWin, A_REVERSE);
+          mvwaddnwstr(m_MainWin, i, beforeMatch.size(), match.c_str(), match.size());
+          wattroff(m_MainWin, A_REVERSE);
+          mvwaddnwstr(m_MainWin, i, beforeMatch.size() + match.size(), afterMatch.c_str(), afterMatch.size());
+        }
+        else
+        {
+          // normal
+          mvwaddnwstr(m_MainWin, i, 0, wdispStr.c_str(), wdispStr.size());
+        }
 
         if (m_ColorsEnabled && isQuote)
         {
@@ -2020,6 +2046,12 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
+      if (m_MessageListSearch)
+      {
+        m_MessageFindMatchLine = -1;
+        m_MessageFindQuery = m_MessageListSearchQuery;
+      }
+
       SetState(StateViewMessage);
     }
   }
@@ -2198,12 +2230,14 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     --m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);
+    m_MessageFindMatchLine = -1;
   }
   else if (p_Key == m_KeyNextMsg)
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
     m_MessageViewLineOffset = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);
+    m_MessageFindMatchLine = -1;
   }
   else if (p_Key == m_KeyPrevPage)
   {
@@ -2273,6 +2307,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyToggleTextHtml)
   {
     m_Plaintext = !m_Plaintext;
+    m_MessageFindMatchLine = -1;
   }
   else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
   {
@@ -2319,6 +2354,21 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyExtMsgViewer)
   {
     ExtMsgViewer();
+  }
+  else if (p_Key == m_KeyFind)
+  {
+    MessageFind();
+  }
+  else if (p_Key == m_KeyFindNext)
+  {
+    if (!m_MessageFindQuery.empty())
+    {
+      MessageFindNext();
+    }
+    else
+    {
+      SetDialogMessage("Find text not set");
+    }
   }
   else
   {
@@ -2908,6 +2958,7 @@ void Ui::SetState(Ui::State p_State)
     curs_set(0);
     m_MessageViewLineOffset = 0;
     m_HelpViewMessageOffset = 0;
+    m_MessageFindMatchLine = -1;
   }
   else if (m_State == StateComposeMessage)
   {
@@ -3951,6 +4002,7 @@ bool Ui::DeleteMessage()
       {
         MoveMessage(uid, folder, m_TrashFolder);
 
+        m_MessageFindMatchLine = -1;
         m_MessageViewLineOffset = 0;
         UpdateUidFromIndex(true /* p_UserTriggered */);
 
@@ -4813,6 +4865,59 @@ void Ui::SearchMessage()
 
       UpdateIndexFromUid();
     }
+  }
+}
+
+void Ui::MessageFind()
+{
+  std::string query = m_PersistFindQuery ? m_MessageFindQuery : "";
+  if (PromptString("Find Text: ", "Find", query))
+  {
+    if (query != m_MessageFindQuery)
+    {
+      m_MessageFindMatchLine = -1;
+      m_MessageFindQuery = query;
+    }
+
+    if (!m_MessageFindQuery.empty())
+    {
+      MessageFindNext();
+    }
+  }
+}
+
+void Ui::MessageFindNext()
+{
+  int findFromLine = m_MessageFindMatchLine + 1;
+  const std::wstring wquery = Util::ToLower(Util::ToWString(m_MessageFindQuery));;
+  const std::wstring wtext = Util::ToWString(m_CurrentMessageViewText);
+  std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxViewLineLength, true);
+  wlines.push_back(L"");
+  int countLines = wlines.size();
+
+  bool found = false;
+  for (int i = findFromLine; i < countLines; ++i)
+  {
+    std::wstring wline = Util::ToLower(wlines.at(i));
+    size_t pos = wline.find(wquery);
+    if (pos != std::string::npos)
+    {
+      m_MessageViewLineOffset = Util::Bound(0, i, countLines - m_MainWinHeight);
+      m_MessageFindMatchLine = i;
+      m_MessageFindMatchPos = pos;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found)
+  {
+    SetDialogMessage((m_MessageFindMatchLine == -1) ? "No matches found" : "No more matches found");
+    m_MessageFindMatchLine = -1; // wrap around search
+  }
+  else
+  {
+    SetDialogMessage("");
   }
 }
 

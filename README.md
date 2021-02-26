@@ -557,6 +557,8 @@ file (platform-dependent defaults are left empty below):
     key_ext_html_viewer=v
     key_ext_msg_viewer=w
     key_ext_pager=e
+    key_find=/
+    key_find_next=?
     key_forward=f
     key_forward_word=
     key_goto_folder=g
@@ -585,6 +587,7 @@ file (platform-dependent defaults are left empty below):
     markdown_html_compose=0
     new_msg_bell=1
     persist_file_selection_dir=1
+    persist_find_query=0
     persist_folder_filter=1
     persist_search_query=0
     plain_text=1
@@ -670,6 +673,11 @@ Indicate new messages with terminal bell (default enabled).
 ### persist_file_selection_dir
 
 Determines whether file selection view shall remember previous directory (default enabled).
+
+### persist_find_query
+
+Controls whether to start with previous find query when performing repeated
+find queries (default disabled).
 
 ### persist_folder_filter
 
