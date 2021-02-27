@@ -170,6 +170,11 @@ private:
   void StartComposeBackup();
   void StopComposeBackup();
   void ComposeBackupProcess();
+  void UpdateFilteredMsgDateUids();
+  std::map<std::string, uint32_t>& GetMsgDateUids(const std::string& p_Folder);
+  void FilterDisable();
+  void ToggleFilterShowUnread();
+  void ToggleFilterShowAttachments();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -300,6 +305,8 @@ private:
   int m_KeyKillWord = 0;
   int m_KeyPrevPage = 0;
   int m_KeyNextPage = 0;
+  int m_KeyFilterShowUnread = 0;
+  int m_KeyFilterShowHasAttachments = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
@@ -386,6 +393,11 @@ private:
   int m_MessageFindMatchLine = -1;
   int m_MessageFindMatchPos = 0;
   std::string m_MessageFindQuery;
+
+  bool m_FilterEnabled = false;
+  bool m_FilterShowUnread = false;
+  bool m_FilterShowAttachments = false;
+  std::map<std::string, std::map<std::string, uint32_t>> m_FilteredMsgDateUids;
 
 private:
   static bool s_Running;

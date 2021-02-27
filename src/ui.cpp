@@ -116,6 +116,8 @@ void Ui::Init()
 #endif
     { "key_prev_page", "KEY_PPAGE" },
     { "key_next_page", "KEY_NPAGE" },
+    { "key_filter_show_unread", "!" },
+    { "key_filter_show_has_attachments", "@" },
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
@@ -175,6 +177,8 @@ void Ui::Init()
 
   m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
+  m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
+  m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -517,6 +521,8 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
+      GetKeyDisplay(m_KeyFilterShowUnread), "FiltUnrd",
+      GetKeyDisplay(m_KeyFilterShowHasAttachments), "FiltAttc",
     },
   };
 
@@ -900,7 +906,7 @@ void Ui::DrawMessageList()
     std::set<uint32_t>& newUids = m_NewUids[m_CurrentFolder];
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
-    auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
+    auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
 
     std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
     std::set<uint32_t>& requestedFlags = m_RequestedFlags[m_CurrentFolder];
@@ -2057,6 +2063,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
+    FilterDisable();
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
@@ -2202,6 +2209,14 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeyExtMsgViewer)
   {
     ExtMsgViewer();
+  }
+  else if (p_Key == m_KeyFilterShowUnread)
+  {
+    ToggleFilterShowUnread();
+  }
+  else if (p_Key == m_KeyFilterShowHasAttachments)
+  {
+    ToggleFilterShowAttachments();
   }
   else
   {
@@ -3864,6 +3879,10 @@ std::string Ui::GetStateStr()
       {
         return "Search: " + m_MessageListSearchQuery;
       }
+      else if (m_FilterEnabled)
+      {
+        return std::string("Filter: ") + (m_FilterShowUnread ? "Unread" : "Attachment");
+      }
       else
       {
         return "Folder: " + m_CurrentFolder;
@@ -4009,7 +4028,7 @@ bool Ui::DeleteMessage()
         bool isMsgDateUidsEmpty = false;
         {
           std::lock_guard<std::mutex> lock(m_Mutex);
-          isMsgDateUidsEmpty = m_MsgDateUids[folder].empty();
+          isMsgDateUidsEmpty = GetMsgDateUids(folder).empty();
         }
 
         if (isMsgDateUidsEmpty)
@@ -4166,7 +4185,7 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
   }
 
   std::lock_guard<std::mutex> lock(m_Mutex);
-  auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
+  auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
 
   m_MessageListCurrentIndex[m_CurrentFolder] =
     Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgDateUids.size() - 1);
@@ -4207,7 +4226,7 @@ void Ui::UpdateIndexFromUid()
 
     if (m_MessageListUidSet[m_CurrentFolder])
     {
-      auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
+      auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
 
       for (auto it = msgDateUids.rbegin(); it != msgDateUids.rend(); ++it)
       {
@@ -4736,7 +4755,7 @@ void Ui::SetLastStateOrMessageList()
   else
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    isMsgDateUidsEmpty = m_MsgDateUids[m_CurrentFolder].empty();
+    isMsgDateUidsEmpty = GetMsgDateUids(m_CurrentFolder).empty();
   }
 
   if (isMsgDateUidsEmpty)
@@ -5185,4 +5204,77 @@ void Ui::ComposeBackupProcess()
   OfflineQueue::PopComposeMessages();
 
   LOG_DEBUG("stopping backup thread");
+}
+
+void Ui::UpdateFilteredMsgDateUids()
+{
+  if (!m_FilterEnabled) return;
+
+  auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
+  auto& filteredMsgDateUids = m_FilteredMsgDateUids[m_CurrentFolder];
+  auto& headers = m_Headers[m_CurrentFolder];
+  auto& flags = m_Flags[m_CurrentFolder];
+
+  filteredMsgDateUids.clear();
+  for (const auto& msgDateUid : msgDateUids)
+  {
+    uint32_t uid = msgDateUid.second;
+    if (m_FilterShowUnread)
+    {
+      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
+      {
+        filteredMsgDateUids.insert(msgDateUid);
+      }
+    }
+    else if (m_KeyFilterShowHasAttachments)
+    {
+      auto header = headers.find(uid);
+      if ((header != headers.end()) && header->second.GetHasAttachments())
+      {
+        filteredMsgDateUids.insert(msgDateUid);
+      }
+    }
+  }
+}
+
+std::map<std::string, uint32_t>& Ui::GetMsgDateUids(const std::string& p_Folder)
+{
+  return m_FilterEnabled ? m_FilteredMsgDateUids[p_Folder]
+                         : m_MsgDateUids[p_Folder];
+}
+
+void Ui::FilterDisable()
+{
+  if (m_FilterEnabled)
+  {
+    m_FilterShowAttachments = false;
+    m_FilterShowUnread = false;
+    m_FilterEnabled = false;
+  }
+}
+
+void Ui::ToggleFilterShowUnread()
+{
+    m_FilterShowUnread = !m_FilterShowUnread;
+    if (m_FilterShowUnread)
+    {
+      m_FilterShowAttachments = false;
+    }
+    m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
+    UpdateFilteredMsgDateUids();
+    m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+}
+
+void Ui::ToggleFilterShowAttachments()
+{
+  m_FilterShowAttachments = !m_FilterShowAttachments;
+  if (m_FilterShowAttachments)
+  {
+    m_FilterShowUnread = false;
+  }
+  m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
+  UpdateFilteredMsgDateUids();
+  m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+  UpdateUidFromIndex(true /* p_UserTriggered */);
 }
