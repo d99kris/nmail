@@ -1755,6 +1755,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
         MoveMessage(uid, folder, m_FolderListCurrentFolder);
         UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
+        UpdateFilteredMsgDateUids();
       }
       else
       {
@@ -4024,6 +4025,7 @@ bool Ui::DeleteMessage()
         m_MessageFindMatchLine = -1;
         m_MessageViewLineOffset = 0;
         UpdateUidFromIndex(true /* p_UserTriggered */);
+        UpdateFilteredMsgDateUids();
 
         bool isMsgDateUidsEmpty = false;
         {
