@@ -105,7 +105,7 @@ Required:
 
     sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules
 
-Optional (for OAuth2 support):
+Optional (for OAuth 2.0 support):
 
     pip3 install -U requests
 
@@ -134,7 +134,7 @@ Required:
 
     brew install cmake libetpan openssl ncurses xapian sqlite
 
-Optional (for OAuth2 support):
+Optional (for OAuth 2.0 support):
 
     pip3 install -U requests
 
@@ -172,8 +172,8 @@ example@gmail.com with your actual gmail address):
 Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
 IMAP access and password authentication.
 
-Gmail OAuth2 Setup
-------------------
+Gmail OAuth 2.0 Setup
+---------------------
 Use the setup wizard to set up nmail for the account. Example:
 
     $ nmail -s gmail-oauth2
@@ -184,7 +184,7 @@ Cache encryption password is optional, if not specified all local cache
 encryption will be disabled.
 
 Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
-IMAP access and obtaining OAuth2 access.
+IMAP access and obtaining OAuth 2.0 access.
 
 Outlook (and Hotmail) Setup
 ---------------------------
@@ -265,12 +265,12 @@ disabled).
 ### auth
 
 Specifies whether nmail shall use password authentication (`pass`) or Gmail
-OAuth2 authentication (`gmail-oauth2`).
+OAuth 2.0 authentication (`gmail-oauth2`).
 
 ### auth_encrypt
 
-Indicates whether nmail shall encrypt local OAuth2 access token store (default
-enabled).
+Indicates whether nmail shall encrypt local OAuth 2.0 access token store
+(default enabled).
 
 ### cache_encrypt
 
@@ -792,7 +792,7 @@ Text color of quoted message text (lines starting with `>`).
 
 ~/.nmail/auth.conf
 ------------------
-This configuration file allows users to set up custom OAuth2 client id and
+This configuration file allows users to set up custom OAuth 2.0 client id and
 client secret. If not specified, nmail uses its own application id and secret.
 Default configuration file:
 
@@ -801,11 +801,11 @@ Default configuration file:
 
 ### oauth2_client_id
 
-Custom OAuth2 client id.
+Custom OAuth 2.0 client id.
 
 ### oauth2_client_secret
 
-Custom OAuth2 client secret.
+Custom OAuth 2.0 client secret.
 
 
 Email Service Providers
@@ -833,14 +833,14 @@ To enable "less secure app access", go to
 [myaccount.google.com/security](https://myaccount.google.com/security) and
 under `Less secure app access` click `Turn on access (not recommended)`.
 
-### OAuth2 Authentication
-Google OAuth2 application review has not yet been requested for nmail, and as
-such users need to request an invitation to use this. Please send an email
+### OAuth 2.0 Authentication
+Google OAuth 2.0 application review has not yet been requested for nmail, and
+as such users need to request an invitation to use this. Please send an email
 to `d99kris at gmail dot com` with subject `nmail google oauth2 invite` from
 the google account address you would like to be invited.
 
-Alternatively a user may set up their own OAuth2 application with Google and
-configure `~/.nmail/auth.conf` accordingly.
+Alternatively a user may set up their own OAuth 2.0 application with Google
+and configure `~/.nmail/auth.conf` accordingly.
 
 
 Accessing Email Cache using Other Email Clients
