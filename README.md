@@ -80,7 +80,7 @@ Configuration files:
 Examples:
 
     nmail -s gmail
-        setup nmail for a gmail account.
+        setup nmail for a gmail account
 
 
 Supported Platforms
