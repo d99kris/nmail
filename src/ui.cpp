@@ -5257,15 +5257,15 @@ void Ui::FilterDisable()
 
 void Ui::ToggleFilterShowUnread()
 {
-    m_FilterShowUnread = !m_FilterShowUnread;
-    if (m_FilterShowUnread)
-    {
-      m_FilterShowAttachments = false;
-    }
-    m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
-    UpdateFilteredMsgDateUids();
-    m_MessageListCurrentIndex[m_CurrentFolder] = 0;
-    UpdateUidFromIndex(true /* p_UserTriggered */);
+  m_FilterShowUnread = !m_FilterShowUnread;
+  if (m_FilterShowUnread)
+  {
+    m_FilterShowAttachments = false;
+  }
+  m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
+  UpdateFilteredMsgDateUids();
+  m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+  UpdateUidFromIndex(true /* p_UserTriggered */);
 }
 
 void Ui::ToggleFilterShowAttachments()

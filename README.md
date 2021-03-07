@@ -16,7 +16,7 @@ Features
 - Local cache using AES256-encrypted custom Maildir format
 - Multi-threaded (email fetch and send done in background)
 - Address book auto-generated based on email messages
-- Viewing HTML emails (converted to text in terminal, or in external web browser)
+- Viewing HTML emails (converted to text in terminal, or in external browser)
 - Opening/viewing attachments in external program
 - Simple setup wizard for Gmail and Outlook/Hotmail
 - Familiar UI for alpine / pine users
@@ -57,23 +57,30 @@ Command-line Options:
         run in offline mode
 
     -s, --setup <SERV>
-        setup wizard for specified service, supported services: gmail, outlook
+        setup wizard for specified service, supported services: gmail,
+        gmail-oauth2, outlook
 
     -v, --version
         output version information and exit
 
 Configuration files:
 
+    ~/.nmail/auth.conf
+        configures custom oauth2 client id and secret
+
     ~/.nmail/main.conf
-        configures mail account and general setings.
+        configures mail account and general setings
 
     ~/.nmail/ui.conf
-        customizes UI settings.
+        customizes UI settings
+
+    ~/.nmail/secret.conf
+        stores saved passwords
 
 Examples:
 
     nmail -s gmail
-        setup nmail for a gmail account
+        setup nmail for a gmail account.
 
 
 Supported Platforms
@@ -98,7 +105,11 @@ Required:
 
     sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules
 
-Optional:
+Optional (for OAuth2 support):
+
+    pip3 install -U requests
+
+Optional (to view/compose HTML emails):
 
     sudo apt install lynx markdown
 
@@ -123,7 +134,11 @@ Required:
 
     brew install cmake libetpan openssl ncurses xapian sqlite
 
-Optional:
+Optional (for OAuth2 support):
+
+    pip3 install -U requests
+
+Optional (to view/compose HTML emails):
 
     brew install lynx markdown
 
@@ -143,18 +158,33 @@ Optional:
 Getting Started
 ===============
 
-Gmail Setup
------------
+Gmail Password Authenticated Setup
+----------------------------------
 Use the setup wizard to set up nmail for the account. Example (replace
 example@gmail.com with your actual gmail address):
 
     $ nmail -s gmail
     Email: example@gmail.com
     Name: Firstname Lastname
+    Password:
     Save password (y/n): y
-    Password: 
 
-Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling gmail IMAP access.
+Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
+IMAP access and password authentication.
+
+Gmail OAuth2 Setup
+------------------
+Use the setup wizard to set up nmail for the account. Example:
+
+    $ nmail -s gmail-oauth2
+    Cache Encryption Password (optional):
+    Save password (y/n): y
+
+Cache encryption password is optional, if not specified all local cache
+encryption will be disabled.
+
+Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
+IMAP access and obtaining OAuth2 access.
 
 Outlook (and Hotmail) Setup
 ---------------------------
@@ -164,8 +194,8 @@ example@hotmail.com with your actual outlook / hotmail address):
     $ nmail -s outlook
     Email: example@hotmail.com
     Name: Firstname Lastname
+    Password:
     Save password (y/n): y
-    Password: 
 
 Other Email Providers
 ---------------------
@@ -192,6 +222,8 @@ Full example of a config file `~/.nmail/main.conf`:
 
     address=example@example.com
     addressbook_encrypt=0
+    auth=pass
+    auth_encrypt=1
     cache_encrypt=1
     cache_index_encrypt=0
     client_store_sent=0
@@ -227,15 +259,28 @@ The from-address to use. Required for sending emails.
 
 ### addressbook_encrypt
 
-Indicates whether nmail shall encrypt local address book cache or not (default disabled).
+Indicates whether nmail shall encrypt local address book cache or not (default
+disabled).
+
+### auth
+
+Specifies whether nmail shall use password authentication (`pass`) or Gmail
+OAuth2 authentication (`gmail-oauth2`).
+
+### auth_encrypt
+
+Indicates whether nmail shall encrypt local OAuth2 access token store (default
+enabled).
 
 ### cache_encrypt
 
-Indicates whether nmail shall encrypt local message cache or not (default enabled).
+Indicates whether nmail shall encrypt local message cache or not (default
+enabled).
 
 ### cache_index_encrypt
 
-Indicates whether nmail shall encrypt local search index or not (default disabled).
+Indicates whether nmail shall encrypt local search index or not (default
+disabled).
 
 ### client_store_sent
 
@@ -260,7 +305,7 @@ specified, nmail will use the editor specified by the environment variable
 This field allows excluding certain folders from being accessible in nmail
 and also from being indexed by the search engine. This is mainly useful for
 email service providers with "virtual" folders that are holding copies of
-emails in other folders. When using the setup-wizard to configure a GMail
+emails in other folders. When using the setup-wizard to configure a Gmail
 account, this field will be configured to the following (otherwise empty):
 "[Gmail]/All Mail","[Gmail]/Important","[Gmail]/Starred"
 
@@ -424,13 +469,13 @@ The built-in email compose editor in nmail supports the following:
     Ctrl-O         postpone message
     Ctrl-R         toggle rich headers (bcc)
     Ctrl-T         to select, from address book / from file dialog
-    Ctrl-V         preview html part (generated from markdown to html conversion)
+    Ctrl-V         preview html part (using markdown to html conversion)
     Ctrl-X         send message
     Delete         delete
     Enter          new line
     Page Up/Down   move the cursor page up / down
 
-The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, e.g.:
+The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, ex:
 
     To      : Alice <alice@example.com>, Bob <bob@example.com>
     Cc      : Chuck <chuck@example.com>, Dave <dave@example.com>
@@ -449,7 +494,8 @@ engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
 `AND` and `OR`. By default search query words are combined with `AND` unless
 specified. Results are sorted by email timestamp.
 
-Press `<` or `Left` to exit search results and go back to current folder message list.
+Press `<` or `Left` to exit search results and go back to current folder
+message list.
 
 
 Troubleshooting
@@ -628,7 +674,8 @@ Setting this parameter to 0 disables local backups.
 
 ### compose_hardwrap
 
-Hard-wrap composed emails at 72 chars or terminal width if smaller (default disabled).
+Hard-wrap composed emails at 72 chars or terminal width if smaller (default
+disabled).
 
 ### delete_without_confirm
 
@@ -674,7 +721,8 @@ Indicate new messages with terminal bell (default enabled).
 
 ### persist_file_selection_dir
 
-Determines whether file selection view shall remember previous directory (default enabled).
+Determines whether file selection view shall remember previous directory
+(default enabled).
 
 ### persist_find_query
 
@@ -707,13 +755,15 @@ Allow exiting nmail without confirmation prompt (default enabled).
 
 ### send_without_confirm
 
-Allow sending email during compose without confirmation prompt (default disabled).
+Allow sending email during compose without confirmation prompt (default
+disabled).
 
 ### show_embedded_images
 
-Determines whether to show embedded images in text/html part when viewing it using
-external viewer; press right arrow when viewing a message to go to parts view, and
-then select the text/html part and press right arrow again (default enabled).
+Determines whether to show embedded images in text/html part when viewing it
+using external viewer; press right arrow when viewing a message to go to parts
+view, and then select the text/html part and press right arrow again (default
+enabled).
 
 ### show_progress
 
@@ -740,27 +790,57 @@ configuration file:
 Text color of quoted message text (lines starting with `>`).
 
 
+~/.nmail/auth.conf
+------------------
+This configuration file allows users to set up custom OAuth2 client id and
+client secret. If not specified, nmail uses its own application id and secret.
+Default configuration file:
+
+    oauth2_client_id=
+    oauth2_client_secret=
+
+### oauth2_client_id
+
+Custom OAuth2 client id.
+
+### oauth2_client_secret
+
+Custom OAuth2 client secret.
+
+
 Email Service Providers
 =======================
 
 Gmail Prerequisites
 -------------------
-Gmail prevents password-authenticated IMAP access by default.
+Gmail prevents IMAP access by default.
 
 In order to enable IMAP access go to the Gmail web interface - typically
 [mail.google.com](https://mail.google.com) - and navigate to 
 `Settings -> Forwarding and POP/IMAP -> IMAP access` and select: `Enable IMAP`
 
-To enable password-authenticated IMAP access, one must either set up an
-"app password" or enable "less secure app access".
+### Password Authentication
+Gmail prevents password authentication by default. To enable
+password-authenticated IMAP access, one must either set up an "app password"
+or enable "less secure app access".
 
 To set up an "app password", navigate to
 [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-and select app "Mail" and an appropriate device, e.g. "Mac", then click Generate.
+and select app "Mail" and an appropriate device, e.g. "Mac", then click
+Generate.
 
 To enable "less secure app access", go to
-[myaccount.google.com/security](https://myaccount.google.com/security) and under
-`Less secure app access` click `Turn on access (not recommended)`.
+[myaccount.google.com/security](https://myaccount.google.com/security) and
+under `Less secure app access` click `Turn on access (not recommended)`.
+
+### OAuth2 Authentication
+Google OAuth2 application review has not yet been requested for nmail, and as
+such users need to request an invitation to use this. Please send an email
+to `d99kris at gmail dot com` with subject `nmail google oauth2 invite` from
+the google account address you would like to be invited.
+
+Alternatively a user may set up their own OAuth2 application with Google and
+configure `~/.nmail/auth.conf` accordingly.
 
 
 Accessing Email Cache using Other Email Clients

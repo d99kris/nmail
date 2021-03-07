@@ -16,8 +16,6 @@ public:
   ImapCache(const bool p_CacheEncrypt, const std::string& p_Pass);
   virtual ~ImapCache();
 
-  std::string GetCacheDir();
-  void InitCacheDir();
   std::string GetImapCacheDir();
   void InitImapCacheDir();
   std::string GetFolderCacheDir(const std::string& p_Folder);

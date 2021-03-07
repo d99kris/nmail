@@ -119,7 +119,10 @@ public:
 
 private:
   bool ProcessIdle();
+  int GetIdleDurationSec();
   void Process();
+  bool AuthRefreshNeeded();
+  bool PerformAuthRefresh();
   bool CheckConnectivity();
   void CheckConnectivityAndReconnect(bool p_SkipCheck);
   void CacheProcess();

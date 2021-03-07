@@ -144,12 +144,12 @@ void AddressBook::InitCacheDir()
 
 std::string AddressBook::GetAddressBookCacheDir()
 {
-  return Util::GetApplicationDir() + std::string("cache/") + std::string("address/");
+  return CacheUtil::GetCacheDir() + std::string("address/");
 }
 
 std::string AddressBook::GetAddressBookCacheDbDir()
 {
-  return Util::GetApplicationDir() + std::string("cache/") + std::string("address/db/");
+  return CacheUtil::GetCacheDir() + std::string("address/db/");
 }
 
 std::string AddressBook::GetAddressBookTempDbDir()

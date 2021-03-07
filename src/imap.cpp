@@ -10,6 +10,7 @@
 #include <libetpan/imapdriver_tools.h>
 #include <libetpan/libetpan.h>
 
+#include "auth.h"
 #include "crypto.h"
 #include "flag.h"
 #include "imapcache.h"
@@ -97,7 +98,16 @@ bool Imap::Login()
     }
     else if (rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
     {
-      rv = LOG_IF_IMAP_ERR(mailimap_login(m_Imap, m_User.c_str(), m_Pass.c_str()));
+      if (Auth::IsOAuthEnabled())
+      {
+        bool authResult = AuthRefresh();
+        rv = (authResult ? MAILIMAP_NO_ERROR : MAILIMAP_ERROR_STREAM);
+      }
+      else
+      {
+        rv = LOG_IF_IMAP_ERR(mailimap_login(m_Imap, m_User.c_str(), m_Pass.c_str()));
+      }
+
       connected = (rv == MAILIMAP_NO_ERROR);
     }
   }
@@ -135,6 +145,22 @@ bool Imap::Logout()
   }
 
   return ((rv == MAILIMAP_NO_ERROR) || (rv == MAILIMAP_ERROR_STREAM));
+}
+
+bool Imap::AuthRefresh()
+{
+  LOG_DEBUG_FUNC(STR());
+
+  if (!Auth::RefreshToken())
+  {
+    return false;
+  }
+
+  int rv = MAILIMAP_NO_ERROR;
+  std::string token = Auth::GetAccessToken();
+  rv = LOG_IF_IMAP_ERR(mailimap_oauth2_authenticate(m_Imap, m_User.c_str(), token.c_str()));
+
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
 bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)

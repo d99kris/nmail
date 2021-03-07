@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "auth.h"
 #include "loghelp.h"
 #include "serialized.h"
 #include "util.h"
@@ -255,7 +256,7 @@ bool ImapManager::ProcessIdle()
     FD_SET(m_Pipe[0], &fds);
     FD_SET(idlefd, &fds);
     int maxfd = std::max(m_Pipe[0], idlefd);
-    struct timeval idletv = {(29 * 60), 0};
+    struct timeval idletv = {GetIdleDurationSec(), 0};
     selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
 
     bool idleRv = m_Imap.IdleDone();
@@ -298,6 +299,22 @@ bool ImapManager::ProcessIdle()
   return rv;
 }
 
+int ImapManager::GetIdleDurationSec()
+{
+  int idleDuration = (29 * 60);
+  if (Auth::IsOAuthEnabled())
+  {
+    int timeToOAuthExpiry = static_cast<int>(Auth::GetTimeToExpirySec());
+    if ((timeToOAuthExpiry < idleDuration) && (timeToOAuthExpiry > 0))
+    {
+      idleDuration = timeToOAuthExpiry;
+      LOG_DEBUG("idle duration from oauth2 expiry %d", idleDuration);
+    }
+  }
+
+  return idleDuration;
+}
+
 void ImapManager::Process()
 {
   THREAD_REGISTER();
@@ -334,14 +351,26 @@ void ImapManager::Process()
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
     struct timeval tv = {15, 0};
-    int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
-    bool idleRv = true;
 
-    if ((selrv == 0) && m_Imap.GetConnected())
+    int selrv = 1;
+    m_QueueMutex.lock();
+    bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty();
+    m_QueueMutex.unlock();
+
+    if (isQueueEmpty)
+    {
+      selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+    }
+
+    bool idleRv = true;
+    bool authRefreshNeeded = AuthRefreshNeeded();
+
+    if ((selrv == 0) && m_Imap.GetConnected() && !authRefreshNeeded && isQueueEmpty)
     {
       idleRv &= ProcessIdle();
     }
-    else if ((FD_ISSET(m_Pipe[0], &fds)) && m_Imap.GetConnected())
+    else if ((FD_ISSET(m_Pipe[0], &fds) || !isQueueEmpty) && m_Imap.GetConnected() &&
+             !authRefreshNeeded)
     {
       int len = 0;
       ioctl(m_Pipe[0], FIONREAD, &len);
@@ -353,12 +382,12 @@ void ImapManager::Process()
 
       m_QueueMutex.lock();
 
-      while (m_Running &&
+      while (m_Running && !authRefreshNeeded &&
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
         bool isConnected = true;
 
-        while (!m_Actions.empty() && m_Running && isConnected)
+        while (!m_Actions.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
           Action action = m_Actions.front();
           m_Actions.pop_front();
@@ -388,6 +417,8 @@ void ImapManager::Process()
             SendActionResult(action, result);
           }
 
+          authRefreshNeeded = AuthRefreshNeeded();
+
           m_QueueMutex.lock();
 
           if (retry)
@@ -397,7 +428,7 @@ void ImapManager::Process()
         }
 
         const int progressReportMinTasks = 2;
-        while (!m_Requests.empty() && m_Running && isConnected)
+        while (!m_Requests.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
           Request request = m_Requests.front();
           m_Requests.pop_front();
@@ -436,6 +467,8 @@ void ImapManager::Process()
             SendRequestResponse(request, response);
           }
 
+          authRefreshNeeded = AuthRefreshNeeded();
+
           m_QueueMutex.lock();
 
           if (retry)
@@ -453,7 +486,7 @@ void ImapManager::Process()
         m_QueueMutex.lock();
 
         while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() &&
-               m_Running && isConnected)
+               m_Running && isConnected && !authRefreshNeeded)
         {
           Request request = m_PrefetchRequests.begin()->second.front();
           m_PrefetchRequests.begin()->second.pop_front();
@@ -496,6 +529,8 @@ void ImapManager::Process()
             SendRequestResponse(request, response);
           }
 
+          authRefreshNeeded = AuthRefreshNeeded();
+
           m_QueueMutex.lock();
 
           if (retry)
@@ -532,13 +567,20 @@ void ImapManager::Process()
         m_PrefetchRequestsDone = 0;
       }
 
+      isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty();
+
       m_QueueMutex.unlock();
     }
 
-    if (m_Running && !idleRv)
+    if (m_Running && !idleRv && !authRefreshNeeded)
     {
       LOG_WARNING("idle failed");
       CheckConnectivityAndReconnect(false);
+    }
+
+    if (authRefreshNeeded)
+    {
+      PerformAuthRefresh();
     }
   }
 
@@ -560,6 +602,16 @@ void ImapManager::Process()
 
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
   m_ExitedCond.notify_one();
+}
+
+bool ImapManager::AuthRefreshNeeded()
+{
+  return m_Connect && Auth::IsOAuthEnabled() && Auth::RefreshNeeded();
+}
+
+bool ImapManager::PerformAuthRefresh()
+{
+  return m_Imap.AuthRefresh();
 }
 
 bool ImapManager::CheckConnectivity()
