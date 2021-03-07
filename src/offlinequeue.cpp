@@ -145,7 +145,7 @@ std::vector<std::string> OfflineQueue::PopComposeMessages()
 
 std::string OfflineQueue::GetQueueDir()
 {
-  return Util::GetApplicationDir() + std::string("queue/");
+  return CacheUtil::GetCacheDir() + std::string("queue/");
 }
 
 void OfflineQueue::InitQueueDir()

@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "2.73" LANGUAGES CXX C)
+project(nmail VERSION "2.74" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -31,6 +31,8 @@ add_executable(nmail
   ext/sqlite_modern_cpp/hdr/sqlite_modern_cpp.h
   src/addressbook.cpp
   src/addressbook.h
+  src/auth.cpp
+  src/auth.h
   src/body.cpp
   src/body.h
   src/cacheutil.cpp
@@ -157,8 +159,13 @@ endif()
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)
 
+# Utils
+configure_file(src/oauth2nmail.py ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail.py COPYONLY)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail.py DESTINATION bin)
+
 # Uninstall
 add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/man/man1/nmail.1"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/oauth2nmail.py"
 )

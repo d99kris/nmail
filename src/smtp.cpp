@@ -11,6 +11,7 @@
 
 #include <unistd.h>
 
+#include "auth.h"
 #include "log.h"
 #include "loghelp.h"
 
@@ -152,7 +153,15 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
   {
     LOG_DEBUG("smtp->auth = 0x%x", smtp->auth);
 
-    rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
+    if (Auth::IsOAuthEnabled())
+    {
+      std::string token = Auth::GetAccessToken();
+      rv = LOG_IF_SMTP_ERR(mailsmtp_oauth2_authenticate(smtp, m_User.c_str(), token.c_str()));
+    }
+    else
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
+    }
 
     if (rv != MAILSMTP_NO_ERROR) return false;
   }

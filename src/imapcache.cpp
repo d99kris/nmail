@@ -17,7 +17,6 @@ ImapCache::ImapCache(const bool p_CacheEncrypt, const std::string& p_Pass)
   : m_CacheEncrypt(p_CacheEncrypt)
   , m_Pass(p_Pass)
 {
-  InitCacheDir();
   InitImapCacheDir();
 }
 
@@ -25,21 +24,9 @@ ImapCache::~ImapCache()
 {
 }
 
-std::string ImapCache::GetCacheDir()
-{
-  return Util::GetApplicationDir() + std::string("cache/");
-}
-
-void ImapCache::InitCacheDir()
-{
-  static const int version = 3;
-  const std::string cacheDir = GetCacheDir();
-  CacheUtil::CommonInitCacheDir(cacheDir, version, false /* p_Encrypted */);
-}
-
 std::string ImapCache::GetImapCacheDir()
 {
-  return GetCacheDir() + std::string("imap/");
+  return CacheUtil::GetCacheDir() + std::string("imap/");
 }
 
 void ImapCache::InitImapCacheDir()

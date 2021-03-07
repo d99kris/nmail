@@ -215,6 +215,7 @@ public:
   static std::string GetCompiler();
 
   static void RegisterSignalHandlers();
+  static void RegisterIgnoredSignalHandlers();
   static void SignalCrashHandler(int p_Signal);
   static void SignalTerminateHandler(int p_Signal);
   static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
@@ -251,6 +252,7 @@ public:
   static int AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex);
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
+  static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

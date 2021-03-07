@@ -1243,7 +1243,10 @@ void Util::RegisterSignalHandlers()
   {
     signal(terminatingSignal.first, SignalTerminateHandler);
   }
+}
 
+void Util::RegisterIgnoredSignalHandlers()
+{
   const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
   for (const auto& ignoredSignal : ignoredSignals)
   {
@@ -1623,4 +1626,15 @@ void Util::SetUseServerTimestamps(bool p_Enable)
 bool Util::GetUseServerTimestamps()
 {
   return m_UseServerTimestamps;
+}
+
+void Util::CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir)
+{
+  const std::vector<std::string>& files = Util::ListDir(p_SrcDir);
+  for (const auto& file : files)
+  {
+    std::ifstream srcFile(p_SrcDir + "/" + file, std::ios::binary);
+    std::ofstream dstFile(p_DstDir + "/" + file, std::ios::binary);
+    dstFile << srcFile.rdbuf();
+  }
 }

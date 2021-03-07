@@ -11,6 +11,8 @@
 #include "apathy/path.hpp"
 
 #include "addressbook.h"
+#include "auth.h"
+#include "cacheutil.h"
 #include "config.h"
 #include "crypto.h"
 #include "imapmanager.h"
@@ -29,11 +31,19 @@ static bool ValidateConfig(const std::string& p_User, const std::string& p_Imaph
                            const uint16_t p_Imapport, const std::string& p_Smtphost,
                            const uint16_t p_Smtpport);
 static bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix);
+static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
+                                std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
+                                std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
+static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
+                                       std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
+                                       std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
-static void SetupCommon(std::shared_ptr<Config> p_Config);
+static void SetupPromptUserDetails(std::shared_ptr<Config> p_Config);
 static void SetupGmail(std::shared_ptr<Config> p_Config);
+static void SetupGmailCommon(std::shared_ptr<Config> p_Config);
+static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
 static void LogSystemInfo();
 
@@ -109,6 +119,7 @@ int main(int argc, char* argv[])
   LOG_INFO("starting nmail %s", version.c_str());
 
   Util::InitTempDir();
+  CacheUtil::InitCacheDir();
 
   const std::map<std::string, std::string> defaultMainConfig =
   {
@@ -142,6 +153,8 @@ int main(int argc, char* argv[])
     { "server_timestamps", "0" },
     { "network_timeout", "30" },
     { "queue_encrypt", "1" },
+    { "auth", "pass" },
+    { "auth_encrypt", "1" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -152,30 +165,42 @@ int main(int argc, char* argv[])
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
   std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
-  if (!setup.empty())
+  const bool isSetup = !setup.empty();
+  if (isSetup)
   {
-    remove(mainConfigPath.c_str());
-    remove(secretConfigPath.c_str());
+    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "outlook"))
+    {
+      std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
+      ShowHelp();
+      return 1;
+    }
+
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
     secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
     if (setup == "gmail")
     {
       SetupGmail(mainConfig);
-      mainConfig->Save();
+    }
+    else if (setup == "gmail-oauth2")
+    {
+      SetupGmailOAuth2(mainConfig);
     }
     else if (setup == "outlook")
     {
       SetupOutlook(mainConfig);
-      mainConfig->Save();
     }
-    else
-    {
-      std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
-      ShowHelp();
-      return 1;
-    }
+
+    remove(mainConfigPath.c_str());
+    remove(secretConfigPath.c_str());
+    Util::RmDir(Util::GetApplicationDir() + std::string("cache"));
+    CacheUtil::InitCacheDir();
+
+    mainConfig->Save();
   }
+
+  // Ignore ctrl-c only after setup wizard to enable user abort
+  Util::RegisterIgnoredSignalHandlers();
 
   // Read main config
   const std::string& name = mainConfig->Get("name");
@@ -184,15 +209,11 @@ int main(int argc, char* argv[])
   const std::string& imapHost = mainConfig->Get("imap_host");
   const std::string& smtpHost = mainConfig->Get("smtp_host");
   std::string smtpUser = mainConfig->Get("smtp_user");
-  const bool savePass = (mainConfig->Get("save_pass") == "1");
   const std::string& inbox = mainConfig->Get("inbox");
   std::string trash = mainConfig->Get("trash");
   std::string drafts = mainConfig->Get("drafts");
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
-  const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
-  const bool cacheIndexEncrypt = (mainConfig->Get("cache_index_encrypt") == "1");
-  const bool addressBookEncrypt = (mainConfig->Get("addressbook_encrypt") == "1");
   Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
   Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
   Util::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
@@ -202,7 +223,7 @@ int main(int argc, char* argv[])
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
-  const bool queueEncrypt = (mainConfig->Get("queue_encrypt") == "1");
+  const std::string auth = mainConfig->Get("auth");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
@@ -211,33 +232,6 @@ int main(int argc, char* argv[])
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
-  }
-
-  // Read secret config
-  std::string encPass;
-  if (secretConfig->Exist("pass"))
-  {
-    encPass = secretConfig->Get("pass");
-  }
-  else if (mainConfig->Exist("pass"))
-  {
-    LOG_DEBUG("migrating pass to secret.conf");
-    encPass = mainConfig->Get("pass");
-    mainConfig->Delete("pass");
-    secretConfig->Set("pass", encPass);
-  }
-
-  std::string encSmtpPass;
-  if (secretConfig->Exist("smtp_pass"))
-  {
-    encSmtpPass = secretConfig->Get("smtp_pass");
-  }
-  else if (mainConfig->Exist("smtp_pass"))
-  {
-    LOG_DEBUG("migrating smtp_pass to secret.conf");
-    encSmtpPass = mainConfig->Get("smtp_pass");
-    mainConfig->Delete("smtp_pass");
-    secretConfig->Set("smtp_pass", encSmtpPass);
   }
 
   // Crypto init
@@ -274,56 +268,32 @@ int main(int argc, char* argv[])
   }
 
   std::string pass;
-  if (encPass.empty())
-  {
-    std::cout << (smtpUser.empty() ? "Password: " : "IMAP Password: ");
-    pass = Util::GetPass();
-    if (savePass)
-    {
-      encPass = Serialized::ToHex(Crypto::AESEncrypt(pass, user));
-      secretConfig->Set("pass", encPass);
-    }
-  }
-  else
-  {
-    pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), user);
-  }
-
-  if (!ValidatePass(pass, smtpUser.empty() ? "" : "IMAP "))
-  {
-    return 1;
-  }
-
   std::string smtpPass;
-  if (smtpUser.empty())
+  if (auth == "pass")
   {
-    smtpUser = user;
-    smtpPass = pass;
+    if (!ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
+    {
+      return 1;
+    }
   }
   else
   {
-    if (encSmtpPass.empty())
+    if (!ObtainCacheEncryptPassword(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
     {
-      std::cout << "SMTP Password: ";
-      smtpPass = Util::GetPass();
-      if (savePass)
-      {
-        encSmtpPass = Serialized::ToHex(Crypto::AESEncrypt(smtpPass, smtpUser));
-        secretConfig->Set("smtp_pass", encSmtpPass);
-      }
-    }
-    else
-    {
-      smtpPass = Crypto::AESDecrypt(Serialized::FromHex(encSmtpPass), smtpUser);
+      return 1;
     }
   }
 
-  if (!ValidatePass(smtpPass, "SMTP "))
-  {
-    return 1;
-  }
+  // Read config that may be updated during authentication
+  const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
+  const bool cacheIndexEncrypt = (mainConfig->Get("cache_index_encrypt") == "1");
+  const bool addressBookEncrypt = (mainConfig->Get("addressbook_encrypt") == "1");
+  const bool queueEncrypt = (mainConfig->Get("queue_encrypt") == "1");
+  const bool authEncrypt = (mainConfig->Get("auth_encrypt") == "1");
 
   Util::InitStdErrRedirect(logPath);
+
+  Auth::Init(auth, authEncrypt, pass, isSetup);
 
   Ui ui(inbox, address, prefetchLevel);
 
@@ -367,6 +337,8 @@ int main(int argc, char* argv[])
   smtpManager.reset();
   imapManager.reset();
 
+  Auth::Cleanup();
+
   mainConfig->Save();
   mainConfig.reset();
 
@@ -394,20 +366,22 @@ static void ShowHelp()
     "Usage: nmail [OPTION]\n"
     "\n"
     "Options:\n"
-    "   -d, --confdir <DIR>  use a different directory than ~/.nmail\n"
-    "   -e, --verbose        enable verbose logging\n"
-    "   -h, --help           display this help and exit\n"
-    "   -o, --offline        run in offline mode\n"
-    "   -s, --setup <SERV>   setup wizard for specified service, supported\n"
-    "                        services: gmail, outlook\n"
-    "   -v, --version        output version information and exit\n"
+    "   -d, --confdir <DIR>     use a different directory than ~/.nmail\n"
+    "   -e, --verbose           enable verbose logging\n"
+    "   -h, --help              display this help and exit\n"
+    "   -o, --offline           run in offline mode\n"
+    "   -s, --setup <SERVICE>   setup wizard for specified service, supported\n"
+    "                           services: gmail, gmail-oauth2, outlook\n"
+    "   -v, --version           output version information and exit\n"
     "\n"
     "Examples:\n"
-    "   nmail -s gmail       setup nmail for a gmail account\n"
+    "   nmail -s gmail          setup nmail for a gmail account\n"
     "\n"
     "Files:\n"
-    "   ~/.nmail/main.conf   configures mail account and general setings.\n"
-    "   ~/.nmail/ui.conf     customizes UI settings.\n"
+    "   ~/.nmail/auth.conf      configures custom oauth2 client id and secret\n"
+    "   ~/.nmail/main.conf      configures mail account and general settings\n"
+    "   ~/.nmail/ui.conf        customizes UI settings\n"
+    "   ~/.nmail/secret.conf    stores saved passwords\n"
     "\n"
     "Report bugs at https://github.com/d99kris/nmail\n"
     "\n";
@@ -425,31 +399,29 @@ static void ShowVersion()
     "Written by Kristofer Berggren.\n";
 }
 
-static void SetupCommon(std::shared_ptr<Config> p_Config)
+static void SetupPromptUserDetails(std::shared_ptr<Config> p_Config)
 {
-  Util::RmDir(Util::GetApplicationDir() + std::string("cache"));
-
   std::string email;
   std::cout << "Email: ";
   std::getline(std::cin, email);
   std::cout << "Name: ";
   std::string name;
   std::getline(std::cin, name);
-  std::cout << "Save password (y/n): ";
-  std::string savepass;
-  std::getline(std::cin, savepass);
 
   p_Config->Set("name", name);
   p_Config->Set("address", email);
   p_Config->Set("user", email);
-  p_Config->Set("cache_encrypt", "1");
-  p_Config->Set("save_pass", std::to_string((int)(savepass == "y")));
 }
 
 static void SetupGmail(std::shared_ptr<Config> p_Config)
 {
-  SetupCommon(p_Config);
+  SetupPromptUserDetails(p_Config);
 
+  SetupGmailCommon(p_Config);
+}
+
+static void SetupGmailCommon(std::shared_ptr<Config> p_Config)
+{
   p_Config->Set("imap_host", "imap.gmail.com");
   p_Config->Set("imap_port", "993");
   p_Config->Set("smtp_host", "smtp.gmail.com");
@@ -461,9 +433,28 @@ static void SetupGmail(std::shared_ptr<Config> p_Config)
   p_Config->Set("folders_exclude", "\"[Gmail]/All Mail\",\"[Gmail]/Important\",\"[Gmail]/Starred\"");
 }
 
+static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config)
+{
+  std::string auth = "gmail-oauth2";
+  if (!Auth::GenerateToken(auth))
+  {
+    std::cout << auth << " setup failed, exiting.\n";
+    exit(1);
+  }
+
+  std::string name = Auth::GetName();
+  std::string email = Auth::GetEmail();
+  p_Config->Set("name", name);
+  p_Config->Set("address", email);
+  p_Config->Set("user", email);
+  p_Config->Set("auth", auth);
+
+  SetupGmailCommon(p_Config);
+}
+
 static void SetupOutlook(std::shared_ptr<Config> p_Config)
 {
-  SetupCommon(p_Config);
+  SetupPromptUserDetails(p_Config);
 
   p_Config->Set("imap_host", "imap-mail.outlook.com");
   p_Config->Set("imap_port", "993");
@@ -473,6 +464,175 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config)
   p_Config->Set("trash", "Deleted");
   p_Config->Set("drafts", "Drafts");
   p_Config->Set("sent", "Sent");
+}
+
+static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
+                                std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
+                                std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
+{
+  // Read secret config
+  std::string encPass;
+  if (p_SecretConfig->Exist("pass"))
+  {
+    encPass = p_SecretConfig->Get("pass");
+  }
+
+  std::string encSmtpPass;
+  if (p_SecretConfig->Exist("smtp_pass"))
+  {
+    encSmtpPass = p_SecretConfig->Get("smtp_pass");
+  }
+
+  if (encPass.empty())
+  {
+    std::cout << (p_SmtpUser.empty() ? "Password: " : "IMAP Password: ");
+    p_Pass = Util::GetPass();
+    encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+  }
+  else
+  {
+    p_Pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), p_User);
+  }
+
+  if (!ValidatePass(p_Pass, p_SmtpUser.empty() ? "" : "IMAP "))
+  {
+    return false;
+  }
+
+  if (p_SmtpUser.empty())
+  {
+    p_SmtpUser = p_User;
+    p_SmtpPass = p_Pass;
+  }
+  else
+  {
+    if (encSmtpPass.empty())
+    {
+      std::cout << "SMTP Password: ";
+      p_SmtpPass = Util::GetPass();
+      encSmtpPass = Serialized::ToHex(Crypto::AESEncrypt(p_SmtpPass, p_SmtpUser));
+    }
+    else
+    {
+      p_SmtpPass = Crypto::AESDecrypt(Serialized::FromHex(encSmtpPass), p_SmtpUser);
+    }
+  }
+
+  if (!ValidatePass(p_SmtpPass, "SMTP "))
+  {
+    return false;
+  }
+
+  if (p_IsSetup)
+  {
+    std::cout << "Save password (y/n): ";
+    std::string savepass;
+    std::getline(std::cin, savepass);
+    const bool isSavePass = (savepass == "y");
+    p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
+
+    if (isSavePass)
+    {
+      if (!encPass.empty())
+      {
+        p_SecretConfig->Set("pass", encPass);
+      }
+
+      if (!encSmtpPass.empty())
+      {
+        p_SecretConfig->Set("smtp_pass", encSmtpPass);
+      }
+    }
+  }
+
+  return true;
+}
+
+static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
+                                       std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
+                                       std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
+{
+  if (p_IsSetup)
+  {
+    std::cout << "Cache Encryption Password (optional): ";
+    p_Pass = Util::GetPass();
+
+    if (p_Pass.empty())
+    {
+      // if no pass specified during setup, disable encryption
+      p_MainConfig->Set("cache_encrypt", "0");
+      p_MainConfig->Set("cache_index_encrypt", "0");
+      p_MainConfig->Set("addressbook_encrypt", "0");
+      p_MainConfig->Set("queue_encrypt", "0");
+      p_MainConfig->Set("auth_encrypt", "0");
+
+      p_MainConfig->Set("save_pass", "0");
+    }
+    else
+    {
+      // if pass specified, prompt user whether to store it
+      std::cout << "Save password (y/n): ";
+      std::string savepass;
+      std::getline(std::cin, savepass);
+      const bool isSavePass = (savepass == "y");
+      p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
+
+      if (isSavePass)
+      {
+        std::string encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+        p_SecretConfig->Set("pass", encPass);
+      }
+    }
+
+    p_SecretConfig->Save();
+    p_MainConfig->Save();
+  }
+  else
+  {
+    const bool cacheEncrypt = (p_MainConfig->Get("cache_encrypt") == "1");
+    const bool cacheIndexEncrypt = (p_MainConfig->Get("cache_index_encrypt") == "1");
+    const bool addressBookEncrypt = (p_MainConfig->Get("addressbook_encrypt") == "1");
+    const bool queueEncrypt = (p_MainConfig->Get("queue_encrypt") == "1");
+    const bool authEncrypt = (p_MainConfig->Get("auth_encrypt") == "1");
+
+    if (!cacheEncrypt && !cacheIndexEncrypt && !addressBookEncrypt && !queueEncrypt && !authEncrypt)
+    {
+      p_Pass = "";
+    }
+    else
+    {
+      std::string encPass;
+      if (p_SecretConfig->Exist("pass"))
+      {
+        encPass = p_SecretConfig->Get("pass");
+      }
+
+      if (encPass.empty())
+      {
+        std::cout << "Cache Encryption Password: ";
+        p_Pass = Util::GetPass();
+        encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+      }
+      else
+      {
+        p_Pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), p_User);
+      }
+
+      if (!ValidatePass(p_Pass, "Cache Encryption "))
+      {
+        return false;
+      }
+    }
+  }
+
+  if (p_SmtpUser.empty())
+  {
+    p_SmtpUser = p_User;
+  }
+
+  p_SmtpPass = p_Pass;
+
+  return true;
 }
 
 bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,

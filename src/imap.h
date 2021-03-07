@@ -30,6 +30,7 @@ public:
 
   bool Login();
   bool Logout();
+  bool AuthRefresh();
 
   bool GetFolders(const bool p_Cached, std::set<std::string>& p_Folders);
   bool GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids);

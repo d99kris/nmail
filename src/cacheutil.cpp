@@ -12,6 +12,18 @@
 #include "serialized.h"
 #include "util.h"
 
+void CacheUtil::InitCacheDir()
+{
+  static const int version = 3;
+  const std::string cacheDir = GetCacheDir();
+  CacheUtil::CommonInitCacheDir(cacheDir, version, false /* p_Encrypted */);
+}
+
+std::string CacheUtil::GetCacheDir()
+{
+  return Util::GetApplicationDir() + std::string("cache/");
+}
+
 bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool p_Encrypted)
 {
   const std::string& versionPath = p_Dir + "version";

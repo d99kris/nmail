@@ -471,12 +471,12 @@ uint32_t ImapIndex::GetUidFromDocId(const std::string& p_DocId)
 
 std::string ImapIndex::GetCacheIndexDir()
 {
-  return Util::GetApplicationDir() + std::string("cache/") + std::string("index/");
+  return CacheUtil::GetCacheDir() + std::string("index/");
 }
 
 std::string ImapIndex::GetCacheIndexDbDir()
 {
-  return Util::GetApplicationDir() + std::string("cache/") + std::string("index/db/");
+  return CacheUtil::GetCacheDir() + std::string("index/db/");
 }
 
 std::string ImapIndex::GetCacheIndexDbTempDir()
