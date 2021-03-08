@@ -268,7 +268,7 @@ bool ImapManager::ProcessIdle()
       break;
     }
 
-    if ((selrv != 0) && FD_ISSET(idlefd, &fds) && !m_Running)
+    if ((selrv != 0) && FD_ISSET(idlefd, &fds) && m_Running)
     {
       LOG_DEBUG("idle notification");
 

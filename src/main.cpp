@@ -530,18 +530,19 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
     std::getline(std::cin, savepass);
     const bool isSavePass = (savepass == "y");
     p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
+  }
 
-    if (isSavePass)
+  const bool isSavePass = (p_MainConfig->Get("save_pass") == "1");
+  if (isSavePass)
+  {
+    if (!encPass.empty())
     {
-      if (!encPass.empty())
-      {
-        p_SecretConfig->Set("pass", encPass);
-      }
+      p_SecretConfig->Set("pass", encPass);
+    }
 
-      if (!encSmtpPass.empty())
-      {
-        p_SecretConfig->Set("smtp_pass", encSmtpPass);
-      }
+    if (!encSmtpPass.empty())
+    {
+      p_SecretConfig->Set("smtp_pass", encSmtpPass);
     }
   }
 
