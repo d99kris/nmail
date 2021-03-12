@@ -1618,7 +1618,7 @@ int Util::GetColor(const std::string& p_Str)
   {
     if (!can_change_color())
     {
-      LOG_WARNING("terminal cannot set custom hex colors, skipping \"%s\"", p_Str);
+      LOG_WARNING("terminal cannot set custom hex colors, skipping \"%s\"", p_Str.c_str());
       return -1;
     }
 
@@ -1632,7 +1632,7 @@ int Util::GetColor(const std::string& p_Str)
       return colorId;
     }
 
-    LOG_WARNING("invalid color hex code \"%s\"", p_Str);
+    LOG_WARNING("invalid color hex code \"%s\"", p_Str.c_str());
     return -1;
   }
 
