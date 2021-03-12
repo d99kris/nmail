@@ -318,7 +318,13 @@ private:
   bool m_ShowEmbeddedImages = true;
   bool m_ShowRichHeader = false;
   bool m_ColorsEnabled = false;
-  int m_ColorMessageQuoted = -1;
+
+  int m_ColorTopBar = -1;
+  int m_ColorQuotedText = -1;
+  int m_ColorHighlightedText = -1;
+  int m_ColorHelpKeys = -1;
+  int m_ColorHelpDesc = -1;
+  int m_ColorDialog = -1;
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;

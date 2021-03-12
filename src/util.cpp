@@ -1586,35 +1586,83 @@ std::string Util::GetSQLiteVersion()
   return std::string(SQLITE_VERSION);
 }
 
-int Util::AddColor(const std::string& p_Hex)
+int Util::GetColor(const std::string& p_Str)
 {
-  static int colorId = 31;
-
-  if (p_Hex.empty()) return -1;
-
-  if ((p_Hex.size() == 8) && (p_Hex.substr(0, 2) == "0x"))
+  const int BRIGHT = 8;
+  static std::map<std::string, int> standardColors =
   {
-    uint32_t r = 0, g = 0, b = 0;
-    Util::HexToRGB(p_Hex, r, g, b);
+    { "black", COLOR_BLACK },
+    { "red", COLOR_RED },
+    { "green", COLOR_GREEN },
+    { "yellow", COLOR_YELLOW },
+    { "blue", COLOR_BLUE },
+    { "magenta", COLOR_MAGENTA },
+    { "cyan", COLOR_CYAN },
+    { "white", COLOR_WHITE },
 
+    { "gray", BRIGHT | COLOR_BLACK },
+    { "bright_black", BRIGHT | COLOR_BLACK },
+    { "bright_red", BRIGHT | COLOR_RED },
+    { "bright_green", BRIGHT | COLOR_GREEN },
+    { "bright_yellow", BRIGHT | COLOR_YELLOW },
+    { "bright_blue", BRIGHT | COLOR_BLUE },
+    { "bright_magenta", BRIGHT | COLOR_MAGENTA },
+    { "bright_cyan", BRIGHT | COLOR_CYAN },
+    { "bright_white", BRIGHT | COLOR_WHITE },
+  };
+
+  if (p_Str.empty()) return -1;
+
+  // hex
+  if ((p_Str.size() == 8) && (p_Str.substr(0, 2) == "0x"))
+  {
+    if (!can_change_color())
+    {
+      LOG_WARNING("terminal cannot set custom hex colors, skipping \"%s\"", p_Str);
+      return -1;
+    }
+
+    uint32_t r = 0, g = 0, b = 0;
+    Util::HexToRGB(p_Str, r, g, b);
     if ((r <= 255) && (g <= 255) && (b <= 255))
     {
+      static int colorId = 31;
       colorId++;
       init_color(colorId, ((r * 1000) / 255), ((g * 1000) / 255), ((b * 1000) / 255));
       return colorId;
     }
+
+    LOG_WARNING("invalid color hex code \"%s\"", p_Str);
+    return -1;
   }
 
-  LOG_WARNING("warning: unsupported color hex code \"%s\"", p_Hex.c_str());
+  // name
+  std::map<std::string, int>::iterator standardColor = standardColors.find(p_Str);
+  if (standardColor != standardColors.end())
+  {
+    return standardColor->second;
+  }
 
+  // id
+  if (Util::IsInteger(p_Str))
+  {
+    int32_t id = Util::ToInteger(p_Str);
+    return id;
+  }
+
+  LOG_WARNING("unsupported color string \"%s\"", p_Str.c_str());
   return -1;
 }
 
-int Util::AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex)
+int Util::AddColorPair(const std::string& p_FgStr, const std::string& p_BgStr)
 {
+  const int fgColor = GetColor(p_FgStr);
+  const int bgColor = GetColor(p_BgStr);
+  if ((fgColor == -1) && (bgColor == -1)) return -1;
+
   static int colorPairId = 0;
   colorPairId++;
-  init_pair(colorPairId, AddColor(p_FgHex), AddColor(p_BgHex));
+  init_pair(colorPairId, fgColor, bgColor);
   return colorPairId;
 }
 

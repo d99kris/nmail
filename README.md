@@ -779,15 +779,68 @@ an email (default disabled).
 
 ~/.nmail/colors.conf
 --------------------
-This configuration file controls the configurable colors of nmail. Colors must
-be specified using six digit hex format with 0x prefix, e.g. `0xffffff`. Default
+This configuration file controls the configurable colors of nmail. Example
+colors config files are provided in `/usr/local/share/nmail/themes` which can
+be used by overwriting `colors.conf`, example:
+
+    cp /usr/local/share/nmail/themes/htop-style.conf ~/.nmail/colors.conf
+
+Alternatively one may manually edit `colors.conf`. Colors may
+be specified using standard palette names (`black`, `red`, `green`, `yellow`,
+`blue`, `magenta`, `cyan`, `white`, `gray`, `bright_red`, `bright_green`,
+`bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan` and
+`bright_white`) or using integer palette numbers (`0`, `1`, `2`, etc). For
+terminals supporting custom palettes it is also possible to specify colors
+using six digit hex format with 0x prefix, e.g. `0xa0a0a0`. For each item
+background `_bg` and foreground `_fg` can be specified. Default
 configuration file:
 
-    color_message_quoted_fg=0xa0a0a0
+    color_dialog_bg=
+    color_dialog_fg=
+    color_help_desc_bg=
+    color_help_desc_fg=
+    color_help_keys_bg=
+    color_help_keys_fg=
+    color_highlighted_text_bg=
+    color_highlighted_text_fg=
+    color_quoted_text_bg=
+    color_quoted_text_fg=
+    color_regular_text_bg=
+    color_regular_text_fg=
+    color_top_bar_bg=
+    color_top_bar_fg=
 
-### color_message_quoted_fg
+### color_dialog
 
-Text color of quoted message text (lines starting with `>`).
+User prompt dialogs and notifications at bottom of the screen, just above the
+help bar.
+
+### color_help_desc
+
+Help shortcut description texts at bottom of the screen, i.e. `Compose` in
+`C Compose`.
+
+### color_help_keys
+
+Help shortcut key binding texts at bottom of the screen, i.e. `C` in
+`C Compose`.
+
+### color_highlighted_text
+
+Highlighted text, such as current message in message view, current folder in
+folder list, text strings found in message find, etc.
+
+### color_quoted_text
+
+Quoted message text (lines starting with `>`).
+
+### color_regular_text
+
+Default text color.
+
+### color_top_bar
+
+Top / title bar.
 
 
 ~/.nmail/auth.conf

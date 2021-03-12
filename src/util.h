@@ -248,8 +248,8 @@ public:
   static std::string ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
                                      const std::string& p_SrcStr);
   static std::string GetSQLiteVersion();
-  static int AddColor(const std::string& p_Hex);
-  static int AddColorPair(const std::string& p_FgHex, const std::string& p_BgHex);
+  static int GetColor(const std::string& p_Str);
+  static int AddColorPair(const std::string& p_FgStr, const std::string& p_BgStr);
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
   static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);
