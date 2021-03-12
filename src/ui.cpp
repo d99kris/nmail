@@ -4925,7 +4925,7 @@ void Ui::MessageFind()
   std::string query = m_PersistFindQuery ? m_MessageFindQuery : "";
   if (PromptString("Find Text: ", "Find", query))
   {
-    if (query != m_MessageFindQuery)
+    if (!query.empty() && (query != m_MessageFindQuery))
     {
       m_MessageFindMatchLine = -1;
       m_MessageFindQuery = query;
