@@ -783,7 +783,7 @@ an email (default disabled).
 ~/.nmail/colors.conf
 --------------------
 This configuration file controls the configurable colors of nmail. Example
-colors config files are provided in `/usr/local/share/nmail/themes` which can
+color config files are provided in `/usr/local/share/nmail/themes` which can
 be used by overwriting `colors.conf`, example:
 
     cp /usr/local/share/nmail/themes/htop-style.conf ~/.nmail/colors.conf
