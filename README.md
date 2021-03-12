@@ -111,7 +111,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    sudo apt install lynx markdown
+    sudo apt install lynx pandoc
 
 **Source**
 
@@ -140,7 +140,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    brew install lynx markdown
+    brew install lynx pandoc
 
 **Source**
 
@@ -418,9 +418,12 @@ used.
 
 ### text_to_html_cmd
 
-This field allows overriding which external program to use for converting
-composed plain text markdown message to corresponding text/html part. If not
-specified, nmail will use the program `markdown` if present on the system.
+This field allows customizing how nmail should convert composed plain text
+markdown message to corresponding text/html part. If not specified, nmail
+checks if `pandoc` or `markdown` is available on the system (in that order),
+and uses the first found. The exact command used is one of:
+- `pandoc -s -f gfm -t html`
+- `markdown`
 
 ### trash
 

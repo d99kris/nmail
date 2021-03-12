@@ -413,7 +413,30 @@ void Util::SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd)
 
 std::string Util::GetDefaultTextToHtmlConvertCmd()
 {
-  return "markdown";
+  std::string result;
+  const std::string& commandOutPath = Util::GetTempFilename(".txt");
+  const std::string& command =
+    std::string("which pandoc markdown 2> /dev/null | head -1 > ") + commandOutPath;
+  if (system(command.c_str()) == 0)
+  {
+    std::string output = Util::ReadFile(commandOutPath);
+    output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
+    if (!output.empty())
+    {
+      if (output.find("/pandoc") != std::string::npos)
+      {
+        result = "pandoc -s -f gfm -t html";
+      }
+      else if (output.find("/markdown") != std::string::npos)
+      {
+        result = "markdown";
+      }
+    }
+  }
+
+  Util::DeleteFile(commandOutPath);
+
+  return result;
 }
 
 std::string Util::ConvertTextToHtml(const std::string& p_Text)
