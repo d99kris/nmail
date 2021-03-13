@@ -213,7 +213,7 @@ void Ui::Init()
       { "color_highlighted_text_bg", "reverse" },
       { "color_highlighted_text_fg", "reverse" },
       { "color_quoted_text_bg", "" },
-      { "color_quoted_text_fg", "gray" },
+      { "color_quoted_text_fg", "" },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
       { "color_top_bar_bg", "reverse" },
