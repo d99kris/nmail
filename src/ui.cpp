@@ -204,20 +204,20 @@ void Ui::Init()
 
     const std::map<std::string, std::string> defaultColorsConfig =
     {
-      { "color_dialog_bg", "" },
-      { "color_dialog_fg", "" },
+      { "color_dialog_bg", "reverse" },
+      { "color_dialog_fg", "reverse" },
       { "color_help_desc_bg", "" },
       { "color_help_desc_fg", "" },
-      { "color_help_keys_bg", "" },
-      { "color_help_keys_fg", "" },
-      { "color_highlighted_text_bg", "" },
-      { "color_highlighted_text_fg", "" },
+      { "color_help_keys_bg", "reverse" },
+      { "color_help_keys_fg", "reverse" },
+      { "color_highlighted_text_bg", "reverse" },
+      { "color_highlighted_text_fg", "reverse" },
       { "color_quoted_text_bg", "" },
-      { "color_quoted_text_fg", "" },
+      { "color_quoted_text_fg", "gray" },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
-      { "color_top_bar_bg", "" },
-      { "color_top_bar_fg", "" },
+      { "color_top_bar_bg", "reverse" },
+      { "color_top_bar_fg", "reverse" },
     };
     const std::string colorsConfigPath(Util::GetApplicationDir() + std::string("colors.conf"));
     Config colorsConfig = Config(colorsConfigPath, defaultColorsConfig);
@@ -227,12 +227,16 @@ void Ui::Init()
     const int colorRegularTextBg = Util::GetColor(colorsConfig.Get("color_regular_text_bg"));
     assume_default_colors(colorRegularTextFg, colorRegularTextBg);
 
-    m_ColorDialog = Util::AddColorPair(colorsConfig.Get("color_dialog_fg"), colorsConfig.Get("color_dialog_bg"));
-    m_ColorHelpDesc = Util::AddColorPair(colorsConfig.Get("color_help_desc_fg"), colorsConfig.Get("color_help_desc_bg"));
-    m_ColorHelpKeys = Util::AddColorPair(colorsConfig.Get("color_help_keys_fg"), colorsConfig.Get("color_help_keys_bg"));
-    m_ColorHighlightedText = Util::AddColorPair(colorsConfig.Get("color_highlighted_text_fg"), colorsConfig.Get("color_highlighted_text_bg"));
-    m_ColorQuotedText = Util::AddColorPair(colorsConfig.Get("color_quoted_text_fg"), colorsConfig.Get("color_quoted_text_bg"));
-    m_ColorTopBar = Util::AddColorPair(colorsConfig.Get("color_top_bar_fg"), colorsConfig.Get("color_top_bar_bg"));
+    m_AttrsDialog = Util::GetColorAttrs(colorsConfig.Get("color_dialog_fg"), colorsConfig.Get("color_dialog_bg"));
+    m_AttrsHelpDesc =
+      Util::GetColorAttrs(colorsConfig.Get("color_help_desc_fg"), colorsConfig.Get("color_help_desc_bg"));
+    m_AttrsHelpKeys =
+      Util::GetColorAttrs(colorsConfig.Get("color_help_keys_fg"), colorsConfig.Get("color_help_keys_bg"));
+    m_AttrsHighlightedText =
+      Util::GetColorAttrs(colorsConfig.Get("color_highlighted_text_fg"), colorsConfig.Get("color_highlighted_text_bg"));
+    m_AttrsQuotedText =
+      Util::GetColorAttrs(colorsConfig.Get("color_quoted_text_fg"), colorsConfig.Get("color_quoted_text_bg"));
+    m_AttrsTopBar = Util::GetColorAttrs(colorsConfig.Get("color_top_bar_fg"), colorsConfig.Get("color_top_bar_bg"));
 
     colorsConfig.Save();
   }
@@ -392,8 +396,7 @@ void Ui::DrawAll()
 void Ui::DrawTop()
 {
   werase(m_TopWin);
-  const int topAttrs = (m_ColorTopBar != -1) ? COLOR_PAIR(m_ColorTopBar) : A_REVERSE;
-  wattron(m_TopWin, topAttrs);
+  wattron(m_TopWin, m_AttrsTopBar);
 
   std::string version = "  nmail " + Util::GetAppVersion();
   std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
@@ -405,7 +408,7 @@ void Ui::DrawTop()
   std::string topCombined = topLeft + topCenter + topRight;
 
   mvwprintw(m_TopWin, 0, 0, "%s", topCombined.c_str());
-  wattroff(m_TopWin, topAttrs);
+  wattroff(m_TopWin, m_AttrsTopBar);
   wrefresh(m_TopWin);
 }
 
@@ -476,10 +479,9 @@ void Ui::DrawDefaultDialog()
     {
       int x = std::max((m_ScreenWidth - (int)m_DialogMessage.size() - 1) / 2, 0);
       const std::string& dispStr = m_DialogMessage;
-      const int dialogAttrs = (m_ColorDialog != -1) ? COLOR_PAIR(m_ColorDialog) : A_REVERSE;
-      wattron(m_DialogWin, dialogAttrs);
+      wattron(m_DialogWin, m_AttrsDialog);
       mvwprintw(m_DialogWin, 0, x, " %s ", dispStr.c_str());
-      wattroff(m_DialogWin, dialogAttrs);
+      wattroff(m_DialogWin, m_AttrsDialog);
     }
   }
 
@@ -669,9 +671,6 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText)
   int cols = 6;
   int width = m_ScreenWidth / cols;
 
-  const int keyAttrs = (m_ColorHelpKeys != -1) ? COLOR_PAIR(m_ColorHelpKeys) : A_REVERSE;
-  const int textAttrs = (m_ColorHelpDesc != -1) ? COLOR_PAIR(m_ColorHelpDesc) : A_NORMAL;
-
   int y = 0;
   for (auto rowIt = p_HelpText.begin(); rowIt != p_HelpText.end(); ++rowIt)
   {
@@ -681,14 +680,14 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText)
       std::wstring wcmd = Util::ToWString(rowIt->at(colIdx));
       std::wstring wdesc = Util::ToWString(rowIt->at(colIdx + 1));
 
-      wattron(m_HelpWin, keyAttrs);
+      wattron(m_HelpWin, m_AttrsHelpKeys);
       mvwaddnwstr(m_HelpWin, y, x, wcmd.c_str(), wcmd.size());
-      wattroff(m_HelpWin, keyAttrs);
+      wattroff(m_HelpWin, m_AttrsHelpKeys);
 
-      wattron(m_HelpWin, textAttrs);
+      wattron(m_HelpWin, m_AttrsHelpDesc);
       const std::wstring wdescTrim = wdesc.substr(0, width - wcmd.size() - 2);
       mvwaddnwstr(m_HelpWin, y, x + wcmd.size() + 1, wdescTrim.c_str(), wdescTrim.size());
-      wattroff(m_HelpWin, textAttrs);
+      wattroff(m_HelpWin, m_AttrsHelpDesc);
 
       x += width;
     }
@@ -752,14 +751,13 @@ void Ui::DrawFolderList()
                               std::max(0, (int)folders.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)folders.size());
 
-    const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
     for (int i = idxOffs; i < idxMax; ++i)
     {
       const std::string& folder = *std::next(folders.begin(), i);
 
       if (i == m_FolderListCurrentIndex)
       {
-        wattron(m_MainWin, highlightAttrs);
+        wattron(m_MainWin, m_AttrsHighlightedText);
         m_FolderListCurrentFolder = folder;
       }
 
@@ -768,7 +766,7 @@ void Ui::DrawFolderList()
 
       if (i == m_FolderListCurrentIndex)
       {
-        wattroff(m_MainWin, highlightAttrs);
+        wattroff(m_MainWin, m_AttrsHighlightedText);
       }
     }
   }
@@ -797,14 +795,13 @@ void Ui::DrawAddressList()
                               std::max(0, (int)m_Addresses.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)m_Addresses.size());
 
-    const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
     for (int i = idxOffs; i < idxMax; ++i)
     {
       const std::string& address = *std::next(m_Addresses.begin(), i);
 
       if (i == m_AddressListCurrentIndex)
       {
-        wattron(m_MainWin, highlightAttrs);
+        wattron(m_MainWin, m_AttrsHighlightedText);
         m_AddressListCurrentAddress = address;
       }
 
@@ -820,7 +817,7 @@ void Ui::DrawAddressList()
 
       if (i == m_AddressListCurrentIndex)
       {
-        wattroff(m_MainWin, highlightAttrs);
+        wattroff(m_MainWin, m_AttrsHighlightedText);
       }
     }
   }
@@ -869,7 +866,6 @@ void Ui::DrawFileList()
     dirLabel += dirPath.substr(dirPathRight);
     mvwaddnwstr(m_MainWin, 0, 2, dirLabel.c_str(), dirLabel.size());
 
-    const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
     for (int i = idxOffs; i < idxMax; ++i)
     {
       const Fileinfo& fileinfo = *std::next(files.begin(), i);
@@ -892,7 +888,7 @@ void Ui::DrawFileList()
 
       if (i == m_FileListCurrentIndex)
       {
-        wattron(m_MainWin, highlightAttrs);
+        wattron(m_MainWin, m_AttrsHighlightedText);
         m_FileListCurrentFile = fileinfo;
       }
 
@@ -900,7 +896,7 @@ void Ui::DrawFileList()
 
       if (i == m_FileListCurrentIndex)
       {
-        wattroff(m_MainWin, highlightAttrs);
+        wattroff(m_MainWin, m_AttrsHighlightedText);
       }
     }
   }
@@ -969,7 +965,6 @@ void Ui::DrawMessageList()
     const std::string& currentDate = Header::GetCurrentDate();
 
     werase(m_MainWin);
-    const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
 
     for (int i = idxOffs; i < idxMax; ++i)
     {
@@ -1025,7 +1020,7 @@ void Ui::DrawMessageList()
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        wattron(m_MainWin, highlightAttrs);
+        wattron(m_MainWin, m_AttrsHighlightedText);
       }
 
       std::wstring wheader = Util::ToWString(header);
@@ -1033,7 +1028,7 @@ void Ui::DrawMessageList()
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        wattroff(m_MainWin, highlightAttrs);
+        wattroff(m_MainWin, m_AttrsHighlightedText);
       }
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
@@ -1158,7 +1153,6 @@ void Ui::DrawMessageListSearch()
     const std::string& currentDate = Header::GetCurrentDate();
 
     werase(m_MainWin);
-    const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
 
     for (int i = idxOffs; i < idxMax; ++i)
     {
@@ -1209,7 +1203,7 @@ void Ui::DrawMessageListSearch()
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        wattron(m_MainWin, highlightAttrs);
+        wattron(m_MainWin, m_AttrsHighlightedText);
       }
 
       std::wstring wheader = Util::ToWString(header);
@@ -1217,7 +1211,7 @@ void Ui::DrawMessageListSearch()
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        wattroff(m_MainWin, highlightAttrs);
+        wattroff(m_MainWin, m_AttrsHighlightedText);
       }
 
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
@@ -1362,8 +1356,6 @@ void Ui::DrawMessage()
       std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxViewLineLength, true);
       wlines.push_back(L"");
       int countLines = wlines.size();
-      const int quotedAttrs = (m_ColorQuotedText != -1) ? COLOR_PAIR(m_ColorQuotedText) : A_NORMAL;
-      const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
                                             countLines - m_MainWinHeight);
@@ -1375,7 +1367,7 @@ void Ui::DrawMessage()
 
         if (isQuote)
         {
-          wattron(m_MainWin, quotedAttrs);
+          wattron(m_MainWin, m_AttrsQuotedText);
         }
 
         if (!m_MessageFindQuery.empty() && (m_MessageFindMatchLine == (i + m_MessageViewLineOffset)))
@@ -1387,9 +1379,9 @@ void Ui::DrawMessage()
           std::wstring afterMatch = wdispStr.substr(m_MessageFindMatchPos + wquery.size());
 
           mvwaddnwstr(m_MainWin, i, 0, beforeMatch.c_str(), beforeMatch.size());
-          wattron(m_MainWin, highlightAttrs);
+          wattron(m_MainWin, m_AttrsHighlightedText);
           mvwaddnwstr(m_MainWin, i, beforeMatch.size(), match.c_str(), match.size());
-          wattroff(m_MainWin, highlightAttrs);
+          wattroff(m_MainWin, m_AttrsHighlightedText);
           mvwaddnwstr(m_MainWin, i, beforeMatch.size() + match.size(), afterMatch.c_str(), afterMatch.size());
         }
         else
@@ -1400,7 +1392,7 @@ void Ui::DrawMessage()
 
         if (isQuote)
         {
-          wattroff(m_MainWin, quotedAttrs);
+          wattroff(m_MainWin, m_AttrsQuotedText);
         }
       }
 
@@ -1561,7 +1553,6 @@ void Ui::DrawPartList()
                                 std::max(0, (int)parts.size() - (int)itemsMax));
       int idxMax = idxOffs + std::min(itemsMax, (int)parts.size());
 
-      const int highlightAttrs = (m_ColorHighlightedText != -1) ? COLOR_PAIR(m_ColorHighlightedText) : A_REVERSE;
       for (int i = idxOffs; i < idxMax; ++i)
       {
         auto it = std::next(parts.begin(), i);
@@ -1569,7 +1560,7 @@ void Ui::DrawPartList()
 
         if (i == m_PartListCurrentIndex)
         {
-          wattron(m_MainWin, highlightAttrs);
+          wattron(m_MainWin, m_AttrsHighlightedText);
           m_PartListCurrentPart = part;
         }
 
@@ -1588,7 +1579,7 @@ void Ui::DrawPartList()
 
         if (i == m_PartListCurrentIndex)
         {
-          wattroff(m_MainWin, highlightAttrs);
+          wattroff(m_MainWin, m_AttrsHighlightedText);
         }
       }
     }
@@ -4431,10 +4422,9 @@ bool Ui::PromptYesNo(const std::string& p_Prompt)
 
   const std::string& dispStr = p_Prompt;
   int x = std::max((m_ScreenWidth - (int)dispStr.size() - 1) / 2, 0);
-  const int dialogAttrs = (m_ColorDialog != -1) ? COLOR_PAIR(m_ColorDialog) : A_REVERSE;
-  wattron(m_DialogWin, dialogAttrs);
+  wattron(m_DialogWin, m_AttrsDialog);
   mvwprintw(m_DialogWin, 0, x, " %s ", dispStr.c_str());
-  wattroff(m_DialogWin, dialogAttrs);
+  wattroff(m_DialogWin, m_AttrsDialog);
 
   wrefresh(m_DialogWin);
 

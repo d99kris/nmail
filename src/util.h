@@ -249,7 +249,7 @@ public:
                                      const std::string& p_SrcStr);
   static std::string GetSQLiteVersion();
   static int GetColor(const std::string& p_Str);
-  static int AddColorPair(const std::string& p_FgStr, const std::string& p_BgStr);
+  static int GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr);
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
   static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);

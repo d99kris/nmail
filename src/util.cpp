@@ -1634,7 +1634,7 @@ int Util::GetColor(const std::string& p_Str)
     { "bright_white", BRIGHT | COLOR_WHITE },
   };
 
-  if (p_Str.empty()) return -1;
+  if (p_Str.empty() || (p_Str == "normal")) return -1;
 
   // hex
   if ((p_Str.size() == 8) && (p_Str.substr(0, 2) == "0x"))
@@ -1673,20 +1673,32 @@ int Util::GetColor(const std::string& p_Str)
     return id;
   }
 
+  if (p_Str == "reverse")
+  {
+    LOG_WARNING("both fg and bg must be set to \"reverse\"", p_Str.c_str());
+    return -1;
+  }
+
   LOG_WARNING("unsupported color string \"%s\"", p_Str.c_str());
   return -1;
 }
 
-int Util::AddColorPair(const std::string& p_FgStr, const std::string& p_BgStr)
+int Util::GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr)
 {
+  if (p_FgStr.empty() && p_BgStr.empty()) return A_NORMAL;
+
+  if ((p_FgStr == "normal") && (p_BgStr == "normal")) return A_NORMAL;
+
+  if ((p_FgStr == "reverse") && (p_BgStr == "reverse")) return A_REVERSE;
+
   const int fgColor = GetColor(p_FgStr);
   const int bgColor = GetColor(p_BgStr);
-  if ((fgColor == -1) && (bgColor == -1)) return -1;
+  if ((fgColor == -1) && (bgColor == -1)) return A_NORMAL;
 
   static int colorPairId = 0;
   colorPairId++;
   init_pair(colorPairId, fgColor, bgColor);
-  return colorPairId;
+  return COLOR_PAIR(colorPairId);
 }
 
 void Util::SetUseServerTimestamps(bool p_Enable)

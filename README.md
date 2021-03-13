@@ -8,7 +8,7 @@ nmail - ncurses mail
 nmail is a console-based email client for Linux and macOS with a user interface
 similar to alpine / pine.
 
-![screenshot](/doc/screenshot.png) 
+![screenshot nmail](/doc/screenshot-nmail.png)
 
 Features
 --------
@@ -26,6 +26,7 @@ Features
 - Compose HTML emails using Markdown (see `markdown_html_compose` option)
 - Email search
 - Compose emails while offline
+- Color customization
 
 Not Supported / Out of Scope
 ----------------------------
@@ -782,36 +783,54 @@ an email (default disabled).
 
 ~/.nmail/colors.conf
 --------------------
-This configuration file controls the configurable colors of nmail. Example
-color config files are provided in `/usr/local/share/nmail/themes` which can
-be used by overwriting `colors.conf`, example:
+This configuration file controls the configurable colors of nmail. For this
+configuration to take effect, `colors_enabled=1` must be set in
+`~/.nmail/ui.conf`.
+
+Example color config files are provided in `/usr/local/share/nmail/themes`
+and can be used by overwriting `~/.nmail/colors.conf`.
+
+### Htop style theme
+
+This color theme is similar to htop's default, see screenshot below with
+nmail and htop.
+
+![screenshot nmail htop style theme](/doc/screenshot-nmail-htop-theme.png)
+
+To use this config:
 
     cp /usr/local/share/nmail/themes/htop-style.conf ~/.nmail/colors.conf
+
+### Manual configuration
 
 Alternatively one may manually edit `colors.conf`. Colors may
 be specified using standard palette names (`black`, `red`, `green`, `yellow`,
 `blue`, `magenta`, `cyan`, `white`, `gray`, `bright_red`, `bright_green`,
 `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan` and
-`bright_white`) or using integer palette numbers (`0`, `1`, `2`, etc). For
-terminals supporting custom palettes it is also possible to specify colors
-using six digit hex format with 0x prefix, e.g. `0xa0a0a0`. For each item
+`bright_white`) or using integer palette numbers (`0`, `1`, `2`, etc).
+
+To use default terminal color, leave the color empty or set it to `normal`.
+To use inverted / reverse color set both `fg` and `bg` values to `reverse`.
+
+For terminals supporting custom palettes it is also possible to specify colors
+using six digit hex format with `0x` prefix, e.g. `0xa0a0a0`. For each item
 background `_bg` and foreground `_fg` can be specified. Default
 configuration file:
 
-    color_dialog_bg=
-    color_dialog_fg=
+    color_dialog_bg=reverse
+    color_dialog_fg=reverse
     color_help_desc_bg=
     color_help_desc_fg=
-    color_help_keys_bg=
-    color_help_keys_fg=
-    color_highlighted_text_bg=
-    color_highlighted_text_fg=
+    color_help_keys_bg=reverse
+    color_help_keys_fg=reverse
+    color_highlighted_text_bg=reverse
+    color_highlighted_text_fg=reverse
     color_quoted_text_bg=
-    color_quoted_text_fg=
+    color_quoted_text_fg=gray
     color_regular_text_bg=
     color_regular_text_fg=
-    color_top_bar_bg=
-    color_top_bar_fg=
+    color_top_bar_bg=reverse
+    color_top_bar_fg=reverse
 
 ### color_dialog
 

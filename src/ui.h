@@ -319,12 +319,12 @@ private:
   bool m_ShowRichHeader = false;
   bool m_ColorsEnabled = false;
 
-  int m_ColorTopBar = -1;
-  int m_ColorQuotedText = -1;
-  int m_ColorHighlightedText = -1;
-  int m_ColorHelpKeys = -1;
-  int m_ColorHelpDesc = -1;
-  int m_ColorDialog = -1;
+  int m_AttrsDialog = A_REVERSE;
+  int m_AttrsHelpDesc = A_NORMAL;
+  int m_AttrsHelpKeys = A_REVERSE;
+  int m_AttrsHighlightedText = A_REVERSE;
+  int m_AttrsQuotedText = A_NORMAL;
+  int m_AttrsTopBar = A_REVERSE;
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;
