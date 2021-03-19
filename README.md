@@ -112,7 +112,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    sudo apt install lynx pandoc
+    sudo apt install lynx markdown
 
 **Source**
 
@@ -141,7 +141,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    brew install lynx pandoc
+    brew install lynx markdown
 
 **Source**
 
@@ -631,6 +631,11 @@ file (platform-dependent defaults are left empty below):
     key_save_file=s
     key_search=/
     key_send=KEY_CTRLX
+    key_sort_date=3
+    key_sort_has_attachments=2
+    key_sort_name=4
+    key_sort_subject=5
+    key_sort_unread=1
     key_sync=s
     key_to_select=KEY_CTRLT
     key_toggle_markdown_compose=KEY_CTRLN
@@ -642,6 +647,8 @@ file (platform-dependent defaults are left empty below):
     persist_find_query=0
     persist_folder_filter=1
     persist_search_query=0
+    persist_selection_on_sortfilter_change=1
+    persist_sortfilter=1
     plain_text=1
     postpone_without_confirm=0
     quit_without_confirm=1
@@ -741,6 +748,16 @@ Determines whether to persist move-to-folder list filter (default enabled).
 
 Controls whether to start with previous search query when performing repeated
 search queries (default disabled).
+
+### persist_selection_on_sortfilter_change
+
+Determines whether to keep current message list selection when
+sorting/filtering mode is changed (default enabled).
+
+### persist_sortfilter
+
+Specifies whether each folder listing shall persist its folder/sorting
+(default enabled).
 
 ### plain_text
 

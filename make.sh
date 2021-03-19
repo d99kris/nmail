@@ -20,6 +20,7 @@ BUILD="0"
 TESTS="0"
 DOC="0"
 INSTALL="0"
+SRC="0"
 case "${1%/}" in
   deps)
     DEPS="1"
@@ -44,6 +45,10 @@ case "${1%/}" in
     INSTALL="1"
     ;;
 
+  src)
+    SRC="1"
+    ;;
+
   all)
     DEPS="1"
     BUILD="1"
@@ -59,7 +64,8 @@ case "${1%/}" in
     echo "  tests     - perform build and run tests"
     echo "  doc       - perform build and generate documentation"
     echo "  install   - perform build and install"
-    echo "  all       - perform all actions above"
+    echo "  all       - perform all actions above (except reformatting)"
+    echo "  src       - perform source code reformatting"
     exit 1
     ;;
 esac
@@ -79,6 +85,12 @@ if [[ "${DEPS}" == "1" ]]; then
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
+fi
+
+# src
+if [[ "${SRC}" == "1" ]]; then
+  uncrustify -c etc/uncrustify.cfg --replace --no-backup src/*.cpp src/*.h || \
+    exiterr "unrustify failed, exiting."
 fi
 
 # build

@@ -60,6 +60,23 @@ public:
     HeaderSub,
   };
 
+  enum SortFilter
+  {
+    SortDefault = 0,
+    SortUnseenAsc,
+    SortUnseenDesc,
+    SortUnseenOnly,
+    SortAttchAsc,
+    SortAttchDesc,
+    SortAttchOnly,
+    SortDateAsc,
+    SortDateDesc,
+    SortNameAsc,
+    SortNameDesc,
+    SortSubjAsc,
+    SortSubjDesc,
+  };
+
   Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel);
   virtual ~Ui();
 
@@ -126,6 +143,7 @@ private:
   std::string GetKeyDisplay(int p_Key);
   std::string GetStatusStr();
   std::string GetStateStr();
+  std::string GetFilterStr();
   bool IsValidTextKey(int p_Key);
 
   void SendComposedMessage();
@@ -170,11 +188,19 @@ private:
   void StartComposeBackup();
   void StopComposeBackup();
   void ComposeBackupProcess();
-  void UpdateFilteredMsgDateUids();
-  std::map<std::string, uint32_t>& GetMsgDateUids(const std::string& p_Folder);
-  void FilterDisable();
-  void ToggleFilterShowUnread();
-  void ToggleFilterShowAttachments();
+
+  std::map<std::string, uint32_t>& GetDisplayUids(const std::string& p_Folder);
+  std::set<uint32_t>& GetHeaderUids(const std::string& p_Folder);
+  std::string GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, SortFilter p_SortFilter);
+  void UpdateDisplayUids(const std::string& p_Folder,
+                         const std::set<uint32_t>& p_RemovedUids = std::set<uint32_t>(),
+                         const std::set<uint32_t>& p_AddedUids = std::set<uint32_t>(),
+                         bool p_FilterUpdated = false);
+  void SortFilterPreUpdate();
+  void SortFilterUpdated(bool p_FilterUpdated);
+  void DisableSortFilter();
+  void ToggleFilter(SortFilter p_SortFilter);
+  void ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -198,9 +224,12 @@ private:
   std::map<std::string, std::map<uint32_t, Header>> m_Headers;
   std::map<std::string, std::map<uint32_t, uint32_t>> m_Flags;
   std::map<std::string, std::map<uint32_t, Body>> m_Bodys;
-  std::map<std::string, std::map<std::string, uint32_t>> m_MsgDateUids;
-  std::map<std::string, std::map<uint32_t, std::string>> m_MsgUidDates;
   std::map<std::string, std::set<uint32_t>> m_NewUids;
+  std::map<std::string, SortFilter> m_SortFilter;
+  std::map<std::string, std::set<uint32_t>> m_HeaderUids;
+  std::map<std::string, std::map<SortFilter, std::map<std::string, uint32_t>>> m_DisplayUids;
+  std::map<std::string, std::map<SortFilter, uint64_t>> m_DisplayUidsVersion;
+  std::map<std::string, uint64_t> m_HeaderUidsVersion;
 
   bool m_HasRequestedFolders = false;
   bool m_HasPrefetchRequestedFolders = false;
@@ -307,6 +336,11 @@ private:
   int m_KeyNextPage = 0;
   int m_KeyFilterShowUnread = 0;
   int m_KeyFilterShowHasAttachments = 0;
+  int m_KeySortUnread = 0;
+  int m_KeySortHasAttachments = 0;
+  int m_KeySortDate = 0;
+  int m_KeySortName = 0;
+  int m_KeySortSubject = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
@@ -328,6 +362,8 @@ private:
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;
+  bool m_PersistSortFilter = true;
+  bool m_PersistSelectionOnSortFilterChange = true;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;
@@ -368,6 +404,7 @@ private:
   State m_LastMessageState = StateComposeMessage;
 
   int m_HelpViewMessagesListOffset = 0;
+  int m_HelpViewMessagesListSize = 0;
   int m_HelpViewMessageOffset = 0;
 
   bool m_MessageViewToggledSeen = false;
@@ -399,11 +436,6 @@ private:
   int m_MessageFindMatchLine = -1;
   int m_MessageFindMatchPos = 0;
   std::string m_MessageFindQuery;
-
-  bool m_FilterEnabled = false;
-  bool m_FilterShowUnread = false;
-  bool m_FilterShowAttachments = false;
-  std::map<std::string, std::map<std::string, uint32_t>> m_FilteredMsgDateUids;
 
 private:
   static bool s_Running;
