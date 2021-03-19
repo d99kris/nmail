@@ -231,6 +231,7 @@ public:
   static std::string GetPagerCmd();
   static void StripCR(std::wstring& p_Str);
   static std::string Strip(const std::string& p_Str, const char p_Char);
+  static std::string TrimLeft(const std::string& p_Str, const std::string& p_Trim);
   static std::string TrimRight(const std::string& p_Str, const std::string& p_Trim);
   static std::string RunCommand(const std::string& p_Cmd);
   static void DetectCommandNotPresent(const std::string& p_Cmd);
@@ -253,6 +254,9 @@ public:
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
   static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);
+  static void BitInvertString(std::string& p_String);
+  static void NormalizeName(std::string& p_String);
+  static void NormalizeSubject(std::string& p_String);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

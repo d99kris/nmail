@@ -685,25 +685,22 @@ void ImapManager::CacheProcess()
 
       while (m_CacheRunning && !m_CacheRequests.empty())
       {
-        while (!m_CacheRequests.empty())
+        const Request request = m_CacheRequests.front();
+        m_CacheRequests.pop_front();
+
+        m_CacheQueueMutex.unlock();
+
+        Response response;
+        bool result = PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */,
+                                     response);
+        if (!result)
         {
-          const Request request = m_CacheRequests.front();
-          m_CacheRequests.pop_front();
-
-          m_CacheQueueMutex.unlock();
-
-          Response response;
-          bool result = PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */,
-                                       response);
-          if (!result)
-          {
-            LOG_WARNING("cache request failed");
-          }
-
-          SendRequestResponse(request, response);
-
-          m_CacheQueueMutex.lock();
+          LOG_WARNING("cache request failed");
         }
+
+        SendRequestResponse(request, response);
+
+        m_CacheQueueMutex.lock();
       }
 
       m_CacheQueueMutex.unlock();

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <csignal>
 #include <map>
+#include <regex>
 #include <set>
 
 #include <cxxabi.h>
@@ -1451,6 +1452,13 @@ std::string Util::Strip(const std::string& p_Str, const char p_Char)
   return str;
 }
 
+std::string Util::TrimLeft(const std::string& p_Str, const std::string& p_Trim)
+{
+  std::string str = p_Str;
+  str.erase(0, str.find_first_not_of(p_Trim));
+  return str;
+}
+
 std::string Util::TrimRight(const std::string& p_Str, const std::string& p_Trim)
 {
   const auto strEnd = p_Str.find_last_not_of(p_Trim);
@@ -1720,4 +1728,24 @@ void Util::CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir)
     std::ofstream dstFile(p_DstDir + "/" + file, std::ios::binary);
     dstFile << srcFile.rdbuf();
   }
+}
+
+void Util::BitInvertString(std::string& p_String)
+{
+  for (auto& ch : p_String)
+  {
+    ch = ~ch;
+  }
+}
+
+void Util::NormalizeName(std::string& p_String)
+{
+  std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
+}
+
+void Util::NormalizeSubject(std::string& p_String)
+{
+  std::regex re("^((re|fwd?) *(:) *)+", std::regex_constants::icase);
+  p_String = std::regex_replace(p_String, re, "");
+  std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
 }

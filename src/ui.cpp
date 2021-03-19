@@ -118,10 +118,17 @@ void Ui::Init()
     { "key_next_page", "KEY_NPAGE" },
     { "key_filter_show_unread", "!" },
     { "key_filter_show_has_attachments", "@" },
+    { "key_sort_unread", "1" },
+    { "key_sort_has_attachments", "2" },
+    { "key_sort_date", "3" },
+    { "key_sort_name", "4" },
+    { "key_sort_subject", "5" },
     { "colors_enabled", "0" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
     { "compose_backup_interval", "10" },
+    { "persist_sortfilter", "1" },
+    { "persist_selection_on_sortfilter_change", "1" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -179,6 +186,11 @@ void Ui::Init()
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
   m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
   m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
+  m_KeySortUnread = Util::GetKeyCode(m_Config.Get("key_sort_unread"));
+  m_KeySortHasAttachments = Util::GetKeyCode(m_Config.Get("key_sort_has_attachments"));
+  m_KeySortDate = Util::GetKeyCode(m_Config.Get("key_sort_date"));
+  m_KeySortName = Util::GetKeyCode(m_Config.Get("key_sort_name"));
+  m_KeySortSubject = Util::GetKeyCode(m_Config.Get("key_sort_subject"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -243,6 +255,8 @@ void Ui::Init()
 
   m_AttachmentIndicator = m_Config.Get("attachment_indicator");
   m_BottomReply = m_Config.Get("bottom_reply") == "1";
+  m_PersistSortFilter = m_Config.Get("persist_sortfilter") == "1";
+  m_PersistSelectionOnSortFilterChange = m_Config.Get("persist_selection_on_sortfilter_change") == "1";
 
   try
   {
@@ -509,11 +523,10 @@ void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= fa
 
 void Ui::DrawHelp()
 {
-  // @todo: non-static is not optimal performance-wise, consider separate static vectors here and select below
-  std::vector<std::vector<std::string>> viewMessagesListHelp =
+  static std::vector<std::vector<std::string>> viewMessagesListCommonHelp =
   {
     {
-      GetKeyDisplay(m_KeyBack), m_MessageListSearch ? "MsgList" : "Folders",
+      GetKeyDisplay(m_KeyBack), "Folders",
       GetKeyDisplay(m_KeyPrevMsg), "PrevMsg",
       GetKeyDisplay(m_KeyReply), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
@@ -539,10 +552,35 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
-      GetKeyDisplay(m_KeyFilterShowUnread), "FiltUnrd",
-      GetKeyDisplay(m_KeyFilterShowHasAttachments), "FiltAttc",
     },
   };
+
+  static std::vector<std::vector<std::string>> viewMessagesListHelp = [&]()
+  {
+    std::vector<std::vector<std::string>> listHelp = viewMessagesListCommonHelp;
+    listHelp.push_back(
+    {
+      GetKeyDisplay(m_KeySortUnread), "SortUnrd",
+      GetKeyDisplay(m_KeySortHasAttachments), "SortAttc",
+      GetKeyDisplay(m_KeySortDate), "SortDate",
+      GetKeyDisplay(m_KeySortName), "SortName",
+      GetKeyDisplay(m_KeySortSubject), "SortSubj",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
+    });
+    listHelp.push_back(
+    {
+      GetKeyDisplay(m_KeyFilterShowUnread), "FiltUnrd",
+      GetKeyDisplay(m_KeyFilterShowHasAttachments), "FiltAttc",
+    });
+    return listHelp;
+  }();
+
+  static std::vector<std::vector<std::string>> viewMessagesListSearchHelp = [&]()
+  {
+    std::vector<std::vector<std::string>> listHelp = viewMessagesListCommonHelp;
+    listHelp[0][1] = "MsgList";
+    return listHelp;
+  }();
 
   static std::vector<std::vector<std::string>> viewMessageHelp =
   {
@@ -624,8 +662,12 @@ void Ui::DrawHelp()
     {
       case StateViewMessageList:
         {
-          auto first = viewMessagesListHelp.begin() + m_HelpViewMessagesListOffset;
-          auto last = viewMessagesListHelp.begin() + m_HelpViewMessagesListOffset + 2;
+          const std::vector<std::vector<std::string>>& listHelp =
+            m_MessageListSearch ? viewMessagesListSearchHelp : viewMessagesListHelp;
+          m_HelpViewMessagesListSize = listHelp.size();
+
+          auto first = listHelp.begin() + m_HelpViewMessagesListOffset;
+          auto last = listHelp.begin() + m_HelpViewMessagesListOffset + 2;
           std::vector<std::vector<std::string>> helpMessages(first, last);
           DrawHelpText(helpMessages);
           break;
@@ -926,7 +968,7 @@ void Ui::DrawMessageList()
     std::set<uint32_t>& newUids = m_NewUids[m_CurrentFolder];
     std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
     std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
-    auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
+    const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
 
     std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[m_CurrentFolder];
     std::set<uint32_t>& requestedFlags = m_RequestedFlags[m_CurrentFolder];
@@ -959,8 +1001,8 @@ void Ui::DrawMessageList()
 
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
                                        ((m_MainWinHeight - 1) / 2)),
-                              std::max(0, (int)msgDateUids.size() - (int)m_MainWinHeight));
-    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)msgDateUids.size());
+                              std::max(0, (int)displayUids.size() - (int)m_MainWinHeight));
+    int idxMax = idxOffs + std::min(m_MainWinHeight, (int)displayUids.size());
 
     const std::string& currentDate = Header::GetCurrentDate();
 
@@ -968,7 +1010,7 @@ void Ui::DrawMessageList()
 
     for (int i = idxOffs; i < idxMax; ++i)
     {
-      uint32_t uid = std::prev(msgDateUids.end(), i + 1)->second;
+      uint32_t uid = std::prev(displayUids.end(), i + 1)->second;
 
       if ((flags.find(uid) == flags.end()) &&
           (requestedFlags.find(uid) == requestedFlags.end()))
@@ -1755,7 +1797,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   }
   else if (p_Key == KEY_END)
   {
-    m_FolderListCurrentIndex = std::numeric_limits<int>::max();
+    m_FolderListCurrentIndex = std::numeric_limits<int>::max() - 1;
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
@@ -1774,9 +1816,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       {
         const int uid = m_CurrentFolderUid.second;
         MoveMessage(uid, folder, m_FolderListCurrentFolder);
-        UpdateUidFromIndex(true /* p_UserTriggered */);
         SetLastStateOrMessageList();
-        UpdateFilteredMsgDateUids();
       }
       else
       {
@@ -2085,7 +2125,6 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
-    FilterDisable();
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
@@ -2095,6 +2134,11 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     }
     else
     {
+      if (!m_PersistSortFilter)
+      {
+        DisableSortFilter();
+      }
+
       SetState(StateGotoFolder);
     }
   }
@@ -2199,7 +2243,11 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyOtherCmdHelp)
   {
-    m_HelpViewMessagesListOffset = (m_HelpViewMessagesListOffset == 0) ? 2 : 0;
+    m_HelpViewMessagesListOffset += 2;
+    if (m_HelpViewMessagesListOffset >= m_HelpViewMessagesListSize)
+    {
+      m_HelpViewMessagesListOffset = 0;
+    }
   }
   else if (p_Key == m_KeyExport)
   {
@@ -2234,11 +2282,31 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyFilterShowUnread)
   {
-    ToggleFilterShowUnread();
+    ToggleFilter(SortUnseenOnly);
   }
   else if (p_Key == m_KeyFilterShowHasAttachments)
   {
-    ToggleFilterShowAttachments();
+    ToggleFilter(SortAttchOnly);
+  }
+  else if (p_Key == m_KeySortUnread)
+  {
+    ToggleSort(SortUnseenDesc, SortUnseenAsc);
+  }
+  else if (p_Key == m_KeySortHasAttachments)
+  {
+    ToggleSort(SortAttchDesc, SortAttchAsc);
+  }
+  else if (p_Key == m_KeySortDate)
+  {
+    ToggleSort(SortDateDesc, SortDateAsc);
+  }
+  else if (p_Key == m_KeySortName)
+  {
+    ToggleSort(SortNameDesc, SortNameAsc);
+  }
+  else if (p_Key == m_KeySortSubject)
+  {
+    ToggleSort(SortSubjDesc, SortSubjAsc);
   }
   else
   {
@@ -3337,7 +3405,8 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       if (!removedUids.empty())
       {
         LOG_DEBUG_VAR("del uids =", removedUids);
-        RemoveUidDate(p_Response.m_Folder, removedUids);
+        UpdateDisplayUids(p_Response.m_Folder, removedUids);
+        m_Headers[p_Response.m_Folder] = m_Headers[p_Response.m_Folder] - removedUids;
       }
 
       m_Uids[p_Response.m_Folder] = p_Response.m_Uids;
@@ -3350,10 +3419,9 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(), p_Response.m_Headers.end());
+      UpdateDisplayUids(p_Response.m_Folder, std::set<uint32_t>(), MapKey(p_Response.m_Headers));
+
       uiRequest |= UiRequestDrawAll;
-
-      AddUidDate(p_Response.m_Folder, p_Response.m_Headers);
-
       updateIndexFromUid = true;
       LOG_DEBUG_VAR("new headers =", MapKey(p_Response.m_Headers));
     }
@@ -3901,9 +3969,9 @@ std::string Ui::GetStateStr()
       {
         return "Search: " + m_MessageListSearchQuery;
       }
-      else if (m_FilterEnabled)
+      else if (m_SortFilter[m_CurrentFolder] != SortDefault)
       {
-        return std::string("Filter: ") + (m_FilterShowUnread ? "Unread" : "Attachment");
+        return "Folder: " + m_CurrentFolder + GetFilterStr();
       }
       else
       {
@@ -3925,15 +3993,56 @@ std::string Ui::GetStateStr()
 
         return str;
       }
-    case StateGotoFolder: return "Goto Folder";
-    case StateMoveToFolder: return "Move To Folder";
-    case StateComposeMessage: return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateReplyMessage: return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateForwardMessage: return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateAddressList: return "Address Book";
-    case StateFileList: return "File Selection";
-    case StateViewPartList: return "Message Parts";
+    case StateGotoFolder:
+      return "Goto Folder";
+    case StateMoveToFolder:
+      return "Move To Folder";
+    case StateComposeMessage:
+      return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateReplyMessage:
+      return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateForwardMessage:
+      return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateAddressList:
+      return "Address Book";
+    case StateFileList:
+      return "File Selection";
+    case StateViewPartList:
+      return "Message Parts";
     default: return "Unknown State";
+  }
+}
+
+std::string Ui::GetFilterStr()
+{
+  switch (m_SortFilter[m_CurrentFolder])
+  {
+    case SortUnseenAsc:
+      return " [Unrd Asc]";
+    case SortUnseenDesc:
+      return " [Unrd Desc]";
+    case SortUnseenOnly:
+      return " [Unrd Only]";
+    case SortAttchAsc:
+      return " [Attc Asc]";
+    case SortAttchDesc:
+      return " [Attc Desc]";
+    case SortAttchOnly:
+      return " [Attc Only]";
+    case SortDateAsc:
+      return " [Date Asc]";
+    case SortDateDesc:
+      return " [Date Desc]";
+    case SortNameAsc:
+      return " [Name Asc]";
+    case SortNameDesc:
+      return " [Name Desc]";
+    case SortSubjAsc:
+      return " [Subj Asc]";
+    case SortSubjDesc:
+      return " [Subj Desc]";
+    default:
+      return ""; // should not reach here
   }
 }
 
@@ -4045,16 +4154,14 @@ bool Ui::DeleteMessage()
 
         m_MessageFindMatchLine = -1;
         m_MessageViewLineOffset = 0;
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        UpdateFilteredMsgDateUids();
 
-        bool isMsgDateUidsEmpty = false;
+        bool isHeaderUidsEmpty = false;
         {
           std::lock_guard<std::mutex> lock(m_Mutex);
-          isMsgDateUidsEmpty = GetMsgDateUids(folder).empty();
+          isHeaderUidsEmpty = GetHeaderUids(folder).empty();
         }
 
-        if (isMsgDateUidsEmpty)
+        if (isHeaderUidsEmpty)
         {
           SetState(StateViewMessageList);
         }
@@ -4087,15 +4194,17 @@ void Ui::MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::strin
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = m_CurrentFolderUid.first;
+    const std::string& folder = p_From;
 
-    RemoveUidDate(folder, action.m_Uids);
+    UpdateDisplayUids(folder, action.m_Uids);
     m_Uids[folder] = m_Uids[folder] - action.m_Uids;
     m_Headers[folder] = m_Headers[folder] - action.m_Uids;
 
     m_HasRequestedUids[p_From] = false;
     m_HasRequestedUids[p_To] = false;
   }
+
+  UpdateUidFromIndex(true /* p_UserTriggered */);
 }
 
 void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
@@ -4108,7 +4217,7 @@ void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    RemoveUidDate(p_Folder, action.m_Uids);
+    UpdateDisplayUids(p_Folder, action.m_Uids);
     m_Uids[p_Folder] = m_Uids[p_Folder] - action.m_Uids;
     m_Headers[p_Folder] = m_Headers[p_Folder] - action.m_Uids;
 
@@ -4208,14 +4317,14 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
   }
 
   std::lock_guard<std::mutex> lock(m_Mutex);
-  auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
+  const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
 
   m_MessageListCurrentIndex[m_CurrentFolder] =
-    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)msgDateUids.size() - 1);
-  if (msgDateUids.size() > 0)
+    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)displayUids.size() - 1);
+  if (displayUids.size() > 0)
   {
     m_MessageListCurrentUid[m_CurrentFolder] =
-      std::prev(msgDateUids.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->second;
+      std::prev(displayUids.end(), m_MessageListCurrentIndex[m_CurrentFolder] + 1)->second;
   }
   else
   {
@@ -4249,13 +4358,13 @@ void Ui::UpdateIndexFromUid()
 
     if (m_MessageListUidSet[m_CurrentFolder])
     {
-      auto& msgDateUids = GetMsgDateUids(m_CurrentFolder);
+      const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
 
-      for (auto it = msgDateUids.rbegin(); it != msgDateUids.rend(); ++it)
+      for (auto it = displayUids.rbegin(); it != displayUids.rend(); ++it)
       {
         if ((int32_t)it->second == m_MessageListCurrentUid[m_CurrentFolder])
         {
-          m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(msgDateUids.rbegin(), it);
+          m_MessageListCurrentIndex[m_CurrentFolder] = std::distance(displayUids.rbegin(), it);
           found = true;
           break;
         }
@@ -4273,68 +4382,8 @@ void Ui::UpdateIndexFromUid()
     m_CurrentFolderUid.second = m_MessageListCurrentUid[m_CurrentFolder];
   }
 
-  LOG_DEBUG("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder],
+  LOG_TRACE("current uid = %d, idx = %d", m_MessageListCurrentUid[m_CurrentFolder],
             m_MessageListCurrentIndex[m_CurrentFolder]);
-}
-
-void Ui::AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders)
-{
-  auto& msgDateUids = m_MsgDateUids[p_Folder];
-  auto& msgUidDates = m_MsgUidDates[p_Folder];
-
-  for (auto it = p_UidHeaders.begin(); it != p_UidHeaders.end(); ++it)
-  {
-    const uint32_t uid = it->first;
-    const std::string& date = m_Headers[p_Folder][uid].GetDateTime();
-    std::string dateUid = date + std::to_string(uid);
-
-    if (uid == 0)
-    {
-      LOG_WARNING("skip add date = %s, uid = %d pair", date.c_str(), uid);
-      continue;
-    }
-
-    LOG_TRACE("add date = %s, uid = %d pair", date.c_str(), uid);
-
-    auto ret = msgDateUids.insert(std::pair<std::string, uint32_t>(dateUid, uid));
-    if (ret.second)
-    {
-      msgUidDates.insert(std::pair<uint32_t, std::string>(uid, dateUid));
-    }
-  }
-}
-
-void Ui::RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
-{
-  auto& msgDateUids = m_MsgDateUids[p_Folder];
-  auto& msgUidDates = m_MsgUidDates[p_Folder];
-
-  for (auto it = p_Uids.begin(); it != p_Uids.end(); ++it)
-  {
-    const uint32_t uid = *it;
-    const std::string& date = m_Headers[p_Folder][uid].GetDateTime();
-    std::string dateUid = date + std::to_string(uid);
-
-    if (uid == 0)
-    {
-      LOG_WARNING("skip del date = %s, uid = %d pair", date.c_str(), uid);
-      continue;
-    }
-
-    LOG_DEBUG("del date = %s, uid = %d pair", date.c_str(), uid);
-
-    auto msgDateUid = msgDateUids.find(dateUid);
-    if (msgDateUid != msgDateUids.end())
-    {
-      msgDateUids.erase(msgDateUid);
-    }
-
-    auto msgUidDate = msgUidDates.find(uid);
-    if (msgUidDate != msgUidDates.end())
-    {
-      msgUidDates.erase(msgUidDate);
-    }
-  }
 }
 
 void Ui::ComposeMessagePrevLine()
@@ -4770,18 +4819,18 @@ void Ui::ExtMsgViewer(const std::string& p_Path)
 
 void Ui::SetLastStateOrMessageList()
 {
-  bool isMsgDateUidsEmpty = false;
+  bool isHeaderUidsEmpty = false;
   if (m_MessageListSearch)
   {
-    isMsgDateUidsEmpty = false;
+    isHeaderUidsEmpty = false;
   }
   else
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    isMsgDateUidsEmpty = GetMsgDateUids(m_CurrentFolder).empty();
+    isHeaderUidsEmpty = GetHeaderUids(m_CurrentFolder).empty();
   }
 
-  if (isMsgDateUidsEmpty)
+  if (isHeaderUidsEmpty)
   {
     SetState(StateViewMessageList);
   }
@@ -5229,75 +5278,240 @@ void Ui::ComposeBackupProcess()
   LOG_DEBUG("stopping backup thread");
 }
 
-void Ui::UpdateFilteredMsgDateUids()
+std::map<std::string, uint32_t>& Ui::GetDisplayUids(const std::string& p_Folder)
 {
-  if (!m_FilterEnabled) return;
+  const SortFilter& sortFilter = m_SortFilter[p_Folder];
+  std::map<std::string, uint32_t>& displayUids = m_DisplayUids[p_Folder][sortFilter];
+  return displayUids;
+}
 
-  auto& msgDateUids = m_MsgDateUids[m_CurrentFolder];
-  auto& filteredMsgDateUids = m_FilteredMsgDateUids[m_CurrentFolder];
-  auto& headers = m_Headers[m_CurrentFolder];
-  auto& flags = m_Flags[m_CurrentFolder];
+std::set<uint32_t>& Ui::GetHeaderUids(const std::string& p_Folder)
+{
+  return m_HeaderUids[p_Folder];
+}
 
-  filteredMsgDateUids.clear();
-  for (const auto& msgDateUid : msgDateUids)
+std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, SortFilter p_SortFilter)
+{
+  std::map<uint32_t, Header>& headers = m_Headers[p_Folder];
+  const std::map<uint32_t, uint32_t>& flags = m_Flags[p_Folder];
+
+  std::string key;
+  std::string priKey;
+  std::map<uint32_t, Header>::iterator hit = headers.find(p_Uid);
+  std::string dateUidKey =
+    ((hit != headers.end()) ? hit->second.GetDateTime() : "") + " " + std::to_string(p_Uid);
+  std::map<uint32_t, uint32_t>::const_iterator fit;
+  switch (p_SortFilter)
   {
-    uint32_t uid = msgDateUid.second;
-    if (m_FilterShowUnread)
-    {
-      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
+    case SortDefault:
+    case SortDateDesc:
+      key = dateUidKey;
+      break;
+
+    case SortDateAsc:
+      key = dateUidKey;
+      Util::BitInvertString(key);
+      break;
+
+    case SortUnseenOnly:
+      fit = flags.find(p_Uid);
+      key = ((fit != flags.end()) && !Flag::GetSeen(fit->second)) ? dateUidKey : "";
+      break;
+
+    case SortAttchOnly:
+      key = ((hit != headers.end()) && hit->second.GetHasAttachments()) ? dateUidKey : "";
+      break;
+
+    case SortNameDesc:
+      if (hit != headers.end())
       {
-        filteredMsgDateUids.insert(msgDateUid);
+        priKey = (p_Folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
+      }
+      else
+      {
+        priKey = "";
+      }
+      Util::NormalizeName(priKey);
+      key = priKey + " " + dateUidKey;
+      break;
+
+    case SortNameAsc:
+      if (hit != headers.end())
+      {
+        priKey = (p_Folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
+      }
+      else
+      {
+        priKey = "";
+      }
+      Util::NormalizeName(priKey);
+      key = priKey + " " + dateUidKey;
+      Util::BitInvertString(key);
+      break;
+
+    case SortSubjDesc:
+      priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
+      Util::NormalizeSubject(priKey);
+      key = priKey + " " + dateUidKey;
+      break;
+
+    case SortSubjAsc:
+      priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
+      Util::NormalizeSubject(priKey);
+      key = priKey + " " + dateUidKey;
+      Util::BitInvertString(key);
+      break;
+
+    case SortUnseenDesc:
+      fit = flags.find(p_Uid);
+      priKey = ((fit != flags.end()) && !Flag::GetSeen(fit->second)) ? "1" : "0";
+      key = priKey + " " + dateUidKey;
+      break;
+
+    case SortUnseenAsc:
+      fit = flags.find(p_Uid);
+      priKey = ((fit != flags.end()) && !Flag::GetSeen(fit->second)) ? "1" : "0";
+      key = priKey + " " + dateUidKey;
+      Util::BitInvertString(key);
+      break;
+
+    case SortAttchDesc:
+      priKey = ((hit != headers.end()) && hit->second.GetHasAttachments()) ? "1" : "0";
+      key = priKey + " " + dateUidKey;
+      break;
+
+    case SortAttchAsc:
+      priKey = ((hit != headers.end()) && hit->second.GetHasAttachments()) ? "1" : "0";
+      key = priKey + " " + dateUidKey;
+      Util::BitInvertString(key);
+      break;
+
+    default:
+      LOG_WARNING("unhandled sortfilter %d", p_SortFilter);
+      break;
+  }
+
+  return key;
+}
+
+// must be called with m_Mutex lock held
+void Ui::UpdateDisplayUids(const std::string& p_Folder,
+                           const std::set<uint32_t>& p_RemovedUids /*= std::set<uint32_t>()*/,
+                           const std::set<uint32_t>& p_AddedUids /*= std::set<uint32_t>()*/,
+                           bool p_FilterUpdated /*= false*/)
+{
+  std::set<uint32_t>& headerUids = m_HeaderUids[p_Folder];
+  SortFilter& sortFilter = m_SortFilter[p_Folder];
+  std::map<std::string, uint32_t>& displayUids = m_DisplayUids[p_Folder][sortFilter];
+  uint64_t& displayUidsVersion = m_DisplayUidsVersion[p_Folder][sortFilter];
+  uint64_t& headerUidsVersion = m_HeaderUidsVersion[p_Folder];
+  (void)p_FilterUpdated; // @todo: remove unused argument
+
+  if (displayUidsVersion != headerUidsVersion)
+  {
+    displayUids.clear();
+    for (auto& uid : headerUids)
+    {
+      if (uid == 0) continue;
+
+      std::string key = GetDisplayUidsKey(p_Folder, uid, sortFilter);
+      if (key.empty()) continue;
+
+      displayUids.insert(std::pair<std::string, uint32_t>(key, uid));
+    }
+
+    displayUidsVersion = headerUidsVersion;
+  }
+
+  if (!p_RemovedUids.empty())
+  {
+    headerUids = headerUids - p_RemovedUids;
+    ++headerUidsVersion;
+
+    for (auto& uid : p_RemovedUids)
+    {
+      if (uid == 0) continue;
+
+      std::string key = GetDisplayUidsKey(p_Folder, uid, sortFilter);
+      if (key.empty()) continue;
+
+      auto displayUid = displayUids.find(key);
+      if (displayUid != displayUids.end())
+      {
+        displayUids.erase(displayUid);
       }
     }
-    else if (m_KeyFilterShowHasAttachments)
+
+    displayUidsVersion = headerUidsVersion;
+  }
+
+  if (!p_AddedUids.empty())
+  {
+    headerUids = headerUids + p_AddedUids;
+    ++headerUidsVersion;
+
+    for (auto& uid : p_AddedUids)
     {
-      auto header = headers.find(uid);
-      if ((header != headers.end()) && header->second.GetHasAttachments())
-      {
-        filteredMsgDateUids.insert(msgDateUid);
-      }
+      if (uid == 0) continue;
+
+      std::string key = GetDisplayUidsKey(p_Folder, uid, sortFilter);
+      if (key.empty()) continue;
+
+      displayUids.insert(std::pair<std::string, uint32_t>(key, uid));
     }
+
+    displayUidsVersion = headerUidsVersion;
   }
 }
 
-std::map<std::string, uint32_t>& Ui::GetMsgDateUids(const std::string& p_Folder)
+void Ui::SortFilterPreUpdate()
 {
-  return m_FilterEnabled ? m_FilteredMsgDateUids[p_Folder]
-                         : m_MsgDateUids[p_Folder];
-}
-
-void Ui::FilterDisable()
-{
-  if (m_FilterEnabled)
+  if (m_PersistSelectionOnSortFilterChange)
   {
-    m_FilterShowAttachments = false;
-    m_FilterShowUnread = false;
-    m_FilterEnabled = false;
+    UpdateUidFromIndex(true /* p_UserTriggered */);
   }
 }
 
-void Ui::ToggleFilterShowUnread()
+void Ui::SortFilterUpdated(bool p_FilterUpdated)
 {
-  m_FilterShowUnread = !m_FilterShowUnread;
-  if (m_FilterShowUnread)
   {
-    m_FilterShowAttachments = false;
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    UpdateDisplayUids(m_CurrentFolder, std::set<uint32_t>(), std::set<uint32_t>(), p_FilterUpdated);
   }
-  m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
-  UpdateFilteredMsgDateUids();
-  m_MessageListCurrentIndex[m_CurrentFolder] = 0;
-  UpdateUidFromIndex(true /* p_UserTriggered */);
+
+  if (m_PersistSelectionOnSortFilterChange)
+  {
+    UpdateIndexFromUid();
+  }
+  else
+  {
+    m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+  }
 }
 
-void Ui::ToggleFilterShowAttachments()
+void Ui::DisableSortFilter()
 {
-  m_FilterShowAttachments = !m_FilterShowAttachments;
-  if (m_FilterShowAttachments)
-  {
-    m_FilterShowUnread = false;
-  }
-  m_FilterEnabled = m_FilterShowUnread || m_FilterShowAttachments;
-  UpdateFilteredMsgDateUids();
-  m_MessageListCurrentIndex[m_CurrentFolder] = 0;
-  UpdateUidFromIndex(true /* p_UserTriggered */);
+  SortFilter& sortFilter = m_SortFilter[m_CurrentFolder];
+  bool wasFilterEnabled = (sortFilter == SortUnseenOnly) || (sortFilter == SortAttchOnly);
+  SortFilterPreUpdate();
+  sortFilter = SortDefault;
+  SortFilterUpdated(wasFilterEnabled);
+}
+
+void Ui::ToggleFilter(SortFilter p_SortFilter)
+{
+  SortFilter& sortFilter = m_SortFilter[m_CurrentFolder];
+  SortFilterPreUpdate();
+  sortFilter = (sortFilter != p_SortFilter) ? p_SortFilter : SortDefault;
+  SortFilterUpdated(true /* p_FilterUpdated */);
+}
+
+void Ui::ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond)
+{
+  SortFilter& sortFilter = m_SortFilter[m_CurrentFolder];
+  bool wasFilterEnabled = (sortFilter == SortUnseenOnly) || (sortFilter == SortAttchOnly);
+  SortFilterPreUpdate();
+  sortFilter = (sortFilter == p_SortSecond) ? SortDefault : ((sortFilter == p_SortFirst) ? p_SortSecond : p_SortFirst);
+  SortFilterUpdated(wasFilterEnabled);
 }
