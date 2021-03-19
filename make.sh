@@ -55,7 +55,6 @@ case "${1%/}" in
     TESTS="1"
     DOC="1"
     INSTALL="1"
-    SRC="1"
     ;;
 
   *)
@@ -65,8 +64,8 @@ case "${1%/}" in
     echo "  tests     - perform build and run tests"
     echo "  doc       - perform build and generate documentation"
     echo "  install   - perform build and install"
+    echo "  all       - perform all actions above (except reformatting)"
     echo "  src       - perform source code reformatting"
-    echo "  all       - perform all actions above"
     exit 1
     ;;
 esac
