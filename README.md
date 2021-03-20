@@ -656,16 +656,17 @@ file (platform-dependent defaults are left empty below):
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
+    unread_indicator=N
 
 ### attachment_indicator
 
-Control which character to indicate that an email has attachments
+Controls which character to indicate that an email has attachments
 (default: `+`). For a less compact layout one can add space before the
 character, like ` 📎`.
 
 ### bottom_reply
 
-Control whether to reply at the bottom of emails (default disabled).
+Controls whether to reply at the bottom of emails (default disabled).
 
 ### cancel_without_confirm
 
@@ -796,6 +797,11 @@ fetching emails (default enabled).
 Determines whether to show rich headers (bcc field) during email compose. This
 option can be re-configured in run-time by pressing `CTRL-R` when composing
 an email (default disabled).
+
+### unread_indicator
+
+Controls which character to indicate that an email is unread (default: `N`).
+For a more graphical interface, an emoji such as `✉` can be used.
 
 
 ~/.nmail/colors.conf

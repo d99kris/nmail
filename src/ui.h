@@ -364,6 +364,7 @@ private:
   bool m_BottomReply = false;
   bool m_PersistSortFilter = true;
   bool m_PersistSelectionOnSortFilterChange = true;
+  std::string m_UnreadIndicator;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

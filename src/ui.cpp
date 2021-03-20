@@ -129,6 +129,7 @@ void Ui::Init()
     { "compose_backup_interval", "10" },
     { "persist_sortfilter", "1" },
     { "persist_selection_on_sortfilter_change", "1" },
+    { "unread_indicator", "N" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -257,6 +258,7 @@ void Ui::Init()
   m_BottomReply = m_Config.Get("bottom_reply") == "1";
   m_PersistSortFilter = m_Config.Get("persist_sortfilter") == "1";
   m_PersistSelectionOnSortFilterChange = m_Config.Get("persist_selection_on_sortfilter_change") == "1";
+  m_UnreadIndicator = m_Config.Get("unread_indicator");
 
   try
   {
@@ -1019,11 +1021,11 @@ void Ui::DrawMessageList()
         requestedFlags.insert(uid);
       }
 
-      std::string seenFlag;
-      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
-      {
-        seenFlag = std::string("N");
-      }
+      bool isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
+      static const std::wstring wUnreadIndicator = Util::ToWString(m_UnreadIndicator);
+      static const int unreadIndicatorWidth = Util::WStringWidth(wUnreadIndicator);
+      std::string unreadFlag = isUnread ? std::string(m_UnreadIndicator)
+                                        : std::string(unreadIndicatorWidth, ' ');
 
       std::string shortDate;
       std::string shortFrom;
@@ -1052,10 +1054,9 @@ void Ui::DrawMessageList()
         }
       }
 
-      seenFlag = Util::TrimPadString(seenFlag, 1);
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = " " + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
@@ -1210,11 +1211,11 @@ void Ui::DrawMessageListSearch()
         requestedFlags.insert(uid);
       }
 
-      std::string seenFlag;
-      if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
-      {
-        seenFlag = std::string("N");
-      }
+      bool isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
+      static const std::wstring wUnreadIndicator = Util::ToWString(m_UnreadIndicator);
+      static const int unreadIndicatorWidth = Util::WStringWidth(wUnreadIndicator);
+      std::string unreadFlag = isUnread ? std::string(m_UnreadIndicator)
+                                        : std::string(unreadIndicatorWidth, ' ');
 
       std::string shortDate;
       std::string shortFrom;
@@ -1235,10 +1236,9 @@ void Ui::DrawMessageListSearch()
         }
       }
 
-      seenFlag = Util::TrimPadString(seenFlag, 1);
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = " " + seenFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = " " + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
