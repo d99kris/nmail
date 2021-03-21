@@ -133,6 +133,7 @@ void Ui::Init()
     { "persist_sortfilter", "1" },
     { "persist_selection_on_sortfilter_change", "1" },
     { "unread_indicator", "N" },
+    { "invalid_input_notify", "1" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -263,6 +264,7 @@ void Ui::Init()
   m_PersistSortFilter = m_Config.Get("persist_sortfilter") == "1";
   m_PersistSelectionOnSortFilterChange = m_Config.Get("persist_selection_on_sortfilter_change") == "1";
   m_UnreadIndicator = m_Config.Get("unread_indicator");
+  m_InvalidInputNotify = m_Config.Get("invalid_input_notify") == "1";
 
   try
   {
@@ -2361,7 +2363,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       UpdateIndexFromUid();
     }
   }
-  else
+  else if (m_InvalidInputNotify)
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }
@@ -2528,7 +2530,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
       SetDialogMessage("Find text not set");
     }
   }
-  else
+  else if (m_InvalidInputNotify)
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }
@@ -2894,7 +2896,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
 
       asyncRedraw = true;
     }
-    else
+    else if (m_InvalidInputNotify)
     {
       SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
     }
@@ -3047,7 +3049,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       SetDialogMessage("Save cancelled");
     }
   }
-  else
+  else if (m_InvalidInputNotify)
   {
     SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
   }

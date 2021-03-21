@@ -366,6 +366,7 @@ private:
   bool m_PersistSortFilter = true;
   bool m_PersistSelectionOnSortFilterChange = true;
   std::string m_UnreadIndicator;
+  bool m_InvalidInputNotify = true;
 
   int m_FolderListFilterPos = 0;
   std::wstring m_FolderListFilterStr;

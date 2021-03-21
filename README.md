@@ -606,6 +606,7 @@ file (platform-dependent defaults are left empty below):
     compose_hardwrap=0
     delete_without_confirm=0
     help_enabled=1
+    invalid_input_notify=1
     key_back=,
     key_backward_kill_word=
     key_backward_word=
@@ -710,6 +711,10 @@ prompt (default disabled).
 ### help_enabled
 
 Show supported keyboard shortcuts at bottom of screen (default enabled).
+
+### invalid_input_notify
+
+Notify user when unsupported keyboard shortcuts are input (default enabled).
 
 ### key_
 
