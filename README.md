@@ -241,6 +241,7 @@ Full example of a config file `~/.nmail/main.conf`:
     network_timeout=30
     pager_cmd=
     parts_viewer_cmd=
+    prefetch_all_headers=1
     prefetch_level=2
     queue_encrypt=1
     save_pass=1
@@ -368,6 +369,17 @@ If `$PAGER` is not set, nmail will use `less`.
 This field allows overriding the external viewer used when viewing email
 parts and attachments. By default nmail uses `open` on macOS and
 `xdg-open >/dev/null 2>&1` on Linux.
+
+### prefetch_all_headers
+
+Determines whether nmail shall fetch headers for all messages when viewing a
+folder, or only the latest based on message uid. By disabling this option there
+is no guarantee folder message lists are sorted by timestamp, as only headers
+for the last messages stored/added in the folder will be retrieved from server.
+Also note that some other nmail features may operate in degraded mode when this
+setting is disabled. The ability to disable prefetching of all headers is
+mainly to encompass use-cases where one wants to minimize network usage, or
+use nmail without persistant cache. Default enabled.
 
 ### prefetch_level
 
@@ -615,6 +627,7 @@ file (platform-dependent defaults are left empty below):
     key_forward_word=
     key_goto_folder=g
     key_import=i
+    key_jump_to=j
     key_kill_word=
     key_move=m
     key_next_msg=n

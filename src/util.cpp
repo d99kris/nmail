@@ -1749,3 +1749,11 @@ void Util::NormalizeSubject(std::string& p_String)
   p_String = std::regex_replace(p_String, re, "");
   std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
 }
+
+std::string Util::ZeroPad(uint32_t p_Num, int32_t p_Len)
+{
+  std::string str = std::to_string(p_Num);
+  int32_t zeroCount = std::max(0, p_Len - (int)str.length());
+  str = std::string(zeroCount, '0') + str;
+  return str;
+}

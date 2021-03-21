@@ -146,6 +146,7 @@ int main(int argc, char* argv[])
     { "html_viewer_cmd", "" },
     { "msg_viewer_cmd", "" },
     { "prefetch_level", "2" },
+    { "prefetch_all_headers", "1" },
     { "verbose_logging", "0" },
     { "pager_cmd", "" },
     { "editor_cmd", "" },
@@ -224,6 +225,7 @@ int main(int argc, char* argv[])
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
+  const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
@@ -295,7 +297,7 @@ int main(int argc, char* argv[])
 
   Auth::Init(auth, authEncrypt, pass, isSetup);
 
-  Ui ui(inbox, address, prefetchLevel);
+  Ui ui(inbox, address, prefetchLevel, prefetchAllHeaders);
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,

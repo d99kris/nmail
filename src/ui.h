@@ -77,7 +77,8 @@ public:
     SortSubjDesc,
   };
 
-  Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel);
+  Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel,
+     bool p_PrefetchAllHeaders);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
@@ -224,7 +225,6 @@ private:
   std::map<std::string, std::map<uint32_t, Header>> m_Headers;
   std::map<std::string, std::map<uint32_t, uint32_t>> m_Flags;
   std::map<std::string, std::map<uint32_t, Body>> m_Bodys;
-  std::map<std::string, std::set<uint32_t>> m_NewUids;
   std::map<std::string, SortFilter> m_SortFilter;
   std::map<std::string, std::set<uint32_t>> m_HeaderUids;
   std::map<std::string, std::map<SortFilter, std::map<std::string, uint32_t>>> m_DisplayUids;
@@ -341,6 +341,7 @@ private:
   int m_KeySortDate = 0;
   int m_KeySortName = 0;
   int m_KeySortSubject = 0;
+  int m_KeyJumpTo = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
@@ -437,6 +438,7 @@ private:
   int m_MessageFindMatchLine = -1;
   int m_MessageFindMatchPos = 0;
   std::string m_MessageFindQuery;
+  bool m_PrefetchAllHeaders = true;
 
 private:
   static bool s_Running;

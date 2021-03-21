@@ -257,6 +257,7 @@ public:
   static void BitInvertString(std::string& p_String);
   static void NormalizeName(std::string& p_String);
   static void NormalizeSubject(std::string& p_String);
+  static std::string ZeroPad(uint32_t p_Num, int32_t p_Len);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

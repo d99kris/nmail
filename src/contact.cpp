@@ -7,6 +7,8 @@
 
 #include "contact.h"
 
+#include <iostream>
+
 Contact::Contact()
 {
 }
