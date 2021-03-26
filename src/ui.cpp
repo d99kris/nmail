@@ -3474,7 +3474,10 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             fetchHeaderUids.insert(uid);
             requestedHeaders.insert(uid);
           }
+        }
 
+        for (auto& uid : p_Response.m_Uids)
+        {
           if ((flags.find(uid) == flags.end()) &&
               (requestedFlags.find(uid) == requestedFlags.end()))
           {
