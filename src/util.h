@@ -195,9 +195,9 @@ public:
   static int GetKeyCode(const std::string& p_KeyName);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                            bool p_WrapQuoteLines);
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap);
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                            bool p_WrapQuoteLines,
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap,
                                             int p_Pos, int& p_WrapLine, int& p_WrapPos);
   static std::string GetPass();
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);
@@ -258,6 +258,7 @@ public:
   static void NormalizeName(std::string& p_String);
   static void NormalizeSubject(std::string& p_String);
   static std::string ZeroPad(uint32_t p_Num, int32_t p_Len);
+  static bool GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

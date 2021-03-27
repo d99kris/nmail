@@ -44,6 +44,7 @@ public:
     std::string m_Folder;
     bool m_GetFolders = false;
     bool m_GetUids = false;
+    bool m_ProcessHtml = false;
     std::set<uint32_t> m_GetHeaders;
     std::set<uint32_t> m_GetFlags;
     std::set<uint32_t> m_GetBodys;

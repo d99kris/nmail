@@ -779,6 +779,15 @@ bool ImapManager::PerformRequest(const Request& p_Request, bool p_Cached, bool p
   {
     const bool rv = m_Imap.GetBodys(p_Request.m_Folder, p_Request.m_GetBodys, p_Cached,
                                     p_Prefetch, p_Response.m_Bodys);
+    if (p_Request.m_ProcessHtml)
+    {
+      for (auto& body : p_Response.m_Bodys)
+      {
+        // pre-convert html to text to improve ui latency
+        body.second.GetTextHtml();
+      }
+    }
+
     p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetBodysFailed;
   }
 

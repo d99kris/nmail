@@ -164,6 +164,7 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   const std::vector<Contact> bcc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Bcc)));
   const std::string& ref = p_Action.m_RefMsgId;
   const std::vector<std::string> att = Util::ExpandPaths(Util::Trim(Util::Split(p_Action.m_Att)));
+  const bool flow = p_Action.m_FormatFlowed;
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address, m_Timeout);
 
@@ -171,13 +172,13 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   {
     SetStatus(Status::FlagSending);
     result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, p_Action.m_HtmlBody,
-                                to, cc, bcc, ref, att, result.m_Message);
+                                to, cc, bcc, ref, att, flow, result.m_Message);
     ClearStatus(Status::FlagSending);
   }
   else if (p_Action.m_IsCreateMessage)
   {
     const std::string& header = smtp.GetHeader(p_Action.m_Subject, to, cc, bcc, ref);
-    const std::string& body = smtp.GetBody(p_Action.m_Body, p_Action.m_HtmlBody, att);
+    const std::string& body = smtp.GetBody(p_Action.m_Body, p_Action.m_HtmlBody, att, false);
     result.m_Message = header + body;
     result.m_Result = !result.m_Message.empty();
   }

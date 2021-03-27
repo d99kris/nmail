@@ -41,6 +41,7 @@ public:
     std::string m_ComposeTempDirectory;
     uint32_t m_ComposeDraftUid = 0;
     std::string m_CreatedMsg;
+    bool m_FormatFlowed = false;
   };
 
   struct Result

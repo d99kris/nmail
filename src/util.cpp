@@ -371,24 +371,28 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
   std::string result;
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command =
-    std::string("which lynx elinks links 2> /dev/null | head -1 > ") + commandOutPath;
+    std::string("which pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
   if (system(command.c_str()) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
     if (!output.empty())
     {
-      if (output.find("/lynx") != std::string::npos)
+      if (output.find("/pandoc") != std::string::npos)
       {
-        result = "lynx -assume_charset=utf-8 -display_charset=utf-8 -dump";
+        result = "iconv -t UTF-8 | pandoc -f html -t plain+literate_haskell --wrap=none";
+      }
+      else if (output.find("/w3m") != std::string::npos)
+      {
+        result = "w3m -T text/html -I utf-8 -dump";
+      }
+      else if (output.find("/lynx") != std::string::npos)
+      {
+        result = "lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump -stdin";
       }
       else if (output.find("/elinks") != std::string::npos)
       {
         result = "elinks -dump-charset utf-8 -dump";
-      }
-      else if (output.find("/links") != std::string::npos)
-      {
-        result = "links -codepage utf-8 -dump";
       }
     }
   }
@@ -961,16 +965,17 @@ int Util::GetKeyCode(const std::string& p_KeyName)
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_WrapQuoteLines)
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap)
 {
   int pos = 0;
   int wrapLine = 0;
   int wrapPos = 0;
-  return WordWrap(p_Text, p_LineLength, p_WrapQuoteLines, pos, wrapLine, wrapPos);
+  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, pos, wrapLine,
+                  wrapPos);
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_WrapQuoteLines,
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap,
                                          int p_Pos, int& p_WrapLine, int& p_WrapPos)
 {
   std::wostringstream wrapped;
@@ -980,23 +985,132 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
   p_WrapPos = 0;
 
   const unsigned wrapLineLength = p_LineLength - 1; // lines with spaces allowed to width - 1
-  const unsigned overflowLineLength = p_LineLength; // overflowing/long lines allowed to full width
+  const unsigned overflowLineLength = p_LineLength; // overflowing lines allowed to full width
 
+  if (p_ProcessFormatFlowed)
+  {
+    bool prevLineFlowed = false;
+    std::wstring line;
+    std::wstring prevQuotePrefix;
+    std::wstring quotePrefix;
+    std::wstring prevUnquotedLine;
+    std::wstring unquotedLine;
+    std::wistringstream textss(p_Text);
+    std::wostringstream outss;
+    bool reflowUnquoted = true;
+    while (std::getline(textss, line))
+    {
+      line.erase(std::remove(line.begin(), line.end(), L'\r'), line.end());
+
+      if (!GetQuotePrefix(line, quotePrefix, unquotedLine))
+      {
+        if (reflowUnquoted)
+        {
+          if ((quotePrefix != prevQuotePrefix) || !prevLineFlowed)
+          {
+            outss << L"\n" << line;
+          }
+          else
+          {
+            if (!prevLineFlowed)
+            {
+              outss << L" ";
+            }
+            outss << line;
+          }
+
+          size_t unquotedLen = unquotedLine.size();
+          prevLineFlowed = ((unquotedLen > 0) && (unquotedLine[unquotedLen - 1] == L' '));
+        }
+        else
+        {
+          outss << L"\n" << line;
+        }
+      }
+      else
+      {
+        quotePrefix.erase(std::remove(quotePrefix.begin(), quotePrefix.end(), L' '), quotePrefix.end());
+
+        if (quotePrefix != prevQuotePrefix)
+        {
+          outss << L"\n" << quotePrefix << L" " << unquotedLine;
+        }
+        else
+        {
+          if (unquotedLine.empty())
+          {
+            outss << L"\n" << quotePrefix << L" ";
+          }
+          else
+          {
+            if (prevUnquotedLine.empty())
+            {
+              outss << L"\n" << quotePrefix << L" ";
+            }
+            else
+            {
+              size_t prevUnquotedLen = prevUnquotedLine.size();
+              if (prevUnquotedLine[prevUnquotedLen - 1] != L' ')
+              {
+                outss << L" ";
+              }
+            }
+
+            outss << unquotedLine;
+          }
+        }
+      }
+
+      prevQuotePrefix = quotePrefix;
+      prevUnquotedLine = unquotedLine;
+    }
+
+    p_Text = outss.str().substr(1);
+  }
+
+  if (true)
   {
     std::wstring line;
+    std::wstring prevQuotePrefix;
     std::wistringstream textss(p_Text);
+    const std::wstring flowedSuffix = p_OutputFormatFlowed ? L" " : L"";
+    const size_t quotePrefixMaxLen = p_LineLength / 2;
     while (std::getline(textss, line))
     {
       std::wstring linePart = line;
+
+      std::wstring quotePrefix;
+      std::wstring tmpLine;
+      size_t quotePrefixLen = 0;
+      const bool hasQuotePrefix = p_QuoteWrap && GetQuotePrefix(linePart, quotePrefix, tmpLine);
+      if (hasQuotePrefix)
+      {
+        quotePrefix.erase(std::remove(quotePrefix.begin(), quotePrefix.end(), L' '), quotePrefix.end());
+        quotePrefix += L' ';
+        quotePrefixLen = quotePrefix.size();
+        if (quotePrefixLen > quotePrefixMaxLen)
+        {
+          quotePrefix = quotePrefix.substr(quotePrefixLen - quotePrefixMaxLen);
+          quotePrefixLen = quotePrefix.size();
+        }
+
+        linePart = quotePrefix + tmpLine;
+      }
+
       while (true)
       {
-        if ((linePart.size() >= wrapLineLength) &&
-            (p_WrapQuoteLines || (linePart.rfind(L">", 0) != 0)))
+        std::wstring tmpPrefix;
+        if (hasQuotePrefix && !GetQuotePrefix(linePart, tmpPrefix, tmpLine))
+        {
+          linePart = quotePrefix + linePart;
+        }
+
+        if (linePart.size() > wrapLineLength)
         {
           size_t spacePos = linePart.rfind(L' ', wrapLineLength);
-          if (spacePos != std::wstring::npos)
+          if ((spacePos != std::wstring::npos) && (spacePos > quotePrefixLen))
           {
-            lines.push_back(linePart.substr(0, spacePos));
+            lines.push_back(linePart.substr(0, spacePos) + flowedSuffix);
             if (linePart.size() > (spacePos + 1))
             {
               linePart = linePart.substr(spacePos + 1);
@@ -1756,4 +1870,22 @@ std::string Util::ZeroPad(uint32_t p_Num, int32_t p_Len)
   int32_t zeroCount = std::max(0, p_Len - (int)str.length());
   str = std::string(zeroCount, '0') + str;
   return str;
+}
+
+bool Util::GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line)
+{
+  std::wsmatch sm;
+  std::wregex re(L"^(( *> *)+)");
+  if (std::regex_search(p_String, sm, re))
+  {
+    p_Prefix = sm.str();
+    p_Line = sm.suffix();
+    return true;
+  }
+  else
+  {
+    p_Prefix.clear();
+    p_Line = p_String;
+    return false;
+  }
 }

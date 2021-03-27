@@ -30,6 +30,7 @@ public:
             const std::vector<Contact>& p_Bcc,
             const std::string& p_RefMsgId,
             const std::vector<std::string>& p_AttachmentPaths,
+            const bool p_Flowed,
             std::string& p_ResultMessage);
   bool Send(const std::string& p_Data, const std::vector<Contact>& p_To,
             const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
@@ -37,11 +38,11 @@ public:
                         const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
                         const std::string& p_RefMsgId);
   std::string GetBody(const std::string& p_Message, const std::string& p_HtmlMessage,
-                      const std::vector<std::string>& p_AttachmentPaths);
+                      const std::vector<std::string>& p_AttachmentPaths, bool p_Flowed);
 
 private:
   bool SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients);
-  struct mailmime* GetMimeTextPart(const char* p_MimeType, const std::string& p_Message);
+  struct mailmime* GetMimeTextPart(const char* p_MimeType, const std::string& p_Message, bool p_Flowed);
   struct mailmime* GetMimeFilePart(const std::string& p_Path,
                                    const std::string& p_MimeType = "application/octet-stream");
   struct mailmime* GetMimePart(struct mailmime_content* p_Content,

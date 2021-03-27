@@ -47,13 +47,14 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
                 const std::vector<Contact>& p_Bcc,
                 const std::string& p_RefMsgId,
                 const std::vector<std::string>& p_AttachmentPaths,
+                const bool p_Flowed,
                 std::string& p_ResultMessage)
 {
   LOG_DEBUG_FUNC(STR());
-  LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths));
+  LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths, p_Flowed));
 
   const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
-  const std::string& body = GetBody(p_Message, p_HtmlMessage, p_AttachmentPaths);
+  const std::string& body = GetBody(p_Message, p_HtmlMessage, p_AttachmentPaths, p_Flowed);
   const std::string& data = header + body;
   p_ResultMessage = data;
   std::vector<Contact> recipients;
@@ -347,7 +348,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
 }
 
 std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_HtmlMessage,
-                          const std::vector<std::string>& p_AttachmentPaths)
+                          const std::vector<std::string>& p_AttachmentPaths, bool p_Flowed)
 {
   // html and text message part layout:
   // mainMultipart (content for message, subType="mixed")
@@ -368,12 +369,12 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
     GetMimePart(mailmime_content_new_with_str("multipart/alternative"),
                 mailmime_fields_new_empty(), 0);
 
-  struct mailmime* textBodyPart = GetMimeTextPart("text/plain", p_Message);
+  struct mailmime* textBodyPart = GetMimeTextPart("text/plain", p_Message, p_Flowed);
   mailmime_smart_add_part(htmlAndTextMultipart, textBodyPart);
 
   if (!p_HtmlMessage.empty())
   {
-    struct mailmime* htmlBodyPart = GetMimeTextPart("text/html", p_HtmlMessage);
+    struct mailmime* htmlBodyPart = GetMimeTextPart("text/html", p_HtmlMessage, false);
     mailmime_smart_add_part(htmlAndTextMultipart, htmlBodyPart);
   }
 
@@ -407,7 +408,7 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
   return out;
 }
 
-mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message)
+mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message, bool p_Flowed)
 {
   int encodingType = MAILMIME_MECHANISM_QUOTED_PRINTABLE;
   struct mailmime_mechanism* encoding = mailmime_mechanism_new(encodingType, NULL);
@@ -421,6 +422,13 @@ mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Mes
   char* paramval = strdup("utf-8");
   struct mailmime_parameter* param = mailmime_param_new_with_data(paramkey, paramval);
   clist_append(content->ct_parameters, param);
+  if (p_Flowed)
+  {
+    char* formatkey = strdup("format");
+    char* formatval = strdup("flowed");
+    struct mailmime_parameter* formatparam = mailmime_param_new_with_data(formatkey, formatval);
+    clist_append(content->ct_parameters, formatparam);
+  }
   struct mailmime* mime = GetMimePart(content, mimefields, 1);
   mailmime_set_body_text(mime, const_cast<char*>(p_Message.c_str()), p_Message.size());
 

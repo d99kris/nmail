@@ -112,7 +112,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    sudo apt install lynx markdown
+    sudo apt install pandoc
 
 **Source**
 
@@ -141,7 +141,7 @@ Optional (for OAuth 2.0 support):
 
 Optional (to view/compose HTML emails):
 
-    brew install lynx markdown
+    brew install pandoc
 
 **Source**
 
@@ -314,12 +314,17 @@ account, this field will be configured to the following (otherwise empty):
 ### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
-If not specified, nmail checks if `lynx`, `elinks` or `links` is available
-on the system (in that order), and uses the first found. The exact command
-used is one of:
-- `lynx -assume_charset=utf-8 -display_charset=utf-8 -dump`
+If not specified, nmail checks if `pandoc`, `w3m`, `lynx` or `elinks` is
+available on the system (in that order), and uses the first found. The exact
+command used is one of:
+- `iconv -t 'UTF-8' | pandoc -f html -t plain+literate_haskell --wrap=none`
+- `w3m -T text/html -I utf-8 -dump`
+- `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump -stdin`
 - `elinks -dump-charset utf-8 -dump`
-- `links -codepage utf-8 -dump`
+
+Note that while pandoc generally produces a better text-equivalent to an
+html email, it is also slower than the other tools. For usage on a lower
+spec'ed system, consider using any of the other conversion utilities instead.
 
 ### html_viewer_cmd
 
@@ -514,13 +519,12 @@ Press `<` or `Left` to exit search results and go back to current folder
 message list.
 
 
-Troubleshooting
-===============
+Reporting Bugs
+==============
 
-If any issues are observed, please provide a copy of `~/.nmail/log.txt` when
-reporting the issue. The preferred way of reporting issues and asking
-questions is by opening
-[a Github issue](https://github.com/d99kris/nmail/issues/new).
+The preferred way of reporting bugs is by opening
+[a Github issue](https://github.com/d99kris/nmail/issues/new). Providing a
+copy of `~/.nmail/log.txt` when reporting the issue is preferred.
 
 A verbose logging mode is supported. It produces very large log files with
 detailed information. The verbose logs typically contain actual email contents.
@@ -555,16 +559,27 @@ Review the resulting log file and ensure there are no clear text passwords
 in it, before sharing it with others.
 
 
-Telegram Group
-==============
+User Discussion Forums
+======================
 
-A Telegram group [https://t.me/nmailusers](https://t.me/nmailusers) is
-available for users to discuss nmail usage and related topics.
+For discussing nmail usage (including getting help from other users) a mailing
+list and a Telegram group are available.
 
-Bug reports, feature requests and usage questions directed at the nmail
-maintainer(s) should however be reported using
+Bug reports and feature requests should however be reported using
 [Github issues](https://github.com/d99kris/nmail/issues/new) to ensure they
 are properly tracked and get addressed.
+
+Mailing List
+------------
+Feel free to subscribe at
+[www.freelists.org/list/nmail-users](http://www.freelists.org/list/nmail-users)
+and once subscribed, send messages to
+[nmail-users@freelists.org](mailto:nmail-users@freelists.org)
+
+Telegram Group
+--------------
+The Telegram group is available at
+[https://t.me/nmailusers](https://t.me/nmailusers)
 
 
 Security
@@ -603,7 +618,7 @@ file (platform-dependent defaults are left empty below):
     cancel_without_confirm=0
     colors_enabled=0
     compose_backup_interval=10
-    compose_hardwrap=0
+    compose_line_wrap=0
     delete_without_confirm=0
     help_enabled=1
     invalid_input_notify=1
@@ -666,6 +681,8 @@ file (platform-dependent defaults are left empty below):
     plain_text=1
     postpone_without_confirm=0
     quit_without_confirm=1
+    respect_format_flowed=1
+    rewrap_quoted_lines=1
     send_without_confirm=0
     show_embedded_images=1
     show_progress=1
@@ -698,10 +715,13 @@ an email, then upon next nmail startup any backuped compose message will be
 automatically uploaded to the draft folder.
 Setting this parameter to 0 disables local backups.
 
-### compose_hardwrap
+### compose_line_wrap
 
-Hard-wrap composed emails at 72 chars or terminal width if smaller (default
-disabled).
+Specify how nmail shall wrap lines in outgoing emails. Supported options:
+
+    0 = none (default)
+    1 = using format=flowed
+    2 = hardwrap at 72 chars width
 
 ### delete_without_confirm
 
@@ -792,6 +812,15 @@ Allow postponing email compose without confirmation prompt (default disabled).
 ### quit_without_confirm
 
 Allow exiting nmail without confirmation prompt (default enabled).
+
+### respect_format_flowed
+
+Specify whether nmail shall respect email line wrapping of format=flowed
+type (default enabled).
+
+### rewrap_quoted_lines
+
+Control whether nmail shall rewrap quoted lines (default enabled).
 
 ### send_without_confirm
 

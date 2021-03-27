@@ -61,6 +61,7 @@ std::string Body::GetTextPlain()
   }
   else
   {
+    ParseHtml();
     return m_TextHtml;
   }
 }
@@ -69,6 +70,7 @@ std::string Body::GetTextHtml()
 {
   Parse();
 
+  ParseHtml();
   if (!m_TextHtml.empty())
   {
     return m_TextHtml;
@@ -113,6 +115,19 @@ bool Body::HasAttachments()
   return false;
 }
 
+bool Body::IsFormatFlowed()
+{
+  Parse();
+  // @todo: consider caching lookup
+  if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
+  {
+    const Part& part = m_Parts.at(m_TextPlainIndex);
+    return part.m_IsFormatFlowed;
+  }
+
+  return false;
+}
+
 void Body::Parse()
 {
   if (!m_Parsed)
@@ -128,7 +143,6 @@ void Body::Parse()
     }
 
     ParseText();
-    ParseHtml();
 
     m_Parsed = true;
   }
@@ -151,36 +165,33 @@ void Body::ParseText()
 
 void Body::ParseHtml()
 {
-  if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
+  if (!m_HtmlParsed)
   {
-    const Part& part = m_Parts.at(m_TextHtmlIndex);
-    std::string partHtml = part.m_Data;
-    m_Html = partHtml;
-
-    if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
+    if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
     {
-      partHtml = Util::ConvertEncoding(part.m_Charset, "utf-8", partHtml);
+      const Part& part = m_Parts.at(m_TextHtmlIndex);
+      std::string partHtml = part.m_Data;
+      m_Html = partHtml;
+
+      if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
+      {
+        partHtml = Util::ConvertEncoding(part.m_Charset, "utf-8", partHtml);
+      }
+
+      // @todo: more elegant removal of meta-tags
+      Util::ReplaceString(partHtml, "<meta ", "<beta ");
+      Util::ReplaceString(partHtml, "<META ", "<BETA ");
+
+      const std::string& textHtmlPath = Util::GetTempFilename(".html");
+      Util::WriteFile(textHtmlPath, partHtml);
+
+      const std::string& cmd = "cat " + textHtmlPath + " | " + Util::GetHtmlToTextConvertCmd();
+      m_TextHtml = Util::RunCommand(cmd);
+
+      Util::DeleteFile(textHtmlPath);
     }
 
-    // @todo: more elegant removal of meta-tags
-    Util::ReplaceString(partHtml, "<meta ", "<beta ");
-    Util::ReplaceString(partHtml, "<META ", "<BETA ");
-
-    const std::string& textHtmlPath = Util::GetTempFilename(".html");
-    Util::WriteFile(textHtmlPath, partHtml);
-
-    const std::string& textFromHtmlPath = Util::GetTempFilename(".txt");
-    const std::string& command = Util::GetHtmlToTextConvertCmd() + std::string(" ") +
-      textHtmlPath + std::string(" 2> /dev/null > ") + textFromHtmlPath;
-    int rv = system(command.c_str());
-    if (rv == 0)
-    {
-      m_TextHtml = Util::ReadFile(textFromHtmlPath);
-      m_TextHtml = Util::ReduceIndent(m_TextHtml, 3); // @todo: make configurable?
-    }
-
-    Util::DeleteFile(textHtmlPath);
-    Util::DeleteFile(textFromHtmlPath);
+    m_HtmlParsed = true;
   }
 }
 
@@ -385,6 +396,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
+            ParseMimeContentType(p_Mime->mm_content_type, part.m_IsFormatFlowed);
             m_TextPlainIndex = m_NumParts;
           }
 
@@ -441,6 +453,25 @@ void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::strin
     if (fields.fld_content_charset != NULL)
     {
       p_Charset = Util::ToLower(std::string(fields.fld_content_charset));
+    }
+  }
+}
+
+void Body::ParseMimeContentType(struct mailmime_content* p_MimeContentType, bool& p_IsFormatFlowed)
+{
+  if (p_MimeContentType == NULL) return;
+
+  clist* parameters = p_MimeContentType->ct_parameters;
+  if (parameters == NULL) return;
+
+  for (clistiter* it = clist_begin(parameters); it != NULL; it = clist_next(it))
+  {
+    struct mailmime_parameter* mimeParameter = (struct mailmime_parameter*)clist_content(it);
+    std::string name(mimeParameter->pa_name);
+    std::string value(mimeParameter->pa_value);
+    if ((name == "format") && (value == "flowed"))
+    {
+      p_IsFormatFlowed = true;
     }
   }
 }

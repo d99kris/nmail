@@ -77,6 +77,13 @@ public:
     SortSubjDesc,
   };
 
+  enum LineWrap
+  {
+    LineWrapNone = 0,
+    LineWrapFormatFlowed = 1,
+    LineWrapHardWrap = 2,
+  };
+
   Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel,
      bool p_PrefetchAllHeaders);
   virtual ~Ui();
@@ -182,6 +189,7 @@ private:
   void Quit();
   std::wstring GetComposeStr(int p_HeaderField);
   void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
+  std::wstring GetComposeBodyForSend();
   int GetCurrentHeaderField();
   void StartSync();
   std::string MakeHtmlPart(const std::string& p_Text);
@@ -202,6 +210,7 @@ private:
   void DisableSortFilter();
   void ToggleFilter(SortFilter p_SortFilter);
   void ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond);
+  const std::vector<std::wstring>& GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -291,7 +300,9 @@ private:
 
   Config m_Config;
 
-  bool m_ComposeHardwrap = false;
+  int m_ComposeLineWrap = LineWrapNone;
+  bool m_RespectFormatFlowed = true;
+  bool m_RewrapQuotedLines = true;
   bool m_HelpEnabled = true;
 
   int m_KeyPrevMsg = 0;
@@ -440,6 +451,8 @@ private:
   int m_MessageFindMatchPos = 0;
   std::string m_MessageFindQuery;
   bool m_PrefetchAllHeaders = true;
+  bool m_CurrentMessageProcessFlowed = false;
+  int m_MessageViewHeaderLineCount = 0;
 
 private:
   static bool s_Running;

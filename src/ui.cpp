@@ -54,7 +54,9 @@ void Ui::Init()
 
   const std::map<std::string, std::string> defaultConfig =
   {
-    { "compose_hardwrap", "0" },
+    { "compose_line_wrap", "0" },
+    { "respect_format_flowed", "1" },
+    { "rewrap_quoted_lines", "1" },
     { "help_enabled", "1" },
     { "persist_file_selection_dir", "1" },
     { "persist_find_query", "0" },
@@ -126,7 +128,7 @@ void Ui::Init()
     { "key_sort_name", "4" },
     { "key_sort_subject", "5" },
     { "key_jump_to", "j" },
-    { "colors_enabled", "0" },
+    { "colors_enabled", "1" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
     { "compose_backup_interval", "10" },
@@ -139,7 +141,9 @@ void Ui::Init()
   m_Config = Config(configPath, defaultConfig);
   m_Config.LogParams();
 
-  m_ComposeHardwrap = m_Config.Get("compose_hardwrap") == "1";
+  m_ComposeLineWrap = Util::ToInteger(m_Config.Get("compose_line_wrap"));
+  m_RespectFormatFlowed = m_Config.Get("respect_format_flowed") == "1";
+  m_RewrapQuotedLines = m_Config.Get("rewrap_quoted_lines") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   m_PersistFileSelectionDir = m_Config.Get("persist_file_selection_dir") == "1";
   m_PersistFindQuery = m_Config.Get("persist_find_query") == "1";
@@ -231,7 +235,7 @@ void Ui::Init()
       { "color_highlighted_text_bg", "reverse" },
       { "color_highlighted_text_fg", "reverse" },
       { "color_quoted_text_bg", "" },
-      { "color_quoted_text_fg", "" },
+      { "color_quoted_text_fg", "gray" },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
       { "color_top_bar_bg", "reverse" },
@@ -295,7 +299,7 @@ void Ui::InitWindows()
   m_ScreenHeight = std::max(m_ScreenHeight, 8);
 
   m_MaxViewLineLength = m_ScreenWidth;
-  m_MaxComposeLineLength = m_ComposeHardwrap ? std::min(m_ScreenWidth, 72) : m_ScreenWidth;
+  m_MaxComposeLineLength = (m_ComposeLineWrap == LineWrapHardWrap) ? std::min(m_ScreenWidth, 72) : m_ScreenWidth;
   wclear(stdscr);
   wrefresh(stdscr);
   const int topHeight = 1;
@@ -754,7 +758,7 @@ void Ui::DrawFolderList()
   {
     ImapManager::Request request;
     request.m_GetFolders = true;
-    LOG_DEBUG("async request folders");
+    LOG_DEBUG("async req folders");
     m_HasRequestedFolders = true;
     m_ImapManager->AsyncRequest(request);
   }
@@ -963,14 +967,15 @@ void Ui::DrawMessageList()
     ImapManager::Request request;
     request.m_Folder = m_CurrentFolder;
     request.m_GetUids = true;
-    LOG_DEBUG_VAR("async request uids =", m_CurrentFolder);
+    LOG_DEBUG_VAR("async req uids =", m_CurrentFolder);
     m_HasRequestedUids[m_CurrentFolder] = true;
     m_ImapManager->AsyncRequest(request);
   }
 
   std::set<uint32_t> fetchHeaderUids;
   std::set<uint32_t> fetchFlagUids;
-  std::set<uint32_t> fetchBodyUids;
+  std::set<uint32_t> fetchBodyPriUids;
+  std::set<uint32_t> fetchBodySecUids;
   std::set<uint32_t> prefetchBodyUids;
 
   {
@@ -1085,7 +1090,19 @@ void Ui::DrawMessageList()
           if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
           {
             requestedBodys.insert(uid);
-            fetchBodyUids.insert(uid);
+            fetchBodyPriUids.insert(uid);
+          }
+        }
+      }
+      else if (abs(i - m_MessageListCurrentIndex[m_CurrentFolder]) == 1)
+      {
+        if ((bodys.find(uid) == bodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
+        {
+          if (m_PrefetchLevel >= PrefetchLevelCurrentView)
+          {
+            requestedBodys.insert(uid);
+            fetchBodySecUids.insert(uid);
           }
         }
       }
@@ -1105,37 +1122,46 @@ void Ui::DrawMessageList()
     }
   }
 
-  if (!fetchBodyUids.empty())
+  for (auto& uid : fetchBodyPriUids)
   {
-    for (auto& uid : fetchBodyUids)
-    {
-      ImapManager::Request request;
-      request.m_Folder = m_CurrentFolder;
+    ImapManager::Request request;
+    request.m_Folder = m_CurrentFolder;
 
-      std::set<uint32_t> fetchUids;
-      fetchUids.insert(uid);
-      request.m_GetBodys = fetchUids;
+    std::set<uint32_t> fetchUids;
+    fetchUids.insert(uid);
+    request.m_GetBodys = fetchUids;
+    request.m_ProcessHtml = !m_Plaintext;
 
-      LOG_DEBUG_VAR("async request bodys =", fetchUids);
-      m_ImapManager->AsyncRequest(request);
-    }
+    LOG_DEBUG_VAR("async req pri bodys =", fetchUids);
+    m_ImapManager->AsyncRequest(request);
   }
 
-  if (!prefetchBodyUids.empty())
+  for (auto& uid : fetchBodySecUids)
   {
-    for (auto& uid : prefetchBodyUids)
-    {
-      ImapManager::Request request;
-      request.m_PrefetchLevel = PrefetchLevelCurrentView;
-      request.m_Folder = m_CurrentFolder;
+    ImapManager::Request request;
+    request.m_Folder = m_CurrentFolder;
 
-      std::set<uint32_t> fetchUids;
-      fetchUids.insert(uid);
-      request.m_GetBodys = fetchUids;
+    std::set<uint32_t> fetchUids;
+    fetchUids.insert(uid);
+    request.m_GetBodys = fetchUids;
+    request.m_ProcessHtml = !m_Plaintext;
 
-      LOG_DEBUG_VAR("prefetch request bodys =", fetchUids);
-      m_ImapManager->PrefetchRequest(request);
-    }
+    LOG_DEBUG_VAR("async req sec bodys =", fetchUids);
+    m_ImapManager->AsyncRequest(request);
+  }
+
+  for (auto& uid : prefetchBodyUids)
+  {
+    ImapManager::Request request;
+    request.m_PrefetchLevel = PrefetchLevelCurrentView;
+    request.m_Folder = m_CurrentFolder;
+
+    std::set<uint32_t> fetchUids;
+    fetchUids.insert(uid);
+    request.m_GetBodys = fetchUids;
+
+    LOG_DEBUG_VAR("prefetch req bodys =", fetchUids);
+    m_ImapManager->PrefetchRequest(request);
   }
 
   const int maxHeadersFetchRequest = 25;
@@ -1154,7 +1180,7 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetHeaders = subsetFetchHeaderUids;
 
-        LOG_DEBUG_VAR("async request headers =", subsetFetchHeaderUids);
+        LOG_DEBUG_VAR("async req headers =", subsetFetchHeaderUids);
         m_ImapManager->AsyncRequest(request);
 
         subsetFetchHeaderUids.clear();
@@ -1178,7 +1204,7 @@ void Ui::DrawMessageList()
         request.m_Folder = m_CurrentFolder;
         request.m_GetFlags = subsetFetchFlagUids;
 
-        LOG_DEBUG_VAR("async request flags =", subsetFetchFlagUids);
+        LOG_DEBUG_VAR("async req flags =", subsetFetchFlagUids);
         m_ImapManager->AsyncRequest(request);
 
         subsetFetchFlagUids.clear();
@@ -1192,7 +1218,8 @@ void Ui::DrawMessageList()
 void Ui::DrawMessageListSearch()
 {
   std::map<std::string, std::set<uint32_t>> fetchFlagUids;
-  std::map<std::string, std::set<uint32_t>> fetchBodyUids;
+  std::map<std::string, std::set<uint32_t>> fetchBodyPriUids;
+  std::map<std::string, std::set<uint32_t>> fetchBodySecUids;
 
   {
     std::lock_guard<std::mutex> lock(m_SearchMutex);
@@ -1263,18 +1290,29 @@ void Ui::DrawMessageListSearch()
         wattroff(m_MainWin, m_AttrsHighlightedText);
       }
 
+      const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+      std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
-        const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-        std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
-
         if ((bodys.find(uid) == bodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
           if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
           {
             requestedBodys.insert(uid);
-            fetchBodyUids[folder].insert(uid);
+            fetchBodyPriUids[folder].insert(uid);
+          }
+        }
+      }
+      else if (abs(i - m_MessageListCurrentIndex[m_CurrentFolder]) == 1)
+      {
+        if ((bodys.find(uid) == bodys.end()) &&
+            (requestedBodys.find(uid) == requestedBodys.end()))
+        {
+          if (m_PrefetchLevel >= PrefetchLevelCurrentView)
+          {
+            requestedBodys.insert(uid);
+            fetchBodySecUids[folder].insert(uid);
           }
         }
       }
@@ -1287,17 +1325,29 @@ void Ui::DrawMessageListSearch()
     request.m_Folder = fetchFlagUid.first;
     request.m_GetFlags = fetchFlagUid.second;
 
-    LOG_DEBUG_VAR("async request flags =", request.m_GetFlags);
+    LOG_DEBUG_VAR("async req flags =", request.m_GetFlags);
     m_ImapManager->AsyncRequest(request);
   }
 
-  for (auto& fetchBodyUid : fetchBodyUids)
+  for (auto& fetchBodyUid : fetchBodyPriUids)
   {
     ImapManager::Request request;
     request.m_Folder = fetchBodyUid.first;
     request.m_GetBodys = fetchBodyUid.second;
+    request.m_ProcessHtml = !m_Plaintext;
 
-    LOG_DEBUG_VAR("async request bodys =", request.m_GetBodys);
+    LOG_DEBUG_VAR("async req pri bodys =", request.m_GetBodys);
+    m_ImapManager->AsyncRequest(request);
+  }
+
+  for (auto& fetchBodyUid : fetchBodySecUids)
+  {
+    ImapManager::Request request;
+    request.m_Folder = fetchBodyUid.first;
+    request.m_GetBodys = fetchBodyUid.second;
+    request.m_ProcessHtml = !m_Plaintext;
+
+    LOG_DEBUG_VAR("async req sec bodys =", request.m_GetBodys);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -1312,7 +1362,8 @@ void Ui::DrawMessage()
   const int uid = m_CurrentFolderUid.second;
 
   std::set<uint32_t> fetchHeaderUids;
-  std::set<uint32_t> fetchBodyUids;
+  std::set<uint32_t> fetchBodyPriUids;
+  std::set<uint32_t> fetchBodySecUids;
   bool markSeen = false;
   bool unseen = false;
   {
@@ -1337,7 +1388,7 @@ void Ui::DrawMessage()
         (requestedBodys.find(uid) == requestedBodys.end()))
     {
       requestedBodys.insert(uid);
-      fetchBodyUids.insert(uid);
+      fetchBodyPriUids.insert(uid);
     }
 
     std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
@@ -1401,9 +1452,8 @@ void Ui::DrawMessage()
       const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
-      const std::wstring wtext = Util::ToWString(text);
-      std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxViewLineLength, true);
-      wlines.push_back(L"");
+      m_CurrentMessageProcessFlowed = m_RespectFormatFlowed && m_Plaintext && body.IsFormatFlowed();
+      std::vector<std::wstring> wlines = GetCachedWordWrapLines(folder, bodyIt->first);
       int countLines = wlines.size();
 
       m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
@@ -1412,7 +1462,8 @@ void Ui::DrawMessage()
       {
         const std::wstring& wdispStr = wlines.at(i + m_MessageViewLineOffset);
         const std::string& dispStr = Util::ToString(wdispStr);
-        const bool isQuote = (dispStr.rfind(">", 0) == 0);
+        const bool isQuote = (dispStr.rfind(">", 0) == 0) &&
+          ((i + m_MessageViewLineOffset) > m_MessageViewHeaderLineCount);
 
         if (isQuote)
         {
@@ -1447,6 +1498,33 @@ void Ui::DrawMessage()
 
       markSeen = true;
     }
+
+    if (m_PrefetchLevel >= PrefetchLevelCurrentView)
+    {
+      const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
+      if (displayUids.size() > 0)
+      {
+        int32_t maxIndex = (int)GetDisplayUids(m_CurrentFolder).size() - 1;
+        int32_t nextIndex = Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] + 1, maxIndex);
+        int32_t prevIndex = Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] - 1, maxIndex);
+        uint32_t nextUid = std::prev(displayUids.end(), nextIndex + 1)->second;
+        uint32_t prevUid = std::prev(displayUids.end(), prevIndex + 1)->second;
+
+        if ((bodys.find(nextUid) == bodys.end()) &&
+            (requestedBodys.find(nextUid) == requestedBodys.end()))
+        {
+          requestedBodys.insert(nextUid);
+          fetchBodySecUids.insert(nextUid);
+        }
+
+        if ((bodys.find(prevUid) == bodys.end()) &&
+            (requestedBodys.find(prevUid) == requestedBodys.end()))
+        {
+          requestedBodys.insert(prevUid);
+          fetchBodySecUids.insert(prevUid);
+        }
+      }
+    }
   }
 
   if (!fetchHeaderUids.empty())
@@ -1454,16 +1532,27 @@ void Ui::DrawMessage()
     ImapManager::Request request;
     request.m_Folder = folder;
     request.m_GetHeaders = fetchHeaderUids;
-    LOG_DEBUG_VAR("async request headers =", fetchHeaderUids);
+    LOG_DEBUG_VAR("async req headers =", fetchHeaderUids);
     m_ImapManager->AsyncRequest(request);
   }
 
-  if (!fetchBodyUids.empty())
+  if (!fetchBodyPriUids.empty())
   {
     ImapManager::Request request;
     request.m_Folder = folder;
-    request.m_GetBodys = fetchBodyUids;
-    LOG_DEBUG_VAR("async request bodys =", fetchBodyUids);
+    request.m_GetBodys = fetchBodyPriUids;
+    request.m_ProcessHtml = !m_Plaintext;
+    LOG_DEBUG_VAR("async req pri bodys =", fetchBodyPriUids);
+    m_ImapManager->AsyncRequest(request);
+  }
+
+  if (!fetchBodySecUids.empty())
+  {
+    ImapManager::Request request;
+    request.m_Folder = folder;
+    request.m_GetBodys = fetchBodySecUids;
+    request.m_ProcessHtml = !m_Plaintext;
+    LOG_DEBUG_VAR("async req sec bodys =", fetchBodySecUids);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -1477,7 +1566,11 @@ void Ui::DrawMessage()
 
 void Ui::DrawComposeMessage()
 {
-  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
+  const bool processFlowed = false; // only process when viewing message
+  const bool outputFlowed = false; // only generate when sending after compose
+  const bool quoteWrap = false; // only wrap quoted lines when viewing message
+  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                         processFlowed, outputFlowed, quoteWrap,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
@@ -1566,7 +1659,20 @@ void Ui::DrawComposeMessage()
     if (messageY > m_MainWinHeight) break;
 
     const std::string& dispStr = Util::ToString(*line);
+    const bool isQuote = (dispStr.rfind(">", 0) == 0);
+
+    if (isQuote)
+    {
+      wattron(m_MainWin, m_AttrsQuotedText);
+    }
+
     mvwprintw(m_MainWin, messageY, 0, "%s", dispStr.c_str());
+
+    if (isQuote)
+    {
+      wattroff(m_MainWin, m_AttrsQuotedText);
+    }
+
     ++messageY;
   }
 
@@ -2329,7 +2435,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
         request.m_Folder = m_CurrentFolder;
         request.m_GetUids = true;
         request.m_GetHeaders = std::set<uint32_t>({ uid });
-        LOG_DEBUG_VAR("async request uids =", m_CurrentFolder);
+        LOG_DEBUG_VAR("async req uids =", m_CurrentFolder);
         m_HasRequestedUids[m_CurrentFolder] = true;
         m_ImapManager->AsyncRequest(request);
 
@@ -2689,20 +2795,28 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeyPrevPage)
     {
+      const bool processFlowed = false; // only process when viewing message
+      const bool outputFlowed = false; // only generate when sending after compose
+      const bool quoteWrap = false; // only wrap quoted lines when viewing message
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                               processFlowed, outputFlowed, quoteWrap,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
     }
     else if (p_Key == m_KeyNextPage)
     {
+      const bool processFlowed = false; // only process when viewing message
+      const bool outputFlowed = false; // only generate when sending after compose
+      const bool quoteWrap = false; // only wrap quoted lines when viewing message
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength, true,
+        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                               processFlowed, outputFlowed, quoteWrap,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -3240,17 +3354,33 @@ void Ui::SetState(Ui::State p_State)
       Body& body = bit->second;
 
       std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
-      std::vector<std::wstring> bodyTextLines =
-        Util::WordWrap(Util::ToWString(bodyText), (m_MaxComposeLineLength - 8), false);
-      std::string indentBodyText =
-        Util::AddIndent(Util::ToString(Util::Join(bodyTextLines)), "> ");
+      if (!bodyText.empty() && bodyText[bodyText.size() - 1] == '\n')
+      {
+        bodyText = bodyText.substr(0, bodyText.size() - 1);
+      }
+
+      std::string indentBodyText = Util::AddIndent(bodyText, "> ");
+      std::string indentBody;
+      if (m_ComposeLineWrap == LineWrapFormatFlowed)
+      {
+        indentBody = indentBodyText;
+      }
+      else
+      {
+        const bool processFlowed = m_RespectFormatFlowed && m_Plaintext && body.IsFormatFlowed();
+        const bool outputFlowed = false;
+        const bool quoteWrap = m_RewrapQuotedLines;
+        std::vector<std::wstring> indentBodyLines =
+          Util::WordWrap(Util::ToWString(indentBodyText), 72, processFlowed, outputFlowed, quoteWrap);
+        indentBody = Util::ToString(Util::Join(indentBodyLines));
+      }
 
       if (!m_BottomReply)
       {
         m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
                                               header.GetFrom() +
                                               " wrote:\n\n" +
-                                              indentBodyText);
+                                              indentBody);
         Util::StripCR(m_ComposeMessageStr);
       }
       else
@@ -3258,7 +3388,7 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessageStr = Util::ToWString("On " + header.GetDateTime() + " " +
                                               header.GetFrom() +
                                               " wrote:\n\n" +
-                                              indentBodyText + "\n\n\n");
+                                              indentBody + "\n\n\n");
         Util::StripCR(m_ComposeMessageStr);
         m_ComposeMessagePos = (int)m_ComposeMessageStr.size() - 1;
         int lineCount = Util::Split(Util::ToString(m_ComposeMessageStr), '\n').size();
@@ -3537,7 +3667,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           request.m_Folder = p_Response.m_Folder;
           request.m_GetHeaders = subsetFetchHeaderUids;
 
-          LOG_DEBUG_VAR("async request headers =", subsetFetchHeaderUids);
+          LOG_DEBUG_VAR("async req headers =", subsetFetchHeaderUids);
           m_ImapManager->AsyncRequest(request);
 
           subsetFetchHeaderUids.clear();
@@ -3559,7 +3689,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           request.m_Folder = p_Response.m_Folder;
           request.m_GetFlags = subsetFetchFlagUids;
 
-          LOG_DEBUG_VAR("async request flags =", subsetFetchFlagUids);
+          LOG_DEBUG_VAR("async req flags =", subsetFetchFlagUids);
           m_ImapManager->AsyncRequest(request);
 
           subsetFetchFlagUids.clear();
@@ -3587,7 +3717,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           request.m_PrefetchLevel = PrefetchLevelFullSync;
           request.m_Folder = folder;
           request.m_GetUids = true;
-          LOG_DEBUG_VAR("prefetch request uids =", folder);
+          LOG_DEBUG_VAR("prefetch req uids =", folder);
           m_HasPrefetchRequestedUids[folder] = true;
           m_ImapManager->PrefetchRequest(request);
         }
@@ -3663,7 +3793,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             request.m_Folder = folder;
             request.m_GetHeaders = subsetPrefetchHeaders;
 
-            LOG_DEBUG_VAR("prefetch request headers =", subsetPrefetchHeaders);
+            LOG_DEBUG_VAR("prefetch req headers =", subsetPrefetchHeaders);
             m_ImapManager->PrefetchRequest(request);
 
             subsetPrefetchHeaders.clear();
@@ -3688,7 +3818,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             request.m_Folder = folder;
             request.m_GetFlags = subsetPrefetchFlags;
 
-            LOG_DEBUG_VAR("prefetch request flags =", subsetPrefetchFlags);
+            LOG_DEBUG_VAR("prefetch req flags =", subsetPrefetchFlags);
             m_ImapManager->PrefetchRequest(request);
 
             subsetPrefetchFlags.clear();
@@ -3713,7 +3843,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
             request.m_Folder = folder;
             request.m_GetBodys = subsetPrefetchBodys;
 
-            LOG_DEBUG_VAR("prefetch request bodys =", subsetPrefetchBodys);
+            LOG_DEBUG_VAR("prefetch req bodys =", subsetPrefetchBodys);
             m_ImapManager->PrefetchRequest(request);
 
             subsetPrefetchBodys.clear();
@@ -3947,7 +4077,7 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
     ImapManager::Request request;
     request.m_PrefetchLevel = PrefetchLevelFullSync;
     request.m_GetFolders = true;
-    LOG_DEBUG("prefetch request folders");
+    LOG_DEBUG("prefetch req folders");
     m_HasPrefetchRequestedFolders = true;
     m_ImapManager->PrefetchRequest(request);
   }
@@ -4184,12 +4314,12 @@ void Ui::SendComposedMessage()
   smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
   smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
   smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-  smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
-                                                       : m_ComposeMessageStr);
+  smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
   smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
   smtpAction.m_RefMsgId = m_ComposeHeaderRef;
   smtpAction.m_ComposeTempDirectory = m_ComposeTempDirectory;
   smtpAction.m_ComposeDraftUid = m_ComposeDraftUid;
+  smtpAction.m_FormatFlowed = (m_ComposeLineWrap == LineWrapFormatFlowed);
 
   if (IsConnected())
   {
@@ -4223,8 +4353,7 @@ void Ui::UploadDraftMessage()
     smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
     smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
     smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-    smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
-                                                         : m_ComposeMessageStr);
+    smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
     smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
@@ -5106,9 +5235,7 @@ void Ui::MessageFindNext()
 {
   int findFromLine = m_MessageFindMatchLine + 1;
   const std::wstring wquery = Util::ToLower(Util::ToWString(m_MessageFindQuery));;
-  const std::wstring wtext = Util::ToWString(m_CurrentMessageViewText);
-  std::vector<std::wstring> wlines = Util::WordWrap(wtext, m_MaxViewLineLength, true);
-  wlines.push_back(L"");
+  std::vector<std::wstring> wlines = Ui::GetCachedWordWrapLines("", 0);
   int countLines = wlines.size();
 
   bool found = false;
@@ -5218,6 +5345,32 @@ void Ui::SetComposeStr(int p_HeaderField, const std::wstring& p_Str)
   }
 }
 
+std::wstring Ui::GetComposeBodyForSend()
+{
+  if (m_ComposeLineWrap == LineWrapNone)
+  {
+    return m_ComposeMessageStr;
+  }
+  else if (m_ComposeLineWrap == LineWrapFormatFlowed)
+  {
+    const bool processFlowed = m_CurrentMessageProcessFlowed;
+    const bool outputFlowed = true;
+    const bool quoteWrap = m_RewrapQuotedLines;
+    std::vector<std::wstring> indentBodyLines =
+      Util::WordWrap(m_ComposeMessageStr, 72, processFlowed, outputFlowed, quoteWrap);
+    return Util::Join(indentBodyLines);
+  }
+  else if (m_ComposeLineWrap == LineWrapHardWrap)
+  {
+    return Util::Join(m_ComposeMessageLines);
+  }
+  else
+  {
+    LOG_WARNING("invalid line wrap %d", m_ComposeLineWrap);
+  }
+  return L"";
+}
+
 int Ui::GetCurrentHeaderField()
 {
   if (m_ShowRichHeader)
@@ -5268,7 +5421,7 @@ void Ui::StartSync()
       ImapManager::Request request;
       request.m_PrefetchLevel = PrefetchLevelFullSync;
       request.m_GetFolders = true;
-      LOG_DEBUG("prefetch request folders");
+      LOG_DEBUG("prefetch req folders");
       m_HasPrefetchRequestedFolders = true;
       m_ImapManager->PrefetchRequest(request);
     }
@@ -5327,6 +5480,7 @@ void Ui::HandleConnected()
       smtpAction.m_Cc = header.GetCc();
       smtpAction.m_Bcc = header.GetBcc();
       smtpAction.m_IsSendCreatedMessage = true;
+      smtpAction.m_FormatFlowed = (m_ComposeLineWrap == LineWrapFormatFlowed);
 
       m_SmtpManager->AsyncAction(smtpAction);
     }
@@ -5380,8 +5534,7 @@ void Ui::ComposeBackupProcess()
       smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
       smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
       smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-      smtpAction.m_Body = Util::ToString(m_ComposeHardwrap ? Util::Join(m_ComposeMessageLines)
-                                                           : m_ComposeMessageStr);
+      smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
       smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
       smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
@@ -5639,4 +5792,49 @@ void Ui::ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond)
   SortFilterPreUpdate();
   sortFilter = (sortFilter == p_SortSecond) ? SortDefault : ((sortFilter == p_SortFirst) ? p_SortSecond : p_SortFirst);
   SortFilterUpdated(wasFilterEnabled);
+}
+
+const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid)
+{
+  static std::string prevFolder;
+  static uint32_t prevUid = 0;
+  static bool prevPlaintext = false;
+  static bool prevProcessFlowed = false;
+  static int32_t prevMaxViewLineLength = 0;
+  static std::vector<std::wstring> wlines;
+  static size_t prevTextLen = 0;
+
+  if (p_Folder.empty() && (p_Uid == 0)) return wlines;
+
+  if ((prevFolder == p_Folder) && (prevUid == p_Uid) && (prevPlaintext == m_Plaintext) &&
+      (prevProcessFlowed == m_CurrentMessageProcessFlowed) && (prevMaxViewLineLength == m_MaxViewLineLength) &&
+      (prevTextLen == m_CurrentMessageViewText.size()))
+  {
+    return wlines;
+  }
+
+  prevFolder = p_Folder;
+  prevUid = p_Uid;
+  prevPlaintext = m_Plaintext;
+  prevProcessFlowed = m_CurrentMessageProcessFlowed;
+  prevMaxViewLineLength = m_MaxViewLineLength;
+  prevTextLen = m_CurrentMessageViewText.size(); // cater for search results async header load
+
+  const std::wstring wtext = Util::ToWString(m_CurrentMessageViewText);
+  const bool outputFlowed = false; // only generate when sending after compose
+  const bool quoteWrap = m_RewrapQuotedLines;
+  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed, outputFlowed, quoteWrap);
+  wlines.push_back(L"");
+
+  size_t wlinesSize = wlines.size();
+  for (size_t i = 0; i < wlinesSize; ++i)
+  {
+    if (wlines[i].empty())
+    {
+      m_MessageViewHeaderLineCount = i;
+      break;
+    }
+  }
+
+  return wlines;
 }
