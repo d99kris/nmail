@@ -122,6 +122,9 @@ void Ui::Init()
     { "key_next_page", "KEY_NPAGE" },
     { "key_filter_show_unread", "!" },
     { "key_filter_show_has_attachments", "@" },
+    { "key_filter_show_current_date", "#" },
+    { "key_filter_show_current_name", "$" },
+    { "key_filter_show_current_subject", "%" },
     { "key_sort_unread", "1" },
     { "key_sort_has_attachments", "2" },
     { "key_sort_date", "3" },
@@ -195,6 +198,9 @@ void Ui::Init()
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
   m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
   m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
+  m_KeyFilterShowCurrentDate = Util::GetKeyCode(m_Config.Get("key_filter_show_current_date"));
+  m_KeyFilterShowCurrentName = Util::GetKeyCode(m_Config.Get("key_filter_show_current_name"));
+  m_KeyFilterShowCurrentSubject = Util::GetKeyCode(m_Config.Get("key_filter_show_current_subject"));
   m_KeySortUnread = Util::GetKeyCode(m_Config.Get("key_sort_unread"));
   m_KeySortHasAttachments = Util::GetKeyCode(m_Config.Get("key_sort_has_attachments"));
   m_KeySortDate = Util::GetKeyCode(m_Config.Get("key_sort_date"));
@@ -583,6 +589,9 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyFilterShowUnread), "FiltUnrd",
       GetKeyDisplay(m_KeyFilterShowHasAttachments), "FiltAttc",
+      GetKeyDisplay(m_KeyFilterShowCurrentDate), "FiltDate",
+      GetKeyDisplay(m_KeyFilterShowCurrentName), "FiltName",
+      GetKeyDisplay(m_KeyFilterShowCurrentSubject), "FiltSubj",
     });
     return listHelp;
   }();
@@ -2400,6 +2409,18 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if ((p_Key == m_KeyFilterShowHasAttachments) && !m_MessageListSearch)
   {
     ToggleFilter(SortAttchOnly);
+  }
+  else if ((p_Key == m_KeyFilterShowCurrentDate) && !m_MessageListSearch)
+  {
+    ToggleFilter(SortCurrDateOnly);
+  }
+  else if ((p_Key == m_KeyFilterShowCurrentName) && !m_MessageListSearch)
+  {
+    ToggleFilter(SortCurrNameOnly);
+  }
+  else if ((p_Key == m_KeyFilterShowCurrentSubject) && !m_MessageListSearch)
+  {
+    ToggleFilter(SortCurrSubjOnly);
   }
   else if ((p_Key == m_KeySortUnread) && !m_MessageListSearch)
   {
@@ -4226,7 +4247,7 @@ std::string Ui::GetStateStr()
       }
       else if (m_SortFilter[m_CurrentFolder] != SortDefault)
       {
-        return "Folder: " + m_CurrentFolder + GetFilterStr();
+        return "Folder: " + m_CurrentFolder + GetFilterStateStr();
       }
       else
       {
@@ -4268,7 +4289,7 @@ std::string Ui::GetStateStr()
   }
 }
 
-std::string Ui::GetFilterStr()
+std::string Ui::GetFilterStateStr()
 {
   switch (m_SortFilter[m_CurrentFolder])
   {
@@ -4288,14 +4309,20 @@ std::string Ui::GetFilterStr()
       return " [Date Asc]";
     case SortDateDesc:
       return " [Date Desc]";
+    case SortCurrDateOnly:
+      return " [Date Curr]";
     case SortNameAsc:
       return " [Name Asc]";
     case SortNameDesc:
       return " [Name Desc]";
+    case SortCurrNameOnly:
+      return " [Name Curr]";
     case SortSubjAsc:
       return " [Subj Asc]";
     case SortSubjDesc:
       return " [Subj Desc]";
+    case SortCurrSubjOnly:
+      return " [Subj Curr]";
     default:
       return ""; // should not reach here
   }
@@ -5600,6 +5627,36 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       key = ((hit != headers.end()) && hit->second.GetHasAttachments()) ? dateUidKey : "";
       break;
 
+    case SortCurrDateOnly:
+      key = ((hit != headers.end()) && (hit->second.GetDate() == m_FilterCustomStr)) ? dateUidKey : "";
+      break;
+
+    case SortCurrNameOnly:
+      if (hit != headers.end())
+      {
+        std::string name = (m_CurrentFolder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
+        Util::NormalizeName(name);
+        key = (name == m_FilterCustomStr) ? dateUidKey : "";
+      }
+      else
+      {
+        key = "";
+      }
+      break;
+
+    case SortCurrSubjOnly:
+      if (hit != headers.end())
+      {
+        std::string subj = hit->second.GetSubject();
+        Util::NormalizeSubject(subj);
+        key = (subj == m_FilterCustomStr) ? dateUidKey : "";
+      }
+      else
+      {
+        key = "";
+      }
+      break;
+
     case SortNameDesc:
       if (hit != headers.end())
       {
@@ -5781,7 +5838,48 @@ void Ui::ToggleFilter(SortFilter p_SortFilter)
 {
   SortFilter& sortFilter = m_SortFilter[m_CurrentFolder];
   SortFilterPreUpdate();
-  sortFilter = (sortFilter != p_SortFilter) ? p_SortFilter : SortDefault;
+  SortFilter newSortFilter = (sortFilter != p_SortFilter) ? p_SortFilter : SortDefault;
+
+  if ((newSortFilter == SortCurrDateOnly) || (newSortFilter == SortCurrNameOnly) ||
+      (newSortFilter == SortCurrSubjOnly))
+  {
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, Header>& headers = m_Headers[m_CurrentFolder];
+    std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+    if (hit == headers.end())
+    {
+      SetDialogMessage("No message selected to filter on");
+      return;
+    }
+
+    // dont cache custom date, name or subject filters due to mem usage
+    std::map<std::string, uint32_t>& displayUids = m_DisplayUids[m_CurrentFolder][newSortFilter];
+    uint64_t& displayUidsVersion = m_DisplayUidsVersion[m_CurrentFolder][newSortFilter];
+    displayUids.clear();
+    displayUidsVersion = 0;
+
+    switch (newSortFilter)
+    {
+      case SortCurrDateOnly:
+        m_FilterCustomStr = hit->second.GetDate();
+        break;
+
+      case SortCurrNameOnly:
+        m_FilterCustomStr = (m_CurrentFolder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
+        Util::NormalizeName(m_FilterCustomStr);
+        break;
+
+      case SortCurrSubjOnly:
+        m_FilterCustomStr = hit->second.GetSubject();
+        Util::NormalizeSubject(m_FilterCustomStr);
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  sortFilter = newSortFilter;
   SortFilterUpdated(true /* p_FilterUpdated */);
 }
 

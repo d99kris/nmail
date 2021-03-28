@@ -635,8 +635,11 @@ file (platform-dependent defaults are left empty below):
     key_ext_html_viewer=v
     key_ext_msg_viewer=w
     key_ext_pager=e
-    key_filter_show_unread=!
+    key_filter_show_current_date=#
+    key_filter_show_current_name=$
+    key_filter_show_current_subject=%
     key_filter_show_has_attachments=@
+    key_filter_show_unread=!
     key_find=/
     key_find_next=?
     key_forward=f

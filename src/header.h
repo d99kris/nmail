@@ -18,6 +18,7 @@ public:
   void SetHeaderData(const std::string& p_HdrData, const std::string& p_StrData,
                      const time_t p_ServerTime);
   std::string GetData() const;
+  std::string GetDate();
   std::string GetDateTime();
   std::string GetDateOrTime(const std::string& p_CurrentDate);
   time_t GetTimeStamp();

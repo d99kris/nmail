@@ -71,10 +71,13 @@ public:
     SortAttchOnly,
     SortDateAsc,
     SortDateDesc,
+    SortCurrDateOnly,
     SortNameAsc,
     SortNameDesc,
+    SortCurrNameOnly,
     SortSubjAsc,
     SortSubjDesc,
+    SortCurrSubjOnly,
   };
 
   enum LineWrap
@@ -151,7 +154,7 @@ private:
   std::string GetKeyDisplay(int p_Key);
   std::string GetStatusStr();
   std::string GetStateStr();
-  std::string GetFilterStr();
+  std::string GetFilterStateStr();
   bool IsValidTextKey(int p_Key);
 
   void SendComposedMessage();
@@ -347,6 +350,9 @@ private:
   int m_KeyNextPage = 0;
   int m_KeyFilterShowUnread = 0;
   int m_KeyFilterShowHasAttachments = 0;
+  int m_KeyFilterShowCurrentDate = 0;
+  int m_KeyFilterShowCurrentName = 0;
+  int m_KeyFilterShowCurrentSubject = 0;
   int m_KeySortUnread = 0;
   int m_KeySortHasAttachments = 0;
   int m_KeySortDate = 0;
@@ -453,6 +459,8 @@ private:
   bool m_PrefetchAllHeaders = true;
   bool m_CurrentMessageProcessFlowed = false;
   int m_MessageViewHeaderLineCount = 0;
+
+  std::string m_FilterCustomStr;
 
 private:
   static bool s_Running;

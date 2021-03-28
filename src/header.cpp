@@ -40,6 +40,12 @@ std::string Header::GetData() const
   return m_Data;
 }
 
+std::string Header::GetDate()
+{
+  Parse();
+  return m_Date;
+}
+
 std::string Header::GetDateTime()
 {
   Parse();
