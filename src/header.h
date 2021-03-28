@@ -34,6 +34,7 @@ public:
   std::string GetMessageId();
   std::set<std::string> GetAddresses();
   bool GetHasAttachments();
+  std::string GetRawHeaderText(bool p_LocalHeaders);
 
   static std::string GetCurrentDate();
 
@@ -68,6 +69,7 @@ private:
   std::string m_UniqueId;
   std::set<std::string> m_Addresses;
   bool m_HasAttachments = false;
+  std::string m_RawHeaderText;
 };
 
 std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header);

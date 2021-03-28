@@ -131,6 +131,7 @@ void Ui::Init()
     { "key_sort_name", "4" },
     { "key_sort_subject", "5" },
     { "key_jump_to", "j" },
+    { "key_toggle_full_header", "h" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
@@ -139,6 +140,7 @@ void Ui::Init()
     { "persist_selection_on_sortfilter_change", "1" },
     { "unread_indicator", "N" },
     { "invalid_input_notify", "1" },
+    { "full_header_include_local", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -275,6 +277,8 @@ void Ui::Init()
   m_PersistSelectionOnSortFilterChange = m_Config.Get("persist_selection_on_sortfilter_change") == "1";
   m_UnreadIndicator = m_Config.Get("unread_indicator");
   m_InvalidInputNotify = m_Config.Get("invalid_input_notify") == "1";
+  m_KeyToggleFullHeader = Util::GetKeyCode(m_Config.Get("key_toggle_full_header"));
+  m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
 
   try
   {
@@ -634,6 +638,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyFind), "Find",
       GetKeyDisplay(m_KeyFindNext), "FindNext",
+      GetKeyDisplay(m_KeyToggleFullHeader), "TgFullHdr",
     },
   };
 
@@ -1414,20 +1419,27 @@ void Ui::DrawMessage()
     if (headerIt != headers.end())
     {
       Header& header = headerIt->second;
-      ss << "Date: " << header.GetDateTime() << "\n";
-      ss << "From: " << header.GetFrom() << "\n";
-      if (!header.GetReplyTo().empty())
+      if (m_ShowFullHeader)
       {
-        ss << "Reply-To: " << header.GetReplyTo() << "\n";
+        ss << header.GetRawHeaderText(m_FullHeaderIncludeLocal);
       }
-
-      ss << "To: " << header.GetTo() << "\n";
-      if (!header.GetCc().empty())
+      else
       {
-        ss << "Cc: " << header.GetCc() << "\n";
-      }
+        ss << "Date: " << header.GetDateTime() << "\n";
+        ss << "From: " << header.GetFrom() << "\n";
+        if (!header.GetReplyTo().empty())
+        {
+          ss << "Reply-To: " << header.GetReplyTo() << "\n";
+        }
 
-      ss << "Subject: " << header.GetSubject() << "\n";
+        ss << "To: " << header.GetTo() << "\n";
+        if (!header.GetCc().empty())
+        {
+          ss << "Cc: " << header.GetCc() << "\n";
+        }
+
+        ss << "Subject: " << header.GetSubject() << "\n";
+      }
 
       if (bodyIt != bodys.end())
       {
@@ -2656,6 +2668,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     {
       SetDialogMessage("Find text not set");
     }
+  }
+  else if (p_Key == m_KeyToggleFullHeader)
+  {
+    m_ShowFullHeader = !m_ShowFullHeader;
   }
   else if (m_InvalidInputNotify)
   {

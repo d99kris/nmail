@@ -136,6 +136,34 @@ bool Header::GetHasAttachments()
   return m_HasAttachments;
 }
 
+std::string Header::GetRawHeaderText(bool p_LocalHeaders)
+{
+  std::string& raw = m_RawHeaderText;
+  if (!raw.empty()) return raw;
+
+  raw = m_Data;
+  raw.erase(std::remove(raw.begin(), raw.end(), L'\r'), raw.end());
+
+  // remove body structure header info
+  size_t endpos = raw.find("\n\n");
+  if (endpos != std::string::npos)
+  {
+    raw = raw.substr(0, endpos + 1);
+  }
+
+  // remove local headers if not requested
+  if (!p_LocalHeaders)
+  {
+    size_t startpos = raw.find("\n");
+    if (startpos != std::string::npos)
+    {
+      raw = raw.substr(startpos + 1);
+    }
+  }
+
+  return raw;
+}
+
 std::string Header::GetCurrentDate()
 {
   time_t nowtime = time(NULL);

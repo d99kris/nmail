@@ -620,6 +620,7 @@ file (platform-dependent defaults are left empty below):
     compose_backup_interval=10
     compose_line_wrap=0
     delete_without_confirm=0
+    full_header_include_local=0
     help_enabled=1
     invalid_input_notify=1
     key_back=,
@@ -670,6 +671,7 @@ file (platform-dependent defaults are left empty below):
     key_sort_unread=1
     key_sync=s
     key_to_select=KEY_CTRLT
+    key_toggle_full_header=h
     key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t
     key_toggle_unread=u
@@ -730,6 +732,12 @@ Specify how nmail shall wrap lines in outgoing emails. Supported options:
 
 Allow deleting emails (moving to trash folder) without confirmation
 prompt (default disabled).
+
+### full_header_include_local
+
+While viewing full headers (by pressing `h`) nmail displays RFC 822 headers
+by default. This parameter allows enabling nmail to also display local /
+internal header fields, such as server timestamp. Default disabled.
 
 ### help_enabled
 
