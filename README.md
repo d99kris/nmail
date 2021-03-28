@@ -616,7 +616,7 @@ file (platform-dependent defaults are left empty below):
     attachment_indicator=+
     bottom_reply=0
     cancel_without_confirm=0
-    colors_enabled=0
+    colors_enabled=1
     compose_backup_interval=10
     compose_line_wrap=0
     delete_without_confirm=0
@@ -705,7 +705,7 @@ Allow canceling email compose without confirmation prompt (default disabled).
 
 ### colors_enabled
 
-Enable terminal color output (default disabled).
+Enable terminal color output (default enabled).
 
 ### compose_backup_interval
 
@@ -896,7 +896,7 @@ configuration file:
     color_highlighted_text_bg=reverse
     color_highlighted_text_fg=reverse
     color_quoted_text_bg=
-    color_quoted_text_fg=
+    color_quoted_text_fg=gray
     color_regular_text_bg=
     color_regular_text_fg=
     color_top_bar_bg=reverse
