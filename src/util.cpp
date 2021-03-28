@@ -52,6 +52,7 @@ std::string Util::m_MsgViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
+std::string Util::m_SenderHostname;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
@@ -610,11 +611,20 @@ std::string Util::MakeForwardSubject(const std::string& p_Str)
   return hasFwdPrefix ? p_Str : ("Fwd: " + p_Str);
 }
 
-std::string Util::GetHostname()
+std::string Util::GetSenderHostname()
 {
-  char hostname[256]; // @todo: use HOST_NAME_MAX?
-  gethostname(hostname, sizeof(hostname));
-  return std::string(hostname);
+  static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : [&]()
+  {
+    char hostname[256]; // @todo: use HOST_NAME_MAX?
+    gethostname(hostname, sizeof(hostname));
+    return std::string(hostname);
+  }();
+  return senderHostname;
+}
+
+void Util::SetSenderHostname(const std::string& p_SenderHostname)
+{
+  m_SenderHostname = p_SenderHostname;
 }
 
 std::string Util::ToString(const std::wstring& p_WStr)
@@ -1278,12 +1288,22 @@ void Util::DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p
   p_CurPos -= (p_CurPos - startPos);
 }
 
-std::string Util::GetAppVersion()
+std::string Util::GetUiAppVersion()
 {
 #ifdef PROJECT_VERSION
-  std::string version = "v" PROJECT_VERSION;
+  static std::string version = "nmail v" PROJECT_VERSION;
 #else
-  std::string version = "";
+  static std::string version = "nmail";
+#endif
+  return version;
+}
+
+std::string Util::GetMessageIdAppVersion()
+{
+#ifdef PROJECT_VERSION
+  static std::string version = "nmail." PROJECT_VERSION;
+#else
+  static std::string version = "nmail";
 #endif
   return version;
 }

@@ -115,8 +115,8 @@ int main(int argc, char* argv[])
   THREAD_REGISTER();
   Util::RegisterSignalHandlers();
 
-  const std::string version = Util::GetAppVersion();
-  LOG_INFO("starting nmail %s", version.c_str());
+  const std::string appVersion = Util::GetUiAppVersion();
+  LOG_INFO("starting %s", appVersion.c_str());
 
   Util::InitTempDir();
   CacheUtil::InitCacheDir();
@@ -156,6 +156,7 @@ int main(int argc, char* argv[])
     { "queue_encrypt", "1" },
     { "auth", "pass" },
     { "auth_encrypt", "1" },
+    { "sender_hostname", "" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -226,6 +227,7 @@ int main(int argc, char* argv[])
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
+  Util::SetSenderHostname(mainConfig->Get("sender_hostname"));
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
@@ -392,7 +394,7 @@ static void ShowHelp()
 static void ShowVersion()
 {
   std::cout <<
-    "nmail " << Util::GetAppVersion() << "\n"
+    Util::GetUiAppVersion() << "\n"
     "\n"
     "Copyright (c) 2019-2021 Kristofer Berggren\n"
     "\n"

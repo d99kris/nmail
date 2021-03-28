@@ -172,7 +172,8 @@ public:
   static std::string AddIndent(const std::string& p_Str, const std::string& p_Indent);
   static std::string MakeReplySubject(const std::string& p_Str);
   static std::string MakeForwardSubject(const std::string& p_Str);
-  static std::string GetHostname();
+  static std::string GetSenderHostname();
+  static void SetSenderHostname(const std::string& p_SenderHostname);
   static std::string ToString(const std::wstring& p_WStr);
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, int p_Len);
@@ -210,7 +211,8 @@ public:
   static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
   static void DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
   static void DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
-  static std::string GetAppVersion();
+  static std::string GetUiAppVersion();
+  static std::string GetMessageIdAppVersion();
   static std::string GetBuildOs();
   static std::string GetCompiler();
 
@@ -269,6 +271,7 @@ private:
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;
+  static std::string m_SenderHostname;
   static int m_OrgStdErr;
   static int m_NewStdErr;
   static bool m_UseServerTimestamps;

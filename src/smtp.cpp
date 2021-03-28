@@ -112,7 +112,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
   if (rv != MAILSMTP_NO_ERROR) return false;
 
   bool esmtpMode = false;
-  const std::string& hostname = Util::GetHostname();
+  const std::string& hostname = Util::GetSenderHostname();
   if (enableLmtp)
   {
     rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, hostname.c_str()));
@@ -312,9 +312,10 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   struct mailimf_date_time* datenow = mailimf_get_date(now);
 
   char id[512];
-  std::string hostname = Util::GetHostname();
-  snprintf(id, sizeof(id), "nmail.%lx.%lx.%x@%s", (long)now, random(), getpid(),
-           hostname.c_str());
+  std::string hostname = Util::GetSenderHostname();
+  std::string appVersion = Util::GetMessageIdAppVersion();
+  snprintf(id, sizeof(id), "%s.%lx.%lx.%x@%s", appVersion.c_str(),
+           (long)now, random(), getpid(), hostname.c_str());
   char* messageid = strdup(id);
 
   clist* clist_inreplyto = NULL;
