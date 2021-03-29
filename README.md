@@ -579,8 +579,7 @@ Mailing List
 ------------
 Feel free to subscribe at
 [www.freelists.org/list/nmail-users](http://www.freelists.org/list/nmail-users)
-and once subscribed, send messages to
-[nmail-users@freelists.org](mailto:nmail-users@freelists.org)
+and once subscribed, send messages to nmail-users [at] freelists [dot] org
 
 Telegram Group
 --------------
