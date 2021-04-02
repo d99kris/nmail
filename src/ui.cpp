@@ -141,6 +141,7 @@ void Ui::Init()
     { "unread_indicator", "N" },
     { "invalid_input_notify", "1" },
     { "full_header_include_local", "0" },
+    { "tab_size", "8" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -279,6 +280,7 @@ void Ui::Init()
   m_InvalidInputNotify = m_Config.Get("invalid_input_notify") == "1";
   m_KeyToggleFullHeader = Util::GetKeyCode(m_Config.Get("key_toggle_full_header"));
   m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
+  m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
 
   try
   {
@@ -1590,8 +1592,9 @@ void Ui::DrawComposeMessage()
   const bool processFlowed = false; // only process when viewing message
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = false; // only wrap quoted lines when viewing message
+  const int expandTabSize = 0; // disabled
   m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                         processFlowed, outputFlowed, quoteWrap,
+                                         processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                          m_ComposeMessageWrapPos);
 
@@ -2835,11 +2838,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       const bool processFlowed = false; // only process when viewing message
       const bool outputFlowed = false; // only generate when sending after compose
       const bool quoteWrap = false; // only wrap quoted lines when viewing message
+      const int expandTabSize = 0; // disabled
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
         m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                               processFlowed, outputFlowed, quoteWrap,
+                                               processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -2849,11 +2853,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       const bool processFlowed = false; // only process when viewing message
       const bool outputFlowed = false; // only generate when sending after compose
       const bool quoteWrap = false; // only wrap quoted lines when viewing message
+      const int expandTabSize = 0; // disabled
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
         m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                               processFlowed, outputFlowed, quoteWrap,
+                                               processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
                                                m_ComposeMessageWrapPos);
       }
@@ -3033,6 +3038,20 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyToggleMarkdownCompose)
     {
       m_CurrentMarkdownHtmlCompose = !m_CurrentMarkdownHtmlCompose;
+    }
+    else if (p_Key == 0x9)
+    {
+      if (!m_IsComposeHeader)
+      {
+        DrawAll(); // redraw to update current column position (m_ComposeMessageWrapPos)
+        int tabSpaces = (m_TabSize - (m_ComposeMessageWrapPos % m_TabSize));
+        for (int i = 0; i < tabSpaces; ++i)
+        {
+          m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, ' ');
+        }
+      }
+
+      asyncRedraw = true;
     }
     else if (IsValidTextKey(p_Key))
     {
@@ -3407,8 +3426,9 @@ void Ui::SetState(Ui::State p_State)
         const bool processFlowed = m_RespectFormatFlowed && m_Plaintext && body.IsFormatFlowed();
         const bool outputFlowed = false;
         const bool quoteWrap = m_RewrapQuotedLines;
+        const int expandTabSize = m_TabSize; // enabled
         std::vector<std::wstring> indentBodyLines =
-          Util::WordWrap(Util::ToWString(indentBodyText), 72, processFlowed, outputFlowed, quoteWrap);
+          Util::WordWrap(Util::ToWString(indentBodyText), 72, processFlowed, outputFlowed, quoteWrap, expandTabSize);
         indentBody = Util::ToString(Util::Join(indentBodyLines));
       }
 
@@ -4346,7 +4366,7 @@ std::string Ui::GetFilterStateStr()
 
 bool Ui::IsValidTextKey(int p_Key)
 {
-  return ((p_Key >= 0x20) || (p_Key == 0x9) || (p_Key == 0xA));
+  return ((p_Key >= 0x20) || (p_Key == 0xA));
 }
 
 void Ui::SendComposedMessage()
@@ -5399,8 +5419,9 @@ std::wstring Ui::GetComposeBodyForSend()
     const bool processFlowed = m_CurrentMessageProcessFlowed;
     const bool outputFlowed = true;
     const bool quoteWrap = m_RewrapQuotedLines;
+    const int expandTabSize = 0; // disabled
     std::vector<std::wstring> indentBodyLines =
-      Util::WordWrap(m_ComposeMessageStr, 72, processFlowed, outputFlowed, quoteWrap);
+      Util::WordWrap(m_ComposeMessageStr, 72, processFlowed, outputFlowed, quoteWrap, expandTabSize);
     return Util::Join(indentBodyLines);
   }
   else if (m_ComposeLineWrap == LineWrapHardWrap)
@@ -5937,7 +5958,8 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   const std::wstring wtext = Util::ToWString(m_CurrentMessageViewText);
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = m_RewrapQuotedLines;
-  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed, outputFlowed, quoteWrap);
+  const int expandTabSize = m_TabSize; // enabled
+  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed, outputFlowed, quoteWrap, expandTabSize);
   wlines.push_back(L"");
 
   size_t wlinesSize = wlines.size();

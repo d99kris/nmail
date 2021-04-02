@@ -464,6 +464,7 @@ private:
   int m_MessageViewHeaderLineCount = 0;
 
   std::string m_FilterCustomStr;
+  int m_TabSize = 8;
 
 private:
   static bool s_Running;

@@ -697,6 +697,7 @@ file (platform-dependent defaults are left empty below):
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
+    tab_size=8
     unread_indicator=N
 
 ### attachment_indicator
@@ -860,6 +861,11 @@ fetching emails (default enabled).
 Determines whether to show rich headers (bcc field) during email compose. This
 option can be re-configured in run-time by pressing `CTRL-R` when composing
 an email (default disabled).
+
+### tab_size
+
+Tabs are expanded to spaces when viewed in nmail. This parameter controls the
+space between tab stops (default 8).
 
 ### unread_indicator
 

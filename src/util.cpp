@@ -975,17 +975,17 @@ int Util::GetKeyCode(const std::string& p_KeyName)
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap)
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize)
 {
   int pos = 0;
   int wrapLine = 0;
   int wrapPos = 0;
-  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, pos, wrapLine,
+  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, p_ExpandTabSize, pos, wrapLine,
                   wrapPos);
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap,
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize,
                                          int p_Pos, int& p_WrapLine, int& p_WrapPos)
 {
   std::wostringstream wrapped;
@@ -1076,6 +1076,27 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
     }
 
     p_Text = outss.str().substr(1);
+  }
+
+  if (p_ExpandTabSize > 0)
+  {
+    size_t pos = 0;
+    const std::wstring wsearch = L"\t";
+    while ((pos = p_Text.find(wsearch, pos)) != std::wstring::npos)
+    {
+      size_t lineStart = p_Text.rfind(L'\n', pos);
+      if (lineStart == std::wstring::npos)
+      {
+        lineStart = 0;
+      }
+
+      const size_t tabColumn = pos - lineStart - 1;
+      const int tabSpaces = (p_ExpandTabSize - (tabColumn % p_ExpandTabSize));
+      std::wstring replace(tabSpaces, L' ');
+
+      p_Text.replace(pos, wsearch.length(), replace);
+      pos += replace.length();
+    }
   }
 
   if (true)
