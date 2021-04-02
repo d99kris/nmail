@@ -250,8 +250,6 @@ public:
   static std::string GetSigName(int p_Signal);
   static std::string MimeToUtf8(const std::string& p_Str);
   static std::vector<std::string> MimeToUtf8(const std::vector<std::string>& p_Strs);
-  static std::string ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
-                                     const std::string& p_SrcStr);
   static std::string GetSQLiteVersion();
   static int GetColor(const std::string& p_Str);
   static int GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr);

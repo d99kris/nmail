@@ -104,7 +104,7 @@ Linux / Ubuntu
 
 Required:
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules
+    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev
 
 Optional (for OAuth 2.0 support):
 
@@ -133,7 +133,7 @@ macOS
 
 Required:
 
-    brew install cmake libetpan openssl ncurses xapian sqlite
+    brew install cmake libetpan openssl ncurses xapian sqlite libmagic
 
 Optional (for OAuth 2.0 support):
 
@@ -318,7 +318,7 @@ This field allows customizing how nmail should convert HTML emails to text.
 If not specified, nmail checks if `pandoc`, `w3m`, `lynx` or `elinks` is
 available on the system (in that order), and uses the first found. The exact
 command used is one of:
-- `iconv -t 'UTF-8' | pandoc -f html -t plain+literate_haskell --wrap=none`
+- `pandoc -f html -t plain+literate_haskell --wrap=preserve`
 - `w3m -T text/html -I utf-8 -dump`
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump -stdin`
 - `elinks -dump-charset utf-8 -dump`
