@@ -381,7 +381,7 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
     {
       if (output.find("/pandoc") != std::string::npos)
       {
-        result = "iconv -t UTF-8 | pandoc -f html -t plain+literate_haskell --wrap=none";
+        result = "pandoc -f html -t plain+literate_haskell --wrap=preserve";
       }
       else if (output.find("/w3m") != std::string::npos)
       {
@@ -1749,27 +1749,6 @@ std::vector<std::string> Util::MimeToUtf8(const std::vector<std::string>& p_Strs
     strs.push_back(MimeToUtf8(str));
   }
   return strs;
-}
-
-std::string Util::ConvertEncoding(const std::string& p_SrcEnc, const std::string& p_DstEnc,
-                                  const std::string& p_SrcStr)
-{
-  std::string str;
-  char* convStr = NULL;
-  size_t convLen = 0;
-  if ((charconv_buffer(p_DstEnc.c_str(), p_SrcEnc.c_str(), p_SrcStr.c_str(), p_SrcStr.size(),
-                       &convStr, &convLen) == MAIL_CHARCONV_NO_ERROR) && (convStr != NULL))
-  {
-    str = std::string(convStr, convLen);
-    charconv_buffer_free(convStr);
-  }
-  else
-  {
-    str = p_SrcStr;
-    LOG_ERROR("failed converting %s to %s", p_SrcEnc.c_str(), p_DstEnc.c_str());
-  }
-
-  return str;
 }
 
 std::string Util::GetSQLiteVersion()

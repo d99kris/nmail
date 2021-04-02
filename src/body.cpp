@@ -9,6 +9,7 @@
 
 #include <libetpan/libetpan.h>
 
+#include "encoding.h"
 #include "header.h"
 #include "log.h"
 #include "loghelp.h"
@@ -153,12 +154,9 @@ void Body::ParseText()
   if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
   {
     const Part& part = m_Parts.at(m_TextPlainIndex);
+    std::string partEnc = part.m_Charset;
     std::string partText = part.m_Data;
-    if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
-    {
-      partText = Util::ConvertEncoding(part.m_Charset, "utf-8", partText);
-    }
-
+    Encoding::ConvertToUtf8(partEnc, partText);
     m_TextPlain = partText;
   }
 }
@@ -170,13 +168,10 @@ void Body::ParseHtml()
     if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
     {
       const Part& part = m_Parts.at(m_TextHtmlIndex);
+      std::string partEnc = part.m_Charset;
       std::string partHtml = part.m_Data;
       m_Html = partHtml;
-
-      if (!part.m_Charset.empty() && (part.m_Charset != "utf-8"))
-      {
-        partHtml = Util::ConvertEncoding(part.m_Charset, "utf-8", partHtml);
-      }
+      Encoding::ConvertToUtf8(partEnc, partHtml);
 
       // @todo: more elegant removal of meta-tags
       Util::ReplaceString(partHtml, "<meta ", "<beta ");

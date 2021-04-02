@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "2.93" LANGUAGES CXX C)
+project(nmail VERSION "2.94" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -43,6 +43,8 @@ add_executable(nmail
   src/contact.h
   src/crypto.cpp
   src/crypto.h
+  src/encoding.cpp
+  src/encoding.h
   src/flag.cpp
   src/flag.h
   src/header.cpp
@@ -146,10 +148,13 @@ if(FOUND_EXECINFO)
   target_compile_definitions(nmail PRIVATE HAVE_EXECINFO_H=1)
 endif()
 
+find_library(MAGIC_LIBRARY magic)
+
 # Linking
 target_link_libraries(nmail PUBLIC
                       ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
+                      ${MAGIC_LIBRARY}
                       pthread ${CMAKE_DL_LIBS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

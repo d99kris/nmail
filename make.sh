@@ -76,12 +76,12 @@ if [[ "${DEPS}" == "1" ]]; then
   if [ "${OS}" == "Linux" ]; then
     DISTRO="$(lsb_release -i | awk -F':\t' '{print $2}')"
     if [[ "${DISTRO}" == "Ubuntu" ]]; then
-      sudo apt update && sudo apt -y install libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev || exiterr "deps failed (linux), exiting."
+      sudo apt update && sudo apt -y install libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev || exiterr "deps failed (linux), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${DISTRO}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
-    brew install openssl ncurses libetpan xapian sqlite || exiterr "deps failed (mac), exiting."
+    brew install openssl ncurses libetpan xapian sqlite libmagic || exiterr "deps failed (mac), exiting."
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
