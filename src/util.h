@@ -196,9 +196,11 @@ public:
   static int GetKeyCode(const std::string& p_KeyName);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize);
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                            bool p_QuoteWrap, int p_ExpandTabSize);
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize,
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                            bool p_QuoteWrap, int p_ExpandTabSize,
                                             int p_Pos, int& p_WrapLine, int& p_WrapPos);
   static std::string GetPass();
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);

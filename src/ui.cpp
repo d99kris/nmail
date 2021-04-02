@@ -5966,7 +5966,8 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = m_RewrapQuotedLines;
   const int expandTabSize = m_TabSize; // enabled
-  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed, outputFlowed, quoteWrap, expandTabSize);
+  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed,
+                          outputFlowed, quoteWrap, expandTabSize);
   wlines.push_back(L"");
 
   size_t wlinesSize = wlines.size();

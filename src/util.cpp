@@ -613,12 +613,14 @@ std::string Util::MakeForwardSubject(const std::string& p_Str)
 
 std::string Util::GetSenderHostname()
 {
-  static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : [&]()
+  static std::string sysHostname = [&]()
   {
     char hostname[256]; // @todo: use HOST_NAME_MAX?
     gethostname(hostname, sizeof(hostname));
     return std::string(hostname);
   }();
+
+  static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : sysHostname;
   return senderHostname;
 }
 
@@ -975,17 +977,20 @@ int Util::GetKeyCode(const std::string& p_KeyName)
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize)
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                         bool p_QuoteWrap, int p_ExpandTabSize)
 {
   int pos = 0;
   int wrapLine = 0;
   int wrapPos = 0;
-  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, p_ExpandTabSize, pos, wrapLine,
+  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, p_ExpandTabSize, pos,
+                  wrapLine,
                   wrapPos);
 }
 
 std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLength,
-                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed, bool p_QuoteWrap, int p_ExpandTabSize,
+                                         bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                         bool p_QuoteWrap, int p_ExpandTabSize,
                                          int p_Pos, int& p_WrapLine, int& p_WrapPos)
 {
   std::wostringstream wrapped;
