@@ -1058,7 +1058,8 @@ void Ui::DrawMessageList()
       std::string shortFrom;
       std::string subject;
       std::string attachFlag;
-      if (headers.find(uid) != headers.end())
+      auto hit = headers.find(uid);
+      if (hit != headers.end())
       {
         Header& header = headers.at(uid);
         shortDate = header.GetDateOrTime(currentDate);
@@ -1242,7 +1243,7 @@ void Ui::DrawMessageListSearch()
 
   {
     std::lock_guard<std::mutex> lock(m_SearchMutex);
-    const std::vector<Header>& headers = m_MessageListSearchResultHeaders;
+    std::vector<Header>& headers = m_MessageListSearchResultHeaders;
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
                               std::max(0, (int)headers.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
@@ -1275,7 +1276,7 @@ void Ui::DrawMessageListSearch()
       std::string subject;
       std::string attachFlag;
       {
-        Header header = headers.at(i);
+        Header& header = headers[i];
         shortDate = header.GetDateOrTime(currentDate);
         shortFrom = header.GetShortFrom();
         subject = header.GetSubject();
