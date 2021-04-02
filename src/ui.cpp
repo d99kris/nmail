@@ -2643,6 +2643,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyToggleTextHtml)
   {
     m_Plaintext = !m_Plaintext;
+    m_MessageViewLineOffset = 0;
     m_MessageFindMatchLine = -1;
   }
   else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
