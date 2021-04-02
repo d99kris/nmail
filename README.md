@@ -1043,9 +1043,12 @@ Third-party Libraries
 nmail is implemented in C++. Its source tree includes the source code of the
 following third-party libraries:
 
-- [apathy](https://github.com/dlecocq/apathy) - MIT License
-- [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) - Boost License
-- [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) - MIT License
+- [apathy](https://github.com/dlecocq/apathy) -
+  Copyright 2013 Dan Lecocq - [MIT License](/ext/apathy/LICENSE)
+- [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) -
+  Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
+- [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
+  Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
 
 Code Formatting
 ---------------
