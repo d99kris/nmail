@@ -348,6 +348,7 @@ private:
   int m_KeyKillWord = 0;
   int m_KeyPrevPage = 0;
   int m_KeyNextPage = 0;
+  int m_KeyFilterSortReset = 0;
   int m_KeyFilterShowUnread = 0;
   int m_KeyFilterShowHasAttachments = 0;
   int m_KeyFilterShowCurrentDate = 0;

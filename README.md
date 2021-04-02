@@ -646,6 +646,7 @@ file (platform-dependent defaults are left empty below):
     key_filter_show_current_subject=%
     key_filter_show_has_attachments=@
     key_filter_show_unread=!
+    key_filter_sort_reset=`
     key_find=/
     key_find_next=?
     key_forward=f

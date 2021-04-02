@@ -120,6 +120,7 @@ void Ui::Init()
 #endif
     { "key_prev_page", "KEY_PPAGE" },
     { "key_next_page", "KEY_NPAGE" },
+    { "key_filter_sort_reset", "`" },
     { "key_filter_show_unread", "!" },
     { "key_filter_show_has_attachments", "@" },
     { "key_filter_show_current_date", "#" },
@@ -199,6 +200,7 @@ void Ui::Init()
 
   m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
+  m_KeyFilterSortReset = Util::GetKeyCode(m_Config.Get("key_filter_sort_reset"));
   m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
   m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
   m_KeyFilterShowCurrentDate = Util::GetKeyCode(m_Config.Get("key_filter_show_current_date"));
@@ -598,6 +600,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyFilterShowCurrentDate), "FiltDate",
       GetKeyDisplay(m_KeyFilterShowCurrentName), "FiltName",
       GetKeyDisplay(m_KeyFilterShowCurrentSubject), "FiltSubj",
+      GetKeyDisplay(m_KeyFilterSortReset), "FiltReset",
     });
     return listHelp;
   }();
@@ -2416,6 +2419,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeyExtMsgViewer)
   {
     ExtMsgViewer();
+  }
+  else if ((p_Key == m_KeyFilterSortReset) && !m_MessageListSearch)
+  {
+    DisableSortFilter();
   }
   else if ((p_Key == m_KeyFilterShowUnread) && !m_MessageListSearch)
   {
