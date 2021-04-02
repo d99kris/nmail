@@ -2252,6 +2252,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
@@ -2287,6 +2288,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
+      UpdateUidFromIndex(true /* p_UserTriggered */);
       const int uid = m_CurrentFolderUid.second;
       if (uid != -1)
       {
@@ -2308,6 +2310,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyReply)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
@@ -2327,6 +2330,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyForward)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
@@ -2348,6 +2352,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
+      UpdateUidFromIndex(true /* p_UserTriggered */);
       const int uid = m_CurrentFolderUid.second;
       if (uid != -1)
       {
@@ -2367,6 +2372,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
+      UpdateUidFromIndex(true /* p_UserTriggered */);
       const int uid = m_CurrentFolderUid.second;
       if (uid != -1)
       {
@@ -2392,6 +2398,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyExport)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ExportMessage();
   }
   else if (p_Key == m_KeyImport)
@@ -2415,10 +2422,12 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyExtHtmlViewer)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ExtHtmlViewer();
   }
   else if (p_Key == m_KeyExtMsgViewer)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ExtMsgViewer();
   }
   else if ((p_Key == m_KeyFilterSortReset) && !m_MessageListSearch)
@@ -2435,14 +2444,17 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if ((p_Key == m_KeyFilterShowCurrentDate) && !m_MessageListSearch)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ToggleFilter(SortCurrDateOnly);
   }
   else if ((p_Key == m_KeyFilterShowCurrentName) && !m_MessageListSearch)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ToggleFilter(SortCurrNameOnly);
   }
   else if ((p_Key == m_KeyFilterShowCurrentSubject) && !m_MessageListSearch)
   {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
     ToggleFilter(SortCurrSubjOnly);
   }
   else if ((p_Key == m_KeySortUnread) && !m_MessageListSearch)
