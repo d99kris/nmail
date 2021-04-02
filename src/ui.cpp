@@ -515,7 +515,7 @@ void Ui::DrawDefaultDialog()
     std::chrono::time_point<std::chrono::system_clock> nowTime =
       std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed = nowTime - m_DialogMessageTime;
-    if ((elapsed.count() < 1.0f) && !m_DialogMessage.empty())
+    if ((elapsed.count() < 0.5f) && !m_DialogMessage.empty())
     {
       int x = std::max((m_ScreenWidth - (int)m_DialogMessage.size() - 1) / 2, 0);
       const std::string& dispStr = m_DialogMessage;
