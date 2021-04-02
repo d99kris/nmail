@@ -2549,17 +2549,31 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyPrevMsg)
   {
-    --m_MessageListCurrentIndex[m_CurrentFolder];
-    m_MessageViewLineOffset = 0;
+    int prevIndex = m_MessageListCurrentIndex[m_CurrentFolder]--;
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    m_MessageFindMatchLine = -1;
+    if (prevIndex == m_MessageListCurrentIndex[m_CurrentFolder])
+    {
+      SetDialogMessage("Already on first message");
+    }
+    else
+    {
+      m_MessageViewLineOffset = 0;
+      m_MessageFindMatchLine = -1;
+    }
   }
   else if (p_Key == m_KeyNextMsg)
   {
-    ++m_MessageListCurrentIndex[m_CurrentFolder];
-    m_MessageViewLineOffset = 0;
+    int prevIndex = m_MessageListCurrentIndex[m_CurrentFolder]++;
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    m_MessageFindMatchLine = -1;
+    if (prevIndex == m_MessageListCurrentIndex[m_CurrentFolder])
+    {
+      SetDialogMessage("No more messages");
+    }
+    else
+    {
+      m_MessageViewLineOffset = 0;
+      m_MessageFindMatchLine = -1;
+    }
   }
   else if (p_Key == m_KeyPrevPage)
   {
