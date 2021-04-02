@@ -263,7 +263,7 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   static const std::string clientId = GetClientId();
   static const std::string clientSecret = GetClientSecret();
   static const std::string tokenStore = GetTokenStoreTempPath();
-  static const std::string scriptPath = Util::DirName(Util::GetSelfPath()) + "/oauth2nmail.py";
+  static const std::string scriptPath = Util::DirName(Util::GetSelfPath()) + "/oauth2nmail";
 
   setenv("OAUTH2_TYPE", type.c_str(), 1);
   setenv("OAUTH2_CLIENT_ID", clientId.c_str(), 1);

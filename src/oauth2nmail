@@ -18,14 +18,14 @@ pathServed = ""
 
 
 def show_help():
-    print("oauth2nmail.py is a utility tool for handling OAuth2 authentication and")
+    print("oauth2nmail is a utility tool for handling OAuth2 authentication and")
     print("token renewals. Primarily written for use by nmail email client.")
     print("Parameters must be passed using environment variables, see examples below.")
     print("")
-    print("Usage: oauth2nmail.py --generate")
-    print("   or: oauth2nmail.py --refresh")
-    print("   or: oauth2nmail.py --help")
-    print("   or: oauth2nmail.py --version")
+    print("Usage: oauth2nmail --generate")
+    print("   or: oauth2nmail --refresh")
+    print("   or: oauth2nmail --help")
+    print("   or: oauth2nmail --version")
     print("")
     print("Options:")
     print("   -g, --generate    perform authentication and generate refresh/access tokens")
@@ -45,21 +45,21 @@ def show_help():
     print("")
     print("Examples:")
     print("   OAUTH2_TYPE=\"gmail-oauth2\" OAUTH2_CLIENT_ID=\"9\" OAUTH2_CLIENT_SECRET=\"j\" \\")
-    print("   OAUTH2_TOKEN_STORE=\"${HOME}/.nmail/oauth2.tokens\" oauth2nmail.py -g")
+    print("   OAUTH2_TOKEN_STORE=\"${HOME}/.nmail/oauth2.tokens\" oauth2nmail -g")
     print("")
     print("   OAUTH2_TYPE=\"gmail-oauth2\" OAUTH2_CLIENT_ID=\"9\" OAUTH2_CLIENT_SECRET=\"j\" \\")
-    print("   OAUTH2_TOKEN_STORE=\"${HOME}/.nmail/oauth2.tokens\" oauth2nmail.py -r")
+    print("   OAUTH2_TOKEN_STORE=\"${HOME}/.nmail/oauth2.tokens\" oauth2nmail -r")
     print("")
     print("Report bugs at https://github.com/d99kris/nmail")
     print("")
 
 
 def show_version():
-    print("oauth2nmail.py v" + version)
+    print("oauth2nmail v" + version)
     print("")
     print("Copyright (c) 2021 Kristofer Berggren")
     print("")
-    print("oauth2nmail.py is distributed under the MIT license.")
+    print("oauth2nmail is distributed under the MIT license.")
     print("")
     print("Written by Kristofer Berggren.")
 
@@ -91,7 +91,7 @@ def read_tokens(tokenStore):
 def generate(provider, client_id, client_secret, token_store):
     localHostName = "localhost"
     localHostPort = 6880
-    redirectPage = "/oauth2nmail.py"
+    redirectPage = "/oauth2nmail"
     redirectUri = "http://" + localHostName + ":" + str(localHostPort) + redirectPage
 
     # open default web browser for user authentication
