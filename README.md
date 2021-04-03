@@ -809,12 +809,12 @@ search queries (default disabled).
 ### persist_selection_on_sortfilter_change
 
 Determines whether to keep current message list selection when
-sorting/filtering mode is changed (default enabled).
+filtering/sorting mode is changed (default enabled).
 
 ### persist_sortfilter
 
-Specifies whether each folder listing shall persist its folder/sorting
-(default enabled).
+Specifies whether each folder listing shall persist its filtering/sorting
+mode (default enabled).
 
 ### plain_text
 
