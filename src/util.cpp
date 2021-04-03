@@ -179,8 +179,6 @@ std::vector<std::string> Util::ListDir(const std::string& p_Folder)
 std::set<Fileinfo, FileinfoCompare> Util::ListPaths(const std::string& p_Folder)
 {
   std::set<Fileinfo, FileinfoCompare> fileinfos;
-  fileinfos.insert(Fileinfo("..", -1));
-
   const std::vector<apathy::Path>& paths = apathy::Path::listdir(p_Folder);
   for (auto& path : paths)
   {

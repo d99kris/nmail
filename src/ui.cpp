@@ -2154,10 +2154,24 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   {
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
+    std::string lastDirName = Util::BaseName(m_CurrentDir);
     m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
     m_Files = Util::ListPaths(m_CurrentDir);
-    m_FileListCurrentIndex = 0;
-    m_FileListCurrentFile.m_Name = "";
+    if (lastDirName != "/")
+    {
+      Fileinfo lastDirFileinfo(lastDirName, -1);
+      auto it = m_Files.find(lastDirFileinfo);
+      if (it != m_Files.end())
+      {
+        m_FileListCurrentIndex = std::distance(m_Files.begin(), it);
+        m_FileListCurrentFile = *it;
+      }
+    }
+    else
+    {
+      m_FileListCurrentIndex = 0;
+      m_FileListCurrentFile.m_Name = "";
+    }
   }
   else if (p_Key == KEY_LEFT)
   {
