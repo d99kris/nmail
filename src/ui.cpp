@@ -133,6 +133,8 @@ void Ui::Init()
     { "key_sort_subject", "%" },
     { "key_jump_to", "j" },
     { "key_toggle_full_header", "h" },
+    { "key_select_item", "KEY_SPACE" },
+    { "key_select_all", "a" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
@@ -249,6 +251,8 @@ void Ui::Init()
       { "color_quoted_text_fg", "gray" },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
+      { "color_selected_item_bg", "" },
+      { "color_selected_item_fg", "gray" },
       { "color_top_bar_bg", "reverse" },
       { "color_top_bar_fg", "reverse" },
     };
@@ -270,6 +274,17 @@ void Ui::Init()
     m_AttrsQuotedText =
       Util::GetColorAttrs(colorsConfig.Get("color_quoted_text_fg"), colorsConfig.Get("color_quoted_text_bg"));
     m_AttrsTopBar = Util::GetColorAttrs(colorsConfig.Get("color_top_bar_fg"), colorsConfig.Get("color_top_bar_bg"));
+    m_AttrsSelectedItem =
+      Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_selected_item_bg"));
+
+    if (m_AttrsHighlightedText == A_REVERSE)
+    {
+      m_AttrsSelectedHighlighted = m_AttrsSelectedItem | A_REVERSE;
+    }
+    else
+    {
+      m_AttrsSelectedHighlighted = Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg"));
+    }
 
     colorsConfig.Save();
   }
@@ -283,6 +298,8 @@ void Ui::Init()
   m_KeyToggleFullHeader = Util::GetKeyCode(m_Config.Get("key_toggle_full_header"));
   m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
   m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
+  m_KeySelectItem = Util::GetKeyCode(m_Config.Get("key_select_item"));
+  m_KeySelectAll = Util::GetKeyCode(m_Config.Get("key_select_all"));
 
   try
   {
@@ -578,6 +595,8 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
+      GetKeyDisplay(m_KeySelectAll), "SelectAll",
+      GetKeyDisplay(m_KeySelectItem), "Select",
     },
   };
 
@@ -1009,6 +1028,7 @@ void Ui::DrawMessageList()
     std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
     const std::string& currentDate = Header::GetCurrentDate();
+    const std::set<uint32_t>& folderSelectedUids = m_SelectedUids[m_CurrentFolder];
 
     if (!m_PrefetchAllHeaders)
     {
@@ -1036,6 +1056,8 @@ void Ui::DrawMessageList()
         }
       }
     }
+
+    bool hasAttrsSelected = (m_AttrsSelectedItem != A_NORMAL);
 
     werase(m_MainWin);
 
@@ -1082,22 +1104,37 @@ void Ui::DrawMessageList()
         }
       }
 
+      bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
+      std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
+
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = " " + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      bool isCurrent = (i == m_MessageListCurrentIndex[m_CurrentFolder]);
+
+      if (isCurrent)
       {
         wattron(m_MainWin, m_AttrsHighlightedText);
+      }
+
+      if (isSelected)
+      {
+        wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
       std::wstring wheader = Util::ToWString(header);
       mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
 
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      if (isSelected)
+      {
+        wattroff(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
+      }
+
+      if (isCurrent)
       {
         wattroff(m_MainWin, m_AttrsHighlightedText);
       }
@@ -1248,6 +1285,7 @@ void Ui::DrawMessageListSearch()
                               std::max(0, (int)headers.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
     const std::string& currentDate = Header::GetCurrentDate();
+    bool hasAttrsSelected = (m_AttrsSelectedItem != A_NORMAL);
 
     werase(m_MainWin);
 
@@ -1290,22 +1328,38 @@ void Ui::DrawMessageListSearch()
         }
       }
 
+      const std::set<uint32_t>& folderSelectedUids = m_SelectedUids[folder];
+      bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
+      std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
+
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = " " + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      bool isCurrent = (i == m_MessageListCurrentIndex[m_CurrentFolder]);
+
+      if (isCurrent)
       {
         wattron(m_MainWin, m_AttrsHighlightedText);
+      }
+
+      if (isSelected)
+      {
+        wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
       std::wstring wheader = Util::ToWString(header);
       mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
 
-      if (i == m_MessageListCurrentIndex[m_CurrentFolder])
+      if (isSelected)
+      {
+        wattroff(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
+      }
+
+      if (isCurrent)
       {
         wattroff(m_MainWin, m_AttrsHighlightedText);
       }
@@ -1955,8 +2009,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       const std::string& folder = m_CurrentFolderUid.first;
       if (m_FolderListCurrentFolder != folder)
       {
-        const int uid = m_CurrentFolderUid.second;
-        MoveMessage(uid, folder, m_FolderListCurrentFolder);
+        MoveSelectedMessages(m_FolderListCurrentFolder);
         SetLastStateOrMessageList();
       }
       else
@@ -1974,6 +2027,8 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
         m_PersistedFolderListCurrentIndex = m_FolderListCurrentIndex;
       }
     }
+
+    ClearSelection();
   }
   else if (p_Key == KEY_LEFT)
   {
@@ -2248,7 +2303,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_MessageListCurrentIndex[m_CurrentFolder] - m_MainWinHeight;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
+  else if (p_Key == m_KeyNextPage)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] =
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
@@ -2537,6 +2592,33 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_MessageListCurrentUid[m_CurrentFolder] = uid;
       m_MessageListUidSet[m_CurrentFolder] = true;
       UpdateIndexFromUid();
+    }
+  }
+  else if (p_Key == m_KeySelectItem)
+  {
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      ToggleSelected();
+
+      ++m_MessageListCurrentIndex[m_CurrentFolder];
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+    }
+    else
+    {
+      SetDialogMessage("No message to select/unselect");
+    }
+  }
+  else if (p_Key == m_KeySelectAll)
+  {
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      ToggleSelectAll();
+    }
+    else
+    {
+      SetDialogMessage("No messages to select/unselect");
     }
   }
   else if (m_InvalidInputNotify)
@@ -4078,7 +4160,8 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
 
     if (smtpAction.m_ComposeDraftUid != 0)
     {
-      MoveMessage(smtpAction.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+      MoveMessages(std::set<uint32_t>({ smtpAction.m_ComposeDraftUid }), m_DraftsFolder,
+                   m_TrashFolder);
       m_HasRequestedUids[m_TrashFolder] = false;
     }
 
@@ -4143,7 +4226,8 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
 
     if ((action.m_ComposeDraftUid != 0) && !m_DraftsFolder.empty() && !m_TrashFolder.empty())
     {
-      MoveMessage(action.m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+      MoveMessages(std::set<uint32_t>({ action.m_ComposeDraftUid }), m_DraftsFolder,
+                   m_TrashFolder);
     }
 
     if (m_ClientStoreSent)
@@ -4483,7 +4567,7 @@ void Ui::UploadDraftMessage()
 
         if (m_ComposeDraftUid != 0)
         {
-          MoveMessage(m_ComposeDraftUid, m_DraftsFolder, m_TrashFolder);
+          MoveMessages(std::set<uint32_t>({ m_ComposeDraftUid }), m_DraftsFolder, m_TrashFolder);
         }
 
         m_HasRequestedUids[m_DraftsFolder] = false;
@@ -4510,13 +4594,20 @@ bool Ui::DeleteMessage()
   if (!m_TrashFolder.empty())
   {
     const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
-
     if (folder != m_TrashFolder)
     {
-      if (m_DeleteWithoutConfirm || Ui::PromptYesNo("Delete message (y/n)?"))
+      int count = Ui::GetSelectedCount();
+      std::string prompt = (count > 1) ? "Delete " + std::to_string(count)  + " messages (y/n)?"
+                                       : "Delete message (y/n)?";
+
+      if (m_DeleteWithoutConfirm || Ui::PromptYesNo(prompt))
       {
-        MoveMessage(uid, folder, m_TrashFolder);
+        MoveSelectedMessages(m_TrashFolder);
+
+        if (count > 0)
+        {
+          ClearSelection();
+        }
 
         m_MessageFindMatchLine = -1;
         m_MessageViewLineOffset = 0;
@@ -4535,9 +4626,14 @@ bool Ui::DeleteMessage()
     }
     else
     {
-      if (Ui::PromptYesNo("Permanently delete message (y/n)?"))
+      int count = Ui::GetSelectedCount();
+      std::string prompt = (count > 1)
+        ? "Permanently delete " + std::to_string(count)  + " messages (y/n)?"
+        : "Permanently delete message (y/n)?";
+      if (Ui::PromptYesNo(prompt))
       {
-        DeleteMessage(uid, folder);
+        DeleteSelectedMessages();
+        ClearSelection();
       }
     }
 
@@ -4550,11 +4646,32 @@ bool Ui::DeleteMessage()
   }
 }
 
-void Ui::MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To)
+void Ui::MoveSelectedMessages(const std::string& p_To)
+{
+  int selectCount = 0;
+  for (auto& selectedFolder : m_SelectedUids)
+  {
+    if (!selectedFolder.second.empty())
+    {
+      MoveMessages(selectedFolder.second, selectedFolder.first, p_To);
+    }
+    selectCount += selectedFolder.second.size();
+  }
+
+  if (selectCount == 0)
+  {
+    const std::string& folder = m_CurrentFolderUid.first;
+    const uint32_t uid = m_CurrentFolderUid.second;
+    MoveMessages(std::set<uint32_t>({ uid }), folder, p_To);
+  }
+}
+
+void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_From,
+                      const std::string& p_To)
 {
   ImapManager::Action action;
   action.m_Folder = p_From;
-  action.m_Uids.insert(p_Uid);
+  action.m_Uids = p_Uids;
   action.m_MoveDestination = p_To;
   m_ImapManager->AsyncAction(action);
 
@@ -4570,14 +4687,34 @@ void Ui::MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::strin
     m_HasRequestedUids[p_To] = false;
   }
 
-  UpdateUidFromIndex(true /* p_UserTriggered */);
+  UpdateIndexFromUid();
 }
 
-void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
+void Ui::DeleteSelectedMessages()
+{
+  int selectCount = 0;
+  for (auto& selectedFolder : m_SelectedUids)
+  {
+    if (!selectedFolder.second.empty())
+    {
+      DeleteMessages(selectedFolder.second, selectedFolder.first);
+    }
+    selectCount += selectedFolder.second.size();
+  }
+
+  if (selectCount == 0)
+  {
+    const std::string& folder = m_CurrentFolderUid.first;
+    const uint32_t uid = m_CurrentFolderUid.second;
+    DeleteMessages(std::set<uint32_t>({ uid }), folder);
+  }
+}
+
+void Ui::DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Folder)
 {
   ImapManager::Action action;
   action.m_Folder = p_Folder;
-  action.m_Uids.insert(p_Uid);
+  action.m_Uids = p_Uids;
   action.m_DeleteMessages = true;
   m_ImapManager->AsyncAction(action);
 
@@ -4589,6 +4726,8 @@ void Ui::DeleteMessage(uint32_t p_Uid, const std::string& p_Folder)
 
     m_HasRequestedUids[p_Folder] = false;
   }
+
+  UpdateIndexFromUid();
 }
 
 void Ui::ToggleSeen()
@@ -5291,6 +5430,7 @@ void Ui::SearchMessage()
       }
 
       m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+      ClearSelection();
 
       {
         std::lock_guard<std::mutex> lock(m_SearchMutex);
@@ -5314,6 +5454,7 @@ void Ui::SearchMessage()
     else
     {
       m_MessageListSearch = false;
+      ClearSelection();
       if (m_PreviousFolder != "")
       {
         m_CurrentFolder = m_PreviousFolder;
@@ -6023,4 +6164,81 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   }
 
   return wlines;
+}
+
+void Ui::ClearSelection()
+{
+  m_SelectedUids.clear();
+  m_AllSelected = false;
+}
+
+void Ui::ToggleSelected()
+{
+  const std::string& folder = m_CurrentFolderUid.first;
+  const int uid = m_CurrentFolderUid.second;
+
+  std::set<uint32_t>& folderSelectedUids = m_SelectedUids[folder];
+  auto it = folderSelectedUids.find(uid);
+  if (it == folderSelectedUids.end())
+  {
+    folderSelectedUids.insert(uid);
+    SetDialogMessage("Selected message");
+  }
+  else
+  {
+    folderSelectedUids.erase(uid);
+    SetDialogMessage("Unselected message");
+  }
+}
+
+void Ui::ToggleSelectAll()
+{
+  m_SelectedUids.clear();
+  if (m_AllSelected)
+  {
+    m_AllSelected = false;
+    SetDialogMessage("Unselected all");
+    return;
+  }
+
+  int selectCount = 0;
+  if (m_MessageListSearch)
+  {
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    std::vector<Header>& headers = m_MessageListSearchResultHeaders;
+    int idxMax = headers.size();
+    for (int i = 0; i < idxMax; ++i)
+    {
+      const std::string& folder = m_MessageListSearchResultFolderUids.at(i).first;
+      const int uid = m_MessageListSearchResultFolderUids.at(i).second;
+      m_SelectedUids[folder].insert(uid);
+      ++selectCount;
+    }
+  }
+  else
+  {
+    std::set<uint32_t>& folderSelectedUids = m_SelectedUids[m_CurrentFolder];
+
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
+    for (auto& displayUid : displayUids)
+    {
+      folderSelectedUids.insert(displayUid.second);
+      ++selectCount;
+    }
+  }
+
+  SetDialogMessage("Selected all " + std::to_string(selectCount) + " messages");
+  m_AllSelected = true;
+}
+
+int Ui::GetSelectedCount()
+{
+  int selectCount = 0;
+  for (auto& selectedFolder : m_SelectedUids)
+  {
+    selectCount += selectedFolder.second.size();
+  }
+
+  return selectCount;
 }

@@ -160,8 +160,11 @@ private:
   void SendComposedMessage();
   void UploadDraftMessage();
   bool DeleteMessage();
-  void MoveMessage(uint32_t p_Uid, const std::string& p_From, const std::string& p_To);
-  void DeleteMessage(uint32_t p_Uid, const std::string& p_Folder);
+  void MoveSelectedMessages(const std::string& p_To);
+  void MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_From,
+                    const std::string& p_To);
+  void DeleteSelectedMessages();
+  void DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Folder);
   void ToggleSeen();
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);
@@ -214,6 +217,10 @@ private:
   void ToggleFilter(SortFilter p_SortFilter);
   void ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond);
   const std::vector<std::wstring>& GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid);
+  void ClearSelection();
+  void ToggleSelected();
+  void ToggleSelectAll();
+  int GetSelectedCount();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -361,6 +368,8 @@ private:
   int m_KeySortSubject = 0;
   int m_KeyJumpTo = 0;
   int m_KeyToggleFullHeader = 0;
+  int m_KeySelectItem = 0;
+  int m_KeySelectAll = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
@@ -380,6 +389,8 @@ private:
   int m_AttrsHighlightedText = A_REVERSE;
   int m_AttrsQuotedText = A_NORMAL;
   int m_AttrsTopBar = A_REVERSE;
+  int m_AttrsSelectedItem = A_NORMAL;
+  int m_AttrsSelectedHighlighted = A_NORMAL;
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;
@@ -466,6 +477,9 @@ private:
 
   std::string m_FilterCustomStr;
   int m_TabSize = 8;
+
+  std::map<std::string, std::set<uint32_t>> m_SelectedUids;
+  bool m_AllSelected = false;
 
 private:
   static bool s_Running;

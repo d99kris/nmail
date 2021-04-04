@@ -669,6 +669,8 @@ file (platform-dependent defaults are left empty below):
     key_rich_header=KEY_CTRLR
     key_save_file=s
     key_search=/
+    key_select_all=a
+    key_select_item=KEY_SPACE
     key_send=KEY_CTRLX
     key_sort_date=#
     key_sort_has_attachments=@
@@ -922,6 +924,8 @@ configuration file:
     color_quoted_text_fg=gray
     color_regular_text_bg=
     color_regular_text_fg=
+    color_selected_item_bg=
+    color_selected_item_fg=gray
     color_top_bar_bg=reverse
     color_top_bar_fg=reverse
 
@@ -952,6 +956,10 @@ Quoted message text (lines starting with `>`).
 ### color_regular_text
 
 Default text color.
+
+### color_selected_item
+
+Selected messages in message list view.
 
 ### color_top_bar
 
