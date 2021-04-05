@@ -2703,6 +2703,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
+      ClearSelection();
       SetState(StateMoveToFolder);
     }
     else
@@ -2746,6 +2747,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
+      ClearSelection();
       DeleteMessage();
     }
     else
