@@ -166,6 +166,7 @@ private:
   void DeleteSelectedMessages();
   void DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Folder);
   void ToggleSeen();
+  void SetSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Seen);
   void MarkSeen();
   void UpdateUidFromIndex(bool p_UserTriggered);
   void UpdateIndexFromUid();

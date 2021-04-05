@@ -283,7 +283,8 @@ void Ui::Init()
     }
     else
     {
-      m_AttrsSelectedHighlighted = Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg"));
+      m_AttrsSelectedHighlighted =
+        Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg"));
     }
 
     colorsConfig.Save();
@@ -1031,7 +1032,8 @@ void Ui::DrawMessageList()
 
     auto selectedUidsIt = m_SelectedUids.find(m_CurrentFolder);
     std::set<uint32_t> noSelection;
-    const std::set<uint32_t>& folderSelectedUids = (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
+    const std::set<uint32_t>& folderSelectedUids =
+      (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
 
     if (!m_PrefetchAllHeaders)
     {
@@ -1333,7 +1335,8 @@ void Ui::DrawMessageListSearch()
 
       auto selectedUidsIt = m_SelectedUids.find(folder);
       std::set<uint32_t> noSelection;
-      const std::set<uint32_t>& folderSelectedUids = (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
+      const std::set<uint32_t>& folderSelectedUids =
+        (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
       bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
       std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
 
@@ -4602,12 +4605,13 @@ bool Ui::DeleteMessage()
   {
     const std::string& folder = m_CurrentFolderUid.first;
     bool hasSelection = !m_SelectedUids.empty();
-    bool allSelectedItemsInTrash = hasSelection && (m_SelectedUids.size() == 1) && (m_SelectedUids.begin()->first == m_TrashFolder);
+    bool allSelectedItemsInTrash = hasSelection && (m_SelectedUids.size() == 1) &&
+      (m_SelectedUids.begin()->first == m_TrashFolder);
     if (allSelectedItemsInTrash || (!hasSelection && (folder == m_TrashFolder)))
     {
       int count = Ui::GetSelectedCount();
       std::string prompt = (count > 1)
-        ? "Permanently delete " + std::to_string(count)  + " messages (y/n)?"
+        ? "Permanently delete " + std::to_string(count) + " messages (y/n)?"
         : "Permanently delete message (y/n)?";
       if (Ui::PromptYesNo(prompt))
       {
@@ -4618,7 +4622,7 @@ bool Ui::DeleteMessage()
     else
     {
       int count = Ui::GetSelectedCount();
-      std::string prompt = (count > 1) ? "Delete " + std::to_string(count)  + " messages (y/n)?"
+      std::string prompt = (count > 1) ? "Delete " + std::to_string(count) + " messages (y/n)?"
                                        : "Delete message (y/n)?";
 
       if (m_DeleteWithoutConfirm || Ui::PromptYesNo(prompt))
@@ -4741,26 +4745,65 @@ void Ui::DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_F
 
 void Ui::ToggleSeen()
 {
-  const std::string& folder = m_CurrentFolderUid.first;
-  const int uid = m_CurrentFolderUid.second;
-  std::map<uint32_t, uint32_t> flags;
+  if (m_SelectedUids.empty())
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    flags = m_Flags[folder];
-  }
-  bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
-  bool newSeen = !oldSeen;
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, uint32_t> flags;
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      flags = m_Flags[folder];
+    }
+    bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
+    bool newSeen = !oldSeen;
+    std::set<uint32_t> uids;
+    uids.insert(uid);
 
+    SetSeen(folder, uids, newSeen);
+  }
+  else
+  {
+    bool newSeen = true;
+    bool newSeenSet = false;
+    for (auto& selectedFolder : m_SelectedUids)
+    {
+      if (!selectedFolder.second.empty())
+      {
+        if (!newSeenSet)
+        {
+          std::map<uint32_t, uint32_t> flags;
+          {
+            std::lock_guard<std::mutex> lock(m_Mutex);
+            flags = m_Flags[selectedFolder.first];
+          }
+
+          uint32_t firstUid = *selectedFolder.second.rbegin();
+          bool oldSeen = ((flags.find(firstUid) != flags.end()) && (Flag::GetSeen(flags.at(firstUid))));
+          newSeen = !oldSeen;
+          newSeenSet = true;
+        }
+
+        SetSeen(selectedFolder.first, selectedFolder.second, newSeen);
+      }
+    }
+  }
+}
+
+void Ui::SetSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Seen)
+{
   ImapManager::Action action;
-  action.m_Folder = folder;
-  action.m_Uids.insert(uid);
-  action.m_SetSeen = newSeen;
-  action.m_SetUnseen = !newSeen;
+  action.m_Folder = p_Folder;
+  action.m_Uids = p_Uids;
+  action.m_SetSeen = p_Seen;
+  action.m_SetUnseen = !p_Seen;
   m_ImapManager->AsyncAction(action);
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    Flag::SetSeen(m_Flags[folder][uid], newSeen);
+    for (auto& uid : p_Uids)
+    {
+      Flag::SetSeen(m_Flags[p_Folder][uid], p_Seen);
+    }
   }
 }
 
