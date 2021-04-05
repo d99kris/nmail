@@ -1028,7 +1028,10 @@ void Ui::DrawMessageList()
     std::set<uint32_t>& prefetchedBodys = m_PrefetchedBodys[m_CurrentFolder];
     std::set<uint32_t>& requestedBodys = m_RequestedBodys[m_CurrentFolder];
     const std::string& currentDate = Header::GetCurrentDate();
-    const std::set<uint32_t>& folderSelectedUids = m_SelectedUids[m_CurrentFolder];
+
+    auto selectedUidsIt = m_SelectedUids.find(m_CurrentFolder);
+    std::set<uint32_t> noSelection;
+    const std::set<uint32_t>& folderSelectedUids = (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
 
     if (!m_PrefetchAllHeaders)
     {
@@ -1328,7 +1331,9 @@ void Ui::DrawMessageListSearch()
         }
       }
 
-      const std::set<uint32_t>& folderSelectedUids = m_SelectedUids[folder];
+      auto selectedUidsIt = m_SelectedUids.find(folder);
+      std::set<uint32_t> noSelection;
+      const std::set<uint32_t>& folderSelectedUids = (selectedUidsIt != m_SelectedUids.end()) ? selectedUidsIt->second : noSelection;
       bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
       std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
 
@@ -4596,7 +4601,21 @@ bool Ui::DeleteMessage()
   if (!m_TrashFolder.empty())
   {
     const std::string& folder = m_CurrentFolderUid.first;
-    if (folder != m_TrashFolder)
+    bool hasSelection = !m_SelectedUids.empty();
+    bool allSelectedItemsInTrash = hasSelection && (m_SelectedUids.size() == 1) && (m_SelectedUids.begin()->first == m_TrashFolder);
+    if (allSelectedItemsInTrash || (!hasSelection && (folder == m_TrashFolder)))
+    {
+      int count = Ui::GetSelectedCount();
+      std::string prompt = (count > 1)
+        ? "Permanently delete " + std::to_string(count)  + " messages (y/n)?"
+        : "Permanently delete message (y/n)?";
+      if (Ui::PromptYesNo(prompt))
+      {
+        DeleteSelectedMessages();
+        ClearSelection();
+      }
+    }
+    else
     {
       int count = Ui::GetSelectedCount();
       std::string prompt = (count > 1) ? "Delete " + std::to_string(count)  + " messages (y/n)?"
@@ -4624,18 +4643,6 @@ bool Ui::DeleteMessage()
         {
           SetState(StateViewMessageList);
         }
-      }
-    }
-    else
-    {
-      int count = Ui::GetSelectedCount();
-      std::string prompt = (count > 1)
-        ? "Permanently delete " + std::to_string(count)  + " messages (y/n)?"
-        : "Permanently delete message (y/n)?";
-      if (Ui::PromptYesNo(prompt))
-      {
-        DeleteSelectedMessages();
-        ClearSelection();
       }
     }
 
@@ -6189,6 +6196,11 @@ void Ui::ToggleSelected()
   else
   {
     folderSelectedUids.erase(uid);
+    if (folderSelectedUids.empty())
+    {
+      m_SelectedUids.erase(folder);
+    }
+
     SetDialogMessage("Unselected message");
   }
 }
