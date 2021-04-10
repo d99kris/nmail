@@ -4743,9 +4743,10 @@ void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Fro
   action.m_MoveDestination = p_To;
   m_ImapManager->AsyncAction(action);
 
+  const std::string& folder = p_From;
+
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = p_From;
 
     UpdateDisplayUids(folder, action.m_Uids);
     m_Uids[folder] = m_Uids[folder] - action.m_Uids;
@@ -4753,6 +4754,22 @@ void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Fro
 
     m_HasRequestedUids[p_From] = false;
     m_HasRequestedUids[p_To] = false;
+  }
+
+  if (m_MessageListSearch)
+  {
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    int resultCount = m_MessageListSearchResultHeaders.size();
+    for (int i = 0; i < resultCount; ++i)
+    {
+      auto& folderUid = m_MessageListSearchResultFolderUids.at(i);
+      if ((folderUid.first == folder) && (p_Uids.find(folderUid.second) != p_Uids.end()))
+      {
+        m_MessageListSearchResultFolderUids.erase(m_MessageListSearchResultFolderUids.begin() + i);
+        m_MessageListSearchResultHeaders.erase(m_MessageListSearchResultHeaders.begin() + i);
+        --resultCount;
+      }
+    }
   }
 
   UpdateIndexFromUid();
@@ -4793,6 +4810,22 @@ void Ui::DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_F
     m_Headers[p_Folder] = m_Headers[p_Folder] - action.m_Uids;
 
     m_HasRequestedUids[p_Folder] = false;
+  }
+
+  if (m_MessageListSearch)
+  {
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    int resultCount = m_MessageListSearchResultHeaders.size();
+    for (int i = 0; i < resultCount; ++i)
+    {
+      auto& folderUid = m_MessageListSearchResultFolderUids.at(i);
+      if ((folderUid.first == p_Folder) && (p_Uids.find(folderUid.second) != p_Uids.end()))
+      {
+        m_MessageListSearchResultFolderUids.erase(m_MessageListSearchResultFolderUids.begin() + i);
+        m_MessageListSearchResultHeaders.erase(m_MessageListSearchResultHeaders.begin() + i);
+        --resultCount;
+      }
+    }
   }
 
   UpdateIndexFromUid();

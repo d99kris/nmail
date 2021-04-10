@@ -837,6 +837,23 @@ bool Imap::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>&
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
   rv &= (LOG_IF_IMAP_ERR(mailimap_expunge(m_Imap)) == MAILIMAP_NO_ERROR);
+
+  if (rv)
+  {
+    std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+    std::set<uint32_t> uids =
+      Deserialize<std::set<uint32_t>>(m_ImapCache->ReadCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder)));
+    for (auto& uid : p_Uids)
+    {
+      uids.erase(uid);
+
+      Util::DeleteFile(m_ImapCache->GetBodyCachePath(p_Folder, uid));
+      Util::DeleteFile(m_ImapCache->GetHeaderCachePath(p_Folder, uid));
+    }
+
+    m_ImapCache->WriteCacheFile(m_ImapCache->GetFolderUidsCachePath(p_Folder), Serialize(uids));
+  }
+
   return rv;
 }
 
