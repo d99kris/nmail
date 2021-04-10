@@ -178,7 +178,7 @@ private:
   bool PromptYesNo(const std::string& p_Prompt);
   bool PromptString(const std::string& p_Prompt, const std::string& p_Action,
                     std::string& p_Entry);
-  bool CurrentMessageBodyAvailable();
+  bool CurrentMessageBodyHeaderAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
   void ExtEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void ExtPager();

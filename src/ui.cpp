@@ -1301,6 +1301,7 @@ void Ui::DrawMessageList()
 void Ui::DrawMessageListSearch()
 {
   std::map<std::string, std::set<uint32_t>> fetchFlagUids;
+  std::map<std::string, std::set<uint32_t>> fetchHeaderUids;
   std::map<std::string, std::set<uint32_t>> fetchBodyPriUids;
   std::map<std::string, std::set<uint32_t>> fetchBodySecUids;
 
@@ -1408,6 +1409,18 @@ void Ui::DrawMessageListSearch()
             fetchBodyPriUids[folder].insert(uid);
           }
         }
+
+        const std::map<uint32_t, Header>& gheaders = m_Headers[folder];
+        std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[folder];
+        if ((gheaders.find(uid) == gheaders.end()) &&
+            (requestedHeaders.find(uid) == requestedHeaders.end()))
+        {
+          if (m_PrefetchLevel >= PrefetchLevelCurrentMessage)
+          {
+            requestedHeaders.insert(uid);
+            fetchHeaderUids[folder].insert(uid);
+          }
+        }
       }
       else if (abs(i - m_MessageListCurrentIndex[m_CurrentFolder]) == 1)
       {
@@ -1431,6 +1444,16 @@ void Ui::DrawMessageListSearch()
     request.m_GetFlags = fetchFlagUid.second;
 
     LOG_DEBUG_VAR("async req flags =", request.m_GetFlags);
+    m_ImapManager->AsyncRequest(request);
+  }
+
+  for (auto& fetchHeaderUid : fetchHeaderUids)
+  {
+    ImapManager::Request request;
+    request.m_Folder = fetchHeaderUid.first;
+    request.m_GetHeaders = fetchHeaderUid.second;
+
+    LOG_DEBUG_VAR("async req headers =", request.m_GetHeaders);
     m_ImapManager->AsyncRequest(request);
   }
 
@@ -2414,7 +2437,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
-      if (CurrentMessageBodyAvailable())
+      if (CurrentMessageBodyHeaderAvailable())
       {
         SetState(StateReplyMessage);
       }
@@ -2434,7 +2457,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     const int uid = m_CurrentFolderUid.second;
     if (uid != -1)
     {
-      if (CurrentMessageBodyAvailable())
+      if (CurrentMessageBodyHeaderAvailable())
       {
         SetState(StateForwardMessage);
       }
@@ -2757,7 +2780,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyReply)
   {
-    if (CurrentMessageBodyAvailable())
+    if (CurrentMessageBodyHeaderAvailable())
     {
       SetState(StateReplyMessage);
     }
@@ -2768,7 +2791,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyForward)
   {
-    if (CurrentMessageBodyAvailable())
+    if (CurrentMessageBodyHeaderAvailable())
     {
       SetState(StateForwardMessage);
     }
@@ -5162,14 +5185,16 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
   return rv;
 }
 
-bool Ui::CurrentMessageBodyAvailable()
+bool Ui::CurrentMessageBodyHeaderAvailable()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
   const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+  std::map<uint32_t, Header>& headers = m_Headers[folder];
   std::map<uint32_t, Body>::const_iterator bit = bodys.find(uid);
-  return (bit != bodys.end());
+  std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+  return ((hit != headers.end()) && (bit != bodys.end()));
 }
 
 void Ui::InvalidateUiCache(const std::string& p_Folder)
