@@ -135,6 +135,7 @@ void Ui::Init()
     { "key_toggle_full_header", "h" },
     { "key_select_item", "KEY_SPACE" },
     { "key_select_all", "a" },
+    { "key_search_show_folder", "\\" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "+" },
     { "bottom_reply", "0" },
@@ -145,6 +146,7 @@ void Ui::Init()
     { "invalid_input_notify", "1" },
     { "full_header_include_local", "0" },
     { "tab_size", "8" },
+    { "search_show_folder", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -214,6 +216,7 @@ void Ui::Init()
   m_KeySortName = Util::GetKeyCode(m_Config.Get("key_sort_name"));
   m_KeySortSubject = Util::GetKeyCode(m_Config.Get("key_sort_subject"));
   m_KeyJumpTo = Util::GetKeyCode(m_Config.Get("key_jump_to"));
+  m_KeySearchShowFolder = Util::GetKeyCode(m_Config.Get("key_search_show_folder"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -301,6 +304,7 @@ void Ui::Init()
   m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
   m_KeySelectItem = Util::GetKeyCode(m_Config.Get("key_select_item"));
   m_KeySelectAll = Util::GetKeyCode(m_Config.Get("key_select_all"));
+  m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
 
   try
   {
@@ -317,6 +321,7 @@ void Ui::Cleanup()
 {
   m_Config.Set("plain_text", m_Plaintext ? "1" : "0");
   m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
+  m_Config.Set("search_show_folder", m_SearchShowFolder ? "1" : "0");
   m_Config.Save();
   close(m_Pipe[0]);
   close(m_Pipe[1]);
@@ -628,9 +633,22 @@ void Ui::DrawHelp()
   static std::vector<std::vector<std::string>> viewMessagesListSearchHelp = [&]()
   {
     std::vector<std::vector<std::string>> listHelp = viewMessagesListCommonHelp;
-    listHelp[0][1] = "MsgList";
-    listHelp[3].push_back(GetKeyDisplay(m_KeyJumpTo));
-    listHelp[3].push_back("JumpTo");
+    listHelp[0][1] = "MsgList"; // instead of "Folders"
+
+    listHelp.push_back(
+    {
+      GetKeyDisplay(m_KeyJumpTo), "JumpTo",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
+    });
+    listHelp.push_back(
+    {
+      GetKeyDisplay(m_KeySearchShowFolder), "ShowFold",
+    });
+
     return listHelp;
   }();
 
@@ -1343,9 +1361,11 @@ void Ui::DrawMessageListSearch()
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
       std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
-      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
+
+      std::string folderTag = m_SearchShowFolder ? ("  [" + Util::BaseName(folder) + "]") : "";
+      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - folderTag.size() - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
-      std::string header = headerLeft + subject + " ";
+      std::string header = headerLeft + subject + folderTag + " ";
 
       bool isCurrent = (i == m_MessageListCurrentIndex[m_CurrentFolder]);
 
@@ -2628,6 +2648,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     {
       SetDialogMessage("No messages to select/unselect");
     }
+  }
+  else if ((p_Key == m_KeySearchShowFolder) && m_MessageListSearch)
+  {
+    m_SearchShowFolder = !m_SearchShowFolder;
   }
   else if (m_InvalidInputNotify)
   {

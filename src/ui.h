@@ -371,6 +371,7 @@ private:
   int m_KeyToggleFullHeader = 0;
   int m_KeySelectItem = 0;
   int m_KeySelectAll = 0;
+  int m_KeySearchShowFolder = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
@@ -383,6 +384,7 @@ private:
   bool m_ShowRichHeader = false;
   bool m_ColorsEnabled = false;
   bool m_ShowFullHeader = false;
+  bool m_SearchShowFolder = false;
 
   int m_AttrsDialog = A_REVERSE;
   int m_AttrsHelpDesc = A_NORMAL;

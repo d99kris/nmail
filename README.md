@@ -669,6 +669,7 @@ file (platform-dependent defaults are left empty below):
     key_rich_header=KEY_CTRLR
     key_save_file=s
     key_search=/
+    key_search_show_folder=\
     key_select_all=a
     key_select_item=KEY_SPACE
     key_send=KEY_CTRLX
@@ -696,6 +697,7 @@ file (platform-dependent defaults are left empty below):
     quit_without_confirm=1
     respect_format_flowed=1
     rewrap_quoted_lines=1
+    search_show_folder=0
     send_without_confirm=0
     show_embedded_images=1
     show_progress=1
@@ -841,6 +843,12 @@ type (default enabled).
 ### rewrap_quoted_lines
 
 Control whether nmail shall rewrap quoted lines (default enabled).
+
+### search_show_folder
+
+Determines whether folder name should be shown in search results. This option
+can be re-configured at run-time by pressing `\` when viewing search results
+(default disabled).
 
 ### send_without_confirm
 
