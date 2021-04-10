@@ -104,6 +104,7 @@ void Ui::Init()
     { "key_ext_msg_viewer", "w" },
     { "key_search", "/" },
     { "key_search_current_subject", "=" },
+    { "key_search_current_name", "-" },
     { "key_find", "/" },
     { "key_find_next", "?" },
     { "key_sync", "s" },
@@ -219,6 +220,7 @@ void Ui::Init()
   m_KeyJumpTo = Util::GetKeyCode(m_Config.Get("key_jump_to"));
   m_KeySearchShowFolder = Util::GetKeyCode(m_Config.Get("key_search_show_folder"));
   m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
+  m_KeySearchCurrentName = Util::GetKeyCode(m_Config.Get("key_search_current_name"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -605,7 +607,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
       GetKeyDisplay(m_KeySelectAll), "SelectAll",
       GetKeyDisplay(m_KeySelectItem), "Select",
-      GetKeyDisplay(m_KeySearchCurrentSubject), "SearchSub",
+      GetKeyDisplay(m_KeySearchCurrentSubject), "SearcSubj",
+      GetKeyDisplay(m_KeySearchCurrentName), "SearcName",
     },
   };
 
@@ -2682,7 +2685,12 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeySearchCurrentSubject)
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    SearchMessageCurrentSubject();
+    SearchMessageBasedOnCurrent(true /* p_Subject */);
+  }
+  else if (p_Key == m_KeySearchCurrentName)
+  {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+    SearchMessageBasedOnCurrent(false /* p_Subject */);
   }
   else if (m_InvalidInputNotify)
   {
@@ -5485,6 +5493,8 @@ void Ui::SetLastStateOrMessageList()
   {
     SetState(m_LastState);
   }
+
+  UpdateIndexFromUid();
 }
 
 void Ui::ExportMessage()
@@ -5557,11 +5567,9 @@ void Ui::ImportMessage()
   }
 }
 
-void Ui::SearchMessageCurrentSubject()
+void Ui::SearchMessageBasedOnCurrent(bool p_Subject)
 {
-  const std::string& folder = m_CurrentFolderUid.first;
-  const int uid = m_CurrentFolderUid.second;
-  std::string subject;
+  std::string current;
   bool found = false;
 
   if (m_MessageListSearch)
@@ -5571,27 +5579,39 @@ void Ui::SearchMessageCurrentSubject()
     int idx = m_MessageListCurrentIndex[m_CurrentFolder];
     if ((idx >= 0) && (idx < (int)headers.size()))
     {
-      subject = headers[idx].GetSubject();
+      current = p_Subject ? headers[idx].GetSubject()
+                          : headers[idx].GetShortFrom();
       found = true;
     }
   }
   else
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
     std::map<uint32_t, Header>& headers = m_Headers[folder];
     std::map<uint32_t, Header>::iterator hit = headers.find(uid);
     if (hit != headers.end())
     {
-      subject = hit->second.GetSubject();
+      current = p_Subject ? hit->second.GetSubject()
+                          : ((folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo());
       found = true;
     }
   }
 
   if (found)
   {
-    subject = Util::Trim(subject);
-    Util::NormalizeSubject(subject);
-    std::string query = "subject:\"" + subject + "\"";
+    current = Util::Trim(current);
+    if (p_Subject)
+    {
+      Util::NormalizeSubject(current);
+    }
+    else
+    {
+      Util::NormalizeName(current);
+    }
+    std::string query = p_Subject ? ("subject:\"" + current + "\"")
+                                  : ("from:\"" + current + "\"");
     SearchMessage(query);
   }
   else
