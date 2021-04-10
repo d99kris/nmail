@@ -2879,6 +2879,8 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyToggleFullHeader)
   {
     m_ShowFullHeader = !m_ShowFullHeader;
+    m_MessageViewLineOffset = 0;
+    m_MessageFindMatchLine = -1;
   }
   else if (m_InvalidInputNotify)
   {
