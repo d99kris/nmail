@@ -136,7 +136,7 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 
 void AddressBook::InitCacheDir()
 {
-  static const int version = 5; // note: keep synchronized with ImapIndex (for now)
+  static const int version = 6; // note: keep synchronized with ImapIndex (for now)
   const std::string cacheDir = GetAddressBookCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_AddressBookEncrypt);
   Util::MkDir(GetAddressBookCacheDbDir());

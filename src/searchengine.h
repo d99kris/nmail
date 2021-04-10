@@ -20,7 +20,8 @@ public:
   explicit SearchEngine(const std::string& p_DbPath);
   virtual ~SearchEngine();
 
-  void Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs);
+  void Index(const std::string& p_DocId, const int64_t p_Time, const std::string& p_Body,
+             const std::string& p_Subject, const std::string& p_From, const std::string& p_To);
   void Remove(const std::string& p_DocId);
   void Commit();
 

@@ -518,8 +518,9 @@ Email Search
 Press `/` in the message list view to search the local cache for an email. The
 local cache can be fully syncronized with server by pressing `s`. The search
 engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
-`AND` and `OR`. By default search query words are combined with `AND` unless
-specified. Results are sorted by email timestamp.
+`AND` and `OR`. Search terms may be prefixed by `body:`, `subject:`, `from:`
+or `to:` to search only specified fields. By default search query terms are
+combined with `AND` unless specified. Results are sorted by email timestamp.
 
 Press `<` or `Left` to exit search results and go back to current folder
 message list.

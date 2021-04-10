@@ -401,13 +401,13 @@ void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
         Body body;
         body.SetData(bodyCacheData);
 
-        const std::string& addresses = Util::Join(ToVector(header.GetAddresses()), ", ");
-        const std::string& subject = header.GetSubject();
-        const std::string& bodyText = body.GetTextPlain();
         const int64_t timeStamp = header.GetTimeStamp();
+        const std::string& bodyText = body.GetTextPlain();
+        const std::string& subject = header.GetSubject();
+        const std::string& from = header.GetFrom();
+        const std::string& to = header.GetTo() + " " + header.GetCc() + " " + header.GetBcc();
 
-        std::vector<std::string> docStrs({ addresses, subject, bodyText });
-        m_SearchEngine->Index(docId, timeStamp, docStrs);
+        m_SearchEngine->Index(docId, timeStamp, bodyText, subject, from, to);
 
         // @todo: decouple addressbook population from cache index
         AddressBook::Add(header.GetUniqueId(), header.GetAddresses());
@@ -486,7 +486,7 @@ std::string ImapIndex::GetCacheIndexDbTempDir()
 
 void ImapIndex::InitCacheIndexDir()
 {
-  static const int version = 5; // note: keep synchronized with AddressBook (for now)
+  static const int version = 6; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
   Util::MkDir(GetCacheIndexDbDir());

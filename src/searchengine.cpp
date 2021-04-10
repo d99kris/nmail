@@ -20,7 +20,8 @@ SearchEngine::~SearchEngine()
 {
 }
 
-void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const std::vector<std::string>& p_Strs)
+void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const std::string& p_Body,
+                         const std::string& p_Subject, const std::string& p_From, const std::string& p_To)
 {
   Xapian::TermGenerator termGenerator;
   termGenerator.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
@@ -28,15 +29,14 @@ void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const
   Xapian::Document doc;
   termGenerator.set_document(doc);
 
-  for (size_t i = 0; i < p_Strs.size(); ++i)
-  {
-    if (i > 0)
-    {
-      termGenerator.increase_termpos();
-    }
-
-    termGenerator.index_text(p_Strs.at(i));
-  }
+  termGenerator.index_text(p_Body, 1, "B");
+  termGenerator.increase_termpos();
+  termGenerator.index_text(p_Subject, 1, "S");
+  termGenerator.increase_termpos();
+  termGenerator.index_text(p_From, 1, "F");
+  termGenerator.increase_termpos();
+  termGenerator.index_text(p_To, 1, "T");
+  termGenerator.increase_termpos();
 
   doc.set_data(p_DocId);
   doc.add_boolean_term(p_DocId);
@@ -68,6 +68,18 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
     Xapian::QueryParser queryParser;
     queryParser.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
     queryParser.set_default_op(Xapian::Query::op::OP_AND);
+
+    // search all prefixes if none specified
+    queryParser.add_prefix("", "B");
+    queryParser.add_prefix("", "S");
+    queryParser.add_prefix("", "F");
+    queryParser.add_prefix("", "T");
+
+    // supported search prefixes to specify specific fields
+    queryParser.add_prefix("body", "B");
+    queryParser.add_prefix("subject", "S");
+    queryParser.add_prefix("from", "F");
+    queryParser.add_prefix("to", "T");
 
     Xapian::Query query = queryParser.parse_query(p_QueryStr);
 
