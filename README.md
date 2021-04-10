@@ -309,8 +309,12 @@ This field allows excluding certain folders from being accessible in nmail
 and also from being indexed by the search engine. This is mainly useful for
 email service providers with "virtual" folders that are holding copies of
 emails in other folders. When using the setup-wizard to configure a Gmail
-account, this field will be configured to the following (otherwise empty):
-"[Gmail]/All Mail","[Gmail]/Important","[Gmail]/Starred"
+account, this field will be configured to
+`"[Gmail]/All Mail","[Gmail]/Important","[Gmail]/Starred"`. As an alternative
+to configuring this parameter for Gmail, folders can be excluded from IMAP
+access on server side. In Gmail web interface, navigate to "Settings",
+"See all settings", "Labels" and untick "Show in IMAP" for "Starred",
+"Important" and "All Mail".
 
 ### html_to_text_cmd
 
