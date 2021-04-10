@@ -60,6 +60,7 @@ public:
               bool& p_HasMore);
 
   void SetAborting(bool p_Aborting);
+  void IndexNotifyIdle(bool p_IsIdle);
 
 private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);

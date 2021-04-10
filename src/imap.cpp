@@ -932,6 +932,11 @@ void Imap::SetAborting(bool p_Aborting)
   m_Aborting = p_Aborting;
 }
 
+void Imap::IndexNotifyIdle(bool p_IsIdle)
+{
+  m_ImapIndex->NotifyIdle(p_IsIdle);
+}
+
 bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Force));

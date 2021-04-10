@@ -342,6 +342,10 @@ void ImapManager::Process()
     m_Connecting = false;
     ClearStatus(Status::FlagConnecting);
   }
+  else
+  {
+    m_Imap.IndexNotifyIdle(true);
+  }
 
   LOG_DEBUG("entering loop");
   while (m_Running)
@@ -597,6 +601,10 @@ void ImapManager::Process()
       LOG_DEBUG("logout start");
       m_Imap.Logout();
       LOG_DEBUG("logout complete");
+    }
+    else
+    {
+      m_Imap.IndexNotifyIdle(false);
     }
   }
 
