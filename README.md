@@ -670,6 +670,7 @@ file (platform-dependent defaults are left empty below):
     key_rich_header=KEY_CTRLR
     key_save_file=s
     key_search=/
+    key_search_current_subject==
     key_search_show_folder=\
     key_select_all=a
     key_select_item=KEY_SPACE

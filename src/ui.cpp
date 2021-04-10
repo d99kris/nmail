@@ -103,6 +103,7 @@ void Ui::Init()
     { "key_ext_html_preview", "KEY_CTRLV" },
     { "key_ext_msg_viewer", "w" },
     { "key_search", "/" },
+    { "key_search_current_subject", "=" },
     { "key_find", "/" },
     { "key_find_next", "?" },
     { "key_sync", "s" },
@@ -217,6 +218,7 @@ void Ui::Init()
   m_KeySortSubject = Util::GetKeyCode(m_Config.Get("key_sort_subject"));
   m_KeyJumpTo = Util::GetKeyCode(m_Config.Get("key_jump_to"));
   m_KeySearchShowFolder = Util::GetKeyCode(m_Config.Get("key_search_show_folder"));
+  m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
 
   m_ShowProgress = m_Config.Get("show_progress") == "1";
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -465,8 +467,8 @@ void Ui::DrawTop()
   std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";
-  int centerWidth = m_ScreenWidth - (int)topLeft.size() - (int)topRight.size();
-  std::wstring wtopCenter = Util::TrimPadWString(Util::ToWString(GetStateStr()), centerWidth);
+  int centerWidth = m_ScreenWidth - (int)topLeft.size() - (int)topRight.size() - 2;
+  std::wstring wtopCenter = Util::TrimPadWString(Util::ToWString(GetStateStr()), centerWidth) + L"  ";
   std::string topCenter = Util::ToString(wtopCenter);
   std::string topCombined = topLeft + topCenter + topRight;
 
@@ -603,6 +605,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
       GetKeyDisplay(m_KeySelectAll), "SelectAll",
       GetKeyDisplay(m_KeySelectItem), "Select",
+      GetKeyDisplay(m_KeySearchCurrentSubject), "SearchSub",
     },
   };
 
@@ -2652,6 +2655,11 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if ((p_Key == m_KeySearchShowFolder) && m_MessageListSearch)
   {
     m_SearchShowFolder = !m_SearchShowFolder;
+  }
+  else if (p_Key == m_KeySearchCurrentSubject)
+  {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+    SearchMessageCurrentSubject();
   }
   else if (m_InvalidInputNotify)
   {
@@ -5491,10 +5499,55 @@ void Ui::ImportMessage()
   }
 }
 
-void Ui::SearchMessage()
+void Ui::SearchMessageCurrentSubject()
 {
-  std::string query = (m_MessageListSearch && m_PersistSearchQuery) ? m_MessageListSearchQuery : "";
-  if (PromptString("Search Emails: ", "Search", query))
+  const std::string& folder = m_CurrentFolderUid.first;
+  const int uid = m_CurrentFolderUid.second;
+  std::string subject;
+  bool found = false;
+
+  if (m_MessageListSearch)
+  {
+    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    std::vector<Header>& headers = m_MessageListSearchResultHeaders;
+    int idx = m_MessageListCurrentIndex[m_CurrentFolder];
+    if ((idx >= 0) && (idx < (int)headers.size()))
+    {
+      subject = headers[idx].GetSubject();
+      found = true;
+    }
+  }
+  else
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    std::map<uint32_t, Header>& headers = m_Headers[folder];
+    std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+    if (hit != headers.end())
+    {
+      subject = hit->second.GetSubject();
+      found = true;
+    }
+  }
+
+  if (found)
+  {
+    subject = Util::Trim(subject);
+    Util::NormalizeSubject(subject);
+    std::string query = "subject:\"" + subject + "\"";
+    SearchMessage(query);
+  }
+  else
+  {
+    SetDialogMessage("No message selected to search based on");
+  }
+}
+
+void Ui::SearchMessage(const std::string& p_Query /*= std::string()*/)
+{
+  std::string query = !p_Query.empty()
+    ? p_Query
+    : ((m_MessageListSearch && m_PersistSearchQuery) ? m_MessageListSearchQuery : "");
+  if (!p_Query.empty() || PromptString("Search Emails: ", "Search", query))
   {
     if (!query.empty())
     {

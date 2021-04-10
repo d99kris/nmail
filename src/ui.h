@@ -190,7 +190,8 @@ private:
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
-  void SearchMessage();
+  void SearchMessageCurrentSubject();
+  void SearchMessage(const std::string& p_Query = std::string());
   void MessageFind();
   void MessageFindNext();
   void Quit();
@@ -372,6 +373,7 @@ private:
   int m_KeySelectItem = 0;
   int m_KeySelectAll = 0;
   int m_KeySearchShowFolder = 0;
+  int m_KeySearchCurrentSubject = 0;
 
   bool m_ShowProgress = false;
   bool m_NewMsgBell = false;
