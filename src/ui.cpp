@@ -977,7 +977,7 @@ void Ui::DrawFileList()
                               std::max(0, (int)files.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)files.size());
 
-    int maxWidth = std::min(m_ScreenWidth - 4, 50);
+    int maxWidth = (m_ScreenWidth - 4);
     std::wstring dirLabel = L"Dir: ";
     int maxDirLen = maxWidth - dirLabel.size();
     std::wstring dirPath = Util::ToWString(m_CurrentDir);
