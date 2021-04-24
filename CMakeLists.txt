@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.23" LANGUAGES CXX C)
+project(nmail VERSION "3.24" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -14,7 +14,7 @@ endif()
 # Build type
 set(DEFAULT_BUILD_TYPE "Release")
 if((EXISTS "${CMAKE_SOURCE_DIR}/.svn") OR (EXISTS "${CMAKE_SOURCE_DIR}/.git"))
-  set(DEFAULT_BUILD_TYPE "Debug")
+  set(DEFAULT_BUILD_TYPE "RelWithDebInfo")
 endif()
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Using build type '${DEFAULT_BUILD_TYPE}' (default).")
