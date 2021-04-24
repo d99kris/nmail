@@ -498,7 +498,7 @@ Allows forcing nmail to enable specified logging level:
 
     0 = info, warnings, errors (default)
     1 = debug (same as `-e`, `--verbose` - enable verbose logging)
-    1 = trace (same as `-ee`, `--extra-verbose` - enable extra verbose logging)
+    2 = trace (same as `-ee`, `--extra-verbose` - enable extra verbose logging)
 
 
 Multiple Email Accounts
