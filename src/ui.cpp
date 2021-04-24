@@ -1555,6 +1555,11 @@ void Ui::DrawMessage()
           ss << "Cc: " << header.GetCc() << "\n";
         }
 
+        if (!header.GetBcc().empty())
+        {
+          ss << "Bcc: " << header.GetBcc() << "\n";
+        }
+
         ss << "Subject: " << header.GetSubject() << "\n";
       }
 
@@ -3559,23 +3564,13 @@ void Ui::SetState(Ui::State p_State)
         Util::StripCR(m_ComposeMessageStr);
 
         // @todo: handle quoted commas in address name
-        std::vector<std::string> tos;
-        std::vector<std::string> ccs;
-        std::vector<std::string> bccs;
-        if (header.GetReplyTo().empty())
+        std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
+        std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
+        std::vector<std::string> bccs = Util::Split(header.GetBcc(), ',');
+        if (!bccs.empty())
         {
-          tos = Util::Split(header.GetTo(), ',');
-          ccs = Util::Split(header.GetCc(), ',');
-          bccs = Util::Split(header.GetBcc(), ',');
-          if (!bccs.empty())
-          {
-            // @todo: consider auto-revert to previous rich header state after send / postpone
-            m_ShowRichHeader = true;
-          }
-        }
-        else
-        {
-          tos = Util::Split(header.GetReplyTo(), ',');
+          // @todo: consider auto-revert to previous rich header state after send / postpone
+          m_ShowRichHeader = true;
         }
 
         SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
@@ -3687,7 +3682,11 @@ void Ui::SetState(Ui::State p_State)
       std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
       std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
 
-      ccs.insert(ccs.end(), tos.begin(), tos.end());
+      if (folder != m_SentFolder)
+      {
+        ccs.insert(ccs.end(), tos.begin(), tos.end());
+      }
+
       std::string selfAddress = m_SmtpManager->GetAddress();
       for (auto it = ccs.begin(); it != ccs.end(); /* incremented in loop */)
       {
@@ -3702,8 +3701,16 @@ void Ui::SetState(Ui::State p_State)
       }
       else
       {
-        SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
-        SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+        if (folder == m_SentFolder)
+        {
+          SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
+          SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+        }
+        else
+        {
+          SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+          SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+        }
       }
       SetComposeStr(HeaderBcc, L"");
       SetComposeStr(HeaderAtt, L"");
