@@ -233,6 +233,7 @@ Full example of a config file `~/.nmail/main.conf`:
     client_store_sent=0
     drafts=Drafts
     editor_cmd=
+    file_picker_cmd=
     folders_exclude=
     html_to_text_cmd=
     html_viewer_cmd=
@@ -308,6 +309,14 @@ The field `editor_cmd` allows overriding which external editor to use when
 composing / editing an email using an external editor (`Ctrl-E`). If not
 specified, nmail will use the editor specified by the environment variable
 `$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
+
+### file_picker_cmd
+
+By default when using `Ctrl-T` to select attachment files, the nmail internal
+file picker is used. By specifying this paramater an external command may be
+used instead. The command must output selected file(s) separated by linebreaks,
+on stdout. One may use `nnn` by setting this parameter to:
+`file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n'; rm ${TMP})`
 
 ### folders_exclude
 

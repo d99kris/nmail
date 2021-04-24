@@ -263,6 +263,8 @@ public:
   static bool GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line);
   static std::string ToHex(const std::string& p_String);
   static std::string FromHex(const std::string& p_String);
+  static void SetFilePickerCmd(const std::string& p_FilePickerCmd);
+  static std::string GetFilePickerCmd();
 
 private:
   static std::string m_HtmlToTextConvertCmd;
@@ -277,4 +279,5 @@ private:
   static int m_OrgStdErr;
   static int m_NewStdErr;
   static bool m_UseServerTimestamps;
+  static std::string m_FilePickerCmd;
 };

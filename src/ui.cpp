@@ -2250,20 +2250,7 @@ void Ui::ViewFileListKeyHandler(int p_Key)
     else
     {
       std::string newFilePath = Util::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
-      std::wstring filepaths;
-      const std::string& oldFilepaths =
-        Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine].substr(0, m_ComposeHeaderPos)));
-      if (!oldFilepaths.empty() && (oldFilepaths[oldFilepaths.size() - 1] != ','))
-      {
-        filepaths = Util::ToWString(", " + newFilePath);
-      }
-      else
-      {
-        filepaths = Util::ToWString(newFilePath);
-      }
-
-      m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos, filepaths);
-      m_ComposeHeaderPos += filepaths.size();
+      AddAttachmentPath(newFilePath);
       SetState(m_LastMessageState);
     }
   }
@@ -3026,7 +3013,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       }
       else if (headerField == HeaderAtt)
       {
-        SetState(StateFileList);
+        FilePickerOrStateFileList();
       }
     }
     else
@@ -6507,4 +6494,67 @@ std::string Ui::GetBodyText(Body& p_Body)
     }
   }
   return m_Plaintext ? p_Body.GetTextPlain() : p_Body.GetTextHtml();
+}
+
+void Ui::FilePickerOrStateFileList()
+{
+  std::string filePickerCmd = Util::GetFilePickerCmd();
+  if (filePickerCmd.empty())
+  {
+    SetState(StateFileList);
+  }
+  else
+  {
+    endwin();
+
+    std::string outPath = Util::GetTempFilename(".txt");
+    std::string command = filePickerCmd + " > " + outPath;
+    if (system(command.c_str()) == 0)
+    {
+      std::string filesStr = Util::ReadFile(outPath);
+      if (!filesStr.empty())
+      {
+        std::vector<std::string> files = Util::Split(filesStr, '\n');
+        for (const auto& file : files)
+        {
+          AddAttachmentPath(file);
+        }
+      }
+    }
+    else
+    {
+      LOG_WARNING("external command failed: %s", command.c_str());
+    }
+
+    Util::DeleteFile(outPath);
+
+    refresh();
+    wint_t key = 0;
+    while (get_wch(&key) != ERR)
+    {
+      // Discard any remaining input
+    }
+  }
+}
+
+void Ui::AddAttachmentPath(const std::string& p_Path)
+{
+  std::string filepaths;
+  const std::string& oldFilepaths = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
+
+  if (oldFilepaths.empty())
+  {
+    filepaths = p_Path;
+  }
+  else if (oldFilepaths[oldFilepaths.size() - 1] != ',')
+  {
+    filepaths = ", " + p_Path;
+  }
+  else
+  {
+    filepaths = " " + p_Path;
+  }
+
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldFilepaths + filepaths);
+  m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
 }

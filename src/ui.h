@@ -225,6 +225,8 @@ private:
   int GetSelectedCount();
 
   std::string GetBodyText(Body& p_Body);
+  void FilePickerOrStateFileList();
+  void AddAttachmentPath(const std::string& p_Path);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
