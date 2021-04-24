@@ -314,6 +314,27 @@ int ImapManager::GetIdleDurationSec()
   return idleDuration;
 }
 
+void ImapManager::ProcessIdleOffline()
+{
+  LOG_DEBUG("entering idle");
+  m_Imap.IndexNotifyIdle(true);
+
+  int selrv = 0;
+  int idleDuration = (29 * 60);
+  while (m_Running && (selrv == 0))
+  {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(m_Pipe[0], &fds);
+    int maxfd = m_Pipe[0];
+    struct timeval idletv = {idleDuration, 0};
+    selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
+  }
+
+  m_Imap.IndexNotifyIdle(false);
+  LOG_DEBUG("exiting idle");
+}
+
 void ImapManager::Process()
 {
   THREAD_REGISTER();
@@ -341,10 +362,6 @@ void ImapManager::Process()
     m_Connecting = false;
     ClearStatus(Status::FlagConnecting);
   }
-  else
-  {
-    m_Imap.IndexNotifyIdle(true);
-  }
 
   LOG_DEBUG("entering loop");
   while (m_Running)
@@ -368,9 +385,16 @@ void ImapManager::Process()
     bool idleRv = true;
     bool authRefreshNeeded = AuthRefreshNeeded();
 
-    if ((selrv == 0) && m_Imap.GetConnected() && !authRefreshNeeded && isQueueEmpty)
+    if ((selrv == 0) && !authRefreshNeeded && isQueueEmpty)
     {
-      idleRv &= ProcessIdle();
+      if (m_Imap.GetConnected())
+      {
+        idleRv &= ProcessIdle();
+      }
+      else
+      {
+        ProcessIdleOffline();
+      }
     }
     else if ((FD_ISSET(m_Pipe[0], &fds) || !isQueueEmpty) && m_Imap.GetConnected() &&
              !authRefreshNeeded)
@@ -600,10 +624,6 @@ void ImapManager::Process()
       LOG_DEBUG("logout start");
       m_Imap.Logout();
       LOG_DEBUG("logout complete");
-    }
-    else
-    {
-      m_Imap.IndexNotifyIdle(false);
     }
   }
 

@@ -142,20 +142,28 @@ std::map<uint32_t, Header> ImapCache::GetHeaders(const std::string& p_Folder, co
     std::string uidlist = sstream.str();
     uidlist.pop_back(); // assumes non-empty input set
 
-    *db << "SELECT uid, data FROM headers WHERE uid IN (" + uidlist + ");" >>
-      [&](const uint32_t& uid, const std::vector<char>& data)
-      {
-        Header header;
-        if (!p_Prefetch)
+    if (!p_Prefetch)
+    {
+      *db << "SELECT uid, data FROM headers WHERE uid IN (" + uidlist + ");" >>
+        [&](const uint32_t& uid, const std::vector<char>& data)
         {
+          Header header;
           header = Serialization::FromBytes<Header>(data);
           if (header.ParseIfNeeded())
           {
             updateCacheHeaders[uid] = header;
           }
-        }
-        headers.insert(std::make_pair(uid, header));
-      };
+          headers.insert(std::make_pair(uid, header));
+        };
+    }
+    else
+    {
+      *db << "SELECT uid FROM headers WHERE uid IN (" + uidlist + ");" >>
+        [&](const uint32_t& uid)
+        {
+          headers.insert(std::make_pair(uid, Header()));
+        };
+    }
   }
 
   if (!updateCacheHeaders.empty())
@@ -245,20 +253,29 @@ std::map<uint32_t, Body> ImapCache::GetBodys(const std::string& p_Folder, const 
     std::copy(p_Uids.begin(), p_Uids.end(), std::ostream_iterator<uint32_t>(sstream, ","));
     std::string uidlist = sstream.str();
     uidlist.pop_back(); // assumes non-empty input set
-    *db << "SELECT uid, data FROM bodys WHERE uid IN (" + uidlist + ");" >>
-      [&](const uint32_t& uid, const std::vector<char>& data)
-      {
-        Body body;
-        if (!p_Prefetch)
+
+    if (!p_Prefetch)
+    {
+      *db << "SELECT uid, data FROM bodys WHERE uid IN (" + uidlist + ");" >>
+        [&](const uint32_t& uid, const std::vector<char>& data)
         {
+          Body body;
           body = Serialization::FromBytes<Body>(data);
           if (body.ParseIfNeeded())
           {
             updateCacheBodys[uid] = body;
           }
-        }
-        bodys.insert(std::make_pair(uid, body));
-      };
+          bodys.insert(std::make_pair(uid, body));
+        };
+    }
+    else
+    {
+      *db << "SELECT uid FROM bodys WHERE uid IN (" + uidlist + ");" >>
+        [&](const uint32_t& uid)
+        {
+          bodys.insert(std::make_pair(uid, Body()));
+        };
+    }
   }
 
   if (!updateCacheBodys.empty())
