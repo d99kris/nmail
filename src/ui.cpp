@@ -2157,20 +2157,7 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
-    std::wstring address;
-    const std::string& oldAddress =
-      Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine].substr(0, m_ComposeHeaderPos)));
-    if (!oldAddress.empty() && (oldAddress[oldAddress.size() - 1] != ','))
-    {
-      address = Util::ToWString(", " + m_AddressListCurrentAddress);
-    }
-    else
-    {
-      address = Util::ToWString(m_AddressListCurrentAddress);
-    }
-
-    m_ComposeHeaderStr[m_ComposeHeaderLine].insert(m_ComposeHeaderPos, address);
-    m_ComposeHeaderPos += address.size();
+    AddAddress(m_AddressListCurrentAddress);
     SetState(m_LastMessageState);
   }
   else if (p_Key == KEY_LEFT)
@@ -6539,6 +6526,8 @@ void Ui::FilePickerOrStateFileList()
 
 void Ui::AddAttachmentPath(const std::string& p_Path)
 {
+  if (p_Path.empty()) return;
+
   std::string filepaths;
   const std::string& oldFilepaths = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
 
@@ -6556,5 +6545,26 @@ void Ui::AddAttachmentPath(const std::string& p_Path)
   }
 
   m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldFilepaths + filepaths);
+  m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+}
+
+void Ui::AddAddress(const std::string& p_Address)
+{
+  std::string addAddress;
+  const std::string& oldAddress = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
+  if (oldAddress.empty())
+  {
+    addAddress = p_Address;
+  }
+  else if (oldAddress[oldAddress.size() - 1] != ',')
+  {
+    addAddress = ", " + p_Address;
+  }
+  else
+  {
+    addAddress = " " + p_Address;
+  }
+
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldAddress + addAddress);
   m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
 }
