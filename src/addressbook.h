@@ -40,4 +40,5 @@ private:
   static bool m_AddressBookEncrypt;
   static std::string m_Pass;
   static std::unique_ptr<sqlite::database> m_Db;
+  static bool m_Dirty;
 };

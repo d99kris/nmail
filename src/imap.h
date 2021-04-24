@@ -62,10 +62,11 @@ public:
   void SetAborting(bool p_Aborting);
   void IndexNotifyIdle(bool p_IsIdle);
 
+  bool SetBodysCache(const std::string& p_Folder, const std::map<uint32_t, Body>& p_Bodys);
+
 private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);
   bool SelectedFolderIsEmpty();
-  bool LockSelectedFolder(bool p_DoLock);
   uint32_t GetUidValidity();
 
   static void Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData);
@@ -82,8 +83,6 @@ private:
   std::mutex m_ImapMutex;
   struct mailimap* m_Imap = NULL;
 
-  std::mutex m_CacheMutex;
-
   std::string m_SelectedFolder;
   bool m_SelectedFolderIsEmpty = true;
 
@@ -91,6 +90,6 @@ private:
   bool m_Connected = false;
   bool m_Aborting = false;
 
-  std::unique_ptr<ImapCache> m_ImapCache;
+  std::shared_ptr<ImapCache> m_ImapCache;
   std::unique_ptr<ImapIndex> m_ImapIndex;
 };

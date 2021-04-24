@@ -9,12 +9,11 @@
 
 #include "crypto.h"
 #include "loghelp.h"
-#include "serialized.h"
 #include "util.h"
 
 void CacheUtil::InitCacheDir()
 {
-  static const int version = 3;
+  static const int version = 4;
   const std::string cacheDir = GetCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, false /* p_Encrypted */);
 }
@@ -33,7 +32,7 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
     int storedVersion = -1;
     try
     {
-      DeserializeFromFile(versionPath, storedVersion);
+      ReadVersionFromFile(versionPath, storedVersion);
     }
     catch (...)
     {
@@ -46,7 +45,7 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
       LOG_DEBUG("re-init %s", p_Dir.c_str());
       Util::RmDir(p_Dir);
       Util::MkDir(p_Dir);
-      SerializeToFile(versionPath, currentVersion);
+      WriteVersionToFile(versionPath, currentVersion);
       return false;
     }
   }
@@ -54,7 +53,7 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
   {
     LOG_DEBUG("init %s", p_Dir.c_str());
     Util::MkDir(p_Dir);
-    SerializeToFile(versionPath, currentVersion);
+    WriteVersionToFile(versionPath, currentVersion);
   }
 
   return true;
@@ -76,4 +75,18 @@ void CacheUtil::EncryptCacheDir(const std::string& p_Pass, const std::string& p_
   {
     Crypto::AESEncryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass);
   }
+}
+
+void CacheUtil::ReadVersionFromFile(const std::string& p_Path, int& p_Version)
+{
+  std::string str = Util::FromHex(Util::ReadFile(p_Path));
+  if (Util::IsInteger(str))
+  {
+    p_Version = Util::ToInteger(str);
+  }
+}
+
+void CacheUtil::WriteVersionToFile(const std::string& p_Path, const int p_Version)
+{
+  Util::WriteFile(p_Path, Util::ToHex(std::to_string(p_Version)));
 }

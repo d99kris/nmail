@@ -11,7 +11,6 @@
 
 #include "auth.h"
 #include "loghelp.h"
-#include "serialized.h"
 #include "util.h"
 
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
@@ -39,8 +38,8 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_CacheRunning(false)
   , m_Aborting(false)
 {
-  pipe(m_Pipe);
-  pipe(m_CachePipe);
+  LOG_IF_NONZERO(pipe(m_Pipe));
+  LOG_IF_NONZERO(pipe(m_CachePipe));
   m_Connecting = m_Connect;
 }
 
@@ -64,7 +63,7 @@ ImapManager::~ImapManager()
     }
 
     m_Running = false;
-    write(m_Pipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
 
     if (m_ExitedCond.wait_for(lock, std::chrono::seconds(3)) != std::cv_status::timeout)
     {
@@ -95,7 +94,7 @@ ImapManager::~ImapManager()
     std::unique_lock<std::mutex> lock(m_ExitedCacheCondMutex);
 
     m_CacheRunning = false;
-    write(m_CachePipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_CachePipe[1], "1", 1), 1);
 
     if (m_ExitedCacheCond.wait_for(lock, std::chrono::seconds(2)) != std::cv_status::timeout)
     {
@@ -143,14 +142,14 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
   {
     std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
     m_CacheRequests.push_front(p_Request);
-    write(m_CachePipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_CachePipe[1], "1", 1), 1);
   }
 
   if (m_Connecting || m_OnceConnected)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
-    write(m_Pipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
     m_RequestsTotal = m_Requests.size();
     m_RequestsDone = 0;
   }
@@ -166,7 +165,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
-    write(m_Pipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
     m_PrefetchRequestsTotal = 0;
     for (auto it = m_PrefetchRequests.begin(); it != m_PrefetchRequests.end(); ++it)
     {
@@ -187,7 +186,7 @@ void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Actions.push_front(p_Action);
-    write(m_Pipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
   }
   else
   {
@@ -277,7 +276,7 @@ bool ImapManager::ProcessIdle()
       if (len > 0)
       {
         std::vector<char> buf(len);
-        read(idlefd, &buf[0], len);
+        LOG_IF_NOT_EQUAL(read(idlefd, &buf[0], len), len);
       }
 
       ImapManager::Request request;
@@ -381,7 +380,7 @@ void ImapManager::Process()
       if (len > 0)
       {
         std::vector<char> buf(len);
-        read(m_Pipe[0], &buf[0], len);
+        LOG_IF_NOT_EQUAL(read(m_Pipe[0], &buf[0], len), len);
       }
 
       m_QueueMutex.lock();
@@ -686,7 +685,7 @@ void ImapManager::CacheProcess()
       if (len > 0)
       {
         std::vector<char> buf(len);
-        read(m_CachePipe[0], &buf[0], len);
+        LOG_IF_NOT_EQUAL(read(m_CachePipe[0], &buf[0], len), len);
       }
 
       m_CacheQueueMutex.lock();
@@ -839,6 +838,11 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
     SetStatus(Status::FlagDeleting);
     rv &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
     ClearStatus(Status::FlagDeleting);
+  }
+
+  if (p_Action.m_UpdateCache && !p_Action.m_SetBodysCache.empty())
+  {
+    rv &= m_Imap.SetBodysCache(p_Action.m_Folder, p_Action.m_SetBodysCache);
   }
 
   return rv;

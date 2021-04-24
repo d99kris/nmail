@@ -4435,8 +4435,8 @@ namespace {
                 // Check if the encoding is valid and if it is not, hex escape bytes.
                 // Important: We do not check the exact decoded values for validity, only the encoding format
                 // First check that this bytes is a valid lead byte:
-                // This means that it is not encoded as 1111 1XXX
-                // Or as 10XX XXXX
+                // This means that it is not encoded as 1111 1xxx
+                // Or as 10xx xxxx
                 if (c <  0xC0 ||
                     c >= 0xF8) {
                     hexEscapeChar(os, c);
@@ -4451,7 +4451,7 @@ namespace {
                 }
                 // The header is valid, check data
                 // The next encBytes bytes must together be a valid utf-8
-                // This means: bitpattern 10XX XXXX and the extracted value is sane (ish)
+                // This means: bitpattern 10xx xxxx and the extracted value is sane (ish)
                 bool valid = true;
                 uint32_t value = headerValue(c);
                 for (std::size_t n = 1; n < encBytes; ++n) {

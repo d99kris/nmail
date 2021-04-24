@@ -12,7 +12,6 @@
 #include "cacheutil.h"
 #include "crypto.h"
 #include "loghelp.h"
-#include "serialized.h"
 #include "util.h"
 
 std::mutex OfflineQueue::m_Mutex;
@@ -145,7 +144,7 @@ std::vector<std::string> OfflineQueue::PopComposeMessages()
 
 std::string OfflineQueue::GetQueueDir()
 {
-  return CacheUtil::GetCacheDir() + std::string("queue/");
+  return CacheUtil::GetCacheDir() + std::string("offlinequeue/");
 }
 
 void OfflineQueue::InitQueueDir()

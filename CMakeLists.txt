@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.24" LANGUAGES CXX C)
+project(nmail VERSION "3.25" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -70,8 +70,7 @@ add_executable(nmail
   src/sasl.h
   src/searchengine.cpp
   src/searchengine.h
-  src/serialized.cpp
-  src/serialized.h
+  src/serialization.h
   src/smtp.cpp
   src/smtp.h
   src/smtpmanager.cpp
@@ -141,7 +140,8 @@ find_library(CYRUS_SASL_LIBRARY sasl2)
 find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
-include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr")
+include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr"
+                    "ext/cereal/include")
 
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
 if(FOUND_EXECINFO)

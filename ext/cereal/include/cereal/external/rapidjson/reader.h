@@ -899,7 +899,7 @@ private:
             return false;
     }
 
-    // Helper function to parse four hexadecimal digits in \uXXXX in ParseString().
+    // Helper function to parse four hexadecimal digits in \uxxxx in ParseString().
     template<typename InputStream>
     unsigned ParseHex4(InputStream& is, size_t escapeOffset) {
         unsigned codepoint = 0;

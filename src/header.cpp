@@ -24,6 +24,7 @@ static const std::string labelServerTime("X-Nmail-ServerTime: ");
 void Header::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
+  ParseIfNeeded();
 }
 
 void Header::SetHeaderData(const std::string& p_HdrData, const std::string& p_StrData,
@@ -33,6 +34,7 @@ void Header::SetHeaderData(const std::string& p_HdrData, const std::string& p_St
     labelServerTime + std::to_string(p_ServerTime) + "\n" +
     p_HdrData +
     p_StrData;
+  ParseIfNeeded();
 }
 
 std::string Header::GetData() const
@@ -40,99 +42,83 @@ std::string Header::GetData() const
   return m_Data;
 }
 
-std::string Header::GetDate()
+std::string Header::GetDate() const
 {
-  Parse();
   return m_Date;
 }
 
-std::string Header::GetDateTime()
+std::string Header::GetDateTime() const
 {
-  Parse();
   return m_DateTime;
 }
 
-std::string Header::GetDateOrTime(const std::string& p_CurrentDate)
+std::string Header::GetDateOrTime(const std::string& p_CurrentDate) const
 {
-  Parse();
   return (m_Date == p_CurrentDate) ? m_Time : m_Date;
 }
 
-time_t Header::GetTimeStamp()
+time_t Header::GetTimeStamp() const
 {
-  Parse();
   return m_TimeStamp;
 }
 
-std::string Header::GetFrom()
+std::string Header::GetFrom() const
 {
-  Parse();
   return m_From;
 }
 
-std::string Header::GetShortFrom()
+std::string Header::GetShortFrom() const
 {
-  Parse();
   return m_ShortFrom;
 }
 
-std::string Header::GetTo()
+std::string Header::GetTo() const
 {
-  Parse();
   return m_To;
 }
 
-std::string Header::GetShortTo()
+std::string Header::GetShortTo() const
 {
-  Parse();
   return m_ShortTo;
 }
 
-std::string Header::GetCc()
+std::string Header::GetCc() const
 {
-  Parse();
   return m_Cc;
 }
 
-std::string Header::GetBcc()
+std::string Header::GetBcc() const
 {
-  Parse();
   return m_Bcc;
 }
 
-std::string Header::GetReplyTo()
+std::string Header::GetReplyTo() const
 {
-  Parse();
   return m_ReplyTo;
 }
 
-std::string Header::GetSubject()
+std::string Header::GetSubject() const
 {
-  Parse();
   return m_Subject;
 }
 
-std::string Header::GetUniqueId()
+std::string Header::GetUniqueId() const
 {
-  Parse();
   return m_UniqueId;
 }
 
-std::string Header::GetMessageId()
+std::string Header::GetMessageId() const
 {
-  Parse();
   return m_MessageId;
 }
 
-std::set<std::string> Header::GetAddresses()
+std::set<std::string> Header::GetAddresses() const
 {
-  Parse();
   return m_Addresses;
 }
 
-bool Header::GetHasAttachments()
+bool Header::GetHasAttachments() const
 {
-  Parse();
   return m_HasAttachments;
 }
 
@@ -161,6 +147,8 @@ std::string Header::GetRawHeaderText(bool p_LocalHeaders)
     }
   }
 
+  m_RawHeaderText = raw;
+
   return raw;
 }
 
@@ -175,152 +163,151 @@ std::string Header::GetCurrentDate()
 
 void Header::Parse()
 {
-  if (!m_Parsed)
-  {
-    time_t headerTimeStamp = 0;
-    time_t serverTimeStamp = 0;
+  // @note: this function should not be called directly, only via ParseIfNeeded()
+  LOG_DURATION();
+  time_t headerTimeStamp = 0;
+  time_t serverTimeStamp = 0;
 
+  {
+    std::stringstream sstream(m_Data);
+    std::string line;
+    if (std::getline(sstream, line))
     {
-      std::stringstream sstream(m_Data);
-      std::string line;
-      if (std::getline(sstream, line))
+      if ((line.rfind(labelServerTime, 0) == 0) && (line.size() > labelServerTime.size()))
       {
-        if ((line.rfind(labelServerTime, 0) == 0) && (line.size() > labelServerTime.size()))
-        {
-          std::string serverTime = line.substr(labelServerTime.size());
-          serverTimeStamp = std::stoi(serverTime);
-        }
-        else
-        {
-          LOG_WARNING("unexpected hdr content \"%s\"", line.c_str());
-        }
+        std::string serverTime = line.substr(labelServerTime.size());
+        serverTimeStamp = std::stoi(serverTime);
       }
       else
       {
-        LOG_WARNING("unexpected empty hdr");
+        LOG_WARNING("unexpected hdr content \"%s\"", line.c_str());
       }
     }
-
+    else
     {
-      Body body;
-      body.FromHeader(m_Data);
-      m_HasAttachments = body.HasAttachments();
+      LOG_WARNING("unexpected empty hdr");
     }
+  }
 
-    struct mailmime* mime = NULL;
-    size_t current_index = 0;
-    mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
+  {
+    Body body;
+    body.FromHeader(m_Data);
+    m_HasAttachments = body.HasAttachments();
+  }
 
-    if (mime != NULL)
+  struct mailmime* mime = NULL;
+  size_t current_index = 0;
+  mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
+
+  if (mime != NULL)
+  {
+    if (mime->mm_type == MAILMIME_MESSAGE)
     {
-      if (mime->mm_type == MAILMIME_MESSAGE)
+      if (mime->mm_data.mm_message.mm_fields)
       {
-        if (mime->mm_data.mm_message.mm_fields)
+        if (clist_begin(mime->mm_data.mm_message.mm_fields->fld_list) != NULL)
         {
-          if (clist_begin(mime->mm_data.mm_message.mm_fields->fld_list) != NULL)
+          struct mailimf_fields* fields = mime->mm_data.mm_message.mm_fields;
+          for (clistiter* it = clist_begin(fields->fld_list); it != NULL; it = clist_next(it))
           {
-            struct mailimf_fields* fields = mime->mm_data.mm_message.mm_fields;
-            for (clistiter* it = clist_begin(fields->fld_list); it != NULL; it = clist_next(it))
+            std::vector<std::string> addrs;
+            struct mailimf_field* field = (struct mailimf_field*)clist_content(it);
+            switch (field->fld_type)
             {
-              std::vector<std::string> addrs;
-              struct mailimf_field* field = (struct mailimf_field*)clist_content(it);
-              switch (field->fld_type)
-              {
-                case MAILIMF_FIELD_ORIG_DATE:
-                  {
-                    struct mailimf_date_time* dt = field->fld_data.fld_orig_date->dt_date_time;
-                    headerTimeStamp = Util::MailtimeToTimet(dt);
-                  }
-                  break;
+              case MAILIMF_FIELD_ORIG_DATE:
+                {
+                  struct mailimf_date_time* dt = field->fld_data.fld_orig_date->dt_date_time;
+                  headerTimeStamp = Util::MailtimeToTimet(dt);
+                }
+                break;
 
-                case MAILIMF_FIELD_FROM:
-                  addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
+              case MAILIMF_FIELD_FROM:
+                addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
+                m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                m_From = Util::Join(addrs, ", ");
+                addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
+                m_ShortFrom = Util::Join(addrs, ", ");
+                break;
+
+              case MAILIMF_FIELD_TO:
+                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
+                m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                m_To = Util::Join(addrs, ", ");
+                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list, true));
+                m_ShortTo = Util::Join(addrs, ", ");
+                break;
+
+              case MAILIMF_FIELD_CC:
+                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
+                m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                m_Cc = Util::Join(addrs, ", ");
+                break;
+
+              case MAILIMF_FIELD_BCC:
+                if (field->fld_data.fld_bcc->bcc_addr_list != nullptr)
+                {
+                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_From = Util::Join(addrs, ", ");
-                  addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
-                  m_ShortFrom = Util::Join(addrs, ", ");
-                  break;
+                  m_Bcc = Util::Join(addrs, ", ");
+                }
+                break;
 
-                case MAILIMF_FIELD_TO:
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
-                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_To = Util::Join(addrs, ", ");
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list, true));
-                  m_ShortTo = Util::Join(addrs, ", ");
-                  break;
+              case MAILIMF_FIELD_SUBJECT:
+                m_Subject = Util::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
+                Util::ReplaceString(m_Subject, "\r", "");
+                Util::ReplaceString(m_Subject, "\n", "");
+                break;
 
-                case MAILIMF_FIELD_CC:
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
-                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_Cc = Util::Join(addrs, ", ");
-                  break;
+              case MAILIMF_FIELD_MESSAGE_ID:
+                m_MessageId = std::string(field->fld_data.fld_message_id->mid_value);
+                break;
 
-                case MAILIMF_FIELD_BCC:
-                  if (field->fld_data.fld_bcc->bcc_addr_list != nullptr)
-                  {
-                    addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
-                    m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                    m_Bcc = Util::Join(addrs, ", ");
-                  }
-                  break;
+              case MAILIMF_FIELD_REPLY_TO:
+                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list));
+                m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
+                m_ReplyTo = Util::Join(addrs, ", ");
+                break;
 
-                case MAILIMF_FIELD_SUBJECT:
-                  m_Subject = Util::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
-                  Util::ReplaceString(m_Subject, "\r", "");
-                  Util::ReplaceString(m_Subject, "\n", "");
-                  break;
-
-                case MAILIMF_FIELD_MESSAGE_ID:
-                  m_MessageId = std::string(field->fld_data.fld_message_id->mid_value);
-                  break;
-
-                case MAILIMF_FIELD_REPLY_TO:
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list));
-                  m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_ReplyTo = Util::Join(addrs, ", ");
-                  break;
-
-                default:
-                  break;
-              }
+              default:
+                break;
             }
-
-            m_UniqueId = Crypto::SHA256(m_From + m_DateTime + m_MessageId);
           }
+
+          m_UniqueId = Crypto::SHA256(m_From + m_DateTime + m_MessageId);
         }
       }
-
-      mailmime_free(mime);
     }
 
-    static const bool useServerTime = Util::GetUseServerTimestamps();
-    time_t timeStamp = useServerTime ? serverTimeStamp : headerTimeStamp;
-    if (timeStamp == 0)
-    {
-      // fall back to other option
-      timeStamp = useServerTime ? headerTimeStamp : serverTimeStamp;
-    }
-
-    if (timeStamp != 0)
-    {
-      struct tm* timeinfo = localtime(&timeStamp);
-
-      char senttimestr[64];
-      strftime(senttimestr, sizeof(senttimestr), "%H:%M", timeinfo);
-      std::string senttime(senttimestr);
-
-      char sentdatestr[64];
-      strftime(sentdatestr, sizeof(sentdatestr), "%Y-%m-%d", timeinfo);
-      std::string sentdate(sentdatestr);
-
-      m_TimeStamp = timeStamp;
-      m_Date = sentdate;
-      m_DateTime = sentdate + std::string(" ") + senttime;
-      m_Time = senttime;
-    }
-
-    m_Parsed = true;
+    mailmime_free(mime);
   }
+
+  static const bool useServerTime = Util::GetUseServerTimestamps();
+  time_t timeStamp = useServerTime ? serverTimeStamp : headerTimeStamp;
+  if (timeStamp == 0)
+  {
+    // fall back to other option
+    timeStamp = useServerTime ? headerTimeStamp : serverTimeStamp;
+  }
+
+  if (timeStamp != 0)
+  {
+    struct tm* timeinfo = localtime(&timeStamp);
+
+    char senttimestr[64];
+    strftime(senttimestr, sizeof(senttimestr), "%H:%M", timeinfo);
+    std::string senttime(senttimestr);
+
+    char sentdatestr[64];
+    strftime(sentdatestr, sizeof(sentdatestr), "%Y-%m-%d", timeinfo);
+    std::string sentdate(sentdatestr);
+
+    m_TimeStamp = timeStamp;
+    m_Date = sentdate;
+    m_DateTime = sentdate + std::string(" ") + senttime;
+    m_Time = senttime;
+  }
+
+  m_ParseVersion = GetCurrentParseVersion();
 }
 
 std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list* p_MailboxList,
@@ -407,6 +394,12 @@ std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
   str += std::string("; ");
 
   return str;
+}
+
+size_t Header::GetCurrentParseVersion()
+{
+  static size_t parseVersion = 1; // update offset when parsing changes
+  return parseVersion;
 }
 
 std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header)
