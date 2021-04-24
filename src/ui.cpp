@@ -1922,7 +1922,7 @@ void Ui::Run()
 {
   DrawAll();
   int64_t uiIdleTime = 0;
-  LOG_DEBUG("entering loop");
+  LOG_INFO("entering ui loop");
 
   while (s_Running)
   {
@@ -2021,7 +2021,7 @@ void Ui::Run()
 
   }
 
-  LOG_DEBUG("exiting loop");
+  LOG_INFO("exiting ui loop");
 
   return;
 }
