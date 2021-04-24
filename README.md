@@ -51,6 +51,9 @@ Command-line Options:
     -e, --verbose
         enable verbose logging
 
+    -ee, --extra-verbose
+        enable extra verbose logging
+
     -h, --help
         display this help and exit
 
@@ -481,8 +484,9 @@ Email account username for IMAP (and SMTP).
 
 Allows forcing nmail to enable specified logging level:
 
-    0 = debug, info, warnings, errors (default)
-    1 = trace (same as `-e`, `--verbose` - enable verbose logging)
+    0 = info, warnings, errors (default)
+    1 = debug (same as `-e`, `--verbose` - enable verbose logging)
+    1 = trace (same as `-ee`, `--extra-verbose` - enable extra verbose logging)
 
 
 Multiple Email Accounts
@@ -554,14 +558,21 @@ The preferred way of reporting bugs is by opening
 [a Github issue](https://github.com/d99kris/nmail/issues/new). Providing a
 copy of `~/.nmail/log.txt` when reporting the issue is preferred.
 
-A verbose logging mode is supported. It produces very large log files with
-detailed information. The verbose logs typically contain actual email contents.
-Review and edit such logs to remove any private information before sharing.
-To enable verbose logging:
+Different verbosity levels are supported. The default logging level is very
+brief, primarily to minimize performance overhead. However, when encountering
+issued and reporting bugs, it is generally preferred to provide logs produced
+in verbose mode. To enable verbose logging:
 
     nmail --verbose
 
-Verbose logging can also be enabled by setting `verbose_logging=1` in
+For certain low-level bugs it may be required to collect extra verbose logs.
+This produces very large log files with detailed information. The extra verbose
+logs typically contain actual email contents. Review and edit such logs to
+remove any private information before sharing. To enable extra verbose logging:
+
+    nmail --extra-verbose
+
+Default logging verbosity can be configured with `verbose_logging` parameter in
 `~/.nmail/main.conf`.
 
 Finally, for issues where the logging above does not provide sufficient
