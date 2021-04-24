@@ -57,6 +57,7 @@ std::string Util::m_SenderHostname;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
+std::string Util::m_FilePickerCmd;
 
 bool Util::Exists(const std::string& p_Path)
 {
@@ -1938,4 +1939,14 @@ std::string Util::FromHex(const std::string& p_String)
   }
 
   return result;
+}
+
+void Util::SetFilePickerCmd(const std::string& p_FilePickerCmd)
+{
+  m_FilePickerCmd = p_FilePickerCmd;
+}
+
+std::string Util::GetFilePickerCmd()
+{
+  return m_FilePickerCmd;
 }

@@ -162,6 +162,7 @@ int main(int argc, char* argv[])
     { "auth", "pass" },
     { "auth_encrypt", "1" },
     { "sender_hostname", "" },
+    { "file_picker_cmd", "" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -230,6 +231,7 @@ int main(int argc, char* argv[])
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
   Util::SetSenderHostname(mainConfig->Get("sender_hostname"));
+  Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
 
   // Set logging verbosity level
   if (Log::GetVerboseLevel() == Log::DEBUG_LEVEL)
