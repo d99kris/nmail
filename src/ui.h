@@ -227,6 +227,7 @@ private:
   std::string GetBodyText(Body& p_Body);
   void FilePickerOrStateFileList();
   void AddAttachmentPath(const std::string& p_Path);
+  void AddAddress(const std::string& p_Address);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
