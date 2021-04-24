@@ -21,7 +21,6 @@
 #include "loghelp.h"
 #include "offlinequeue.h"
 #include "sasl.h"
-#include "serialized.h"
 #include "sethelp.h"
 #include "smtpmanager.h"
 #include "ui.h"
@@ -55,6 +54,7 @@ int main(int argc, char* argv[])
   Log::SetVerboseLevel(Log::DEBUG_LEVEL);
   bool online = true;
   std::string setup;
+  std::string exportDir;
 
   // Argument handling
   std::vector<std::string> args(argv + 1, argv + argc);
@@ -87,6 +87,11 @@ int main(int argc, char* argv[])
     {
       ShowVersion();
       return 0;
+    }
+    else if (((*it == "-x") || (*it == "--export")) && (std::distance(it + 1, args.end()) > 0))
+    {
+      ++it;
+      exportDir = *it;
     }
     else
     {
@@ -138,7 +143,7 @@ int main(int argc, char* argv[])
     { "sent", "" },
     { "addressbook_encrypt", "0" },
     { "client_store_sent", "0" },
-    { "cache_encrypt", "1" },
+    { "cache_encrypt", "0" },
     { "cache_index_encrypt", "0" },
     { "html_to_text_cmd", "" },
     { "text_to_html_cmd", "" },
@@ -200,9 +205,6 @@ int main(int argc, char* argv[])
 
     mainConfig->Save();
   }
-
-  // Ignore ctrl-c only after setup wizard to enable user abort
-  Util::RegisterIgnoredSignalHandlers();
 
   // Read main config
   const std::string& name = mainConfig->Get("name");
@@ -295,6 +297,18 @@ int main(int argc, char* argv[])
   const bool queueEncrypt = (mainConfig->Get("queue_encrypt") == "1");
   const bool authEncrypt = (mainConfig->Get("auth_encrypt") == "1");
 
+  // Perform export if requested
+  if (!exportDir.empty())
+  {
+    ImapCache imapCache(cacheEncrypt, pass);
+    bool exportRv = imapCache.Export(exportDir);
+    std::cout << "Export " << (exportRv ? "success" : "failure") << "\n";
+    return exportRv ? 0 : 1;
+  }
+
+  // Ignore ctrl-c only after setup wizard and export to enable user abort
+  Util::RegisterIgnoredSignalHandlers();
+
   Util::InitStdErrRedirect(logPath);
 
   Auth::Init(auth, authEncrypt, pass, isSetup);
@@ -377,6 +391,7 @@ static void ShowHelp()
     "   -s, --setup <SERVICE>   setup wizard for specified service, supported\n"
     "                           services: gmail, gmail-oauth2, outlook\n"
     "   -v, --version           output version information and exit\n"
+    "   -x, --export <DIR>      export cache to specified dir in Maildir format\n"
     "\n"
     "Examples:\n"
     "   nmail -s gmail          setup nmail for a gmail account\n"
@@ -491,11 +506,11 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
   {
     std::cout << (p_SmtpUser.empty() ? "Password: " : "IMAP Password: ");
     p_Pass = Util::GetPass();
-    encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+    encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
   }
   else
   {
-    p_Pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), p_User);
+    p_Pass = Crypto::AESDecrypt(Util::FromHex(encPass), p_User);
   }
 
   if (!ValidatePass(p_Pass, p_SmtpUser.empty() ? "" : "IMAP "))
@@ -514,11 +529,11 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
     {
       std::cout << "SMTP Password: ";
       p_SmtpPass = Util::GetPass();
-      encSmtpPass = Serialized::ToHex(Crypto::AESEncrypt(p_SmtpPass, p_SmtpUser));
+      encSmtpPass = Util::ToHex(Crypto::AESEncrypt(p_SmtpPass, p_SmtpUser));
     }
     else
     {
-      p_SmtpPass = Crypto::AESDecrypt(Serialized::FromHex(encSmtpPass), p_SmtpUser);
+      p_SmtpPass = Crypto::AESDecrypt(Util::FromHex(encSmtpPass), p_SmtpUser);
     }
   }
 
@@ -584,7 +599,7 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
 
       if (isSavePass)
       {
-        std::string encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+        std::string encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
         p_SecretConfig->Set("pass", encPass);
       }
     }
@@ -616,11 +631,11 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
       {
         std::cout << "Cache Encryption Password: ";
         p_Pass = Util::GetPass();
-        encPass = Serialized::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
+        encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
       }
       else
       {
-        p_Pass = Crypto::AESDecrypt(Serialized::FromHex(encPass), p_User);
+        p_Pass = Crypto::AESDecrypt(Util::FromHex(encPass), p_User);
       }
 
       if (!ValidatePass(p_Pass, "Cache Encryption "))

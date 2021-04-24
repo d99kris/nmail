@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <csignal>
+#include <fstream>
+#include <iomanip>
 #include <map>
 #include <regex>
 #include <set>
@@ -38,7 +40,6 @@
 #include "apathy/path.hpp"
 
 #include "loghelp.h"
-#include "serialized.h"
 #include "ui.h"
 
 std::mutex ThreadRegister::m_Mutex;
@@ -1460,7 +1461,7 @@ void Util::SignalCrashHandler(int p_Signal)
       LOG_DUMP(callstackStr.c_str());
 
       CleanupStdErrRedirect();
-      system("reset");
+      LOG_IF_NONZERO(system("reset"));
       std::cerr << logMsg << "\n" << callstackStr << "\n";
     }
 
@@ -1911,4 +1912,30 @@ bool Util::GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, 
     p_Line = p_String;
     return false;
   }
+}
+
+std::string Util::ToHex(const std::string& p_String)
+{
+  std::ostringstream oss;
+  for (const char& ch : p_String)
+  {
+    char buf[3] = { 0 };
+    snprintf(buf, sizeof(buf), "%02X", (unsigned char)ch);
+    oss << buf;
+  }
+
+  return oss.str();
+}
+
+std::string Util::FromHex(const std::string& p_String)
+{
+  std::string result;
+  std::istringstream iss(p_String);
+  char buf[3] = { 0 };
+  while (iss.read(buf, 2))
+  {
+    result += static_cast<char>(strtol(buf, NULL, 16) & 0xff);
+  }
+
+  return result;
 }

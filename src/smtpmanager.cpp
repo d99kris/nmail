@@ -30,7 +30,7 @@ SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
   , m_StatusHandler(p_StatusHandler)
   , m_Running(false)
 {
-  pipe(m_Pipe);
+  LOG_IF_NONZERO(pipe(m_Pipe));
 }
 
 SmtpManager::~SmtpManager()
@@ -39,7 +39,7 @@ SmtpManager::~SmtpManager()
   std::unique_lock<std::mutex> lock(m_ExitedCondMutex);
 
   m_Running = false;
-  write(m_Pipe[1], "1", 1);
+  LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
 
   if (m_ExitedCond.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout)
   {
@@ -67,7 +67,7 @@ void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
   if (m_Connect || p_Action.m_IsCreateMessage)
   {
     m_Actions.push_front(p_Action);
-    write(m_Pipe[1], "1", 1);
+    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
   }
   else
   {
@@ -120,7 +120,7 @@ void SmtpManager::Process()
       {
         len = std::min(len, 256);
         std::vector<char> buf(len);
-        read(m_Pipe[0], &buf[0], len);
+        LOG_IF_NOT_EQUAL(read(m_Pipe[0], &buf[0], len), len);
       }
 
       m_QueueMutex.lock();

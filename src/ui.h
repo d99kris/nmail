@@ -224,6 +224,8 @@ private:
   void ToggleSelectAll();
   int GetSelectedCount();
 
+  std::string GetBodyText(Body& p_Body);
+
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
   std::shared_ptr<SmtpManager> m_SmtpManager;
@@ -293,7 +295,7 @@ private:
   Fileinfo m_FileListCurrentFile;
 
   int m_PartListCurrentIndex = 0;
-  Part m_PartListCurrentPart;
+  PartInfo m_PartListCurrentPartInfo;
 
   int m_MessageViewLineOffset = 0;
   bool m_PersistFileSelectionDir = true;

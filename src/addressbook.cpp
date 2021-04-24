@@ -18,13 +18,13 @@
 #include "log.h"
 #include "loghelp.h"
 #include "maphelp.h"
-#include "serialized.h"
 #include "util.h"
 
 std::mutex AddressBook::m_Mutex;
 bool AddressBook::m_AddressBookEncrypt = true;
 std::string AddressBook::m_Pass;
 std::unique_ptr<sqlite::database> AddressBook::m_Db;
+bool AddressBook::m_Dirty = false;
 
 void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pass)
 {
@@ -60,16 +60,13 @@ void AddressBook::Cleanup()
 
   if (!m_Db) return;
 
-  if (m_AddressBookEncrypt)
+  m_Db.reset();
+  if (m_AddressBookEncrypt && m_Dirty)
   {
     Util::RmDir(GetAddressBookCacheDbDir());
     Util::MkDir(GetAddressBookCacheDbDir());
     CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir());
-    m_Db.reset();
-  }
-  else
-  {
-    m_Db.reset();
+    m_Dirty = false;
   }
 }
 
@@ -109,6 +106,8 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
       LOG_TRACE("increment address %s", address.c_str());
       *m_Db << "UPDATE addresses SET usages = usages + 1 WHERE address = ?;" << address;
     }
+
+    m_Dirty = true;
   }
 }
 
@@ -144,15 +143,15 @@ void AddressBook::InitCacheDir()
 
 std::string AddressBook::GetAddressBookCacheDir()
 {
-  return CacheUtil::GetCacheDir() + std::string("address/");
+  return CacheUtil::GetCacheDir() + std::string("addressbook/");
 }
 
 std::string AddressBook::GetAddressBookCacheDbDir()
 {
-  return CacheUtil::GetCacheDir() + std::string("address/db/");
+  return CacheUtil::GetCacheDir() + std::string("addressbook/db/");
 }
 
 std::string AddressBook::GetAddressBookTempDbDir()
 {
-  return Util::GetTempDir() + std::string("addressdb/");
+  return Util::GetTempDir() + std::string("addressbookdb/");
 }

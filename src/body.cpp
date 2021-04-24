@@ -20,12 +20,12 @@ void Body::FromMime(mailmime* p_Mime)
   // when using this function regular SetData/GetData cannot be used
   // @todo: consider making it a constructor
   ParseMime(p_Mime, 0);
-  m_Parsed = true;
+  m_ParseVersion = GetCurrentParseVersion();
 }
 
 void Body::FromHeader(const std::string& p_Data)
 {
-  if (!m_Parsed)
+  if (m_ParseVersion != GetCurrentParseVersion())
   {
     struct mailmime* mime = NULL;
     size_t current_index = 0;
@@ -37,7 +37,7 @@ void Body::FromHeader(const std::string& p_Data)
       mailmime_free(mime);
     }
 
-    m_Parsed = true;
+    m_ParseVersion = GetCurrentParseVersion();
   }
 }
 
@@ -45,6 +45,7 @@ void Body::SetData(const std::string& p_Data)
 {
   m_Data = p_Data;
   RemoveInvalidHeaders();
+  ParseIfNeeded();
 }
 
 std::string Body::GetData() const
@@ -52,26 +53,20 @@ std::string Body::GetData() const
   return m_Data;
 }
 
-std::string Body::GetTextPlain()
+std::string Body::GetTextPlain() const
 {
-  Parse();
-
   if (!m_TextPlain.empty())
   {
     return m_TextPlain;
   }
   else
   {
-    ParseHtml();
     return m_TextHtml;
   }
 }
 
-std::string Body::GetTextHtml()
+std::string Body::GetTextHtml() const
 {
-  Parse();
-
-  ParseHtml();
   if (!m_TextHtml.empty())
   {
     return m_TextHtml;
@@ -82,10 +77,8 @@ std::string Body::GetTextHtml()
   }
 }
 
-std::string Body::GetHtml()
+std::string Body::GetHtml() const
 {
-  Parse();
-
   if (!m_Html.empty())
   {
     return m_Html;
@@ -96,18 +89,29 @@ std::string Body::GetHtml()
   }
 }
 
-std::map<ssize_t, Part> Body::GetParts()
+std::map<ssize_t, PartInfo> Body::GetPartInfos() const
 {
-  Parse();
-  return m_Parts;
+  return m_PartInfos;
 }
 
-bool Body::HasAttachments()
+std::map<ssize_t, std::string> Body::GetPartDatas()
 {
-  Parse();
-  for (const auto& part : m_Parts)
+  if (!m_PartDatasParsed)
   {
-    if (part.second.m_IsAttachment)
+    bool forceParse = true;
+    m_NumParts = 0;
+    m_PartInfos.clear();
+    m_PartDatas.clear();
+    ParseIfNeeded(forceParse);
+  }
+  return m_PartDatas;
+}
+
+bool Body::HasAttachments() const
+{
+  for (const auto& partInfo : m_PartInfos)
+  {
+    if (partInfo.second.m_IsAttachment)
     {
       return true;
     }
@@ -116,14 +120,13 @@ bool Body::HasAttachments()
   return false;
 }
 
-bool Body::IsFormatFlowed()
+bool Body::IsFormatFlowed() const
 {
-  Parse();
   // @todo: consider caching lookup
-  if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
+  if ((m_TextPlainIndex != -1) && m_PartInfos.count(m_TextPlainIndex))
   {
-    const Part& part = m_Parts.at(m_TextPlainIndex);
-    return part.m_IsFormatFlowed;
+    const PartInfo& partInfo = m_PartInfos.at(m_TextPlainIndex);
+    return partInfo.m_IsFormatFlowed;
   }
 
   return false;
@@ -131,63 +134,75 @@ bool Body::IsFormatFlowed()
 
 void Body::Parse()
 {
-  if (!m_Parsed)
+  // @note: this function should not be called directly, only via ParseIfNeeded()
+  LOG_DURATION();
+  struct mailmime* mime = NULL;
+  size_t current_index = 0;
+  mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
+
+  if (mime != NULL)
   {
-    struct mailmime* mime = NULL;
-    size_t current_index = 0;
-    mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
-
-    if (mime != NULL)
-    {
-      ParseMime(mime, 0);
-      mailmime_free(mime);
-    }
-
-    ParseText();
-
-    m_Parsed = true;
+    ParseMime(mime, 0);
+    mailmime_free(mime);
   }
+
+  ParseText();
+  StoreHtml();
+
+  if (m_TextPlain.empty())
+  {
+    // always parse html if no text/plain part exists
+    ParseHtmlIfNeeded();
+  }
+
+  m_ParseVersion = GetCurrentParseVersion();
+  m_PartDatasParsed = true;
 }
 
 void Body::ParseText()
 {
-  if ((m_TextPlainIndex != -1) && m_Parts.count(m_TextPlainIndex))
+  if ((m_TextPlainIndex != -1) && m_PartInfos.count(m_TextPlainIndex) && m_PartDatas.count(m_TextPlainIndex))
   {
-    const Part& part = m_Parts.at(m_TextPlainIndex);
-    std::string partEnc = part.m_Charset;
-    std::string partText = part.m_Data;
+    const PartInfo& partInfo = m_PartInfos.at(m_TextPlainIndex);
+    std::string partEnc = partInfo.m_Charset;
+    std::string partText = m_PartDatas.at(m_TextPlainIndex);
     Encoding::ConvertToUtf8(partEnc, partText);
     m_TextPlain = partText;
   }
 }
 
+void Body::StoreHtml()
+{
+  if ((m_TextHtmlIndex != -1) && m_PartInfos.count(m_TextHtmlIndex) && m_PartDatas.count(m_TextHtmlIndex))
+  {
+    std::string partHtml = m_PartDatas.at(m_TextHtmlIndex);
+    m_Html = partHtml;
+  }
+}
+
 void Body::ParseHtml()
 {
-  if (!m_HtmlParsed)
+  if ((m_TextHtmlIndex != -1) && m_PartInfos.count(m_TextHtmlIndex) && !m_Html.empty())
   {
-    if ((m_TextHtmlIndex != -1) && m_Parts.count(m_TextHtmlIndex))
-    {
-      const Part& part = m_Parts.at(m_TextHtmlIndex);
-      std::string partEnc = part.m_Charset;
-      std::string partHtml = part.m_Data;
-      m_Html = partHtml;
-      Encoding::ConvertToUtf8(partEnc, partHtml);
+    const PartInfo& partInfo = m_PartInfos.at(m_TextHtmlIndex);
+    std::string partEnc = partInfo.m_Charset;
+    std::string partHtml = m_Html;
+    Encoding::ConvertToUtf8(partEnc, partHtml);
 
-      // @todo: more elegant removal of meta-tags
-      Util::ReplaceString(partHtml, "<meta ", "<beta ");
-      Util::ReplaceString(partHtml, "<META ", "<BETA ");
+    // @todo: more elegant removal of meta-tags
+    Util::ReplaceString(partHtml, "<meta ", "<beta ");
+    Util::ReplaceString(partHtml, "<META ", "<BETA ");
 
-      const std::string& textHtmlPath = Util::GetTempFilename(".html");
-      Util::WriteFile(textHtmlPath, partHtml);
+    const std::string& textHtmlPath = Util::GetTempFilename(".html");
+    Util::WriteFile(textHtmlPath, partHtml);
 
-      const std::string& cmd = "cat " + textHtmlPath + " | " + Util::GetHtmlToTextConvertCmd();
-      m_TextHtml = Util::RunCommand(cmd);
+    const std::string& cmd = "cat " + textHtmlPath + " | " + Util::GetHtmlToTextConvertCmd();
+    m_TextHtml = Util::RunCommand(cmd);
 
-      Util::DeleteFile(textHtmlPath);
-    }
-
-    m_HtmlParsed = true;
+    Util::DeleteFile(textHtmlPath);
   }
+
+  m_HtmlParsed = true;
 }
 
 void Body::ParseMime(mailmime* p_Mime, int p_Depth)
@@ -310,20 +325,23 @@ void Body::ParseMime(mailmime* p_Mime, int p_Depth)
 
               const std::string filename = subject + ".eml";
 
-              Part part;
-              part.m_Data = data;
-              part.m_MimeType = mimeType;
-              part.m_Filename = filename;
-              part.m_IsAttachment = true;
+              PartInfo partInfo;
+              partInfo.m_MimeType = mimeType;
+              partInfo.m_Filename = filename;
+              partInfo.m_IsAttachment = true;
+              partInfo.m_Size = data.size();
 
-              m_Parts[m_NumParts++] = part;
+              m_PartInfos[m_NumParts] = partInfo;
+              m_PartDatas[m_NumParts] = data;
+
+              m_NumParts++;
             }
             else
             {
-              Part part;
-              part.m_IsAttachment = true;
+              PartInfo partInfo;
+              partInfo.m_IsAttachment = true;
 
-              m_Parts[m_NumParts++] = part;
+              m_PartInfos[m_NumParts++] = partInfo;
             }
           }
           else
@@ -350,15 +368,15 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   mailmime_data* data = p_Mime->mm_data.mm_single;
   if (data == NULL)
   {
-    Part part;
+    PartInfo partInfo;
 
-    part.m_Charset = charset;
-    part.m_MimeType = p_MimeType;
-    part.m_Filename = Util::MimeToUtf8(filename);
-    part.m_ContentId = contentId;
-    part.m_IsAttachment = isAttachment;
+    partInfo.m_Charset = charset;
+    partInfo.m_MimeType = p_MimeType;
+    partInfo.m_Filename = Util::MimeToUtf8(filename);
+    partInfo.m_ContentId = contentId;
+    partInfo.m_IsAttachment = isAttachment;
 
-    m_Parts[m_NumParts++] = part;
+    m_PartInfos[m_NumParts++] = partInfo;
     return;
   }
 
@@ -375,23 +393,25 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
         if (rv == MAILIMF_NO_ERROR)
         {
-          Part part;
+          PartInfo partInfo;
+          std::string partData;
 
           if (parsedStr != NULL)
           {
-            part.m_Data = std::string(parsedStr, parsedLen);
+            partData = std::string(parsedStr, parsedLen);
             mmap_string_unref(parsedStr);
           }
 
-          part.m_Charset = charset;
-          part.m_MimeType = p_MimeType;
-          part.m_Filename = Util::MimeToUtf8(filename);
-          part.m_ContentId = contentId;
-          part.m_IsAttachment = isAttachment;
+          partInfo.m_Charset = charset;
+          partInfo.m_MimeType = p_MimeType;
+          partInfo.m_Filename = Util::MimeToUtf8(filename);
+          partInfo.m_ContentId = contentId;
+          partInfo.m_IsAttachment = isAttachment;
+          partInfo.m_Size = partData.size();
 
           if ((m_TextPlainIndex == -1) && (p_MimeType == "text/plain"))
           {
-            ParseMimeContentType(p_Mime->mm_content_type, part.m_IsFormatFlowed);
+            ParseMimeContentType(p_Mime->mm_content_type, partInfo.m_IsFormatFlowed);
             m_TextPlainIndex = m_NumParts;
           }
 
@@ -400,7 +420,9 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
             m_TextHtmlIndex = m_NumParts;
           }
 
-          m_Parts[m_NumParts++] = part;
+          m_PartDatas[m_NumParts] = partData;
+          m_PartInfos[m_NumParts] = partInfo;
+          ++m_NumParts;
         }
       }
       break;
@@ -481,6 +503,13 @@ void Body::RemoveInvalidHeaders()
       m_Data.erase(0, firstLinefeed + 1);
     }
   }
+}
+
+size_t Body::GetCurrentParseVersion()
+{
+  static size_t htmlToTextCmdHash = std::hash<std::string>{}(Util::GetHtmlToTextConvertCmd());
+  static size_t parseVersion = 1 + htmlToTextCmdHash; // update offset when parsing changes
+  return parseVersion;
 }
 
 std::ostream& operator<<(std::ostream& p_Stream, const Body& p_Body)

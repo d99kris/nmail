@@ -50,7 +50,7 @@ void Ui::Init()
   keypad(stdscr, TRUE);
   curs_set(0);
   timeout(0);
-  pipe(m_Pipe);
+  LOG_IF_NONZERO(pipe(m_Pipe));
 
   const std::map<std::string, std::string> defaultConfig =
   {
@@ -1561,7 +1561,7 @@ void Ui::DrawMessage()
       if (bodyIt != bodys.end())
       {
         Body& body = bodyIt->second;
-        std::map<ssize_t, Part> parts = body.GetParts();
+        std::map<ssize_t, PartInfo> parts = body.GetPartInfos();
         std::vector<std::string> attnames;
         for (auto it = parts.begin(); it != parts.end(); ++it)
         {
@@ -1587,7 +1587,7 @@ void Ui::DrawMessage()
     if (bodyIt != bodys.end())
     {
       Body& body = bodyIt->second;
-      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
+      const std::string& bodyText = GetBodyText(body);
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       m_CurrentMessageProcessFlowed = m_RespectFormatFlowed && m_Plaintext && body.IsFormatFlowed();
@@ -1835,7 +1835,7 @@ void Ui::DrawPartList()
   if (bodyIt != bodys.end())
   {
     Body& body = bodyIt->second;
-    const std::map<ssize_t, Part>& parts = body.GetParts();
+    const std::map<ssize_t, PartInfo>& parts = body.GetPartInfos();
 
     int count = parts.size();
     if (count > 0)
@@ -1850,16 +1850,16 @@ void Ui::DrawPartList()
       for (int i = idxOffs; i < idxMax; ++i)
       {
         auto it = std::next(parts.begin(), i);
-        const Part& part = it->second;
+        const PartInfo& part = it->second;
 
         if (i == m_PartListCurrentIndex)
         {
           wattron(m_MainWin, m_AttrsHighlightedText);
-          m_PartListCurrentPart = part;
+          m_PartListCurrentPartInfo = part;
         }
 
         std::string leftPad = "    ";
-        std::string sizeStr = std::to_string(part.m_Data.size()) + " bytes";
+        std::string sizeStr = std::to_string(part.m_Size) + " bytes";
         std::string sizeStrPadded = Util::TrimPadString(sizeStr, 18);
         std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 30);
         std::wstring wline = Util::ToWString(leftPad + sizeStrPadded + mimeTypePadded);
@@ -1884,7 +1884,7 @@ void Ui::DrawPartList()
 
 void Ui::AsyncUiRequest(char p_UiRequest)
 {
-  write(m_Pipe[1], &p_UiRequest, 1);
+  LOG_IF_NOT_EQUAL(write(m_Pipe[1], &p_UiRequest, 1), 1);
 }
 
 void Ui::PerformUiRequest(char p_UiRequest)
@@ -2003,7 +2003,7 @@ void Ui::Run()
       {
         len = std::min(len, 256);
         std::vector<char> buf(len);
-        read(m_Pipe[0], &buf[0], len);
+        LOG_IF_NOT_EQUAL(read(m_Pipe[0], &buf[0], len), len);
         char uiRequest = UiRequestNone;
         for (int i = 0; i < len; ++i)
         {
@@ -3331,29 +3331,29 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     std::string err;
     std::string fileName;
     bool isUnamedTextHtml = false;
-    if (!m_PartListCurrentPart.m_Filename.empty())
+    if (!m_PartListCurrentPartInfo.m_Filename.empty())
     {
-      ext = Util::GetFileExt(m_PartListCurrentPart.m_Filename);
-      fileName = m_PartListCurrentPart.m_Filename;
+      ext = Util::GetFileExt(m_PartListCurrentPartInfo.m_Filename);
+      fileName = m_PartListCurrentPartInfo.m_Filename;
       if (ext.empty())
       {
-        LOG_DEBUG("cannot determine file extension for %s", m_PartListCurrentPart.m_Filename.c_str());
+        LOG_DEBUG("cannot determine file extension for %s", m_PartListCurrentPartInfo.m_Filename.c_str());
       }
     }
     else
     {
-      ext = Util::ExtensionForMimeType(m_PartListCurrentPart.m_MimeType);
+      ext = Util::ExtensionForMimeType(m_PartListCurrentPartInfo.m_MimeType);
       fileName = std::to_string(m_PartListCurrentIndex) + ext;
-      isUnamedTextHtml = (m_PartListCurrentPart.m_MimeType == "text/html");
+      isUnamedTextHtml = (m_PartListCurrentPartInfo.m_MimeType == "text/html");
       if (ext.empty())
       {
-        LOG_DEBUG("no file extension for MIME type %s", m_PartListCurrentPart.m_MimeType.c_str());
+        LOG_DEBUG("no file extension for MIME type %s", m_PartListCurrentPartInfo.m_MimeType.c_str());
       }
     }
 
     std::string tempFilePath;
+    std::string partData;
 
-    if (m_ShowEmbeddedImages && isUnamedTextHtml)
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       const std::string& folder = m_CurrentFolderUid.first;
@@ -3363,30 +3363,38 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       if (bodyIt != bodys.end())
       {
         Body& body = bodyIt->second;
-        const std::map<ssize_t, Part>& parts = body.GetParts();
-        for (auto& part : parts)
+        const std::map<ssize_t, PartInfo>& parts = body.GetPartInfos();
+        const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
+        partData = partDatas.at(m_PartListCurrentIndex);
+
+        if (m_ShowEmbeddedImages && isUnamedTextHtml)
         {
-          if (!part.second.m_ContentId.empty())
+          for (auto& part : parts)
           {
-            const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
-            LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
-            Util::WriteFile(tempPartFilePath, part.second.m_Data);
+            if (!part.second.m_ContentId.empty())
+            {
+              const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
+              LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
+              Util::WriteFile(tempPartFilePath, partDatas.at(part.first));
+            }
           }
         }
       }
 
-      tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-      std::string partData = m_PartListCurrentPart.m_Data;
-      Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
-      Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
-      LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-      Util::WriteFile(tempFilePath, partData);
-    }
-    else
-    {
-      tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-      LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-      Util::WriteFile(tempFilePath, m_PartListCurrentPart.m_Data);
+      if (m_ShowEmbeddedImages && isUnamedTextHtml)
+      {
+        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+        Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
+        Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
+        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+        Util::WriteFile(tempFilePath, partData);
+      }
+      else
+      {
+        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+        LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
+        Util::WriteFile(tempFilePath, partData);
+      }
     }
 
     LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
@@ -3406,13 +3414,29 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeySaveFile)
   {
-    std::string filename = m_PartListCurrentPart.m_Filename;
+    std::string filename = m_PartListCurrentPartInfo.m_Filename;
     if (PromptString("Save Filename: ", "Save", filename))
     {
       if (!filename.empty())
       {
         filename = Util::ExpandPath(filename);
-        Util::WriteFile(filename, m_PartListCurrentPart.m_Data);
+
+        std::string partData;
+        {
+          std::lock_guard<std::mutex> lock(m_Mutex);
+          const std::string& folder = m_CurrentFolderUid.first;
+          const int uid = m_CurrentFolderUid.second;
+          std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+          std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+          if (bodyIt != bodys.end())
+          {
+            Body& body = bodyIt->second;
+            const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
+            partData = partDatas.at(m_PartListCurrentIndex);
+          }
+        }
+
+        Util::WriteFile(filename, partData);
         SetDialogMessage("File saved");
       }
       else
@@ -3562,7 +3586,8 @@ void Ui::SetState(Ui::State p_State)
 
         int idx = 0;
         std::string tmppath = Util::GetTempDirectory();
-        for (auto& part : body.GetParts())
+        const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
+        for (auto& part : body.GetPartInfos())
         {
           if (!part.second.m_Filename.empty())
           {
@@ -3570,7 +3595,7 @@ void Ui::SetState(Ui::State p_State)
             Util::MkDir(tmpfiledir);
             std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
-            Util::WriteFile(tmpfilepath, part.second.m_Data);
+            Util::WriteFile(tmpfilepath, partDatas.at(part.first));
             if (GetComposeStr(HeaderAtt).empty())
             {
               SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
@@ -3615,7 +3640,7 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
-      std::string bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
+      std::string bodyText = GetBodyText(body);
       if (!bodyText.empty() && bodyText[bodyText.size() - 1] == '\n')
       {
         bodyText = bodyText.substr(0, bodyText.size() - 1);
@@ -3718,7 +3743,8 @@ void Ui::SetState(Ui::State p_State)
 
       int idx = 0;
       std::string tmppath = Util::GetTempDirectory();
-      for (auto& part : body.GetParts())
+      const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
+      for (auto& part : body.GetPartInfos())
       {
         if (!part.second.m_Filename.empty())
         {
@@ -3726,7 +3752,7 @@ void Ui::SetState(Ui::State p_State)
           Util::MkDir(tmpfiledir);
           std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
-          Util::WriteFile(tmpfilepath, part.second.m_Data);
+          Util::WriteFile(tmpfilepath, partDatas.at(part.first));
           if (GetComposeStr(HeaderAtt).empty())
           {
             SetComposeStr(HeaderAtt,
@@ -3758,7 +3784,7 @@ void Ui::SetState(Ui::State p_State)
           Util::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
-      const std::string& bodyText = m_Plaintext ? body.GetTextPlain() : body.GetTextHtml();
+      const std::string& bodyText = GetBodyText(body);
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText);
       Util::StripCR(m_ComposeMessageStr);
 
@@ -6455,4 +6481,23 @@ int Ui::GetSelectedCount()
   }
 
   return selectCount;
+}
+
+std::string Ui::GetBodyText(Body& p_Body)
+{
+  if (!m_Plaintext)
+  {
+    if (p_Body.ParseHtmlIfNeeded())
+    {
+      const std::string& folder = m_CurrentFolderUid.first;
+      const int uid = m_CurrentFolderUid.second;
+
+      ImapManager::Action imapAction;
+      imapAction.m_Folder = folder;
+      imapAction.m_UpdateCache = true;
+      imapAction.m_SetBodysCache[uid] = p_Body;
+      m_ImapManager->AsyncAction(imapAction);
+    }
+  }
+  return m_Plaintext ? p_Body.GetTextPlain() : p_Body.GetTextHtml();
 }

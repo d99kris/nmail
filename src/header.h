@@ -18,23 +18,55 @@ public:
   void SetHeaderData(const std::string& p_HdrData, const std::string& p_StrData,
                      const time_t p_ServerTime);
   std::string GetData() const;
-  std::string GetDate();
-  std::string GetDateTime();
-  std::string GetDateOrTime(const std::string& p_CurrentDate);
-  time_t GetTimeStamp();
-  std::string GetFrom();
-  std::string GetShortFrom();
-  std::string GetTo();
-  std::string GetShortTo();
-  std::string GetCc();
-  std::string GetBcc();
-  std::string GetReplyTo();
-  std::string GetSubject();
-  std::string GetUniqueId();
-  std::string GetMessageId();
-  std::set<std::string> GetAddresses();
-  bool GetHasAttachments();
+
+  std::string GetDate() const;
+  std::string GetDateTime() const;
+  std::string GetDateOrTime(const std::string& p_CurrentDate) const;
+  time_t GetTimeStamp() const;
+
+  std::string GetFrom() const;
+  std::string GetShortFrom() const;
+  std::string GetTo() const;
+  std::string GetShortTo() const;
+  std::string GetCc() const;
+  std::string GetBcc() const;
+  std::string GetReplyTo() const;
+  std::string GetSubject() const;
+  std::string GetUniqueId() const;
+  std::string GetMessageId() const;
+  std::set<std::string> GetAddresses() const;
+  bool GetHasAttachments() const;
   std::string GetRawHeaderText(bool p_LocalHeaders);
+  inline bool ParseIfNeeded()
+  {
+    if (m_ParseVersion == GetCurrentParseVersion()) return false;
+
+    Parse();
+    return true;
+  }
+
+  template<class Archive>
+  void serialize(Archive& p_Archive)
+  {
+    p_Archive(m_Data,
+              m_ParseVersion,
+              m_Date,
+              m_DateTime,
+              m_Time,
+              m_TimeStamp,
+              m_From,
+              m_ShortFrom,
+              m_To,
+              m_ShortTo,
+              m_Cc,
+              m_Bcc,
+              m_ReplyTo,
+              m_Subject,
+              m_MessageId,
+              m_UniqueId,
+              m_Addresses,
+              m_HasAttachments);
+  }
 
   static std::string GetCurrentDate();
 
@@ -48,11 +80,12 @@ private:
                               const bool p_Short = false);
   std::string GroupToString(struct mailimf_group* p_Group,
                             const bool p_Short = false);
+  size_t GetCurrentParseVersion();
 
 private:
   std::string m_Data;
 
-  bool m_Parsed = false;
+  size_t m_ParseVersion = 0;
   std::string m_Date;
   std::string m_DateTime;
   std::string m_Time;

@@ -8,6 +8,7 @@
 #include "crypto.h"
 
 #include <cstring>
+#include <fstream>
 
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
@@ -18,7 +19,7 @@
 #include <openssl/ssl.h>
 
 #include "loghelp.h"
-#include "serialized.h"
+#include "util.h"
 
 void Crypto::Init()
 {
@@ -142,7 +143,7 @@ std::string Crypto::SHA256(const std::string& p_Str)
   SHA256_Init(&sha256);
   SHA256_Update(&sha256, p_Str.c_str(), p_Str.size());
   SHA256_Final(hash, &sha256);
-  return Serialized::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
+  return Util::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
 }
 
 bool Crypto::AESEncryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass)

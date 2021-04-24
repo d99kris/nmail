@@ -72,8 +72,10 @@ public:
     bool m_UploadDraft = false;
     bool m_UploadMessage = false;
     bool m_DeleteMessages = false;
+    bool m_UpdateCache = false;
     std::string m_MoveDestination;
     std::string m_Msg;
+    std::map<uint32_t, Body> m_SetBodysCache;
     uint32_t m_TryCount = 0;
   };
 

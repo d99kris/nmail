@@ -13,7 +13,7 @@ similar to alpine / pine.
 Features
 --------
 - Support for IMAP and SMTP protocols
-- Local cache using AES256-encrypted custom Maildir format
+- Local cache using sqlite (optionally AES256-encrypted)
 - Multi-threaded (email fetch and send done in background)
 - Address book auto-generated based on email messages
 - Viewing HTML emails (converted to text in terminal, or in external browser)
@@ -63,6 +63,9 @@ Command-line Options:
 
     -v, --version
         output version information and exit
+
+    -x, --export <DIR>
+        export cache to specified dir in Maildir format
 
 Configuration files:
 
@@ -225,7 +228,7 @@ Full example of a config file `~/.nmail/main.conf`:
     addressbook_encrypt=0
     auth=pass
     auth_encrypt=1
-    cache_encrypt=1
+    cache_encrypt=0
     cache_index_encrypt=0
     client_store_sent=0
     drafts=Drafts
@@ -262,7 +265,8 @@ The from-address to use. Required for sending emails.
 
 ### addressbook_encrypt
 
-Indicates whether nmail shall encrypt local address book cache or not (default
+Indicates whether nmail shall encrypt local address book cache or not. Enabling
+it has some performance impact when starting and exiting nmail (default
 disabled).
 
 ### auth
@@ -277,12 +281,14 @@ Indicates whether nmail shall encrypt local OAuth 2.0 access token store
 
 ### cache_encrypt
 
-Indicates whether nmail shall encrypt local message cache or not (default
-enabled).
+Indicates whether nmail shall encrypt local message cache or not. Enabling
+it has some performance impact when starting and exiting nmail, as well as
+when navigating to different folders (default disabled).
 
 ### cache_index_encrypt
 
-Indicates whether nmail shall encrypt local search index or not (default
+Indicates whether nmail shall encrypt local search index or not. Enabling
+it has some performance impact when starting and exiting nmail (default
 disabled).
 
 ### client_store_sent
@@ -596,16 +602,11 @@ The Telegram group is available at
 Security
 ========
 
-nmail caches data locally to improve performance. By default the cached
-data is encrypted (`cache_encrypt=1` in main.conf). Messages are encrypted
-using OpenSSL AES256-CBC with a key derived from a random salt and the
-email account password. Folder names are hashed using SHA256 (thus
-not encrypted).
-
-Using the command line tool `openssl` it is possible to decrypt locally
-cached messages / headers. Example (enter email account password at prompt):
-
-    openssl enc -d -aes-256-cbc -md sha1 -in ~/.nmail/cache/imap/B5/152.eml
+nmail caches data locally to improve performance. Cached data can be encrypted
+by setting by setting `cache_encrypt=1` in main.conf. Message databases are
+then encrypted using OpenSSL AES256-CBC with a key derived from a random salt
+and the email account password. Folder names are hashed using SHA256 (thus not
+encrypted).
 
 Storing the account password (`save_pass=1` in main.conf) is *not* secure.
 While nmail encrypts the password, the key is trivial to determine from
@@ -1038,12 +1039,10 @@ and configure `~/.nmail/auth.conf` accordingly.
 Accessing Email Cache using Other Email Clients
 ===============================================
 
-With cache encryption disabled (`cache_encrypt=0` in main.conf), nmail stores
-the locally cached messages in a format similar to Maildir. While individual
-messages (`.eml` files) can be opened using many email clients, a script is
-provided to export a Maildir copy of the entire nmail cache. Example usage:
+The nmail message cache may be exported to the Maildir format using the
+following command:
 
-    ./util/nmail_to_maildir.sh ~/.nmail ~/Maildir
+    nmail --export ~/Maildir
 
 A basic `~/.muttrc` config file for reading the exported Maildir in `mutt`:
 
@@ -1069,6 +1068,8 @@ following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) -
   Copyright 2013 Dan Lecocq - [MIT License](/ext/apathy/LICENSE)
+- [cereal](https://github.com/USCiLab/cereal) -
+  Copyright 2014 Randolph Voorhies, Shane Grant - [BSD-3 License](/ext/cereal/LICENSE)
 - [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) -
   Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -

@@ -174,7 +174,7 @@ namespace cereal
       { using type = InputArchive; }; } } } /* end namespaces */
 
     // ######################################################################
-    //! Used to convert a MAKE_HAS_XXX macro into a versioned variant
+    //! Used to convert a MAKE_HAS_xxx macro into a versioned variant
     #define CEREAL_MAKE_VERSIONED_TEST ,0
 
     // ######################################################################

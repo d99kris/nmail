@@ -14,7 +14,6 @@
 #include "config.h"
 #include "log.h"
 #include "loghelp.h"
-#include "serialized.h"
 #include "util.h"
 
 std::mutex Auth::m_Mutex;
@@ -205,9 +204,9 @@ std::string Auth::GetClientId()
   }
   else
   {
-    return Serialized::FromHex("3639393831313539393539322D6338697569646B743963663773347034"
-                               "646376726B636A747136687269346F702E617070732E676F6F676C6575"
-                               "736572636F6E74656E742E636F6D");
+    return Util::FromHex("3639393831313539393539322D6338697569646B743963663773347034"
+                         "646376726B636A747136687269346F702E617070732E676F6F676C6575"
+                         "736572636F6E74656E742E636F6D");
   }
 }
 
@@ -219,7 +218,7 @@ std::string Auth::GetClientSecret()
   }
   else
   {
-    return Serialized::FromHex("6A79664B785F67683536537377486A5952764A4C32564A77");
+    return Util::FromHex("6A79664B785F67683536537377486A5952764A4C32564A77");
   }
 }
 

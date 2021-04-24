@@ -25,25 +25,31 @@
 #define LOG_ERROR(...) Log::Error(__FILENAME__, __LINE__, __VA_ARGS__)
 
 #define LOG_DUMP(STR) Log::Dump(STR)
-#define LOG_TRACE_FUNC(ARGS) do { if (!Log::GetTraceEnabled())break; \
+#define LOG_TRACE_FUNC(ARGS) do { if (!Log::GetTraceEnabled()) break; \
                                   const std::string& str = ARGS; \
                                   Log::Trace(__FILENAME__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
 } while(0)
-#define LOG_DEBUG_FUNC(ARGS) do { if (!Log::GetDebugEnabled())break; \
+#define LOG_DEBUG_FUNC(ARGS) do { if (!Log::GetDebugEnabled()) break; \
                                   const std::string& str = ARGS; \
                                   Log::Debug(__FILENAME__, __LINE__, "%s(%s)", __FUNCTION__, str.c_str()); \
 } while(0)
-#define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled())break; \
+#define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) break; \
                                      const std::string& str = LogHelp::PrettyPrint(VAR); \
                                      LOG_DEBUG(MSG " %s", str.c_str()); \
 } while (0)
 
+// logs error on failure, nothing on success
 #define LOG_IF_NONZERO(EXPR) LogHelp::LogIfNotEqual(EXPR, 0, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_BADFD(EXPR) LogHelp::LogIfEqual(EXPR, -1, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_NULL(EXPR) LogHelp::LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
+#define LOG_IF_NOT_EQUAL(EXPR, EXPECT) LogHelp::LogIfNotEqual(EXPR, EXPECT, #EXPR, __FILENAME__, __LINE__)
+
+// logs error on failure, logs debug on success
 #define LOG_IF_IMAP_ERR(EXPR) LogHelp::LogImap(EXPR, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_IMAP_LOGOUT_ERR(EXPR) LogHelp::LogImapLogout(EXPR, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_SMTP_ERR(EXPR) LogHelp::LogSmtp(EXPR, #EXPR, __FILENAME__, __LINE__)
+
+#define LOG_DURATION() LogDuration logDuration(__FUNCTION__, __FILENAME__, __LINE__)
 
 class LogHelp
 {
@@ -104,10 +110,6 @@ public:
     {
       Log::Error(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
     }
-    else if (Log::GetDebugEnabled())
-    {
-      Log::Debug(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
-    }
 
     return p_Rv;
   }
@@ -119,10 +121,6 @@ public:
     if (p_Rv == p_Expect)
     {
       Log::Error(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
-    }
-    else if (Log::GetDebugEnabled())
-    {
-      Log::Debug(p_File, p_Line, "%s = 0x%x", p_Expr, p_Rv);
     }
 
     return p_Rv;
@@ -160,3 +158,34 @@ std::string STR(const Args&... p_Args)
   LogHelp::PrettyPrintArgsHelper(sstream, p_Args...);
   return sstream.str();
 }
+
+class LogDuration
+{
+public:
+  LogDuration(const char* p_Func, const char* p_File, int p_Line)
+    : m_Func(p_Func)
+    , m_File(p_File)
+    , m_Line(p_Line)
+  {
+    m_Start = std::chrono::high_resolution_clock::now();
+  }
+
+  ~LogDuration()
+  {
+    if (Log::GetTraceEnabled())
+    {
+      const std::chrono::high_resolution_clock::time_point stop =
+        std::chrono::high_resolution_clock::now();
+      const std::chrono::duration<double> duration =
+        std::chrono::duration_cast<std::chrono::duration<double>>(stop - m_Start);
+      long long durationUs = static_cast<long long>(round(duration.count() * 1000000.0));
+      Log::Trace(m_File, m_Line, "%s() duration %lld us", m_Func, durationUs);
+    }
+  }
+
+private:
+  std::chrono::high_resolution_clock::time_point m_Start;
+  const char* m_Func = nullptr;
+  const char* m_File = nullptr;
+  int m_Line = 0;
+};

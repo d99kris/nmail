@@ -23,9 +23,9 @@
 class ImapIndex
 {
 public:
-  explicit ImapIndex(const bool p_CacheIndexEncrypt, const bool p_CacheEncrypt,
+  explicit ImapIndex(const bool p_CacheIndexEncrypt,
                      const std::string& p_Pass,
-                     std::set<std::string>& p_Folders,
+                     std::shared_ptr<ImapCache> p_ImapCache,
                      const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~ImapIndex();
 
@@ -59,9 +59,9 @@ private:
 
 private:
   std::unique_ptr<SearchEngine> m_SearchEngine;
-  std::unique_ptr<ImapCache> m_ImapCache;
   bool m_CacheIndexEncrypt = false;
   std::string m_Pass;
+  std::shared_ptr<ImapCache> m_ImapCache;
   std::set<std::string> m_AddedFolders;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   bool m_Running = false;
@@ -72,4 +72,5 @@ private:
   std::map<std::string, std::set<uint32_t>> m_AddQueue;
   std::map<std::string, std::set<uint32_t>> m_DeleteQueue;
   size_t m_QueueSize = 0;
+  bool m_Dirty = false;
 };
