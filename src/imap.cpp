@@ -204,8 +204,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
     mailimap_list_result_free(list);
 
     m_ImapCache->SetFolders(p_Folders);
-
-    m_ImapIndex->EnqueueSyncFolders(p_Folders);
+    m_ImapIndex->SetFolders(p_Folders);
 
     return true;
   }
@@ -233,6 +232,7 @@ bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<ui
   if (SelectedFolderIsEmpty())
   {
     m_ImapCache->SetUids(p_Folder, p_Uids);
+    m_ImapIndex->SetUids(p_Folder, p_Uids);
     return true;
   }
 
@@ -263,8 +263,7 @@ bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<ui
     mailimap_fetch_list_free(fetch_result);
 
     m_ImapCache->SetUids(p_Folder, p_Uids);
-
-    m_ImapIndex->EnqueueDeleteMessages(p_Folder, p_Uids);
+    m_ImapIndex->SetUids(p_Folder, p_Uids);
   }
 
   mailimap_fetch_type_free(fetch_type);
@@ -403,8 +402,6 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
         }
 
         cacheHeaders[uid] = header;
-
-        m_ImapIndex->EnqueueAddMessage(p_Folder, uid);
       }
 
       mailimap_fetch_list_free(fetch_result);
@@ -626,14 +623,13 @@ bool Imap::GetBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uid
         }
 
         cacheBodys[uid] = body;
-
-        m_ImapIndex->EnqueueAddMessage(p_Folder, uid);
       }
 
       mailimap_fetch_list_free(fetch_result);
     }
 
     m_ImapCache->SetBodys(p_Folder, cacheBodys);
+    m_ImapIndex->SetBodys(p_Folder, MapKey(cacheBodys));
 
     mailimap_fetch_type_free(fetch_type);
   }
@@ -744,10 +740,8 @@ bool Imap::MoveMessages(const std::string& p_Folder, const std::set<uint32_t>& p
 
   if (rv == MAILIMAP_NO_ERROR)
   {
-    m_ImapCache->DeleteUids(p_Folder, p_Uids);
-    m_ImapCache->DeleteFlags(p_Folder, p_Uids);
-    m_ImapCache->DeleteHeaders(p_Folder, p_Uids);
-    m_ImapCache->DeleteBodys(p_Folder, p_Uids);
+    m_ImapCache->DeleteMessages(p_Folder, p_Uids);
+    m_ImapIndex->DeleteMessages(p_Folder, p_Uids);
   }
 
   return (rv == MAILIMAP_NO_ERROR);
@@ -765,10 +759,8 @@ bool Imap::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>&
 
   if (rv)
   {
-    m_ImapCache->DeleteUids(p_Folder, p_Uids);
-    m_ImapCache->DeleteFlags(p_Folder, p_Uids);
-    m_ImapCache->DeleteHeaders(p_Folder, p_Uids);
-    m_ImapCache->DeleteBodys(p_Folder, p_Uids);
+    m_ImapCache->DeleteMessages(p_Folder, p_Uids);
+    m_ImapIndex->DeleteMessages(p_Folder, p_Uids);
   }
 
   return rv;
@@ -873,6 +865,7 @@ void Imap::IndexNotifyIdle(bool p_IsIdle)
 bool Imap::SetBodysCache(const std::string& p_Folder, const std::map<uint32_t, Body>& p_Bodys)
 {
   m_ImapCache->SetBodys(p_Folder, p_Bodys);
+  m_ImapIndex->SetBodys(p_Folder, MapKey(p_Bodys));
   return true;
 }
 
@@ -893,8 +886,11 @@ bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
       if (!cachedUidValid)
       {
         LOG_DEBUG("delete and add folder %s", p_Folder.c_str());
-        m_ImapIndex->EnqueueDeleteFolder(p_Folder);
-        m_ImapIndex->EnqueueAddFolder(p_Folder);
+        std::set<std::string> folders = m_ImapCache->GetFolders();
+        std::set<std::string> tmpFolders = folders;
+        tmpFolders.erase(p_Folder);
+        m_ImapIndex->SetFolders(tmpFolders);
+        m_ImapIndex->SetFolders(folders);
       }
 
       LOG_DEBUG("folder %s = %d", p_Folder.c_str(),

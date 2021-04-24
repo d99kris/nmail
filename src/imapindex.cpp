@@ -32,12 +32,6 @@ ImapIndex::ImapIndex(const bool p_CacheIndexEncrypt,
 {
   LOG_DEBUG_FUNC(STR(p_CacheIndexEncrypt));
 
-  const std::set<std::string>& folders = m_ImapCache->GetFolders();
-  for (const auto& folder : folders)
-  {
-    EnqueueAddFolder(folder);
-  }
-
   LOG_DEBUG("start thread");
   m_Running = true;
   m_Thread = std::thread(&ImapIndex::Process, this);
@@ -63,7 +57,6 @@ ImapIndex::~ImapIndex()
 
 void ImapIndex::NotifyIdle(bool p_IsIdle)
 {
-  // @todo: set idle when in offline mode to enable indexing
   std::unique_lock<std::mutex> lock(m_ProcessMutex);
   m_IsIdle = p_IsIdle;
   if (m_IsIdle)
@@ -72,68 +65,60 @@ void ImapIndex::NotifyIdle(bool p_IsIdle)
   }
 }
 
-void ImapIndex::EnqueueSyncFolders(std::set<std::string>& p_Folders)
+void ImapIndex::SetFolders(const std::set<std::string>& p_Folders)
 {
   LOG_DEBUG_FUNC(STR(p_Folders));
 
-  std::set<std::string> deleteFolders = m_AddedFolders - p_Folders;
-  std::set<std::string> addFolders = p_Folders - m_AddedFolders;
-
-  for (const auto& deleteFolder : deleteFolders)
-  {
-    EnqueueDeleteFolder(deleteFolder);
-  }
-
-  for (const auto& addFolder : addFolders)
-  {
-    EnqueueAddFolder(addFolder);
-  }
-}
-
-void ImapIndex::EnqueueAddFolder(const std::string& p_Folder)
-{
-  LOG_DEBUG_FUNC(STR(p_Folder));
-
+  Notify notify;
+  notify.m_SetFolders = p_Folders;
   std::unique_lock<std::mutex> lock(m_ProcessMutex);
-  if (m_AddedFolders.find(p_Folder) == m_AddedFolders.end())
-  {
-    m_AddedFolders.insert(p_Folder);
-    m_AddQueue[p_Folder].insert(0); // use uid 0 to indicate all uids
-    m_ProcessCondVar.notify_one();
-  }
-
-  m_QueueSize = m_AddQueue.size() + m_DeleteQueue.size();
-}
-
-void ImapIndex::EnqueueDeleteFolder(const std::string& p_Folder)
-{
-  LOG_DEBUG_FUNC(STR(p_Folder));
-
-  std::unique_lock<std::mutex> lock(m_ProcessMutex);
-  m_DeleteQueue[p_Folder].clear();
-  m_DeleteQueue[p_Folder].insert(0); // use uid 0 to indicate keep no uids
-  m_AddedFolders.erase(p_Folder);
-  m_AddQueue.erase(p_Folder);
-  m_ProcessCondVar.notify_one();
-
-  m_QueueSize = m_AddQueue.size() + m_DeleteQueue.size();
-}
-
-void ImapIndex::EnqueueAddMessage(const std::string& p_Folder, uint32_t p_Uid)
-{
-  LOG_TRACE_FUNC(STR(p_Folder, p_Uid));
-
-  std::unique_lock<std::mutex> lock(m_ProcessMutex);
-  m_AddQueue[p_Folder].insert(p_Uid);
+  m_Queue.push(notify);
+  m_QueueSize = m_Queue.size();
   m_ProcessCondVar.notify_one();
 }
 
-void ImapIndex::EnqueueDeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_KeepUids)
+void ImapIndex::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
-  LOG_DEBUG_FUNC(STR(p_Folder, p_KeepUids));
+  LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
   std::unique_lock<std::mutex> lock(m_ProcessMutex);
-  m_DeleteQueue[p_Folder] = p_KeepUids;
+  if (!m_SyncDone) return; // to avoid double work at first idle (sync)
+
+  Notify notify;
+  notify.m_Folder = p_Folder;
+  notify.m_SetUids = p_Uids;
+  m_Queue.push(notify);
+  m_QueueSize = m_Queue.size();
+  m_ProcessCondVar.notify_one();
+}
+
+void ImapIndex::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  std::unique_lock<std::mutex> lock(m_ProcessMutex);
+  if (!m_SyncDone) return; // to avoid double work at first idle (sync)
+
+  Notify notify;
+  notify.m_Folder = p_Folder;
+  notify.m_DeleteUids = p_Uids;
+  m_Queue.push(notify);
+  m_QueueSize = m_Queue.size();
+  m_ProcessCondVar.notify_one();
+}
+
+void ImapIndex::SetBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  std::unique_lock<std::mutex> lock(m_ProcessMutex);
+  if (!m_SyncDone) return; // to avoid double work at first idle (sync)
+
+  Notify notify;
+  notify.m_Folder = p_Folder;
+  notify.m_SetBodys = p_Uids;
+  m_Queue.push(notify);
+  m_QueueSize = m_Queue.size();
   m_ProcessCondVar.notify_one();
 }
 
@@ -165,6 +150,8 @@ void ImapIndex::Process()
 {
   LOG_DEBUG("start process");
 
+  AddressBook::Init(Util::GetAddressBookEncrypt(), m_Pass);
+
   InitCacheIndexDir();
   if (m_CacheIndexEncrypt)
   {
@@ -180,108 +167,55 @@ void ImapIndex::Process()
   LOG_DEBUG("entering loop");
   while (m_Running)
   {
-    std::string addFolder;
-    int32_t addUid = 0;
-    std::string deleteFolder;
-    std::set<uint32_t> keepUids;
-    bool performCommit = false;
+    std::unique_lock<std::mutex> lock(m_ProcessMutex);
 
+    while (m_Running && !(m_IsIdle && (!m_Queue.empty() || !m_SyncDone)))
     {
-      std::unique_lock<std::mutex> lock(m_ProcessMutex);
-      while (true)
+      ClearStatus(Status::FlagIndexing);
+      m_ProcessCondVar.wait(lock);
+    }
+
+    if (!m_Running)
+    {
+      lock.unlock();
+      break;
+    }
+
+    if (m_IsIdle && !m_SyncDone)
+    {
+      m_SyncDone = true;
+      lock.unlock();
+      HandleSyncEnqueue();
+      continue;
+    }
+
+    if (m_IsIdle && !m_Queue.empty())
+    {
+      Notify notify = m_Queue.front();
+      m_Queue.pop();
+      const bool isQueueEmpty = m_Queue.empty();
+      lock.unlock();
+
+      uint32_t progress = 0;
+      if (m_QueueSize > 1)
       {
-        if (!m_Running) break;
-
-        if (m_IsIdle && (!m_AddQueue.empty() || !m_DeleteQueue.empty())) break;
-
-        ClearStatus(Status::FlagIndexing);
-
-        m_ProcessCondVar.wait(lock);
-      }
-
-      if (!m_Running)
-      {
-        break;
-      }
-
-      const std::set<std::string>& addFolders = MapKey<std::string>(m_AddQueue);
-      const std::set<std::string>& deleteFolders = MapKey<std::string>(m_DeleteQueue);
-
-      if (!deleteFolders.empty()) // delete
-      {
-        deleteFolder = *deleteFolders.begin();
-        keepUids = m_DeleteQueue[deleteFolder];
-        m_DeleteQueue.erase(deleteFolder);
-        performCommit = true;
-      }
-      else if (!addFolders.empty()) // add
-      {
-        addFolder = *addFolders.begin();
-        auto firstIt = m_AddQueue[addFolder].begin();
-        addUid = *firstIt;
-        m_AddQueue[addFolder].erase(firstIt);
-        if (m_AddQueue[addFolder].empty())
+        int32_t completed = (int)m_QueueSize - (int)m_Queue.size();
+        if (completed > 0)
         {
-          m_AddQueue.erase(addFolder);
-          performCommit = true;
+          progress = (completed * 100) / m_QueueSize;
         }
       }
 
-    }
+      SetStatus(Status::FlagIndexing, progress);
 
-    uint32_t progress = 0;
-    if (m_QueueSize > 1)
-    {
-      int32_t completed = (int)m_QueueSize - ((int)m_AddQueue.size() + (int)m_DeleteQueue.size());
-      if (completed > 0)
-      {
-        progress = (completed * 100) / m_QueueSize;
-      }
+      HandleNotify(notify);
+      HandleCommit(isQueueEmpty);
     }
-
-    SetStatus(Status::FlagIndexing, progress);
-    if (!deleteFolder.empty())
-    {
-      if ((keepUids.size() == 1) && (*keepUids.begin() == 0))
-      {
-        DeleteFolder(deleteFolder);
-      }
-      else
-      {
-        DeleteMessages(deleteFolder, keepUids);
-      }
-    }
-    else if (!addFolder.empty())
-    {
-      if (addUid == 0)
-      {
-        AddFolder(addFolder);
-      }
-      else
-      {
-        AddMessage(addFolder, addUid);
-      }
-    }
-    else
-    {
-      LOG_WARNING("unexpected state");
-    }
-
-    // commit
-    static std::chrono::time_point<std::chrono::system_clock> lastCommit =
-      std::chrono::system_clock::now();
-    std::chrono::duration<double> secsSinceLastCommit =
-      std::chrono::system_clock::now() - lastCommit;
-    if (performCommit || (secsSinceLastCommit.count() >= 5.0f))
-    {
-      LOG_DEBUG("commit");
-      m_SearchEngine->Commit();
-      lastCommit = std::chrono::system_clock::now();
-    }
-
   }
 
   LOG_DEBUG("exiting loop");
+
+  HandleCommit(true);
 
   m_SearchEngine.reset();
   if (m_CacheIndexEncrypt && m_Dirty)
@@ -293,41 +227,139 @@ void ImapIndex::Process()
     m_Dirty = false;
   }
 
+  AddressBook::Cleanup();
+
   LOG_DEBUG("exit process");
 }
 
-void ImapIndex::AddFolder(const std::string& p_Folder)
+void ImapIndex::HandleNotify(const Notify& p_Notify)
 {
-  LOG_DEBUG_FUNC(STR(p_Folder));
-
-  const std::set<uint32_t>& uids = m_ImapCache->GetUids(p_Folder);
-  const std::map<uint32_t, Body>& uidBodys = m_ImapCache->GetBodys(p_Folder, uids, true);
-  for (const auto& uidBody : uidBodys)
+  if (!p_Notify.m_SetFolders.empty())
   {
-    const uint32_t uid = uidBody.first;
-    const std::string& docId = GetDocId(p_Folder, uid);
-
-    if (!m_SearchEngine->Exists(docId))
+    // Delete folders not present
+    const std::vector<std::string>& docIds = m_SearchEngine->List();
+    for (const auto& docId : docIds)
     {
-      EnqueueAddMessage(p_Folder, uid);
+      const std::string& folder = GetFolderFromDocId(docId);
+      if (!p_Notify.m_SetFolders.count(folder))
+      {
+        // not found in the set of folders to keep, so remove from index
+        LOG_DEBUG("remove %s", docId.c_str());
+        m_SearchEngine->Remove(docId);
+        m_Dirty = true;
+      }
     }
   }
-}
-
-void ImapIndex::DeleteFolder(const std::string& p_Folder)
-{
-  LOG_DEBUG_FUNC(STR(p_Folder));
-
-  const std::vector<std::string>& docIds = m_SearchEngine->List();
-  for (const auto& docId : docIds)
+  else if (!p_Notify.m_SetUids.empty())
   {
-    const std::string& folder = GetFolderFromDocId(docId);
-    if (folder == p_Folder)
+    // Delete uids not present
+    const std::vector<std::string>& docIds = m_SearchEngine->List();
+    for (const auto& docId : docIds)
     {
+      const std::string& folder = GetFolderFromDocId(docId);
+      const uint32_t uid = GetUidFromDocId(docId);
+
+      if (folder == p_Notify.m_Folder)
+      {
+        if (!p_Notify.m_SetUids.count(uid))
+        {
+          // not found in the set of uids to keep, so remove from index
+          LOG_DEBUG("remove %s", docId.c_str());
+          m_SearchEngine->Remove(docId);
+          m_Dirty = true;
+        }
+      }
+    }
+  }
+  else if (!p_Notify.m_DeleteUids.empty())
+  {
+    for (const auto& uid : p_Notify.m_DeleteUids)
+    {
+      // delete specified uid from index
+      const std::string& docId = GetDocId(p_Notify.m_Folder, uid);
+      LOG_DEBUG("remove %s", docId.c_str());
       m_SearchEngine->Remove(docId);
       m_Dirty = true;
     }
   }
+  else if (!p_Notify.m_SetBodys.empty())
+  {
+    for (const auto& uid : p_Notify.m_SetBodys)
+    {
+      // add specified uid to index
+      AddMessage(p_Notify.m_Folder, uid);
+    }
+  }
+}
+
+void ImapIndex::HandleCommit(bool p_ForceCommit)
+{
+  // commit
+  static std::chrono::time_point<std::chrono::system_clock> lastCommit =
+    std::chrono::system_clock::now();
+  std::chrono::duration<double> secsSinceLastCommit =
+    std::chrono::system_clock::now() - lastCommit;
+  if (p_ForceCommit || (secsSinceLastCommit.count() >= 5.0f))
+  {
+    LOG_DEBUG("commit");
+    m_SearchEngine->Commit();
+    lastCommit = std::chrono::system_clock::now();
+  }
+}
+
+void ImapIndex::HandleSyncEnqueue()
+{
+  LOG_DEBUG("sync enqueue start");
+  std::map<std::string, std::set<uint32_t>> docFolderUids;
+  const std::vector<std::string>& docIds = m_SearchEngine->List();
+  for (const auto& docId : docIds)
+  {
+    const std::string& folder = GetFolderFromDocId(docId);
+    const uint32_t uid = GetUidFromDocId(docId);
+    docFolderUids[folder].insert(uid);
+  }
+
+  const std::set<std::string>& folders = m_ImapCache->GetFolders();
+  for (const auto& folder : folders)
+  {
+    const std::set<uint32_t>& uids = m_ImapCache->GetUids(folder);
+    const std::set<uint32_t>& bodyUids = MapKey(m_ImapCache->GetBodys(folder, uids, true /* p_Prefetch */));
+    const std::set<uint32_t>& docUids = docFolderUids[folder];
+    std::set<uint32_t> uidsToAdd = bodyUids - docUids; // present in cache, but not in index
+    std::set<uint32_t> uidsToDel = docUids - bodyUids; // present in index, but not in cache
+
+    std::unique_lock<std::mutex> lock(m_ProcessMutex);
+    if (!uidsToAdd.empty())
+    {
+      const int maxAdd = 10;
+      std::set<uint32_t> subsetUids;
+      for (auto it = uidsToAdd.begin(); it != uidsToAdd.end(); ++it)
+      {
+        subsetUids.insert(*it);
+        if ((subsetUids.size() == maxAdd) ||
+            (std::next(it) == uidsToAdd.end()))
+        {
+          Notify notifyAdd;
+          notifyAdd.m_Folder = folder;
+          notifyAdd.m_SetBodys = subsetUids;
+          m_Queue.push(notifyAdd);
+          subsetUids.clear();
+        }
+      }
+    }
+
+    if (!uidsToDel.empty())
+    {
+      Notify notifyDel;
+      notifyDel.m_Folder = folder;
+      notifyDel.m_DeleteUids = uidsToDel;
+      m_Queue.push(notifyDel);
+    }
+
+    m_QueueSize = m_Queue.size();
+  }
+
+  LOG_DEBUG("sync enqueue end");
 }
 
 void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
@@ -352,33 +384,12 @@ void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
       const std::string& from = header.GetFrom();
       const std::string& to = header.GetTo() + " " + header.GetCc() + " " + header.GetBcc();
 
+      LOG_DEBUG("add %s", docId.c_str());
       m_SearchEngine->Index(docId, timeStamp, bodyText, subject, from, to);
       m_Dirty = true;
 
       // @todo: decouple addressbook population from cache index
       AddressBook::Add(header.GetUniqueId(), header.GetAddresses());
-    }
-  }
-}
-
-void ImapIndex::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_KeepUids)
-{
-  LOG_DEBUG_FUNC(STR(p_Folder, p_KeepUids));
-
-  const std::vector<std::string>& docIds = m_SearchEngine->List();
-  for (const auto& docId : docIds)
-  {
-    const std::string& folder = GetFolderFromDocId(docId);
-    const uint32_t uid = GetUidFromDocId(docId);
-
-    if (folder == p_Folder)
-    {
-      if (p_KeepUids.find(uid) == p_KeepUids.end())
-      {
-        // not found in the set of uids to keep, so remove from index
-        m_SearchEngine->Remove(docId);
-        m_Dirty = true;
-      }
     }
   }
 }

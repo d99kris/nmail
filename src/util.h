@@ -265,6 +265,8 @@ public:
   static std::string FromHex(const std::string& p_String);
   static void SetFilePickerCmd(const std::string& p_FilePickerCmd);
   static std::string GetFilePickerCmd();
+  static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
+  static bool GetAddressBookEncrypt();
 
 private:
   static std::string m_HtmlToTextConvertCmd;
@@ -280,4 +282,5 @@ private:
   static int m_NewStdErr;
   static bool m_UseServerTimestamps;
   static std::string m_FilePickerCmd;
+  static bool m_AddressBookEncrypt;
 };

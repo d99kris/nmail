@@ -84,7 +84,7 @@ void ImapCache::SetFolders(const std::set<std::string>& p_Folders)
   for (const auto& deletedFolder : deletedFolders)
   {
     // @todo: consider closing db and deleting file-system files instead
-    DeleteFolder(deletedFolder);
+    ClearFolder(deletedFolder);
   }
 }
 
@@ -347,7 +347,7 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_UidValidity)
 
   if (!rv)
   {
-    DeleteFolder(p_Folder);
+    ClearFolder(p_Folder);
   }
 
   return rv;
@@ -370,8 +370,8 @@ void ImapCache::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t
   *db << "UPDATE flags SET flag = ? WHERE uid IN (" + uidlist + ");" << (uint32_t)p_Value;
 }
 
-// delete specified folder
-void ImapCache::DeleteFolder(const std::string& p_Folder)
+// clear specified folder
+void ImapCache::ClearFolder(const std::string& p_Folder)
 {
   LOG_DEBUG_FUNC(STR(p_Folder));
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
@@ -390,6 +390,15 @@ void ImapCache::DeleteFolder(const std::string& p_Folder)
 
     *db << "DELETE FROM bodys;";
   }
+}
+
+// delete specified messages
+void ImapCache::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  DeleteUids(p_Folder, p_Uids);
+  DeleteFlags(p_Folder, p_Uids);
+  DeleteHeaders(p_Folder, p_Uids);
+  DeleteBodys(p_Folder, p_Uids);
 }
 
 // delete specified uids

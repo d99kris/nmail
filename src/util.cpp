@@ -58,6 +58,7 @@ int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
 std::string Util::m_FilePickerCmd;
+bool Util::m_AddressBookEncrypt = false;
 
 bool Util::Exists(const std::string& p_Path)
 {
@@ -1949,4 +1950,14 @@ void Util::SetFilePickerCmd(const std::string& p_FilePickerCmd)
 std::string Util::GetFilePickerCmd()
 {
   return m_FilePickerCmd;
+}
+
+void Util::SetAddressBookEncrypt(bool p_AddressBookEncrypt)
+{
+  m_AddressBookEncrypt = p_AddressBookEncrypt;
+}
+
+bool Util::GetAddressBookEncrypt()
+{
+  return m_AddressBookEncrypt;
 }
