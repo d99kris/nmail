@@ -123,6 +123,7 @@ public:
 private:
   bool ProcessIdle();
   int GetIdleDurationSec();
+  void ProcessIdleOffline();
   void Process();
   bool AuthRefreshNeeded();
   bool PerformAuthRefresh();
