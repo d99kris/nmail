@@ -321,6 +321,8 @@ int main(int argc, char* argv[])
 
   Util::InitStdErrRedirect(logPath);
 
+  Util::SetAddressBookEncrypt(addressBookEncrypt);
+
   Auth::Init(auth, authEncrypt, pass, isSetup);
 
   Ui ui(inbox, address, prefetchLevel, prefetchAllHeaders);
@@ -344,7 +346,6 @@ int main(int argc, char* argv[])
                                   std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
 
-  AddressBook::Init(addressBookEncrypt, pass);
   OfflineQueue::Init(queueEncrypt, pass);
 
   ui.SetImapManager(imapManager);
@@ -374,7 +375,6 @@ int main(int argc, char* argv[])
   secretConfig.reset();
 
   OfflineQueue::Cleanup();
-  AddressBook::Cleanup();
 
   Util::CleanupTempDir();
 

@@ -58,11 +58,9 @@ public:
   bool CheckUidValidity(const std::string& p_Folder, int p_UidValidity);
   void SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, const bool p_Value);
 
-  void DeleteFolder(const std::string& p_Folder);
-  void DeleteUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
-  void DeleteFlags(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
-  void DeleteHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
-  void DeleteBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+  void ClearFolder(const std::string& p_Folder);
+
+  void DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
 
   bool Export(const std::string& p_Path);
 
@@ -87,6 +85,11 @@ private:
   void CloseDbs(DbType p_DbType);
   std::string ReadCacheFile(const std::string& p_Path);
   void WriteCacheFile(const std::string& p_Path, const std::string& p_Str);
+
+  void DeleteUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+  void DeleteFlags(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+  void DeleteHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+  void DeleteBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
 
 private:
   bool m_CacheEncrypt;

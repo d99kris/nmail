@@ -80,11 +80,14 @@ esac
 if [[ "${DEPS}" == "1" ]]; then
   OS="$(uname)"
   if [ "${OS}" == "Linux" ]; then
-    DISTRO="$(lsb_release -i | awk -F':\t' '{print $2}')"
-    if [[ "${DISTRO}" == "Ubuntu" ]]; then
+    unset NAME
+    eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
+    if [[ "${NAME}" == "Ubuntu" ]]; then
       sudo apt update && sudo apt -y install libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev || exiterr "deps failed (linux), exiting."
+    elif [[ "${NAME}" == "Fedora" ]]; then
+      sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel clang || exiterr "deps failed (linux), exiting."
     else
-      exiterr "deps failed (unsupported linux distro ${DISTRO}), exiting."
+      exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
     brew install openssl ncurses libetpan xapian sqlite libmagic || exiterr "deps failed (mac), exiting."

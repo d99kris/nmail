@@ -103,22 +103,34 @@ tested on:
 Build / Install
 ===============
 
-Linux / Ubuntu
---------------
+Linux
+-----
 
-**Dependencies**
+**Dependencies Ubuntu**
 
 Required:
 
-    sudo apt install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev
+    sudo apt -y install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev
+
+Optional (to view/compose HTML emails):
+
+    sudo apt -y install pandoc
+
+**Dependencies Fedora**
+
+Required:
+
+    sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel clang
+
+Optional (to view/compose HTML emails):
+
+    sudo yum -y install pandoc
+
+**Dependencies Common Linux**
 
 Optional (for OAuth 2.0 support):
 
     pip3 install -U requests
-
-Optional (to view/compose HTML emails):
-
-    sudo apt install pandoc
 
 **Source**
 
