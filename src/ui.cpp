@@ -889,6 +889,10 @@ void Ui::DrawFolderList()
       }
     }
   }
+  else
+  {
+    m_FolderListCurrentFolder = "";
+  }
 
   wrefresh(m_MainWin);
 }
@@ -2059,38 +2063,41 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
   {
-    if (m_State == StateGotoFolder)
+    if (m_FolderListCurrentFolder != "")
     {
-      m_CurrentFolder = m_FolderListCurrentFolder;
-      m_ImapManager->SetCurrentFolder(m_CurrentFolder);
-      SetState(StateViewMessageList);
-      UpdateIndexFromUid();
-    }
-    else if (m_State == StateMoveToFolder)
-    {
-      const std::string& folder = m_CurrentFolderUid.first;
-      if (m_FolderListCurrentFolder != folder)
+      if (m_State == StateGotoFolder)
       {
-        MoveSelectedMessages(m_FolderListCurrentFolder);
-        SetLastStateOrMessageList();
+        m_CurrentFolder = m_FolderListCurrentFolder;
+        m_ImapManager->SetCurrentFolder(m_CurrentFolder);
+        SetState(StateViewMessageList);
+        UpdateIndexFromUid();
       }
-      else
+      else if (m_State == StateMoveToFolder)
       {
-        SetDialogMessage("Move to same folder ignored");
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        SetState(m_LastState);
+        const std::string& folder = m_CurrentFolderUid.first;
+        if (m_FolderListCurrentFolder != folder)
+        {
+          MoveSelectedMessages(m_FolderListCurrentFolder);
+          SetLastStateOrMessageList();
+        }
+        else
+        {
+          SetDialogMessage("Move to same folder ignored");
+          UpdateUidFromIndex(true /* p_UserTriggered */);
+          SetState(m_LastState);
+        }
+
+        if (m_PersistFolderFilter)
+        {
+          m_PersistedFolderListFilterPos = m_FolderListFilterPos;
+          m_PersistedFolderListFilterStr = m_FolderListFilterStr;
+          m_PersistedFolderListCurrentFolder = m_FolderListCurrentFolder;
+          m_PersistedFolderListCurrentIndex = m_FolderListCurrentIndex;
+        }
       }
 
-      if (m_PersistFolderFilter)
-      {
-        m_PersistedFolderListFilterPos = m_FolderListFilterPos;
-        m_PersistedFolderListFilterStr = m_FolderListFilterStr;
-        m_PersistedFolderListCurrentFolder = m_FolderListCurrentFolder;
-        m_PersistedFolderListCurrentIndex = m_FolderListCurrentIndex;
-      }
+      ClearSelection();
     }
-
-    ClearSelection();
   }
   else if (p_Key == KEY_LEFT)
   {
