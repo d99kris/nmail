@@ -726,6 +726,7 @@ file (platform-dependent defaults are left empty below):
     key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t
     key_toggle_unread=u
+    localized_subject_prefixes=
     markdown_html_compose=0
     new_msg_bell=1
     persist_file_selection_dir=1
@@ -820,6 +821,24 @@ The trailing `$` shall be ignored, and to comply with `nmail` config required
 input format, the printable `b` needs to be converted to octal format. A quick
 lookup using `man ascii` shows `b` is 142 in octal format. The resulting key
 code to use in the config file is `\033\142`.
+
+### localized_subject_prefixes
+
+Email subjects are normalized (stripped of `re:`, `fwd:`) when sorting emails
+by subject, and when replying to, or forwarding an email. By default only the
+English prefixes `re` and `fwd?` (regex for `fwd` and `fw`) are removed. This
+parameter allows extending the removal to other localized prefixes. Example
+configuration for a Swedish user:
+
+    localized_subject_prefixes=sv,vb
+
+For a French user:
+
+    localized_subject_prefixes=ref,tr
+
+For a German user:
+
+    localized_subject_prefixes=aw,wg
 
 ### markdown_html_compose
 

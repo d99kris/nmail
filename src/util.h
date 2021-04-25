@@ -258,7 +258,8 @@ public:
   static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);
   static void BitInvertString(std::string& p_String);
   static void NormalizeName(std::string& p_String);
-  static void NormalizeSubject(std::string& p_String);
+  static void NormalizeSubject(std::string& p_String, bool p_ToLower);
+  static void SetLocalizedSubjectPrefixes(const std::string& p_Prefixes);
   static std::string ZeroPad(uint32_t p_Num, int32_t p_Len);
   static bool GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line);
   static std::string ToHex(const std::string& p_String);
@@ -283,4 +284,5 @@ private:
   static bool m_UseServerTimestamps;
   static std::string m_FilePickerCmd;
   static bool m_AddressBookEncrypt;
+  static std::string m_LocalizedSubjectPrefixes;
 };

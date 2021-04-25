@@ -149,6 +149,7 @@ void Ui::Init()
     { "full_header_include_local", "0" },
     { "tab_size", "8" },
     { "search_show_folder", "0" },
+    { "localized_subject_prefixes", "" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -309,6 +310,7 @@ void Ui::Init()
   m_KeySelectItem = Util::GetKeyCode(m_Config.Get("key_select_item"));
   m_KeySelectAll = Util::GetKeyCode(m_Config.Get("key_select_all"));
   m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
+  Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
 
   try
   {
@@ -5620,7 +5622,7 @@ void Ui::SearchMessageBasedOnCurrent(bool p_Subject)
     current = Util::Trim(current);
     if (p_Subject)
     {
-      Util::NormalizeSubject(current);
+      Util::NormalizeSubject(current, true /*p_ToLower*/);
     }
     else
     {
@@ -6098,7 +6100,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       if (hit != headers.end())
       {
         std::string subj = hit->second.GetSubject();
-        Util::NormalizeSubject(subj);
+        Util::NormalizeSubject(subj, true /*p_ToLower*/);
         key = (subj == m_FilterCustomStr) ? dateUidKey : "";
       }
       else
@@ -6136,13 +6138,13 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
 
     case SortSubjDesc:
       priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
-      Util::NormalizeSubject(priKey);
+      Util::NormalizeSubject(priKey, true /*p_ToLower*/);
       key = priKey + " " + dateUidKey;
       break;
 
     case SortSubjAsc:
       priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
-      Util::NormalizeSubject(priKey);
+      Util::NormalizeSubject(priKey, true /*p_ToLower*/);
       key = priKey + " " + dateUidKey;
       Util::BitInvertString(key);
       break;
@@ -6321,7 +6323,7 @@ void Ui::ToggleFilter(SortFilter p_SortFilter)
 
       case SortCurrSubjOnly:
         m_FilterCustomStr = hit->second.GetSubject();
-        Util::NormalizeSubject(m_FilterCustomStr);
+        Util::NormalizeSubject(m_FilterCustomStr, true /*p_ToLower*/);
         break;
 
       default:

@@ -59,6 +59,7 @@ int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
 std::string Util::m_FilePickerCmd;
 bool Util::m_AddressBookEncrypt = false;
+std::string Util::m_LocalizedSubjectPrefixes;
 
 bool Util::Exists(const std::string& p_Path)
 {
@@ -586,30 +587,16 @@ std::string Util::AddIndent(const std::string& p_Str, const std::string& p_Inden
 
 std::string Util::MakeReplySubject(const std::string& p_Str)
 {
-  std::set<std::string> replyPrefixes = { "re:", "sv:" };
-  std::string oldPrefix = ToLower(p_Str.substr(0, 3));
-  if (replyPrefixes.find(oldPrefix) == replyPrefixes.end())
-  {
-    return "Re: " + p_Str;
-  }
-  return p_Str;
+  std::string subject = p_Str;
+  NormalizeSubject(subject, false /*p_ToLower*/);
+  return ("Re: " + subject);
 }
 
 std::string Util::MakeForwardSubject(const std::string& p_Str)
 {
-  std::set<std::string> replyPrefixes = { "fw", "fwd", "vb" };
-  std::vector<std::string> oldSubjectSplit = Split(p_Str, ':');
-  bool hasFwdPrefix = false;
-  if (oldSubjectSplit.size() > 1)
-  {
-    std::string oldPrefix = ToLower(oldSubjectSplit.at(0));
-    if (replyPrefixes.find(oldPrefix) != replyPrefixes.end())
-    {
-      hasFwdPrefix = true;
-    }
-  }
-
-  return hasFwdPrefix ? p_Str : ("Fwd: " + p_Str);
+  std::string subject = p_Str;
+  NormalizeSubject(subject, false /*p_ToLower*/);
+  return ("Fwd: " + subject);
 }
 
 std::string Util::GetSenderHostname()
@@ -1883,11 +1870,27 @@ void Util::NormalizeName(std::string& p_String)
   std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
 }
 
-void Util::NormalizeSubject(std::string& p_String)
+void Util::NormalizeSubject(std::string& p_String, bool p_ToLower)
 {
-  std::regex re("^((re|fwd?) *(:) *)+", std::regex_constants::icase);
+  static const std::regex re = [&]()
+  {
+    std::vector<std::string> prefixes = { "re", "fwd?" };
+    std::vector<std::string> customPrefixes = Split(m_LocalizedSubjectPrefixes, ',');
+    prefixes.insert(prefixes.end(), customPrefixes.begin(), customPrefixes.end());
+    std::string prefixesJoined = Join(prefixes, "|");
+    return std::regex("^((" + prefixesJoined + ") *(:) *)+", std::regex_constants::icase);
+  }();
+
   p_String = std::regex_replace(p_String, re, "");
-  std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
+  if (p_ToLower)
+  {
+    std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
+  }
+}
+
+void Util::SetLocalizedSubjectPrefixes(const std::string& p_Prefixes)
+{
+  m_LocalizedSubjectPrefixes = p_Prefixes;
 }
 
 std::string Util::ZeroPad(uint32_t p_Num, int32_t p_Len)
