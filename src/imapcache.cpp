@@ -4,6 +4,8 @@
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
+//
+// @todo: consider moving heavy set operations to worker thread
 
 #include "imapcache.h"
 
@@ -110,16 +112,50 @@ std::set<uint32_t> ImapCache::GetUids(const std::string& p_Folder)
 void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DURATION();
-  if (p_Uids.empty()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-  std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
-  std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-  *db << "begin;";
-  *db << "DELETE FROM uids;";
-  *db << "INSERT INTO uids (uids) VALUES (?);" << ToVector(p_Uids);
-  *db << "commit;";
+  std::string delUidList;
+
+  {
+    std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
+    std::shared_ptr<sqlite::database> db = dbCon->m_Database;
+
+    std::set<uint32_t> oldUids;
+    *db << "SELECT uids.uids FROM uids LIMIT 1" >>
+      [&](const std::vector<uint32_t>& data)
+      {
+        oldUids = ToSet(data);
+      };
+
+    if (p_Uids != oldUids)
+    {
+      *db << "begin;";
+      *db << "DELETE FROM uids;";
+      *db << "INSERT INTO uids (uids) VALUES (?);" << ToVector(p_Uids);
+
+      std::set<uint32_t> delUids = oldUids - p_Uids;
+      if (!delUids.empty())
+      {
+        std::stringstream sstream;
+        std::copy(delUids.begin(), delUids.end(), std::ostream_iterator<uint32_t>(sstream, ","));
+        delUidList = sstream.str();
+        delUidList.pop_back(); // assumes non-empty input set
+
+        *db << "DELETE FROM flags WHERE uid IN (" + delUidList + ");";
+        *db << "DELETE FROM headers WHERE uid IN (" + delUidList + ");";
+      }
+      *db << "commit;";
+    }
+  }
+
+  if (!delUidList.empty())
+  {
+    std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
+    std::shared_ptr<sqlite::database> db = dbCon->m_Database;
+
+    *db << "DELETE FROM bodys WHERE uid IN (" + delUidList + ");";
+  }
 }
 
 // get specified headers

@@ -3901,14 +3901,17 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
         !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetHeadersFailed))
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
-      m_Headers[p_Response.m_Folder].insert(p_Response.m_Headers.begin(), p_Response.m_Headers.end());
+
+      const std::map<uint32_t, Header>& headers = p_Response.m_Headers;
+
+      m_Headers[p_Response.m_Folder].insert(headers.begin(), headers.end());
       if (m_PrefetchAllHeaders)
       {
-        UpdateDisplayUids(p_Response.m_Folder, std::set<uint32_t>(), MapKey(p_Response.m_Headers));
+        UpdateDisplayUids(p_Response.m_Folder, std::set<uint32_t>(), MapKey(headers));
       }
       uiRequest |= UiRequestDrawAll;
       updateIndexFromUid = true;
-      LOG_DEBUG_VAR("new headers =", MapKey(p_Response.m_Headers));
+      LOG_DEBUG_VAR("new headers =", MapKey(headers));
     }
 
     if (!p_Request.m_GetFlags.empty() &&
