@@ -332,7 +332,7 @@ file picker is used. By specifying this paramater an external command may be
 used instead. The command must output selected file(s) separated by linebreaks,
 on stdout. One may use `nnn` by setting the parameter like this:
 
-```file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n'; rm ${TMP})```
+```file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n' | uniq; rm ${TMP})```
 
 ### folders_exclude
 
