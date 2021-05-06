@@ -83,7 +83,7 @@ if [[ "${DEPS}" == "1" ]]; then
     unset NAME
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
     if [[ "${NAME}" == "Ubuntu" ]]; then
-      sudo apt update && sudo apt -y install libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev || exiterr "deps failed (linux), exiting."
+      sudo apt update && sudo apt -y install build-essential cmake libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev || exiterr "deps failed (linux), exiting."
     elif [[ "${NAME}" == "Fedora" ]]; then
       sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel clang || exiterr "deps failed (linux), exiting."
     else
