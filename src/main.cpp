@@ -171,11 +171,7 @@ int main(int argc, char* argv[])
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
 
-  const std::map<std::string, std::string> defaultSecretConfig =
-  {
-  };
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
-  std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
   const bool isSetup = !setup.empty();
   if (isSetup)
@@ -188,7 +184,6 @@ int main(int argc, char* argv[])
     }
 
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
-    secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
     if (setup == "gmail")
     {
@@ -210,6 +205,10 @@ int main(int argc, char* argv[])
 
     mainConfig->Save();
   }
+
+  // Read secret config
+  const std::map<std::string, std::string> defaultSecretConfig;
+  std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
   // Read main config
   const std::string& name = mainConfig->Get("name");
