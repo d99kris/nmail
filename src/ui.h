@@ -27,11 +27,12 @@ public:
     StateGotoFolder = 2,
     StateMoveToFolder = 3,
     StateComposeMessage = 4,
-    StateReplyMessage = 5,
-    StateForwardMessage = 6,
-    StateAddressList = 7,
-    StateFileList = 8,
-    StateViewPartList = 9,
+    StateReplyAllMessage = 5,
+    StateReplySenderMessage = 6,
+    StateForwardMessage = 7,
+    StateAddressList = 8,
+    StateFileList = 9,
+    StateViewPartList = 10,
   };
 
   enum UiRequest
@@ -324,7 +325,8 @@ private:
 
   int m_KeyPrevMsg = 0;
   int m_KeyNextMsg = 0;
-  int m_KeyReply = 0;
+  int m_KeyReplyAll = 0;
+  int m_KeyReplySender = 0;
   int m_KeyForward = 0;
   int m_KeyDelete = 0;
   int m_KeyCompose = 0;

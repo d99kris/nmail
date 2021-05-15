@@ -705,7 +705,8 @@ file (platform-dependent defaults are left empty below):
     key_prev_page=KEY_PPAGE
     key_quit=q
     key_refresh=l
-    key_reply=r
+    key_reply_all=r
+    key_reply_sender=R
     key_rich_header=KEY_CTRLR
     key_save_file=s
     key_search=/

@@ -75,7 +75,8 @@ void Ui::Init()
     { "markdown_html_compose", "0" },
     { "key_prev_msg", "p" },
     { "key_next_msg", "n" },
-    { "key_reply", "r" },
+    { "key_reply_all", "r" },
+    { "key_reply_sender", "R" },
     { "key_forward", "f" },
     { "key_delete", "d" },
     { "key_compose", "c" },
@@ -167,7 +168,8 @@ void Ui::Init()
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_KeyPrevMsg = Util::GetKeyCode(m_Config.Get("key_prev_msg"));
   m_KeyNextMsg = Util::GetKeyCode(m_Config.Get("key_next_msg"));
-  m_KeyReply = Util::GetKeyCode(m_Config.Get("key_reply"));
+  m_KeyReplyAll = Util::GetKeyCode(m_Config.Get("key_reply_all"));
+  m_KeyReplySender = Util::GetKeyCode(m_Config.Get("key_reply_sender"));
   m_KeyForward = Util::GetKeyCode(m_Config.Get("key_forward"));
   m_KeyDelete = Util::GetKeyCode(m_Config.Get("key_delete"));
   m_KeyCompose = Util::GetKeyCode(m_Config.Get("key_compose"));
@@ -425,7 +427,8 @@ void Ui::DrawAll()
       break;
 
     case StateComposeMessage:
-    case StateReplyMessage:
+    case StateReplyAllMessage:
+    case StateReplySenderMessage:
     case StateForwardMessage:
       DrawTop();
       DrawHelp();
@@ -583,7 +586,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyBack), "Folders",
       GetKeyDisplay(m_KeyPrevMsg), "PrevMsg",
-      GetKeyDisplay(m_KeyReply), "Reply",
+      GetKeyDisplay(m_KeyReplyAll), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
       GetKeyDisplay(m_KeyRefresh), "Refresh",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
@@ -665,7 +668,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyBack), "MsgList",
       GetKeyDisplay(m_KeyPrevMsg), "PrevMsg",
-      GetKeyDisplay(m_KeyReply), "Reply",
+      GetKeyDisplay(m_KeyReplyAll), "Reply",
       GetKeyDisplay(m_KeyDelete), "Delete",
       GetKeyDisplay(m_KeyToggleTextHtml), "TgTxtHtml",
       GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
@@ -770,7 +773,8 @@ void Ui::DrawHelp()
         break;
 
       case StateComposeMessage:
-      case StateReplyMessage:
+      case StateReplyAllMessage:
+      case StateReplySenderMessage:
       case StateForwardMessage:
         DrawHelpText(composeMessageHelp);
         break;
@@ -1982,7 +1986,8 @@ void Ui::Run()
           break;
 
         case StateComposeMessage:
-        case StateReplyMessage:
+        case StateReplyAllMessage:
+        case StateReplySenderMessage:
         case StateForwardMessage:
           ComposeMessageKeyHandler(key);
           break;
@@ -2422,7 +2427,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     SetState(StateComposeMessage);
   }
-  else if (p_Key == m_KeyReply)
+  else if ((p_Key == m_KeyReplyAll) || (p_Key == m_KeyReplySender))
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
     const int uid = m_CurrentFolderUid.second;
@@ -2430,7 +2435,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     {
       if (CurrentMessageBodyHeaderAvailable())
       {
-        SetState(StateReplyMessage);
+        SetState((p_Key == m_KeyReplyAll) ? StateReplyAllMessage : StateReplySenderMessage);
       }
       else
       {
@@ -2774,11 +2779,11 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     SetState(StateComposeMessage);
   }
-  else if (p_Key == m_KeyReply)
+  else if ((p_Key == m_KeyReplyAll) || (p_Key == m_KeyReplySender))
   {
     if (CurrentMessageBodyHeaderAvailable())
     {
-      SetState(StateReplyMessage);
+      SetState((p_Key == m_KeyReplyAll) ? StateReplyAllMessage : StateReplySenderMessage);
     }
     else
     {
@@ -3591,7 +3596,7 @@ void Ui::SetState(Ui::State p_State)
     }
 
   }
-  else if (m_State == StateReplyMessage)
+  else if ((m_State == StateReplyAllMessage) || (m_State == StateReplySenderMessage))
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
@@ -3687,14 +3692,18 @@ void Ui::SetState(Ui::State p_State)
         if (folder == m_SentFolder)
         {
           SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
-          SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
         }
         else
         {
           SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+        }
+
+        if (m_State == StateReplyAllMessage)
+        {
           SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
         }
       }
+
       SetComposeStr(HeaderBcc, L"");
       SetComposeStr(HeaderAtt, L"");
       SetComposeStr(HeaderSub, Util::ToWString(Util::MakeReplySubject(header.GetSubject())));
@@ -4538,7 +4547,8 @@ std::string Ui::GetStateStr()
       return "Move To Folder";
     case StateComposeMessage:
       return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateReplyMessage:
+    case StateReplyAllMessage:
+    case StateReplySenderMessage:
       return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateForwardMessage:
       return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
