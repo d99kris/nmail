@@ -5097,28 +5097,22 @@ void Ui::ComposeMessagePrevLine()
 
 void Ui::ComposeMessageNextLine()
 {
-  if ((m_ComposeMessageWrapLine + 1) <= (int)m_ComposeMessageLines.size())
+  if (m_ComposeMessagePos < (int)m_ComposeMessageStr.size())
   {
-    int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
+    int stepsForward = (int)m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
       m_ComposeMessageWrapPos + 1;
-    if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size() >
-        m_ComposeMessageWrapPos)
+    if ((m_ComposeMessageWrapLine + 1) < (int)m_ComposeMessageLines.size())
     {
-      stepsForward += m_ComposeMessageWrapPos;
+      if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size() >
+          m_ComposeMessageWrapPos)
+      {
+        stepsForward += m_ComposeMessageWrapPos;
+      }
+      else
+      {
+        stepsForward += (int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
+      }
     }
-    else
-    {
-      stepsForward += m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
-    }
-
-    stepsForward = std::min(stepsForward, m_MaxComposeLineLength);
-    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
-                                      (int)m_ComposeMessageStr.size());
-  }
-  else if ((int)m_ComposeMessageLines.size() > 0)
-  {
-    int stepsForward = m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
-      m_ComposeMessageWrapPos;
 
     stepsForward = std::min(stepsForward, m_MaxComposeLineLength);
     m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
