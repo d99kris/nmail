@@ -507,7 +507,8 @@ void Body::RemoveInvalidHeaders()
 
 size_t Body::GetCurrentParseVersion()
 {
-  static size_t htmlToTextCmdHash = std::hash<std::string>{}(Util::GetHtmlToTextConvertCmd());
+  static std::hash<std::string> hashStr;
+  static size_t htmlToTextCmdHash = hashStr(Util::GetHtmlToTextConvertCmd());
   static size_t parseVersion = 1 + htmlToTextCmdHash; // update offset when parsing changes
   return parseVersion;
 }

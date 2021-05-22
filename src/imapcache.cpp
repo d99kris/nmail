@@ -99,11 +99,12 @@ std::set<uint32_t> ImapCache::GetUids(const std::string& p_Folder)
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
   std::set<uint32_t> uids;
-  *db << "SELECT uids.uids FROM uids LIMIT 1" >>
-    [&](const std::vector<uint32_t>& data)
-    {
-      uids = ToSet(data);
-    };
+  auto lambda = [&](const std::vector<uint32_t>& data)
+  {
+    uids = ToSet(data);
+  };
+
+  *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
 
   return uids;
 }
@@ -122,11 +123,12 @@ void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p
     std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
     std::set<uint32_t> oldUids;
-    *db << "SELECT uids.uids FROM uids LIMIT 1" >>
-      [&](const std::vector<uint32_t>& data)
-      {
-        oldUids = ToSet(data);
-      };
+    auto lambda = [&](const std::vector<uint32_t>& data)
+    {
+      oldUids = ToSet(data);
+    };
+
+    *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
 
     if (p_Uids != oldUids)
     {
@@ -180,25 +182,27 @@ std::map<uint32_t, Header> ImapCache::GetHeaders(const std::string& p_Folder, co
 
     if (!p_Prefetch)
     {
-      *db << "SELECT uid, data FROM headers WHERE uid IN (" + uidlist + ");" >>
-        [&](const uint32_t& uid, const std::vector<char>& data)
+      auto lambda = [&](const uint32_t& uid, const std::vector<char>& data)
+      {
+        Header header;
+        header = Serialization::FromBytes<Header>(data);
+        if (header.ParseIfNeeded())
         {
-          Header header;
-          header = Serialization::FromBytes<Header>(data);
-          if (header.ParseIfNeeded())
-          {
-            updateCacheHeaders[uid] = header;
-          }
-          headers.insert(std::make_pair(uid, header));
-        };
+          updateCacheHeaders[uid] = header;
+        }
+        headers.insert(std::make_pair(uid, header));
+      };
+
+      *db << "SELECT uid, data FROM headers WHERE uid IN (" + uidlist + ");" >> lambda;
     }
     else
     {
-      *db << "SELECT uid FROM headers WHERE uid IN (" + uidlist + ");" >>
-        [&](const uint32_t& uid)
-        {
-          headers.insert(std::make_pair(uid, Header()));
-        };
+      auto lambda = [&](const uint32_t& uid)
+      {
+        headers.insert(std::make_pair(uid, Header()));
+      };
+
+      *db << "SELECT uid FROM headers WHERE uid IN (" + uidlist + ");" >> lambda;
     }
   }
 
@@ -245,11 +249,12 @@ std::map<uint32_t, uint32_t> ImapCache::GetFlags(const std::string& p_Folder, co
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  *db << "SELECT uid, flag FROM flags WHERE uid IN (" + uidlist + ");" >>
-    [&](const uint32_t& uid, const uint32_t& flag)
-    {
-      flags.insert(std::make_pair(uid, flag));
-    };
+  auto lambda = [&](const uint32_t& uid, const uint32_t& flag)
+  {
+    flags.insert(std::make_pair(uid, flag));
+  };
+
+  *db << "SELECT uid, flag FROM flags WHERE uid IN (" + uidlist + ");" >> lambda;
 
   return flags;
 }
@@ -292,25 +297,27 @@ std::map<uint32_t, Body> ImapCache::GetBodys(const std::string& p_Folder, const 
 
     if (!p_Prefetch)
     {
-      *db << "SELECT uid, data FROM bodys WHERE uid IN (" + uidlist + ");" >>
-        [&](const uint32_t& uid, const std::vector<char>& data)
+      auto lambda = [&](const uint32_t& uid, const std::vector<char>& data)
+      {
+        Body body;
+        body = Serialization::FromBytes<Body>(data);
+        if (body.ParseIfNeeded())
         {
-          Body body;
-          body = Serialization::FromBytes<Body>(data);
-          if (body.ParseIfNeeded())
-          {
-            updateCacheBodys[uid] = body;
-          }
-          bodys.insert(std::make_pair(uid, body));
-        };
+          updateCacheBodys[uid] = body;
+        }
+        bodys.insert(std::make_pair(uid, body));
+      };
+
+      *db << "SELECT uid, data FROM bodys WHERE uid IN (" + uidlist + ");" >> lambda;
     }
     else
     {
-      *db << "SELECT uid FROM bodys WHERE uid IN (" + uidlist + ");" >>
-        [&](const uint32_t& uid)
-        {
-          bodys.insert(std::make_pair(uid, Body()));
-        };
+      auto lambda = [&](const uint32_t& uid)
+      {
+        bodys.insert(std::make_pair(uid, Body()));
+      };
+
+      *db << "SELECT uid FROM bodys WHERE uid IN (" + uidlist + ");" >> lambda;
     }
   }
 
@@ -336,7 +343,7 @@ void ImapCache::SetBodys(const std::string& p_Folder, const std::map<uint32_t, B
   for (const auto& body : p_Bodys)
   {
     *db << "INSERT OR REPLACE INTO bodys (uid, data) VALUES (?, ?);" << body.first <<
-    Serialization::ToBytes(body.second);
+      Serialization::ToBytes(body.second);
   }
   *db << "commit;";
 }
@@ -354,14 +361,15 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_UidValidity)
       std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, false /* p_Writable */);
       std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-      *db << "SELECT uidvalidity.uidvalidity FROM uidvalidity LIMIT 1" >>
-        [&](const std::vector<int32_t>& vecdata)
+      auto lambda = [&](const std::vector<int32_t>& vecdata)
+      {
+        if (vecdata.size() == 1)
         {
-          if (vecdata.size() == 1)
-          {
-            storedUidValidity = vecdata.at(0);
-          }
-        };
+          storedUidValidity = vecdata.at(0);
+        }
+      };
+
+      *db << "SELECT uidvalidity.uidvalidity FROM uidvalidity LIMIT 1" >> lambda;
     }
 
     if (p_UidValidity != storedUidValidity)
@@ -446,11 +454,12 @@ void ImapCache::DeleteUids(const std::string& p_Folder, const std::set<uint32_t>
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
   std::set<uint32_t> uids;
-  *db << "SELECT uids.uids FROM uids LIMIT 1" >>
-    [&](const std::vector<uint32_t>& data)
-    {
-      uids = ToSet(data);
-    };
+  auto lambda = [&](const std::vector<uint32_t>& data)
+  {
+    uids = ToSet(data);
+  };
+
+  *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
 
   for (auto& uid : p_Uids)
   {
