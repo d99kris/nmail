@@ -1319,7 +1319,7 @@ void Ui::DrawMessageListSearch()
   std::map<std::string, std::set<uint32_t>> fetchBodySecUids;
 
   {
-    std::lock_guard<std::mutex> lock(m_SearchMutex);
+    std::lock_guard<std::mutex> searchLock(m_SearchMutex);
     std::vector<Header>& headers = m_MessageListSearchResultHeaders;
     int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
                               std::max(0, (int)headers.size() - (int)m_MainWinHeight));
@@ -1334,16 +1334,22 @@ void Ui::DrawMessageListSearch()
       const std::string& folder = m_MessageListSearchResultFolderUids.at(i).first;
       const int uid = m_MessageListSearchResultFolderUids.at(i).second;
 
-      std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
-      std::set<uint32_t>& requestedFlags = m_RequestedFlags[folder];
-      if ((flags.find(uid) == flags.end()) &&
-          (requestedFlags.find(uid) == requestedFlags.end()))
+      bool isUnread = false;
       {
-        fetchFlagUids[folder].insert(uid);
-        requestedFlags.insert(uid);
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
+        std::set<uint32_t>& requestedFlags = m_RequestedFlags[folder];
+        if ((flags.find(uid) == flags.end()) &&
+            (requestedFlags.find(uid) == requestedFlags.end()))
+        {
+          fetchFlagUids[folder].insert(uid);
+          requestedFlags.insert(uid);
+        }
+
+        isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
       }
 
-      bool isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
       static const std::wstring wUnreadIndicator = Util::ToWString(m_UnreadIndicator);
       static const int unreadIndicatorWidth = Util::WStringWidth(wUnreadIndicator);
       std::string unreadFlag = isUnread ? std::string(m_UnreadIndicator)
@@ -1413,6 +1419,8 @@ void Ui::DrawMessageListSearch()
       std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
       if (i == m_MessageListCurrentIndex[m_CurrentFolder])
       {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
         if ((bodys.find(uid) == bodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
@@ -1437,6 +1445,8 @@ void Ui::DrawMessageListSearch()
       }
       else if (abs(i - m_MessageListCurrentIndex[m_CurrentFolder]) == 1)
       {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
         if ((bodys.find(uid) == bodys.end()) &&
             (requestedBodys.find(uid) == requestedBodys.end()))
         {
