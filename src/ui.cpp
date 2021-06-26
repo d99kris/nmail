@@ -1166,7 +1166,8 @@ void Ui::DrawMessageList()
       }
 
       std::wstring wheader = Util::ToWString(header);
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
+      wheader = wheader.substr(0, m_ScreenWidth - 1) + L" ";
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), m_ScreenWidth);
 
       if (isSelected)
       {
@@ -1403,7 +1404,8 @@ void Ui::DrawMessageListSearch()
       }
 
       std::wstring wheader = Util::ToWString(header);
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), wheader.size());
+      wheader = wheader.substr(0, m_ScreenWidth - 1) + L" ";
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), m_ScreenWidth);
 
       if (isSelected)
       {
