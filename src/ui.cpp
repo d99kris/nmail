@@ -1165,9 +1165,8 @@ void Ui::DrawMessageList()
         wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
-      std::wstring wheader = Util::ToWString(header);
-      wheader = wheader.substr(0, m_ScreenWidth - 1) + L" ";
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), m_ScreenWidth);
+      std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), std::min((int)wheader.size(), m_ScreenWidth));
 
       if (isSelected)
       {
@@ -1403,9 +1402,8 @@ void Ui::DrawMessageListSearch()
         wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
-      std::wstring wheader = Util::ToWString(header);
-      wheader = wheader.substr(0, m_ScreenWidth - 1) + L" ";
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), m_ScreenWidth);
+      std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), std::min((int)wheader.size(), m_ScreenWidth));
 
       if (isSelected)
       {
