@@ -630,36 +630,12 @@ void Util::SetSenderHostname(const std::string& p_SenderHostname)
 
 std::string Util::ToString(const std::wstring& p_WStr)
 {
-  size_t len = std::wcstombs(nullptr, p_WStr.c_str(), 0);
-  if (len != static_cast<std::size_t>(-1))
-  {
-    std::vector<char> cstr(len + 1);
-    std::wcstombs(&cstr[0], p_WStr.c_str(), len);
-    std::string str(&cstr[0], len);
-    return str;
-  }
-  else
-  {
-    std::string str = std::string(p_WStr.begin(), p_WStr.end());
-    return str;
-  }
+  return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(p_WStr);
 }
 
 std::wstring Util::ToWString(const std::string& p_Str)
 {
-  size_t len = mbstowcs(nullptr, p_Str.c_str(), 0);
-  if (len != static_cast<std::size_t>(-1))
-  {
-    std::vector<wchar_t> wcstr(len + 1);
-    std::mbstowcs(&wcstr[0], p_Str.c_str(), len);
-    std::wstring wstr(&wcstr[0], len);
-    return wstr;
-  }
-  else
-  {
-    std::wstring wstr = std::wstring(p_Str.begin(), p_Str.end());
-    return wstr;
-  }
+  return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.from_bytes(p_Str);
 }
 
 std::string Util::TrimPadString(const std::string& p_Str, int p_Len)
