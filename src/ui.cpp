@@ -4630,7 +4630,7 @@ bool Ui::ComposedMessageIsValid(bool p_ForSend)
     return false;
   }
 
-  std::vector<std::string> atts = Util::StrToPaths(Util::ToString(GetComposeStr(HeaderAtt)));
+  std::vector<std::string> atts = Util::SplitPaths(Util::ToString(GetComposeStr(HeaderAtt)));
   for (auto& att : atts)
   {
     if (!Util::IsReadableFile(att))
@@ -5397,7 +5397,10 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
   }
 
   const std::string& viewer = Util::GetPartsViewerCmd();
-  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+
+  std::string escapedPath = p_Path;
+  Util::ReplaceString(escapedPath, "\"", "\\\"");
+  const std::string& cmd = viewer + " \"" + escapedPath + "\"";
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
   int rv = system(cmd.c_str());
   if (rv == 0)
@@ -6602,17 +6605,18 @@ void Ui::AddAttachmentPath(const std::string& p_Path)
   std::string filepaths;
   const std::string& oldFilepaths = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
 
+  const std::string newPath = Util::EscapePath(p_Path);
   if (oldFilepaths.empty())
   {
-    filepaths = p_Path;
+    filepaths = newPath;
   }
   else if (oldFilepaths[oldFilepaths.size() - 1] != ',')
   {
-    filepaths = ", " + p_Path;
+    filepaths = ", " + newPath;
   }
   else
   {
-    filepaths = " " + p_Path;
+    filepaths = " " + newPath;
   }
 
   m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldFilepaths + filepaths);

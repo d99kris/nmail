@@ -122,6 +122,10 @@ std::string Util::BaseName(const std::string& p_Path)
 
 std::string Util::ExpandPath(const std::string& p_Path)
 {
+  if (p_Path.empty()) return p_Path;
+
+  if ((p_Path.at(0) != '~') && ((p_Path.at(0) != '$'))) return p_Path;
+
   wordexp_t exp;
   std::string rv;
   if ((wordexp(p_Path.c_str(), &exp, WRDE_NOCMD) == 0) && (exp.we_wordc > 0))
@@ -141,11 +145,10 @@ std::string Util::ExpandPath(const std::string& p_Path)
   return rv;
 }
 
-std::vector<std::string> Util::StrToPaths(const std::string& p_Str)
+std::vector<std::string> Util::SplitPaths(const std::string& p_Str)
 {
-  std::vector<std::string> paths = Util::Trim(Util::Split(p_Str));
-
   std::vector<std::string> expPaths;
+  std::vector<std::string> paths = SplitQuoted(p_Str);
   for (auto& path : paths)
   {
     expPaths.push_back(ExpandPath(path));
@@ -731,37 +734,34 @@ std::vector<std::string> Util::Split(const std::string& p_Str, char p_Sep)
 
 std::vector<std::string> Util::SplitQuoted(const std::string& p_Str)
 {
-  std::vector<std::string> words;
-  size_t quoteCnt = 0;
-  std::string segment;
-  std::stringstream ss(p_Str);
-
-  while (std::getline(ss, segment, '\"'))
+  std::vector<std::string> vec;
+  if (!p_Str.empty())
   {
-    ++quoteCnt;
-    if (quoteCnt % 2 == 0)
+    std::stringstream ss(p_Str);
+    while (ss >> std::ws)
     {
-      segment = Trim(segment);
-      if (!segment.empty())
+      std::string str;
+      if (ss.peek() == '"')
       {
-        words.push_back(segment);
+        ss >> std::quoted(str);
+        std::string extra;
+        std::getline(ss, extra, ',');
+        str += extra;
       }
-    }
-    else
-    {
-      std::stringstream segmentStream(segment);
-      while (std::getline(segmentStream, segment, ','))
+      else
       {
-        segment = Trim(segment);
-        if (!segment.empty())
-        {
-          words.push_back(segment);
-        }
+        std::getline(ss, str, ',');
+      }
+
+      str = Trim(str);
+      if (!str.empty())
+      {
+        vec.push_back(str);
       }
     }
   }
 
-  return words;
+  return vec;
 }
 
 std::string Util::Trim(const std::string& p_Str)
@@ -1970,4 +1970,16 @@ void Util::SetAddressBookEncrypt(bool p_AddressBookEncrypt)
 bool Util::GetAddressBookEncrypt()
 {
   return m_AddressBookEncrypt;
+}
+
+std::string Util::EscapePath(const std::string& p_Str)
+{
+  std::string text = p_Str;
+  ReplaceString(text, "\"", "\\\"");
+  if ((text.find(",") != std::string::npos) || (text.find("\"") != std::string::npos))
+  {
+    text = "\"" + text + "\"";
+  }
+
+  return text;
 }

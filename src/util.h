@@ -121,7 +121,7 @@ public:
   static void WriteWFile(const std::string& p_Path, const std::wstring& p_WStr);
   static std::string BaseName(const std::string& p_Path);
   static std::string ExpandPath(const std::string& p_Path);
-  static std::vector<std::string> StrToPaths(const std::string& p_Str);
+  static std::vector<std::string> SplitPaths(const std::string& p_Str);
   static std::string RemoveFileExt(const std::string& p_Path);
   static std::string GetFileExt(const std::string& p_Path);
   static std::string DirName(const std::string& p_Path);
@@ -269,6 +269,7 @@ public:
   static std::string GetFilePickerCmd();
   static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
   static bool GetAddressBookEncrypt();
+  static std::string EscapePath(const std::string& p_Str);
 
 private:
   static std::string m_HtmlToTextConvertCmd;
