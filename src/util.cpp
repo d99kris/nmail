@@ -148,7 +148,7 @@ std::string Util::ExpandPath(const std::string& p_Path)
 std::vector<std::string> Util::SplitPaths(const std::string& p_Str)
 {
   std::vector<std::string> expPaths;
-  std::vector<std::string> paths = SplitQuoted(p_Str);
+  std::vector<std::string> paths = SplitQuoted(p_Str, true);
   for (auto& path : paths)
   {
     expPaths.push_back(ExpandPath(path));
@@ -732,7 +732,7 @@ std::vector<std::string> Util::Split(const std::string& p_Str, char p_Sep)
   return vec;
 }
 
-std::vector<std::string> Util::SplitQuoted(const std::string& p_Str)
+std::vector<std::string> Util::SplitQuoted(const std::string& p_Str, bool p_Unquote)
 {
   std::vector<std::string> vec;
   if (!p_Str.empty())
@@ -743,7 +743,14 @@ std::vector<std::string> Util::SplitQuoted(const std::string& p_Str)
       std::string str;
       if (ss.peek() == '"')
       {
-        ss >> std::quoted(str);
+        if (p_Unquote)
+        {
+          ss >> std::quoted(str);
+        }
+        else
+        {
+          ss >> str;
+        }
         std::string extra;
         std::getline(ss, extra, ',');
         str += extra;
@@ -1978,6 +1985,34 @@ std::string Util::EscapePath(const std::string& p_Str)
   ReplaceString(text, "\"", "\\\"");
   if ((text.find(",") != std::string::npos) || (text.find("\"") != std::string::npos))
   {
+    text = "\"" + text + "\"";
+  }
+
+  return text;
+}
+
+std::vector<std::string> Util::SplitAddrs(const std::string& p_Str)
+{
+  std::vector<std::string> vec = SplitQuoted(p_Str, false);
+  return vec;
+}
+
+std::vector<std::string> Util::SplitAddrsUnquote(const std::string& p_Str)
+{
+  std::vector<std::string> vec = SplitQuoted(p_Str, true);
+  return vec;
+}
+
+std::string Util::EscapeName(const std::string& p_Str)
+{
+  if (p_Str.empty()) return p_Str;
+
+  if (p_Str.at(0) == '"') return p_Str;
+
+  std::string text = p_Str;
+  if ((text.find(",") != std::string::npos) || (text.find("\"") != std::string::npos))
+  {
+    ReplaceString(text, "\"", "\\\"");
     text = "\"" + text + "\"";
   }
 

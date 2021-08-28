@@ -3563,21 +3563,16 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessageStr = Util::ToWString(bodyText);
         Util::StripCR(m_ComposeMessageStr);
 
-        // @todo: handle quoted commas in address name
-        std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
-        std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
-        std::vector<std::string> bccs = Util::Split(header.GetBcc(), ',');
-        if (!bccs.empty())
-        {
-          // @todo: consider auto-revert to previous rich header state after send / postpone
-          m_ShowRichHeader = true;
-        }
-
-        SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
-        SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
-        SetComposeStr(HeaderBcc, Util::ToWString(Util::Join(bccs, ", ")));
+        SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
+        SetComposeStr(HeaderCc, Util::ToWString(header.GetCc()));
+        SetComposeStr(HeaderBcc, Util::ToWString(header.GetBcc()));
         SetComposeStr(HeaderAtt, L"");
         SetComposeStr(HeaderSub, Util::ToWString(header.GetSubject()));
+
+        if (!GetComposeStr(HeaderBcc).empty())
+        {
+          m_ShowRichHeader = true;
+        }
 
         int idx = 0;
         std::string tmppath = Util::GetTempDirectory();
@@ -3678,22 +3673,6 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessageOffsetY = std::max(lineCount - (m_MainWinHeight / 2), 0);
       }
 
-      // @todo: handle quoted commas in address name
-      std::vector<std::string> tos = Util::Split(header.GetTo(), ',');
-      std::vector<std::string> ccs = Util::Split(header.GetCc(), ',');
-
-      if (folder != m_SentFolder)
-      {
-        ccs.insert(ccs.end(), tos.begin(), tos.end());
-      }
-
-      std::string selfAddress = m_SmtpManager->GetAddress();
-      for (auto it = ccs.begin(); it != ccs.end(); /* incremented in loop */)
-      {
-        it = ((it->find(selfAddress) == std::string::npos) &&
-              (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
-      }
-
       if (!header.GetReplyTo().empty())
       {
         SetComposeStr(HeaderTo, Util::ToWString(header.GetReplyTo()));
@@ -3712,6 +3691,21 @@ void Ui::SetState(Ui::State p_State)
 
         if (m_State == StateReplyAllMessage)
         {
+          std::vector<std::string> tos = Util::SplitAddrs(header.GetTo());
+          std::vector<std::string> ccs = Util::SplitAddrs(header.GetCc());
+
+          if (folder != m_SentFolder)
+          {
+            ccs.insert(ccs.end(), tos.begin(), tos.end());
+          }
+
+          std::string selfAddress = m_SmtpManager->GetAddress();
+          for (auto it = ccs.begin(); it != ccs.end(); /* incremented in loop */)
+          {
+            it = ((it->find(selfAddress) == std::string::npos) &&
+                  (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
+          }
+
           SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
         }
       }
@@ -4320,8 +4314,8 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
   else
   {
     const SmtpManager::Action& action = p_Result.m_Action;
-    const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(action.m_To)));
-    const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(action.m_Cc)));
+    const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrs(action.m_To));
+    const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrs(action.m_Cc));
 
     std::vector<Contact> contacts;
     std::move(to.begin(), to.end(), std::back_inserter(contacts));

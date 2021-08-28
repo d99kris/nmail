@@ -159,9 +159,9 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   Result result;
   result.m_Action = p_Action;
 
-  const std::vector<Contact> to = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_To)));
-  const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Cc)));
-  const std::vector<Contact> bcc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Bcc)));
+  const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_To));
+  const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_Cc));
+  const std::vector<Contact> bcc = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_Bcc));
   const std::string& ref = p_Action.m_RefMsgId;
   const std::vector<std::string> att = Util::SplitPaths(p_Action.m_Att);
   const bool flow = p_Action.m_FormatFlowed;

@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
   Util::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
-  std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude")));
+  std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude"), true));
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");

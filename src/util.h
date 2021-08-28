@@ -190,7 +190,7 @@ public:
   static std::string ToLower(const std::string& p_Str);
   static std::wstring ToLower(const std::wstring& p_WStr);
   static std::vector<std::string> Split(const std::string& p_Str, char p_Sep = ',');
-  static std::vector<std::string> SplitQuoted(const std::string& p_Str);
+  static std::vector<std::string> SplitQuoted(const std::string& p_Str, bool p_Unquote);
   static std::string Trim(const std::string& p_Str);
   static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
   static int ReserveVirtualKeyCode();
@@ -270,6 +270,9 @@ public:
   static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
   static bool GetAddressBookEncrypt();
   static std::string EscapePath(const std::string& p_Str);
+  static std::vector<std::string> SplitAddrs(const std::string& p_Str);
+  static std::vector<std::string> SplitAddrsUnquote(const std::string& p_Str);
+  static std::string EscapeName(const std::string& p_Str);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

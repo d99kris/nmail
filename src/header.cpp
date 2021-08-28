@@ -367,7 +367,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   {
     if ((p_Mailbox->mb_display_name != NULL) && (strlen(p_Mailbox->mb_display_name) > 0))
     {
-      str = std::string(p_Mailbox->mb_display_name) + std::string(" ");
+      str = Util::EscapeName(std::string(p_Mailbox->mb_display_name)) + std::string(" ");
       str += std::string("<") + std::string(p_Mailbox->mb_addr_spec) + std::string(">");
     }
     else
@@ -398,7 +398,7 @@ std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
 
 size_t Header::GetCurrentParseVersion()
 {
-  static size_t parseVersion = 1; // update offset when parsing changes
+  static size_t parseVersion = 2; // update offset when parsing changes
   return parseVersion;
 }
 
