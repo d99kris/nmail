@@ -391,7 +391,7 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
     }
     else
     {
-      LOG_WARNING("attachment path \"%s\" does not exist", path.c_str());
+      LOG_DEBUG("attachment path \"%s\" does not exist", path.c_str());
     }
   }
 

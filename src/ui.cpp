@@ -3173,7 +3173,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeySend)
     {
-      if (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?"))
+      if (ComposedMessageIsValid(true /* p_ForSend */) &&
+          (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?")))
       {
         Util::RmDir(Util::GetPreviewTempDir());
         SendComposedMessage();
@@ -3192,7 +3193,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeyPostpone)
     {
-      if (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?"))
+      if (ComposedMessageIsValid(false /* p_ForSend */) &&
+          (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?")))
       {
         Util::RmDir(Util::GetPreviewTempDir());
         UploadDraftMessage();
@@ -4614,6 +4616,49 @@ std::string Ui::GetFilterStateStr()
 bool Ui::IsValidTextKey(int p_Key)
 {
   return ((p_Key >= 0x20) || (p_Key == 0xA));
+}
+
+bool Ui::ComposedMessageIsValid(bool p_ForSend)
+{
+  std::string addrs =
+    Util::ToString(GetComposeStr(HeaderTo)) +
+    Util::ToString(GetComposeStr(HeaderCc)) +
+    Util::ToString(GetComposeStr(HeaderBcc));
+  if (p_ForSend && (addrs.find("@") == std::string::npos))
+  {
+    SetDialogMessage("No recipients specified");
+    return false;
+  }
+
+  std::vector<std::string> atts = Util::StrToPaths(Util::ToString(GetComposeStr(HeaderAtt)));
+  for (auto& att : atts)
+  {
+    if (!Util::IsReadableFile(att))
+    {
+      std::string path = att;
+      int maxPath = (m_ScreenWidth - 20);
+      if ((int)path.size() > maxPath)
+      {
+        int offset = maxPath - path.size();
+        path = path.substr(offset);
+      }
+
+      LOG_WARNING("file \"%s\" not found", att.c_str());
+      SetDialogMessage("File \"" + path + "\" not found");
+      return false;
+    }
+  }
+
+  std::string subject = Util::ToString(GetComposeStr(HeaderSub));
+  if (p_ForSend && subject.empty())
+  {
+    if (!Ui::PromptYesNo("No subject specified, continue (y/n)?"))
+    {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void Ui::SendComposedMessage()

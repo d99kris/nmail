@@ -73,6 +73,12 @@ bool Util::NotEmpty(const std::string& p_Path)
   return (stat(p_Path.c_str(), &sb) == 0) && (sb.st_size > 0);
 }
 
+bool Util::IsReadableFile(const std::string& p_Path)
+{
+  std::ifstream file(p_Path.c_str());
+  return file.good();
+}
+
 std::string Util::ReadFile(const std::string& p_Path)
 {
   std::ifstream file(p_Path, std::ios::binary);
@@ -135,10 +141,12 @@ std::string Util::ExpandPath(const std::string& p_Path)
   return rv;
 }
 
-std::vector<std::string> Util::ExpandPaths(const std::vector<std::string>& p_Paths)
+std::vector<std::string> Util::StrToPaths(const std::string& p_Str)
 {
+  std::vector<std::string> paths = Util::Trim(Util::Split(p_Str));
+
   std::vector<std::string> expPaths;
-  for (auto& path : p_Paths)
+  for (auto& path : paths)
   {
     expPaths.push_back(ExpandPath(path));
   }

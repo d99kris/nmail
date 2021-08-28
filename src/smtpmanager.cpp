@@ -163,7 +163,7 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   const std::vector<Contact> cc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Cc)));
   const std::vector<Contact> bcc = Contact::FromStrings(Util::Trim(Util::Split(p_Action.m_Bcc)));
   const std::string& ref = p_Action.m_RefMsgId;
-  const std::vector<std::string> att = Util::ExpandPaths(Util::Trim(Util::Split(p_Action.m_Att)));
+  const std::vector<std::string> att = Util::StrToPaths(p_Action.m_Att);
   const bool flow = p_Action.m_FormatFlowed;
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Name, m_Address, m_Timeout);

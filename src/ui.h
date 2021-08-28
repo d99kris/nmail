@@ -158,6 +158,7 @@ private:
   std::string GetFilterStateStr();
   bool IsValidTextKey(int p_Key);
 
+  bool ComposedMessageIsValid(bool p_ForSend);
   void SendComposedMessage();
   void UploadDraftMessage();
   bool DeleteMessage();

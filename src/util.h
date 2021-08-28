@@ -114,13 +114,14 @@ class Util
 public:
   static bool Exists(const std::string& p_Path);
   static bool NotEmpty(const std::string& p_Path);
+  static bool IsReadableFile(const std::string& p_Path);
   static std::string ReadFile(const std::string& p_Path);
   static void WriteFile(const std::string& p_Path, const std::string& p_Str);
   static std::wstring ReadWFile(const std::string& p_Path);
   static void WriteWFile(const std::string& p_Path, const std::wstring& p_WStr);
   static std::string BaseName(const std::string& p_Path);
   static std::string ExpandPath(const std::string& p_Path);
-  static std::vector<std::string> ExpandPaths(const std::vector<std::string>& p_Paths);
+  static std::vector<std::string> StrToPaths(const std::string& p_Str);
   static std::string RemoveFileExt(const std::string& p_Path);
   static std::string GetFileExt(const std::string& p_Path);
   static std::string DirName(const std::string& p_Path);
