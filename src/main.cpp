@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
 static void ShowHelp()
 {
   std::cout <<
-    "nmail is a console-based email client with a user interface similar to\n"
+    "nmail is a terminal-based email client with a user interface similar to\n"
     "alpine / pine, supporting IMAP and SMTP.\n"
     "\n"
     "Usage: nmail [OPTION]\n"
