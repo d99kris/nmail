@@ -630,12 +630,34 @@ void Util::SetSenderHostname(const std::string& p_SenderHostname)
 
 std::string Util::ToString(const std::wstring& p_WStr)
 {
-  return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(p_WStr);
+  try
+  {
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(p_WStr);
+  }
+  catch (...)
+  {
+    LOG_WARNING("failed to convert from utf-16");
+    std::wstring wstr = p_WStr;
+    wstr.erase(std::remove_if(wstr.begin(), wstr.end(), [](wchar_t wch) { return !isascii(wch); }), wstr.end());
+    std::string str = std::string(wstr.begin(), wstr.end());
+    return str;
+  }
 }
 
 std::wstring Util::ToWString(const std::string& p_Str)
 {
-  return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.from_bytes(p_Str);
+  try
+  {
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.from_bytes(p_Str);
+  }
+  catch (...)
+  {
+    LOG_WARNING("failed to convert from utf-8");
+    std::string str = p_Str;
+    str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char ch) { return !isascii(ch); }), str.end());
+    std::wstring wstr = std::wstring(str.begin(), str.end());
+    return wstr;
+  }
 }
 
 std::string Util::TrimPadString(const std::string& p_Str, int p_Len)
