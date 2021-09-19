@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.47" LANGUAGES CXX C)
+project(nmail VERSION "3.48" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
 
@@ -152,7 +152,7 @@ find_library(MAGIC_LIBRARY magic)
 
 # Linking
 target_link_libraries(nmail PUBLIC
-                      ${CURSES_NCURSES_LIBRARY} OpenSSL::SSL SQLite::SQLite3
+                      ${CURSES_LIBRARIES} OpenSSL::SSL SQLite::SQLite3
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
                       ${MAGIC_LIBRARY}
                       pthread ${CMAKE_DL_LIBS})
