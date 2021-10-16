@@ -140,7 +140,7 @@ void Ui::Init()
     { "key_select_all", "a" },
     { "key_search_show_folder", "\\" },
     { "colors_enabled", "1" },
-    { "attachment_indicator", "+" },
+    { "attachment_indicator", " \xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
     { "compose_backup_interval", "10" },
     { "persist_sortfilter", "1" },

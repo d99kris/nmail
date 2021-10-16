@@ -658,7 +658,7 @@ configure nmail.
 This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
-    attachment_indicator=+
+    attachment_indicator= 📎
     bottom_reply=0
     cancel_without_confirm=0
     colors_enabled=1
@@ -752,8 +752,8 @@ file (platform-dependent defaults are left empty below):
 ### attachment_indicator
 
 Controls which character to indicate that an email has attachments
-(default: `+`). For a less compact layout one can add space before the
-character, like ` 📎`.
+(default: ` 📎`). For a more compact and plain layout one can use an ascii
+character and omit the leading space character, example: `+`.
 
 ### bottom_reply
 
