@@ -70,6 +70,22 @@ void AddressBook::Cleanup()
   }
 }
 
+bool AddressBook::ChangePass(const bool p_CacheEncrypt,
+                             const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  if (!p_CacheEncrypt) return true;
+
+  Util::RmDir(GetAddressBookTempDbDir());
+  Util::MkDir(GetAddressBookTempDbDir());
+  if (!CacheUtil::DecryptCacheDir(p_OldPass, GetAddressBookCacheDbDir(), GetAddressBookTempDbDir())) return false;
+
+  Util::RmDir(GetAddressBookCacheDbDir());
+  Util::MkDir(GetAddressBookCacheDbDir());
+  if (!CacheUtil::EncryptCacheDir(p_NewPass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir())) return false;
+
+  return true;
+}
+
 void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p_Addresses)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);

@@ -55,6 +55,23 @@ ImapIndex::~ImapIndex()
   }
 }
 
+bool ImapIndex::ChangePass(const bool p_CacheEncrypt,
+                           const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  if (!p_CacheEncrypt) return true;
+
+  InitCacheTempDir();
+  if (!CacheUtil::DecryptCacheDir(p_OldPass, GetCacheIndexDbDir(), GetCacheIndexDbTempDir())) return false;
+
+  Util::RmDir(GetCacheIndexDbDir());
+  Util::MkDir(GetCacheIndexDbDir());
+  if (!CacheUtil::EncryptCacheDir(p_NewPass, GetCacheIndexDbTempDir(), GetCacheIndexDbDir())) return false;
+
+  CleanupCacheTempDir();
+
+  return true;
+}
+
 void ImapIndex::NotifyIdle(bool p_IsIdle)
 {
   std::unique_lock<std::mutex> lock(m_ProcessMutex);

@@ -38,6 +38,9 @@ public:
   ImapCache(const bool p_CacheEncrypt, const std::string& p_Pass);
   virtual ~ImapCache();
 
+  static bool ChangePass(const bool p_CacheEncrypt,
+                         const std::string& p_OldPass, const std::string& p_NewPass);
+  
   std::set<std::string> GetFolders();
   void SetFolders(const std::set<std::string>& p_Folders);
 
@@ -71,11 +74,11 @@ private:
   void InitBodysCache();
   void CleanupBodysCache();
 
-  std::string GetDbTypeName(ImapCache::DbType p_DbType);
-  std::string GetCacheDir(ImapCache::DbType p_DbType);
-  std::string GetCacheDbDir(ImapCache::DbType p_DbType);
-  std::string GetTempDbDir(ImapCache::DbType p_DbType);
-  std::string GetHeadersFoldersPath();
+  static std::string GetDbTypeName(ImapCache::DbType p_DbType);
+  static std::string GetCacheDir(ImapCache::DbType p_DbType);
+  static std::string GetCacheDbDir(ImapCache::DbType p_DbType);
+  static std::string GetTempDbDir(ImapCache::DbType p_DbType);
+  static std::string GetHeadersFoldersPath();
 
   std::string GetDbName(const std::string& p_Folder);
   std::string GetDbPath(ImapCache::DbType p_DbType, const std::string& p_Folder);

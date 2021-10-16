@@ -39,6 +39,17 @@ void OfflineQueue::Cleanup()
 {
 }
 
+bool OfflineQueue::ChangePass(const bool p_CacheEncrypt,
+                              const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  if (!p_CacheEncrypt) return true;
+
+  // @todo: implement password change for offline queue
+  (void)p_OldPass;
+  (void)p_NewPass;
+  return true;
+}
+
 void OfflineQueue::PushDraftMessage(const std::string& p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);

@@ -45,6 +45,10 @@ static void SetupGmailCommon(std::shared_ptr<Config> p_Config);
 static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
 static void LogSystemInfo();
+static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
+                            std::shared_ptr<Config> p_SecretConfig);
+static bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
+                                 const std::string& p_OldPass, const std::string& p_NewPass);
 
 int main(int argc, char* argv[])
 {
@@ -53,6 +57,7 @@ int main(int argc, char* argv[])
   Util::SetApplicationDir(std::string(getenv("HOME")) + std::string("/.nmail"));
   Log::SetVerboseLevel(Log::INFO_LEVEL);
   bool online = true;
+  bool changePass = false;
   std::string setup;
   std::string exportDir;
 
@@ -81,6 +86,10 @@ int main(int argc, char* argv[])
     else if ((*it == "-o") || (*it == "--offline"))
     {
       online = false;
+    }
+    else if ((*it == "-p") || (*it == "--pass"))
+    {
+      changePass = true;
     }
     else if (((*it == "-s") || (*it == "--setup")) && (std::distance(it + 1, args.end()) > 0))
     {
@@ -282,6 +291,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  if (changePass)
+  {
+    return ChangePasswords(mainConfig, secretConfig) ? 0 : 1;
+  }
+  
   std::string pass;
   std::string smtpPass;
   if (auth == "pass")
@@ -397,6 +411,7 @@ static void ShowHelp()
     "   -e, --verbose           enable verbose logging\n"
     "   -h, --help              display this help and exit\n"
     "   -o, --offline           run in offline mode\n"
+    "   -p, --pass              change password\n"
     "   -s, --setup <SERVICE>   setup wizard for specified service, supported\n"
     "                           services: gmail, gmail-oauth2, outlook\n"
     "   -v, --version           output version information and exit\n"
@@ -739,4 +754,75 @@ void LogSystemInfo()
       LOG_DUMP(linkedLibs.c_str());
     }
   }
+}
+
+bool ChangePasswords(std::shared_ptr<Config> p_MainConfig, std::shared_ptr<Config> p_SecretConfig)
+{
+  std::string user = p_MainConfig->Get("user");
+  std::string smtpUser = p_MainConfig->Get("smtp_user");
+
+  std::string oldPass;
+  if (p_SecretConfig->Exist("pass"))
+  {
+    std::string oldEncPass = p_SecretConfig->Get("pass");
+    oldPass = Crypto::AESDecrypt(Util::FromHex(oldEncPass), user);
+  }
+  else
+  {
+    std::cout << std::string("Old ") + (smtpUser.empty() ? "Password: " : "IMAP Password: ");
+    oldPass = Util::GetPass();
+  }
+
+  std::cout << std::string("New ") + (smtpUser.empty() ? "Password: " : "IMAP Password: ");
+  std::string newPass = Util::GetPass();
+
+  std::string newSmtpPass;
+  if (!smtpUser.empty())
+  {
+    std::cout << "SMTP Password: ";
+    newSmtpPass = Util::GetPass();
+  }
+    
+  if (ChangeCachePasswords(p_MainConfig, oldPass, newPass))
+  {
+    std::string encPass = Util::ToHex(Crypto::AESEncrypt(newPass, user));
+    p_SecretConfig->Set("pass", encPass);
+
+    if (!smtpUser.empty())
+    {
+      std::string encSmtpPass = Util::ToHex(Crypto::AESEncrypt(newSmtpPass, smtpUser));
+      p_SecretConfig->Set("smtp_pass", encSmtpPass);
+    }
+
+    p_SecretConfig->Save();
+
+    std::cout << "Changing password complete.\n";
+    return true;
+  }  
+  else
+  {
+    std::cout << "Changing cache password failed, exiting.\n";
+    return false;
+  }  
+}
+
+bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
+                          const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  const bool cacheEncrypt = (p_MainConfig->Get("cache_encrypt") == "1");
+  if (!ImapCache::ChangePass(cacheEncrypt, p_OldPass, p_NewPass)) return false;
+
+  const bool cacheIndexEncrypt = (p_MainConfig->Get("cache_index_encrypt") == "1");
+  if (!ImapIndex::ChangePass(cacheIndexEncrypt, p_OldPass, p_NewPass)) return false;  
+
+  const bool addressBookEncrypt = (p_MainConfig->Get("addressbook_encrypt") == "1");
+  if (!AddressBook::ChangePass(addressBookEncrypt, p_OldPass, p_NewPass)) return false;
+
+  const bool queueEncrypt = (p_MainConfig->Get("queue_encrypt") == "1");
+  if (!OfflineQueue::ChangePass(queueEncrypt, p_OldPass, p_NewPass)) return false;
+
+  const bool authEncrypt = (p_MainConfig->Get("auth_encrypt") == "1");
+  if (!Auth::ChangePass(authEncrypt, p_OldPass, p_NewPass)) return false;
+
+  return true;
 }

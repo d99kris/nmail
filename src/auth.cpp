@@ -71,6 +71,20 @@ void Auth::Cleanup()
   Util::RmDir(GetAuthTempDir());
 }
 
+bool Auth::ChangePass(const bool p_CacheEncrypt,
+                      const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  if (!p_CacheEncrypt) return true;
+
+  m_AuthEncrypt = p_CacheEncrypt;
+  m_Pass = p_OldPass;
+  LoadCache();
+  m_Pass = p_NewPass;
+  SaveCache();
+
+  return true;
+}
+
 bool Auth::GenerateToken(const std::string& p_Auth)
 {
   LOG_DEBUG_FUNC(STR(p_Auth));

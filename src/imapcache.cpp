@@ -62,6 +62,49 @@ ImapCache::~ImapCache()
   CleanupBodysCache();
 }
 
+bool ImapCache::ChangePass(const bool p_CacheEncrypt,
+                           const std::string& p_OldPass, const std::string& p_NewPass)
+{
+  if (!p_CacheEncrypt) return true;
+
+  std::string headersDir = GetCacheDbDir(HeadersDb);
+  std::vector<std::string> headerFiles = Util::ListDir(headersDir);
+  for (const auto& headerFile : headerFiles)
+  {
+    std::string path = headersDir + headerFile;
+    std::string tmpPath = path + ".tmp";
+    if (!Crypto::AESDecryptFile(path, tmpPath, p_OldPass)) return false;
+
+    if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
+
+    Util::DeleteFile(tmpPath);
+
+    std::cout << ".";
+  }
+  
+  std::string bodysDir = GetCacheDbDir(BodysDb);
+  std::vector<std::string> bodyFiles = Util::ListDir(bodysDir);
+  for (const auto& bodyFile : bodyFiles)
+  {
+    std::string path = bodysDir + bodyFile;
+    std::string tmpPath = path + ".tmp";
+    if (!Crypto::AESDecryptFile(path, tmpPath, p_OldPass)) return false;
+
+    if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
+
+    Util::DeleteFile(tmpPath);
+
+    std::cout << ".";
+  }
+
+  std::string path = GetHeadersFoldersPath();
+  std::string data = Crypto::AESDecrypt(Util::ReadFile(path), p_OldPass);
+  Util::WriteFile(path, Crypto::AESEncrypt(data, p_NewPass));
+
+  std::cout << "\n";
+  return true;
+}
+
 // get all folders
 std::set<std::string> ImapCache::GetFolders()
 {
@@ -642,7 +685,10 @@ std::string ImapCache::GetDbPath(ImapCache::DbType p_DbType, const std::string& 
     {
       if (Util::Exists(cacheDbPath))
       {
-        Crypto::AESDecryptFile(cacheDbPath, dbPath, m_Pass);
+        if (!Crypto::AESDecryptFile(cacheDbPath, dbPath, m_Pass))
+        {
+          Util::DeleteFile(dbPath);          
+        }
       }
     }
   }
@@ -663,7 +709,10 @@ void ImapCache::WriteDb(ImapCache::DbType p_DbType, const std::string& p_Folder)
     const std::string& dbName = GetDbName(p_Folder);
     std::string dbPath = GetTempDbDir(p_DbType) + dbName;
     std::string cacheDbPath = GetCacheDbDir(p_DbType) + dbName;
-    Crypto::AESEncryptFile(dbPath, cacheDbPath, m_Pass);
+    if (!Crypto::AESEncryptFile(dbPath, cacheDbPath, m_Pass))
+    {
+      Util::DeleteFile(cacheDbPath);      
+    }
   }
 }
 

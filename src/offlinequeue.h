@@ -17,6 +17,9 @@ public:
   static void Init(const bool p_Encrypt, const std::string& p_Pass);
   static void Cleanup();
 
+  static bool ChangePass(const bool p_CacheEncrypt,
+                         const std::string& p_OldPass, const std::string& p_NewPass);
+
   static void PushDraftMessage(const std::string& p_Str);
   static void PushOutboxMessage(const std::string& p_Str);
   static void PushComposeMessage(const std::string& p_Str);

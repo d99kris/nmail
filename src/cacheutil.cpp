@@ -59,22 +59,34 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
   return true;
 }
 
-void CacheUtil::DecryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
+bool CacheUtil::DecryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
 {
   const std::vector<std::string>& files = Util::ListDir(p_SrcDir);
   for (auto& file : files)
   {
-    Crypto::AESDecryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass);
+    if (!Crypto::AESDecryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass))
+    {
+      Util::DeleteFile(p_DstDir + "/" + file);
+      return false;
+    }
   }
+
+  return true;
 }
 
-void CacheUtil::EncryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
+bool CacheUtil::EncryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
 {
   const std::vector<std::string>& files = Util::ListDir(p_SrcDir);
   for (auto& file : files)
   {
-    Crypto::AESEncryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass);
+    if (!Crypto::AESEncryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass))
+    {
+      Util::DeleteFile(p_DstDir + "/" + file);
+      return false;
+    }
   }
+
+  return true;
 }
 
 void CacheUtil::ReadVersionFromFile(const std::string& p_Path, int& p_Version)

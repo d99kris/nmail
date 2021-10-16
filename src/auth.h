@@ -17,6 +17,10 @@ public:
   static void Init(const std::string& p_Auth, const bool p_AuthEncrypt,
                    const std::string& p_Pass, const bool p_IsSetup);
   static void Cleanup();
+
+  static bool ChangePass(const bool p_CacheEncrypt,
+                         const std::string& p_OldPass, const std::string& p_NewPass);
+
   static bool GenerateToken(const std::string& p_Auth);
   static std::string GetName();
   static std::string GetEmail();

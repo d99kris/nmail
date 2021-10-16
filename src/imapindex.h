@@ -30,6 +30,9 @@ public:
                      const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~ImapIndex();
 
+  static bool ChangePass(const bool p_CacheEncrypt,
+                         const std::string& p_OldPass, const std::string& p_NewPass);
+
   void NotifyIdle(bool p_IsIdle);
 
   void SetFolders(const std::set<std::string>& p_Folders);
@@ -62,12 +65,12 @@ private:
   std::string GetFolderFromDocId(const std::string& p_DocId);
   uint32_t GetUidFromDocId(const std::string& p_DocId);
 
-  std::string GetCacheIndexDir();
-  std::string GetCacheIndexDbDir();
-  std::string GetCacheIndexDbTempDir();
+  static std::string GetCacheIndexDir();
+  static std::string GetCacheIndexDbDir();
+  static std::string GetCacheIndexDbTempDir();
   void InitCacheIndexDir();
-  void InitCacheTempDir();
-  void CleanupCacheTempDir();
+  static void InitCacheTempDir();
+  static void CleanupCacheTempDir();
 
   void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
