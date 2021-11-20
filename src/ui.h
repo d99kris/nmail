@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 
 #include "config.h"
 #include "imapmanager.h"

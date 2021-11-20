@@ -34,7 +34,7 @@
 #endif
 
 #include <libetpan/libetpan.h>
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 #include <sqlite3.h>
 
 #include "apathy/path.hpp"
