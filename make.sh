@@ -123,7 +123,7 @@ if [[ "${DEBUG}" == "1" ]]; then
   elif [ "${OS}" == "Darwin" ]; then
     MAKEARGS="-j$(sysctl -n hw.ncpu)"
   fi
-  mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make ${MAKEARGS} && cd .. || exiterr "debug build failed, exiting."
+  mkdir -p dbgbuild && cd dbgbuild && cmake -DCMAKE_BUILD_TYPE=Debug .. && make ${MAKEARGS} && cd .. || exiterr "debug build failed, exiting."
 fi
 
 # tests
