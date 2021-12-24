@@ -247,6 +247,8 @@ void Ui::Init()
     start_color();
     assume_default_colors(-1, -1);
 
+    const std::string defaultQuotedFg = (COLORS > 8) ? "gray" : "";
+    const std::string defaultSelectedFg = (COLORS > 8) ? "gray" : "";
     const std::map<std::string, std::string> defaultColorsConfig =
     {
       { "color_dialog_bg", "reverse" },
@@ -258,11 +260,11 @@ void Ui::Init()
       { "color_highlighted_text_bg", "reverse" },
       { "color_highlighted_text_fg", "reverse" },
       { "color_quoted_text_bg", "" },
-      { "color_quoted_text_fg", "gray" },
+      { "color_quoted_text_fg", defaultQuotedFg },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
       { "color_selected_item_bg", "" },
-      { "color_selected_item_fg", "gray" },
+      { "color_selected_item_fg", defaultSelectedFg },
       { "color_top_bar_bg", "reverse" },
       { "color_top_bar_fg", "reverse" },
     };
