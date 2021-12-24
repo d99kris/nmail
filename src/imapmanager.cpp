@@ -86,6 +86,8 @@ ImapManager::~ImapManager()
       else
       {
         LOG_WARNING("process thread abort timeout");
+        lock.unlock();
+        m_Thread.join();
       }
     }
   }

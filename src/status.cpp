@@ -40,6 +40,14 @@ std::string Status::ToString(bool p_ShowProgress)
   {
     str = "Connecting";
   }
+  else if (m_Flags & FlagDisconnecting)
+  {
+    str = "Disconnecting";
+  }
+  else if (m_Flags & FlagExiting)
+  {
+    str = "Exiting";
+  }
   else if (m_Flags & FlagChecking)
   {
     str = "Checking";

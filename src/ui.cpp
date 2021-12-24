@@ -46,7 +46,6 @@ void Ui::Init()
   initscr();
   noecho();
   cbreak();
-  raw();
   keypad(stdscr, TRUE);
   curs_set(0);
   timeout(0);
@@ -1945,6 +1944,8 @@ void Ui::Run()
   DrawAll();
   int64_t uiIdleTime = 0;
   LOG_INFO("entering ui loop");
+  Util::RegisterIgnoredSignalHandlers(); // ignore ctrl-c while ui is running
+  raw();
 
   while (s_Running)
   {
@@ -2044,6 +2045,8 @@ void Ui::Run()
 
   }
 
+  noraw();
+  Util::RestoreIgnoredSignalHandlers();
   LOG_INFO("exiting ui loop");
 
   return;
@@ -5807,6 +5810,10 @@ void Ui::Quit()
 {
   if (m_QuitWithoutConfirm || Ui::PromptYesNo("Quit nmail (y/n)?"))
   {
+    StatusUpdate statusUpdate;
+    statusUpdate.SetFlags = m_Status.IsSet(Status::FlagConnected) ? Status::FlagDisconnecting
+                                                                  : Status::FlagExiting;
+    m_Status.Update(statusUpdate);
     SetRunning(false);
     LOG_DEBUG("stop thread");
   }

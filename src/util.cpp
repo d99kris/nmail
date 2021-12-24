@@ -1438,6 +1438,15 @@ void Util::RegisterIgnoredSignalHandlers()
   }
 }
 
+void Util::RestoreIgnoredSignalHandlers()
+{
+  const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
+  for (const auto& ignoredSignal : ignoredSignals)
+  {
+    signal(ignoredSignal.first, SIG_DFL);
+  }
+}
+
 static std::mutex s_SignalMutex;
 
 void Util::SignalCrashHandler(int p_Signal)

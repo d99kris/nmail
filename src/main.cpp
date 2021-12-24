@@ -329,9 +329,6 @@ int main(int argc, char* argv[])
     return exportRv ? 0 : 1;
   }
 
-  // Ignore ctrl-c only after setup wizard and export to enable user abort
-  Util::RegisterIgnoredSignalHandlers();
-
   Util::InitStdErrRedirect(logPath);
 
   Util::SetAddressBookEncrypt(addressBookEncrypt);

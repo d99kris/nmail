@@ -221,6 +221,7 @@ public:
 
   static void RegisterSignalHandlers();
   static void RegisterIgnoredSignalHandlers();
+  static void RestoreIgnoredSignalHandlers();
   static void SignalCrashHandler(int p_Signal);
   static void SignalTerminateHandler(int p_Signal);
   static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
