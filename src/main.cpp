@@ -1,6 +1,6 @@
 // main.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -406,6 +406,7 @@ static void ShowHelp()
     "Options:\n"
     "   -d, --confdir <DIR>     use a different directory than ~/.nmail\n"
     "   -e, --verbose           enable verbose logging\n"
+    "   -ee, --extra-verbose    enable extra verbose logging\n"
     "   -h, --help              display this help and exit\n"
     "   -o, --offline           run in offline mode\n"
     "   -p, --pass              change password\n"
@@ -432,7 +433,7 @@ static void ShowVersion()
   std::cout <<
     Util::GetUiAppVersion() << "\n"
     "\n"
-    "Copyright (c) 2019-2021 Kristofer Berggren\n"
+    "Copyright (c) 2019-2022 Kristofer Berggren\n"
     "\n"
     "nmail is distributed under the MIT license.\n"
     "\n"

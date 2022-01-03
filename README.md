@@ -60,6 +60,9 @@ Command-line Options:
     -o, --offline
         run in offline mode
 
+    -p, --pass
+        change password
+
     -s, --setup <SERV>
         setup wizard for specified service, supported services: gmail,
         gmail-oauth2, outlook
