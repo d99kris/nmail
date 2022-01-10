@@ -129,11 +129,11 @@ Optional (to view/compose HTML emails):
 
     sudo yum -y install pandoc
 
-**Dependencies Arch**
+**Dependencies Arch Linux**
 
 Required:
 
-    sudo pacman -Sy cmake libetpan openssl ncurses xapian-core sqlite cyrus-sasl file clang
+    sudo pacman -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file clang
 
 Optional (to view/compose HTML emails):
 

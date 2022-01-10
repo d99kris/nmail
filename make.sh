@@ -87,7 +87,7 @@ if [[ "${DEPS}" == "1" ]]; then
     elif [[ "${NAME}" == "Fedora" ]]; then
       sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel clang || exiterr "deps failed (linux), exiting."
     elif [[ "${NAME}" == "Arch Linux" ]]; then
-      sudo pacman --neede -Sy cmake libetpan openssl ncurses xapian-core sqlite cyrus-sasl clang || exiterr "deps failed (linux), exiting."
+      sudo pacman --needed -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file clang || exiterr "deps failed (linux), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
