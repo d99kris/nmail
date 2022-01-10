@@ -129,6 +129,16 @@ Optional (to view/compose HTML emails):
 
     sudo yum -y install pandoc
 
+**Dependencies Arch**
+
+Required:
+
+    sudo pacman -Sy cmake libetpan openssl ncurses xapian-core sqlite cyrus-sasl file clang
+
+Optional (to view/compose HTML emails):
+
+    sudo pacman -Sy pandoc
+
 **Dependencies Common Linux**
 
 Optional (for OAuth 2.0 support):
