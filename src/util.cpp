@@ -1,6 +1,6 @@
 // util.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -697,7 +697,8 @@ std::wstring Util::TrimPadWString(const std::wstring& p_Str, int p_Len)
 
 int Util::WStringWidth(const std::wstring& p_WStr)
 {
-  return wcswidth(p_WStr.c_str(), p_WStr.size());
+  int width = wcswidth(p_WStr.c_str(), p_WStr.size());
+  return (width != -1) ? width : p_WStr.size();
 }
 
 std::string Util::ToLower(const std::string& p_Str)
