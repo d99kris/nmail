@@ -2046,3 +2046,8 @@ std::string Util::EscapeName(const std::string& p_Str)
 
   return text;
 }
+
+void Util::RemoveChar(std::string& p_Str, char p_Char)
+{
+  p_Str.erase(std::remove(p_Str.begin(), p_Str.end(), p_Char), p_Str.end());
+}

@@ -2394,6 +2394,10 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       {
         m_MessageFindMatchLine = -1;
         m_MessageFindQuery = m_MessageListSearchQuery;
+
+        // remove chars not supported by find in document
+        Util::RemoveChar(m_MessageFindQuery, '"');
+        Util::RemoveChar(m_MessageFindQuery, '*');
       }
 
       SetState(StateViewMessage);

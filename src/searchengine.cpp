@@ -81,7 +81,10 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
     queryParser.add_prefix("from", "F");
     queryParser.add_prefix("to", "T");
 
-    Xapian::Query query = queryParser.parse_query(p_QueryStr);
+    // flags
+    unsigned flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;
+
+    Xapian::Query query = queryParser.parse_query(p_QueryStr, flags);
 
     std::lock_guard<std::mutex> DatabaseLock(m_DatabaseMutex);
     m_Database->reopen();
