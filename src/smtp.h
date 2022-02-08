@@ -49,6 +49,7 @@ private:
                                struct mailmime_fields* p_MimeFields,
                                bool p_ForceSingle);
   std::string MimeEncodeStr(const std::string& p_In);
+  std::string RemoveBccHeader(const std::string& p_Data);
 
   static void Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
                      void* p_UserData);

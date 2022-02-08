@@ -53,7 +53,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths, p_Flowed));
 
-  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, p_Bcc, p_RefMsgId);
+  std::vector<Contact> hdrbcc;
+  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, hdrbcc, p_RefMsgId);
   const std::string& body = GetBody(p_Message, p_HtmlMessage, p_AttachmentPaths, p_Flowed);
   const std::string& data = header + body;
   p_ResultMessage = data;
@@ -76,7 +77,9 @@ bool Smtp::Send(const std::string& p_Data, const std::vector<Contact>& p_To,
   recipients.insert(recipients.end(), p_Cc.begin(), p_Cc.end());
   recipients.insert(recipients.end(), p_Bcc.begin(), p_Bcc.end());
 
-  return SendMessage(p_Data, recipients);
+  std::string dataNoBcc = RemoveBccHeader(p_Data);
+
+  return SendMessage(dataNoBcc, recipients);
 }
 
 bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients)
@@ -285,7 +288,6 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   }
 
   struct mailimf_address_list* addrlistbcc = NULL;
-  // @todo: implement ui support for bcc
   if (!p_Bcc.empty())
   {
     clist* bcclist = clist_new();
@@ -586,6 +588,47 @@ std::string Smtp::MimeEncodeStr(const std::string& p_In)
     std::string("?=");
   mmap_string_free(mmstr);
   return out;
+}
+
+std::string Smtp::RemoveBccHeader(const std::string& p_Data)
+{
+  bool isHeader = true;
+  bool isBcc = false;
+  std::string line;
+  std::ostringstream oss;
+  std::istringstream iss(p_Data);
+  while (std::getline(iss, line))
+  {
+    if (isHeader)
+    {
+      if (line.substr(0, 1) == "\r")
+      {
+        isHeader = false;
+        isBcc = false;
+      }
+      else if (!isBcc)
+      {
+        if (line.substr(0, 5) == "Bcc: ")
+        {
+          isBcc = true;
+        }
+      }
+      else
+      {
+        if ((line.length() > 0) && !isspace(line.at(0)))
+        {
+          isBcc = false;
+        }
+      }
+    }
+
+    if (!isBcc)
+    {
+      oss << line << "\n";
+    }
+  }
+
+  return oss.str();
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
