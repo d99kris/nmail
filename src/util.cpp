@@ -335,9 +335,16 @@ void Util::DeleteFile(const std::string& p_Path)
 
 time_t Util::MailtimeToTimet(mailimf_date_time* p_Dt)
 {
+  int year = p_Dt->dt_year;
+  if (year < 100)
+  {
+    // assume two-digit year is 20xx
+    year += 2000;
+  }
+
   char buf[128];
   snprintf(buf, sizeof(buf), "%04i-%02i-%02i %02i:%02i:%02i",
-           p_Dt->dt_year, p_Dt->dt_month, p_Dt->dt_day, p_Dt->dt_hour,
+           year, p_Dt->dt_month, p_Dt->dt_day, p_Dt->dt_hour,
            p_Dt->dt_min, p_Dt->dt_sec);
   int offs = p_Dt->dt_zone;
 
