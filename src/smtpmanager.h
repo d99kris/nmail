@@ -30,6 +30,7 @@ public:
     bool m_IsSendMessage = false;
     bool m_IsCreateMessage = false;
     bool m_IsSendCreatedMessage = false;
+    std::string m_From;
     std::string m_To;
     std::string m_Cc;
     std::string m_Bcc;

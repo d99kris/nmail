@@ -22,10 +22,11 @@
 
 bool Ui::s_Running = false;
 
-Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel,
-       bool p_PrefetchAllHeaders)
+Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name,
+       uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders)
   : m_Inbox(p_Inbox)
   , m_Address(p_Address)
+  , m_Name(p_Name)
   , m_PrefetchLevel(p_PrefetchLevel)
   , m_PrefetchAllHeaders(p_PrefetchAllHeaders)
 {
@@ -438,6 +439,7 @@ void Ui::DrawAll()
       break;
 
     case StateAddressList:
+    case StateFromAddressList:
       DrawTop();
       DrawAddressList();
       DrawHelp();
@@ -492,6 +494,7 @@ void Ui::DrawDialog()
     case StateGotoFolder:
     case StateMoveToFolder:
     case StateAddressList:
+    case StateFromAddressList:
     case StateFileList:
       DrawSearchDialog();
       break;
@@ -516,6 +519,7 @@ void Ui::DrawSearchDialog()
       break;
 
     case StateAddressList:
+    case StateFromAddressList:
       filterPos = m_AddressListFilterPos;
       filterStr = m_AddressListFilterStr;
       break;
@@ -769,6 +773,7 @@ void Ui::DrawHelp()
       case StateGotoFolder:
       case StateMoveToFolder:
       case StateAddressList:
+      case StateFromAddressList:
       case StateFileList:
         DrawHelpText(viewFoldersHelp);
         break;
@@ -911,7 +916,9 @@ void Ui::DrawAddressList()
   static std::wstring lastAddressListFilterStr = m_AddressListFilterStr;
   if (m_AddressListFilterStr != lastAddressListFilterStr)
   {
-    m_Addresses = AddressBook::Get(Util::ToString(m_AddressListFilterStr));
+    std::string filter = Util::ToString(m_AddressListFilterStr);
+    m_Addresses = (m_State == StateAddressList) ? AddressBook::Get(filter)
+                                                : AddressBook::GetFrom(filter);
     lastAddressListFilterStr = m_AddressListFilterStr;
   }
 
@@ -1744,6 +1751,7 @@ void Ui::DrawComposeMessage()
   {
     headerLines =
     {
+      L"From    : ",
       L"To      : ",
       L"Cc      : ",
       L"Bcc     : ",
@@ -2006,6 +2014,7 @@ void Ui::Run()
           break;
 
         case StateAddressList:
+        case StateFromAddressList:
           ViewAddressListKeyHandler(key);
           break;
 
@@ -2186,7 +2195,14 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
-    AddAddress(m_AddressListCurrentAddress);
+    if (m_State == StateAddressList)
+    {
+      AddAddress(m_AddressListCurrentAddress);
+    }
+    else if (m_State == StateFromAddressList)
+    {
+      SetAddress(m_AddressListCurrentAddress);
+    }
     SetState(m_LastMessageState);
   }
   else if (p_Key == KEY_LEFT)
@@ -3031,6 +3047,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       {
         SetState(StateAddressList);
       }
+      else if (headerField == HeaderFrom)
+      {
+        SetState(StateFromAddressList);
+      }
       else if (headerField == HeaderAtt)
       {
         FilePickerOrStateFileList();
@@ -3226,6 +3246,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (p_Key == m_KeyRichHeader)
     {
+      std::wstring from = GetComposeStr(HeaderFrom);
       std::wstring to = GetComposeStr(HeaderTo);
       std::wstring cc = GetComposeStr(HeaderCc);
       std::wstring bcc = GetComposeStr(HeaderBcc);
@@ -3235,6 +3256,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_ShowRichHeader = !m_ShowRichHeader;
 
       SetComposeStr(HeaderAll, L"");
+      SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
       SetComposeStr(HeaderTo, to);
       SetComposeStr(HeaderCc, cc);
       SetComposeStr(HeaderBcc, bcc);
@@ -3473,13 +3495,13 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
 void Ui::SetState(Ui::State p_State)
 {
-  if ((p_State == StateAddressList) || (p_State == StateFileList))
+  if ((p_State == StateAddressList) || (p_State == StateFromAddressList) || (p_State == StateFileList))
   {
     // going to address or file list
     m_LastMessageState = m_State;
     m_State = p_State;
   }
-  else if ((m_State != StateAddressList) && (m_State != StateFileList))
+  else if ((m_State != StateAddressList) && (m_State != StateFromAddressList) && (m_State != StateFileList))
   {
     // normal state transition
     m_LastState = m_State;
@@ -3538,6 +3560,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
@@ -3572,6 +3595,7 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessageStr = Util::ToWString(bodyText);
         Util::StripCR(m_ComposeMessageStr);
 
+        SetComposeStr(HeaderFrom, Util::ToWString(header.GetFrom()));
         SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
         SetComposeStr(HeaderCc, Util::ToWString(header.GetCc()));
         SetComposeStr(HeaderBcc, Util::ToWString(header.GetBcc()));
@@ -3616,6 +3640,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = 3;
     m_ComposeHeaderPos = 0;
@@ -3732,6 +3757,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = 0;
     m_ComposeHeaderPos = 0;
@@ -3810,12 +3836,12 @@ void Ui::SetState(Ui::State p_State)
 
     m_IsComposeHeader = true;
   }
-  else if (m_State == StateAddressList)
+  else if ((m_State == StateAddressList) || (m_State == StateFromAddressList))
   {
     curs_set(1);
     m_AddressListFilterPos = 0;
     m_AddressListFilterStr.clear();
-    m_Addresses = AddressBook::Get("");
+    m_Addresses = (m_State == StateAddressList) ? AddressBook::Get("") : AddressBook::GetFrom("");
     m_AddressListCurrentIndex = 0;
     m_AddressListCurrentAddress = "";
   }
@@ -4325,10 +4351,12 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     const SmtpManager::Action& action = p_Result.m_Action;
     const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrs(action.m_To));
     const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrs(action.m_Cc));
+    const std::vector<Contact> bcc = Contact::FromStrings(Util::SplitAddrs(action.m_Bcc));
 
     std::vector<Contact> contacts;
     std::move(to.begin(), to.end(), std::back_inserter(contacts));
     std::move(cc.begin(), cc.end(), std::back_inserter(contacts));
+    std::move(bcc.begin(), bcc.end(), std::back_inserter(contacts));
 
     for (auto& contact : contacts)
     {
@@ -4368,6 +4396,16 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
       m_HasRequestedUids[m_SentFolder] = false;
+    }
+
+    std::string from = action.m_From;
+    if (!from.empty())
+    {
+      AddressBook::AddFrom(from);
+    }
+    else
+    {
+      AddressBook::AddFrom(GetDefaultFrom());
     }
   }
 
@@ -4568,6 +4606,7 @@ std::string Ui::GetStateStr()
     case StateForwardMessage:
       return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateAddressList:
+    case StateFromAddressList:
       return "Address Book";
     case StateFileList:
       return "File Selection";
@@ -4667,6 +4706,7 @@ bool Ui::ComposedMessageIsValid(bool p_ForSend)
 void Ui::SendComposedMessage()
 {
   SmtpManager::Action smtpAction;
+  smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
   smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
   smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
   smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
@@ -4706,6 +4746,7 @@ void Ui::UploadDraftMessage()
   {
     SmtpManager::Action smtpAction;
     smtpAction.m_IsCreateMessage = true;
+    smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
     smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
     smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
     smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
@@ -5860,6 +5901,7 @@ void Ui::SetComposeStr(int p_HeaderField, const std::wstring& p_Str)
     if (m_ShowRichHeader)
     {
       m_ComposeHeaderStr[4] = p_Str;
+      m_ComposeHeaderStr[5] = p_Str;
     }
   }
   else
@@ -5928,15 +5970,17 @@ int Ui::GetCurrentHeaderField()
   {
     switch (m_ComposeHeaderLine)
     {
-      case 0: return HeaderTo;
+      case 0: return HeaderFrom;
 
-      case 1: return HeaderCc;
+      case 1: return HeaderTo;
 
-      case 2: return HeaderBcc;
+      case 2: return HeaderCc;
 
-      case 3: return HeaderAtt;
+      case 3: return HeaderBcc;
 
-      case 4: return HeaderSub;
+      case 4: return HeaderAtt;
+
+      case 5: return HeaderSub;
 
       default: break;
     }
@@ -6027,6 +6071,7 @@ void Ui::HandleConnected()
 
       SmtpManager::Action smtpAction;
       smtpAction.m_CreatedMsg = outboxMsg;
+      smtpAction.m_From = header.GetFrom();
       smtpAction.m_To = header.GetTo();
       smtpAction.m_Cc = header.GetCc();
       smtpAction.m_Bcc = header.GetBcc();
@@ -6080,6 +6125,7 @@ void Ui::ComposeBackupProcess()
     {
       SmtpManager::Action smtpAction;
       smtpAction.m_IsCreateMessage = true;
+      smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
       smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
       smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
       smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
@@ -6649,4 +6695,16 @@ void Ui::AddAddress(const std::string& p_Address)
 
   m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldAddress + addAddress);
   m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+}
+
+void Ui::SetAddress(const std::string& p_Address)
+{
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(p_Address);
+  m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+}
+
+std::string Ui::GetDefaultFrom()
+{
+  static const Contact defaultFrom(m_Address, m_Name);
+  return defaultFrom.ToString();
 }

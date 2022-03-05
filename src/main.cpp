@@ -335,7 +335,7 @@ int main(int argc, char* argv[])
 
   Auth::Init(auth, authEncrypt, pass, isSetup);
 
-  Ui ui(inbox, address, prefetchLevel, prefetchAllHeaders);
+  Ui ui(inbox, address, name, prefetchLevel, prefetchAllHeaders);
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,

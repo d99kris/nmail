@@ -52,6 +52,7 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
 
   *m_Db << "CREATE TABLE IF NOT EXISTS msgids (msgid TEXT PRIMARY KEY NOT NULL);";
   *m_Db << "CREATE TABLE IF NOT EXISTS addresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
+  *m_Db << "CREATE TABLE IF NOT EXISTS fromaddresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
 }
 
 void AddressBook::Cleanup()
@@ -127,6 +128,30 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
   }
 }
 
+void AddressBook::AddFrom(const std::string& p_Address)
+{
+  std::lock_guard<std::mutex> lock(m_Mutex);
+
+  if (!m_Db) return;
+
+  int addressExists = 0;
+  *m_Db << "SELECT COUNT(usages) FROM fromaddresses WHERE address=?;" << p_Address >> addressExists;
+  if (addressExists == 0)
+  {
+    // add address
+    LOG_TRACE("add fromaddress %s", p_Address.c_str());
+    *m_Db << "INSERT INTO fromaddresses (address, usages) VALUES (?, 1);" << p_Address;
+  }
+  else
+  {
+    // increment address usage
+    LOG_TRACE("increment fromaddress %s", p_Address.c_str());
+    *m_Db << "UPDATE fromaddresses SET usages = usages + 1 WHERE address = ?;" << p_Address;
+  }
+
+  m_Dirty = true;
+}
+
 std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -143,6 +168,28 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
   {
     // @todo: strip out any % from p_Filter?
     *m_Db << "SELECT address FROM addresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
+      [&](const std::string& address) { addresses.push_back(address); };
+  }
+
+  return addresses;
+}
+
+std::vector<std::string> AddressBook::GetFrom(const std::string& p_Filter)
+{
+  std::lock_guard<std::mutex> lock(m_Mutex);
+
+  if (!m_Db) return std::vector<std::string>();
+
+  std::vector<std::string> addresses;
+  if (p_Filter.empty())
+  {
+    *m_Db << "SELECT address FROM fromaddresses ORDER BY usages DESC;" >>
+      [&](const std::string& address) { addresses.push_back(address); };
+  }
+  else
+  {
+    // @todo: strip out any % from p_Filter?
+    *m_Db << "SELECT address FROM fromaddresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
       [&](const std::string& address) { addresses.push_back(address); };
   }
 

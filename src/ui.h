@@ -33,6 +33,7 @@ public:
     StateAddressList = 8,
     StateFileList = 9,
     StateViewPartList = 10,
+    StateFromAddressList = 11,
   };
 
   enum UiRequest
@@ -54,7 +55,8 @@ public:
   enum HeaderField
   {
     HeaderAll = -1,
-    HeaderTo = 0,
+    HeaderFrom = 0,
+    HeaderTo,
     HeaderCc,
     HeaderBcc,
     HeaderAtt,
@@ -88,8 +90,8 @@ public:
     LineWrapHardWrap = 2,
   };
 
-  Ui(const std::string& p_Inbox, const std::string& p_Address, uint32_t p_PrefetchLevel,
-     bool p_PrefetchAllHeaders);
+  Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name,
+     uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
@@ -230,6 +232,8 @@ private:
   void FilePickerOrStateFileList();
   void AddAttachmentPath(const std::string& p_Path);
   void AddAddress(const std::string& p_Address);
+  void SetAddress(const std::string& p_Address);
+  std::string GetDefaultFrom();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -241,6 +245,7 @@ private:
 
   std::string m_Inbox;
   std::string m_Address;
+  std::string m_Name;
   uint32_t m_PrefetchLevel = 0;
 
   std::string m_CurrentFolder = "INBOX";

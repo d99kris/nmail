@@ -19,8 +19,7 @@ class Smtp
 {
 public:
   Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-       const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address,
-       const int64_t p_Timeout);
+       const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout);
   virtual ~Smtp();
 
   bool Send(const std::string& p_Subject, const std::string& p_Message,
@@ -29,6 +28,7 @@ public:
             const std::vector<Contact>& p_Cc,
             const std::vector<Contact>& p_Bcc,
             const std::string& p_RefMsgId,
+            const Contact& p_From,
             const std::vector<std::string>& p_AttachmentPaths,
             const bool p_Flowed,
             std::string& p_ResultMessage);
@@ -36,7 +36,7 @@ public:
             const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
   std::string GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
                         const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
-                        const std::string& p_RefMsgId);
+                        const std::string& p_RefMsgId, const Contact& p_From);
   std::string GetBody(const std::string& p_Message, const std::string& p_HtmlMessage,
                       const std::vector<std::string>& p_AttachmentPaths, bool p_Flowed);
 
@@ -60,7 +60,6 @@ private:
   std::string m_Pass;
   std::string m_Host;
   uint16_t m_Port = 0;
-  std::string m_Name;
   std::string m_Address;
   int64_t m_Timeout = 0;
 };

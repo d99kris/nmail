@@ -16,19 +16,17 @@
 #include "loghelp.h"
 
 Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-           const uint16_t p_Port, const std::string& p_Name, const std::string& p_Address,
-           const int64_t p_Timeout)
+           const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
   , m_Port(p_Port)
-  , m_Name(p_Name)
   , m_Address(p_Address)
   , m_Timeout(p_Timeout)
 {
   if (Log::GetTraceEnabled())
   {
-    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Name, p_Address));
+    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Address));
   }
   else
   {
@@ -46,15 +44,16 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
                 const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
                 const std::vector<Contact>& p_Bcc,
                 const std::string& p_RefMsgId,
+                const Contact& p_From,
                 const std::vector<std::string>& p_AttachmentPaths,
                 const bool p_Flowed,
                 std::string& p_ResultMessage)
 {
   LOG_DEBUG_FUNC(STR());
-  LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_AttachmentPaths, p_Flowed));
+  LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_From, p_AttachmentPaths, p_Flowed));
 
   std::vector<Contact> hdrbcc;
-  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, hdrbcc, p_RefMsgId);
+  const std::string& header = GetHeader(p_Subject, p_To, p_Cc, hdrbcc, p_RefMsgId, p_From);
   const std::string& body = GetBody(p_Message, p_HtmlMessage, p_AttachmentPaths, p_Flowed);
   const std::string& data = header + body;
   p_ResultMessage = data;
@@ -245,11 +244,12 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
 
 std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
                             const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
-                            const std::string& p_RefMsgId)
+                            const std::string& p_RefMsgId, const Contact& p_From)
 {
-  std::string name = MimeEncodeStr(m_Name);
-  struct mailimf_mailbox* mbfrom = mailimf_mailbox_new(strdup(name.c_str()),
-                                                       strdup(m_Address.c_str()));
+  std::string fromname = MimeEncodeStr(p_From.GetName());
+  std::string fromaddress = p_From.GetAddress();
+  struct mailimf_mailbox* mbfrom = mailimf_mailbox_new(strdup(fromname.c_str()),
+                                                       strdup(fromaddress.c_str()));
   struct mailimf_mailbox_list* mblistfrom = mailimf_mailbox_list_new_empty();
   mailimf_mailbox_list_add(mblistfrom, mbfrom);
 

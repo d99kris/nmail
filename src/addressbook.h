@@ -30,7 +30,9 @@ public:
                          const std::string& p_OldPass, const std::string& p_NewPass);
 
   static void Add(const std::string& p_MsgId, const std::set<std::string>& p_Addresses);
+  static void AddFrom(const std::string& p_Address);
   static std::vector<std::string> Get(const std::string& p_Filter);
+  static std::vector<std::string> GetFrom(const std::string& p_Filter);
 
 private:
   static void InitCacheDir();
