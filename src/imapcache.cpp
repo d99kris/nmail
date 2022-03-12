@@ -81,7 +81,7 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
 
     std::cout << ".";
   }
-  
+
   std::string bodysDir = GetCacheDbDir(BodysDb);
   std::vector<std::string> bodyFiles = Util::ListDir(bodysDir);
   for (const auto& bodyFile : bodyFiles)
@@ -687,7 +687,7 @@ std::string ImapCache::GetDbPath(ImapCache::DbType p_DbType, const std::string& 
       {
         if (!Crypto::AESDecryptFile(cacheDbPath, dbPath, m_Pass))
         {
-          Util::DeleteFile(dbPath);          
+          Util::DeleteFile(dbPath);
         }
       }
     }
@@ -711,7 +711,7 @@ void ImapCache::WriteDb(ImapCache::DbType p_DbType, const std::string& p_Folder)
     std::string cacheDbPath = GetCacheDbDir(p_DbType) + dbName;
     if (!Crypto::AESEncryptFile(dbPath, cacheDbPath, m_Pass))
     {
-      Util::DeleteFile(cacheDbPath);      
+      Util::DeleteFile(cacheDbPath);
     }
   }
 }

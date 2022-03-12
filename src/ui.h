@@ -205,6 +205,7 @@ private:
   int GetCurrentHeaderField();
   void StartSync();
   std::string MakeHtmlPart(const std::string& p_Text);
+  std::string MakeHtmlPartCustomSig(const std::string& p_Text);
   void HandleConnected();
   void StartComposeBackup();
   void StopComposeBackup();
@@ -234,6 +235,7 @@ private:
   void AddAddress(const std::string& p_Address);
   void SetAddress(const std::string& p_Address);
   std::string GetDefaultFrom();
+  std::wstring GetSignatureStr(bool p_NoPrefix = false);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -401,6 +403,7 @@ private:
   bool m_ColorsEnabled = false;
   bool m_ShowFullHeader = false;
   bool m_SearchShowFolder = false;
+  bool m_Signature = false;
 
   int m_AttrsDialog = A_REVERSE;
   int m_AttrsHelpDesc = A_NORMAL;

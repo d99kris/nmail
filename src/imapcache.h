@@ -40,7 +40,7 @@ public:
 
   static bool ChangePass(const bool p_CacheEncrypt,
                          const std::string& p_OldPass, const std::string& p_NewPass);
-  
+
   std::set<std::string> GetFolders();
   void SetFolders(const std::set<std::string>& p_Folders);
 

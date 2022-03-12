@@ -295,7 +295,7 @@ int main(int argc, char* argv[])
   {
     return ChangePasswords(mainConfig, secretConfig) ? 0 : 1;
   }
-  
+
   std::string pass;
   std::string smtpPass;
   if (auth == "pass")
@@ -780,7 +780,7 @@ bool ChangePasswords(std::shared_ptr<Config> p_MainConfig, std::shared_ptr<Confi
     std::cout << "SMTP Password: ";
     newSmtpPass = Util::GetPass();
   }
-    
+
   if (ChangeCachePasswords(p_MainConfig, oldPass, newPass))
   {
     std::string encPass = Util::ToHex(Crypto::AESEncrypt(newPass, user));
@@ -796,12 +796,12 @@ bool ChangePasswords(std::shared_ptr<Config> p_MainConfig, std::shared_ptr<Confi
 
     std::cout << "Changing password complete.\n";
     return true;
-  }  
+  }
   else
   {
     std::cout << "Changing cache password failed, exiting.\n";
     return false;
-  }  
+  }
 }
 
 bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
@@ -811,7 +811,7 @@ bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
   if (!ImapCache::ChangePass(cacheEncrypt, p_OldPass, p_NewPass)) return false;
 
   const bool cacheIndexEncrypt = (p_MainConfig->Get("cache_index_encrypt") == "1");
-  if (!ImapIndex::ChangePass(cacheIndexEncrypt, p_OldPass, p_NewPass)) return false;  
+  if (!ImapIndex::ChangePass(cacheIndexEncrypt, p_OldPass, p_NewPass)) return false;
 
   const bool addressBookEncrypt = (p_MainConfig->Get("addressbook_encrypt") == "1");
   if (!AddressBook::ChangePass(addressBookEncrypt, p_OldPass, p_NewPass)) return false;

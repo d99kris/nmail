@@ -572,12 +572,35 @@ bool Util::IsDefaultMsgViewerCmd()
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,
                          const std::string& p_Replace)
 {
+  (void)ReplaceStringCount(p_Str, p_Search, p_Replace);
+}
+
+size_t Util::ReplaceStringCount(std::string& p_Str, const std::string& p_Search,
+                                const std::string& p_Replace)
+{
+  size_t cnt = 0;
   size_t pos = 0;
   while ((pos = p_Str.find(p_Search, pos)) != std::string::npos)
   {
     p_Str.replace(pos, p_Search.length(), p_Replace);
     pos += p_Replace.length();
+    ++cnt;
   }
+
+  return cnt;
+}
+
+bool Util::ReplaceStringFirst(std::string& p_Str, const std::string& p_Search,
+                              const std::string& p_Replace)
+{
+  size_t pos = 0;
+  if ((pos = p_Str.find(p_Search, pos)) != std::string::npos)
+  {
+    p_Str.replace(pos, p_Search.length(), p_Replace);
+    return true;
+  }
+
+  return false;
 }
 
 std::string Util::ReduceIndent(const std::string& p_Str, int p_Cnt)
@@ -624,7 +647,7 @@ std::string Util::GetSenderHostname()
     char hostname[256]; // @todo: use HOST_NAME_MAX?
     gethostname(hostname, sizeof(hostname));
     return std::string(hostname);
-  }();
+  } ();
 
   static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : sysHostname;
   return senderHostname;
@@ -639,7 +662,7 @@ std::string Util::ToString(const std::wstring& p_WStr)
 {
   try
   {
-    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(p_WStr);
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{ }.to_bytes(p_WStr);
   }
   catch (...)
   {
@@ -655,7 +678,7 @@ std::wstring Util::ToWString(const std::string& p_Str)
 {
   try
   {
-    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.from_bytes(p_Str);
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{ }.from_bytes(p_Str);
   }
   catch (...)
   {
@@ -1810,7 +1833,7 @@ int Util::GetColor(const std::string& p_Str)
     }
 
     return colors;
-  }();
+  } ();
 
   if (p_Str.empty() || (p_Str == "normal")) return -1;
 
@@ -1928,7 +1951,7 @@ void Util::NormalizeSubject(std::string& p_String, bool p_ToLower)
     prefixes.insert(prefixes.end(), customPrefixes.begin(), customPrefixes.end());
     std::string prefixesJoined = Join(prefixes, "|");
     return std::regex("^((" + prefixesJoined + ") *(:) *)+", std::regex_constants::icase);
-  }();
+  } ();
 
   p_String = std::regex_replace(p_String, re, "");
   if (p_ToLower)

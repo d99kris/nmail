@@ -29,12 +29,12 @@
 #define LOG_TRACE_FUNC(ARGS) do { if (!Log::GetTraceEnabled()) { break; } \
                                   const std::string& str = ARGS; \
                                   Log::Trace(__FILENAME__, __LINE__, "%s(%s)", \
-                                             __FUNCTION__, str.c_str()); } while(0)
+                                             __FUNCTION__, str.c_str()); } while (0)
 
 #define LOG_DEBUG_FUNC(ARGS) do { if (!Log::GetDebugEnabled()) { break; } \
                                   const std::string& str = ARGS; \
                                   Log::Debug(__FILENAME__, __LINE__, "%s(%s)", \
-                                             __FUNCTION__, str.c_str()); } while(0)
+                                             __FUNCTION__, str.c_str()); } while (0)
 
 #define LOG_DEBUG_VAR(MSG, VAR) do { if (!Log::GetDebugEnabled()) { break; } \
                                      const std::string& str = LogHelp::PrettyPrint(VAR); \
@@ -140,7 +140,7 @@ public:
 
   template<typename FirstArg, typename... RemainingArgs>
   static void PrettyPrintArgsHelper(std::stringstream& p_Sstream, const FirstArg& p_FirstArg,
-                                    const RemainingArgs&... p_RemainingArgs)
+                                    const RemainingArgs& ... p_RemainingArgs)
   {
     if (!p_Sstream.str().empty())
     {
@@ -154,7 +154,7 @@ public:
 };
 
 template<typename... Args>
-std::string STR(const Args&... p_Args)
+std::string STR(const Args& ... p_Args)
 {
   std::stringstream sstream;
   LogHelp::PrettyPrintArgsHelper(sstream, p_Args...);

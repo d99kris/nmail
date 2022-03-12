@@ -27,6 +27,7 @@ Features
 - Email search
 - Compose emails while offline
 - Color customization
+- Signature
 
 Not Supported / Out of Scope
 ----------------------------
@@ -760,6 +761,7 @@ file (platform-dependent defaults are left empty below):
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
+    signature=0
     tab_size=8
     unread_indicator=N
 
@@ -948,6 +950,21 @@ fetching emails (default enabled).
 Determines whether to show rich headers (bcc field) during email compose. This
 option can be re-configured in run-time by pressing `CTRL-R` when composing
 an email (default disabled).
+
+### signature
+
+Determines whether to suffix emails with a signature (default disabled). When
+enabled, nmail will use `~/.nmail/signature.txt` if present, or otherwise use
+`~/.signature` for signature plain text content. When composing markdown
+formatted emails, nmail will use `~/.nmail/signature.html` if present, for the
+html part, and otherwise simply convert the plain text signature to html.
+
+Note: For **custom html** signature to work properly, the plain text signature
+should not be present more than once in the composed message, thus a very short
+plain text signature may not be ideal.
+
+Example signature files: [signature.txt](/doc/signature.txt),
+[signature.html](/doc/signature.html)
 
 ### tab_size
 

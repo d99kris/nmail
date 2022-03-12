@@ -1,6 +1,6 @@
 // util.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -169,6 +169,10 @@ public:
   static bool IsDefaultMsgViewerCmd();
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
+  static size_t ReplaceStringCount(std::string& p_Str, const std::string& p_Search,
+                                   const std::string& p_Replace);
+  static bool ReplaceStringFirst(std::string& p_Str, const std::string& p_Search,
+                                 const std::string& p_Replace);
   static std::string ReduceIndent(const std::string& p_Str, int p_Cnt);
   static std::string AddIndent(const std::string& p_Str, const std::string& p_Indent);
   static std::string MakeReplySubject(const std::string& p_Str);

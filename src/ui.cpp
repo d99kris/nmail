@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -151,6 +151,7 @@ void Ui::Init()
     { "tab_size", "8" },
     { "search_show_folder", "0" },
     { "localized_subject_prefixes", "" },
+    { "signature", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -315,6 +316,7 @@ void Ui::Init()
   m_KeySelectAll = Util::GetKeyCode(m_Config.Get("key_select_all"));
   m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
   Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
+  m_Signature = m_Config.Get("signature") == "1";
 
   try
   {
@@ -644,7 +646,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyFilterSortReset), "FiltReset",
     });
     return listHelp;
-  }();
+  } ();
 
   static std::vector<std::vector<std::string>> viewMessagesListSearchHelp = [&]()
   {
@@ -666,7 +668,7 @@ void Ui::DrawHelp()
     });
 
     return listHelp;
-  }();
+  } ();
 
   static std::vector<std::vector<std::string>> viewMessageHelp =
   {
@@ -3634,7 +3636,10 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeTempDirectory = tmppath;
       }
     }
-
+    else
+    {
+      m_ComposeMessageStr = GetSignatureStr();
+    }
   }
   else if ((m_State == StateReplyAllMessage) || (m_State == StateReplySenderMessage))
   {
@@ -3689,10 +3694,11 @@ void Ui::SetState(Ui::State p_State)
 
       if (!m_BottomReply)
       {
-        m_ComposeMessageStr = Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
-                                              header.GetFrom() +
-                                              " wrote:\n\n" +
-                                              indentBody);
+        m_ComposeMessageStr = GetSignatureStr() +
+          Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
+                          header.GetFrom() +
+                          " wrote:\n\n" +
+                          indentBody);
         Util::StripCR(m_ComposeMessageStr);
       }
       else
@@ -3705,6 +3711,7 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessagePos = (int)m_ComposeMessageStr.size() - 1;
         int lineCount = Util::Split(Util::ToString(m_ComposeMessageStr), '\n').size();
         m_ComposeMessageOffsetY = std::max(lineCount - (m_MainWinHeight / 2), 0);
+        m_ComposeMessageStr += GetSignatureStr();
       }
 
       if (!header.GetReplyTo().empty())
@@ -3807,6 +3814,7 @@ void Ui::SetState(Ui::State p_State)
       }
 
       m_ComposeMessageStr =
+        GetSignatureStr() +
         Util::ToWString("\n\n---------- Forwarded message ---------\n"
                         "From: " + header.GetFrom() + "\n"
                         "Date: " + header.GetDateTime() + "\n"
@@ -6035,7 +6043,55 @@ std::string Ui::MakeHtmlPart(const std::string& p_Text)
 {
   if (!m_CurrentMarkdownHtmlCompose) return std::string();
 
+  if (m_Signature)
+  {
+    std::string htmlPartCustomSignature = MakeHtmlPartCustomSig(p_Text);
+    if (!htmlPartCustomSignature.empty())
+    {
+      return htmlPartCustomSignature;
+    }
+  }
+
   return Util::ConvertTextToHtml(p_Text);
+}
+
+std::string Ui::MakeHtmlPartCustomSig(const std::string& p_Text)
+{
+  std::string signatureStr = Util::ToString(GetSignatureStr(true /* p_NoPrefix */));
+  static const std::string sigHtmlPath = Util::GetApplicationDir() + "signature.html";
+  if (!Util::IsReadableFile(sigHtmlPath))
+  {
+    return std::string();
+  }
+
+  std::string signatureHtmlStr = Util::ReadFile(sigHtmlPath);
+  if (signatureHtmlStr.empty())
+  {
+    LOG_WARNING("html signature file is empty");
+    return std::string();
+  }
+
+  char randhex[80];
+  snprintf(randhex, sizeof(randhex), "%lx.%lx.%x.%lx",
+           (long)time(NULL), random(), getpid(), random());
+  const std::string placeholderStr = std::string(randhex);
+
+  std::string tmpText = p_Text;
+  if (!Util::ReplaceStringFirst(tmpText, signatureStr, "  \n" + placeholderStr))
+  {
+    LOG_WARNING("plain text signature not found in message, cannot use custom html signature");
+    return std::string();
+  }
+
+  tmpText = Util::ConvertTextToHtml(tmpText);
+  const std::string placeholderHtmlStr = "<p>" + placeholderStr + "</p>";
+  if (Util::ReplaceStringCount(tmpText, placeholderHtmlStr, signatureHtmlStr) != 1)
+  {
+    LOG_WARNING("unique custom html signature placeholder not found");
+    return std::string();
+  }
+
+  return tmpText;
 }
 
 void Ui::SetRunning(bool p_Running)
@@ -6707,4 +6763,45 @@ std::string Ui::GetDefaultFrom()
 {
   static const Contact defaultFrom(m_Address, m_Name);
   return defaultFrom.ToString();
+}
+
+std::wstring Ui::GetSignatureStr(bool p_NoPrefix /*= false*/)
+{
+  if (!m_Signature)
+  {
+    return std::wstring();
+  }
+
+  std::string signatureStr;
+  static const std::string sigPriPath = Util::GetApplicationDir() + "signature.txt";
+  static const std::string sigSecPath = std::string(getenv("HOME")) + "/.signature";
+  if (Util::IsReadableFile(sigPriPath))
+  {
+    signatureStr = Util::ReadFile(sigPriPath);
+  }
+  else if (Util::IsReadableFile(sigSecPath))
+  {
+    signatureStr = Util::ReadFile(sigSecPath);
+  }
+  else
+  {
+    LOG_WARNING("signature file missing");
+    return std::wstring();
+  }
+
+  if (signatureStr.empty())
+  {
+    LOG_WARNING("signature file is empty");
+    return std::wstring();
+  }
+
+  if (!p_NoPrefix)
+  {
+    signatureStr = "\n\n" + signatureStr; // prefix with line breaks
+  }
+
+  std::wstring signatureWStr = Util::ToWString(signatureStr);
+  Util::StripCR(signatureWStr);
+
+  return signatureWStr;
 }
