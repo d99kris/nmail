@@ -1896,12 +1896,12 @@ void Ui::DrawPartList()
 
         std::string leftPad = "    ";
         std::string sizeStr = std::to_string(part.m_Size) + " bytes";
-        std::string sizeStrPadded = Util::TrimPadString(sizeStr, 18);
-        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 30);
+        std::string sizeStrPadded = Util::TrimPadString(sizeStr, 17) + " ";
+        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 29) + " ";
         std::wstring wline = Util::ToWString(leftPad + sizeStrPadded + mimeTypePadded);
         std::wstring wfilename = Util::ToWString(part.m_Filename);
         int filenameMaxLen = m_ScreenWidth - (int)wline.size();
-        std::wstring wfilenamePadded = Util::TrimPadWString(wfilename, filenameMaxLen);
+        std::wstring wfilenamePadded = Util::TrimPadWString(wfilename, filenameMaxLen - 1) + L" ";
         wline = wline + wfilenamePadded;
 
         mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(),
