@@ -584,10 +584,10 @@ std::string Smtp::MimeEncodeStr(const std::string& p_In)
   int col = 0;
   MMAPString* mmstr = mmap_string_new(NULL);
   mailmime_quoted_printable_write_mem(mmstr, &col, 1, p_In.c_str(), p_In.size());
-  std::string out = std::string("=?UTF-8?Q?") + std::string(mmstr->str, mmstr->len) +
-    std::string("?=");
+  std::string enc = std::string(mmstr->str, mmstr->len);
+  Util::ReplaceString(enc, "=\r\n", "");
   mmap_string_free(mmstr);
-  return out;
+  return std::string("=?UTF-8?Q?") + enc + std::string("?=");
 }
 
 std::string Smtp::RemoveBccHeader(const std::string& p_Data)
