@@ -3832,7 +3832,12 @@ void Ui::SetState(Ui::State p_State)
           Util::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
-      const std::string& bodyText = GetBodyText(body);
+      std::string bodyText = GetBodyText(body);
+      if (!bodyText.empty() && bodyText[bodyText.size() - 1] == '\n')
+      {
+        bodyText = bodyText.substr(0, bodyText.size() - 1);
+      }
+
       m_ComposeMessageStr += Util::ToWString("\n" + bodyText);
       Util::StripCR(m_ComposeMessageStr);
 
