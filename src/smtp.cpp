@@ -362,37 +362,50 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
   // ->fileBodyPart1 (bodyPart2 for the mainMultipart)
   // --->FileDataHandler (content for fileBodyPart1 )
 
-  struct mailmime* mainMultipart =
-    GetMimePart(mailmime_content_new_with_str("multipart/mixed"),
-                mailmime_fields_new_empty(), 0);
-
-  struct mailmime* htmlAndTextMultipart =
-    GetMimePart(mailmime_content_new_with_str("multipart/alternative"),
-                mailmime_fields_new_empty(), 0);
-
   struct mailmime* textBodyPart = GetMimeTextPart("text/plain", p_Message, p_Flowed);
-  mailmime_smart_add_part(htmlAndTextMultipart, textBodyPart);
 
+  struct mailmime* bodyPart = nullptr;
   if (!p_HtmlMessage.empty())
   {
+    struct mailmime* htmlAndTextMultipart =
+      GetMimePart(mailmime_content_new_with_str("multipart/alternative"),
+                  mailmime_fields_new_empty(), 0);
     struct mailmime* htmlBodyPart = GetMimeTextPart("text/html", p_HtmlMessage, false);
+    mailmime_smart_add_part(htmlAndTextMultipart, textBodyPart);
     mailmime_smart_add_part(htmlAndTextMultipart, htmlBodyPart);
+    bodyPart = htmlAndTextMultipart;
+  }
+  else
+  {
+    bodyPart = textBodyPart;
   }
 
-  mailmime_smart_add_part(mainMultipart, htmlAndTextMultipart);
-
-  for (auto& path : p_AttachmentPaths)
+  struct mailmime* mainMultipart = nullptr;
+  const bool hasAttachment = !p_AttachmentPaths.empty();
+  if (hasAttachment)
   {
-    if (Util::Exists(path))
+    mainMultipart =
+      GetMimePart(mailmime_content_new_with_str("multipart/mixed"),
+                  mailmime_fields_new_empty(), 0);
+    mailmime_smart_add_part(mainMultipart, bodyPart);
+
+    for (auto& path : p_AttachmentPaths)
     {
-      struct mailmime* fileBodyPart = GetMimeFilePart(path);
-      mailmime_smart_add_part(mainMultipart, fileBodyPart);
-      LOG_DEBUG("attachment path \"%s\" added", path.c_str());
+      if (Util::Exists(path))
+      {
+        struct mailmime* fileBodyPart = GetMimeFilePart(path);
+        mailmime_smart_add_part(mainMultipart, fileBodyPart);
+        LOG_DEBUG("attachment path \"%s\" added", path.c_str());
+      }
+      else
+      {
+        LOG_DEBUG("attachment path \"%s\" does not exist", path.c_str());
+      }
     }
-    else
-    {
-      LOG_DEBUG("attachment path \"%s\" does not exist", path.c_str());
-    }
+  }
+  else
+  {
+    mainMultipart = bodyPart;
   }
 
   struct mailmime* msg_mime = mailmime_new_message_data(NULL);
