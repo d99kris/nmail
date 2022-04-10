@@ -114,7 +114,7 @@ Linux
 
 Required:
 
-    sudo apt -y install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev
+    sudo apt -y install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev uuid-dev
 
 Optional (to view/compose HTML emails):
 
@@ -124,7 +124,7 @@ Optional (to view/compose HTML emails):
 
 Required:
 
-    sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel clang
+    sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel libuuid-devel clang
 
 Optional (to view/compose HTML emails):
 
@@ -134,7 +134,7 @@ Optional (to view/compose HTML emails):
 
 Required:
 
-    sudo pacman -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file clang
+    sudo pacman -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file uuid clang
 
 Optional (to view/compose HTML emails):
 
@@ -165,7 +165,7 @@ macOS
 
 Required:
 
-    brew install cmake libetpan openssl ncurses xapian sqlite libmagic
+    brew install cmake libetpan openssl ncurses xapian sqlite libmagic ossp-uuid
 
 Optional (for OAuth 2.0 support):
 
@@ -460,8 +460,8 @@ Specifies whether nmail shall store the password(s) (default enabled).
 
 ### sender_hostname
 
-Custom sender hostname to use in `Message-ID` email header for outgoing emails.
-If not set, nmail uses the system hostname (default).
+Custom sender hostname to use in SMTP authentication when sending outgoing
+emails. If not set, nmail uses the system hostname (default).
 
 ### sent
 

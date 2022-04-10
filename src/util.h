@@ -279,6 +279,7 @@ public:
   static std::vector<std::string> SplitAddrsUnquote(const std::string& p_Str);
   static std::string EscapeName(const std::string& p_Str);
   static void RemoveChar(std::string& p_Str, char p_Char);
+  static std::string GetDomainName(const std::string& p_HostAddress);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

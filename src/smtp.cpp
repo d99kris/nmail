@@ -11,6 +11,8 @@
 
 #include <unistd.h>
 
+#include <uuid/uuid.h>
+
 #include "auth.h"
 #include "log.h"
 #include "loghelp.h"
@@ -313,12 +315,8 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   time_t now = time(NULL);
   struct mailimf_date_time* datenow = mailimf_get_date(now);
 
-  char id[512];
-  std::string hostname = Util::GetSenderHostname();
-  std::string appVersion = Util::GetMessageIdAppVersion();
-  snprintf(id, sizeof(id), "%s.%lx.%lx.%x@%s", appVersion.c_str(),
-           (long)now, random(), getpid(), hostname.c_str());
-  char* messageid = strdup(id);
+  const std::string msgId = GenerateMessageId();
+  char* messageid = strdup(msgId.c_str());
 
   clist* clist_inreplyto = NULL;
   clist* clist_references = NULL;
@@ -629,6 +627,15 @@ std::string Smtp::RemoveBccHeader(const std::string& p_Data)
   }
 
   return oss.str();
+}
+
+std::string Smtp::GenerateMessageId() const
+{
+  uuid_t uuid;
+  char uuid_str[37];
+  uuid_generate(uuid);
+  uuid_unparse(uuid, uuid_str);
+  return std::string(uuid_str) + "@" + Util::GetDomainName(m_Host);
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,

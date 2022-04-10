@@ -2081,3 +2081,19 @@ void Util::RemoveChar(std::string& p_Str, char p_Char)
 {
   p_Str.erase(std::remove(p_Str.begin(), p_Str.end(), p_Char), p_Str.end());
 }
+
+std::string Util::GetDomainName(const std::string& p_HostAddress)
+{
+  char key = '.';
+  std::size_t lastDot = p_HostAddress.rfind(key);
+  if ((lastDot != std::string::npos) && (lastDot > 0))
+  {
+    std::size_t secondLastDot = p_HostAddress.rfind(key, lastDot - 1);
+    if (secondLastDot != std::string::npos)
+    {
+      return p_HostAddress.substr(secondLastDot + 1);
+    }
+  }
+
+  return p_HostAddress;
+}

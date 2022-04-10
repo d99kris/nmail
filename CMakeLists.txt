@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.64" LANGUAGES CXX C)
+project(nmail VERSION "3.65" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
 
@@ -115,13 +115,17 @@ set(CURSES_NEED_WIDE TRUE)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
+# Dependency openssl
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+# Dependency xapian
 find_package(Xapian REQUIRED)
 
+# Dependency sqlite3
 find_package(SQLite3 REQUIRED)
 
+# Dependency libetpan
 find_path(LIBETPAN_INCLUDE_DIR
   NAMES libetpan/libetpan.h
   PATHS ${additional_includes}
@@ -138,13 +142,12 @@ else()
   message(STATUS "Found libetpan: ${LIBETPAN_LIBRARY}")
 endif()
 
+# Dependency sasl2
 find_library(CYRUS_SASL_LIBRARY sasl2)
 find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
-include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr"
-                    "ext/cereal/include")
-
+# Dependency execinfo / magic
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
 if(FOUND_EXECINFO)
   target_compile_definitions(nmail PRIVATE HAVE_EXECINFO_H=1)
@@ -152,11 +155,24 @@ endif()
 
 find_library(MAGIC_LIBRARY magic)
 
+# Dependency libuuid
+find_library(LIBUUID_LIBRARIES NAMES uuid)
+find_path(LIBUUID_HEADERS uuid.h PATH_SUFFIXES uuid/)
+if(NOT LIBUUID_LIBRARIES OR NOT LIBUUID_HEADERS)
+  message(FATAL_ERROR "ERROR: Could not find libuuid")
+else()
+  message(STATUS "Found libuuid: ${LIBUUID_LIBRARIES} and ${LIBUUID_HEADERS}")
+endif()
+
+# Includes
+include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr"
+                    "ext/cereal/include" ${LIBUUID_HEADERS})
+
 # Linking
 target_link_libraries(nmail PUBLIC
                       ${CURSES_LIBRARIES} OpenSSL::SSL SQLite::SQLite3
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
-                      ${MAGIC_LIBRARY}
+                      ${MAGIC_LIBRARY} ${LIBUUID_LIBRARIES}
                       pthread ${CMAKE_DL_LIBS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
