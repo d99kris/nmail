@@ -114,11 +114,11 @@ Linux
 
 Required:
 
-    sudo apt -y install git cmake libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev uuid-dev
+    sudo apt install git cmake build-essential libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev uuid-dev
 
 Optional (to view/compose HTML emails):
 
-    sudo apt -y install pandoc
+    sudo apt install pandoc
 
 **Dependencies Fedora**
 
