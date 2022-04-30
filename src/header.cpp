@@ -254,8 +254,6 @@ void Header::Parse()
 
               case MAILIMF_FIELD_SUBJECT:
                 m_Subject = Util::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
-                Util::ReplaceString(m_Subject, "\r", "");
-                Util::ReplaceString(m_Subject, "\n", "");
                 break;
 
               case MAILIMF_FIELD_MESSAGE_ID:

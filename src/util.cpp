@@ -1774,6 +1774,8 @@ std::string Util::MimeToUtf8(const std::string& p_Str)
   {
     std::string decoded(cdecoded);
     free(cdecoded);
+    Util::ReplaceString(decoded, "\r", "");
+    Util::ReplaceString(decoded, "\n", "");
     return decoded;
   }
   else
