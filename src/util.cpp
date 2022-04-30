@@ -54,6 +54,7 @@ std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
 std::string Util::m_SenderHostname;
+std::string Util::m_DownloadsDir;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
@@ -2096,4 +2097,26 @@ std::string Util::GetDomainName(const std::string& p_HostAddress)
   }
 
   return p_HostAddress;
+}
+
+std::string Util::GetDownloadsDir()
+{
+  return m_DownloadsDir;
+}
+
+void Util::SetDownloadsDir(const std::string& p_DownloadsDir)
+{
+  if (!p_DownloadsDir.empty())
+  {
+    std::string downloadsDir = Util::ExpandPath(p_DownloadsDir);
+    if (Util::IsDir(downloadsDir))
+    {
+      m_DownloadsDir = downloadsDir + "/";
+    }
+  }
+}
+
+bool Util::IsDir(const std::string& p_Path)
+{
+  return apathy::Path(p_Path).is_directory();
 }

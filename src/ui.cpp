@@ -3452,7 +3452,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeySaveFile)
   {
-    std::string filename = m_PartListCurrentPartInfo.m_Filename;
+    std::string filename = Util::GetDownloadsDir() + m_PartListCurrentPartInfo.m_Filename;
     if (PromptString("Save Filename: ", "Save", filename))
     {
       if (!filename.empty())
@@ -5641,7 +5641,7 @@ void Ui::ExportMessage()
 {
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
-  std::string filename = std::to_string(uid) + ".eml";
+  std::string filename = Util::GetDownloadsDir() + std::to_string(uid) + ".eml";
   if (PromptString("Export Filename: ", "Save", filename))
   {
     if (!filename.empty())
@@ -5674,7 +5674,7 @@ void Ui::ExportMessage()
 
 void Ui::ImportMessage()
 {
-  std::string filename;
+  std::string filename = Util::GetDownloadsDir();
   if (PromptString("Import Filename: ", "Load", filename))
   {
     if (!filename.empty())

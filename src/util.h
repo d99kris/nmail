@@ -280,6 +280,9 @@ public:
   static std::string EscapeName(const std::string& p_Str);
   static void RemoveChar(std::string& p_Str, char p_Char);
   static std::string GetDomainName(const std::string& p_HostAddress);
+  static std::string GetDownloadsDir();
+  static void SetDownloadsDir(const std::string& p_DownloadsDir);
+  static bool IsDir(const std::string& p_Path);
 
 private:
   static std::string m_HtmlToTextConvertCmd;
@@ -291,6 +294,7 @@ private:
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;
   static std::string m_SenderHostname;
+  static std::string m_DownloadsDir;
   static int m_OrgStdErr;
   static int m_NewStdErr;
   static bool m_UseServerTimestamps;

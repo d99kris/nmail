@@ -260,6 +260,7 @@ Full example of a config file `~/.nmail/main.conf`:
     cache_encrypt=0
     cache_index_encrypt=0
     client_store_sent=0
+    downloads_dir=
     drafts=Drafts
     editor_cmd=
     file_picker_cmd=
@@ -327,6 +328,11 @@ This field should generally be left `0`. It indicates whether nmail shall upload
 sent emails to configured `sent` folder. Many email service providers
 (gmail, outlook, etc) do this on server side, so this should only be enabled if
 emails sent using nmail do not automatically gets stored in the sent folder.
+
+### downloads_dir
+
+Specifies a custom downloads directory path to save attachments to, for example
+`downloads_dir=~/Downloads`. If not specified, the current working dir is used.
 
 ### drafts
 
