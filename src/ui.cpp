@@ -3621,6 +3621,7 @@ void Ui::SetState(Ui::State p_State)
             std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
             Util::WriteFile(tmpfilepath, partDatas.at(part.first));
+            tmpfilepath = Util::EscapePath(tmpfilepath);
             if (GetComposeStr(HeaderAtt).empty())
             {
               SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
@@ -3800,6 +3801,7 @@ void Ui::SetState(Ui::State p_State)
           std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
           Util::WriteFile(tmpfilepath, partDatas.at(part.first));
+          tmpfilepath = Util::EscapePath(tmpfilepath);
           if (GetComposeStr(HeaderAtt).empty())
           {
             SetComposeStr(HeaderAtt,
@@ -4691,11 +4693,11 @@ bool Ui::ComposedMessageIsValid(bool p_ForSend)
     if (!Util::IsReadableFile(att))
     {
       std::string path = att;
-      int maxPath = (m_ScreenWidth - 20);
+      int maxPath = (m_ScreenWidth - 26);
       if ((int)path.size() > maxPath)
       {
-        int offset = maxPath - path.size();
-        path = path.substr(offset);
+        int offset = path.size() - maxPath;
+        path = "..." + path.substr(offset);
       }
 
       LOG_WARNING("file \"%s\" not found", att.c_str());
