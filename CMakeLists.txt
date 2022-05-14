@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.70" LANGUAGES CXX C)
+project(nmail VERSION "3.71" LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
 
@@ -114,6 +114,7 @@ set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
+target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 
 # Dependency openssl
 find_package(OpenSSL REQUIRED)
