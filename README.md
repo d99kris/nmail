@@ -769,6 +769,7 @@ file (platform-dependent defaults are left empty below):
     show_rich_header=0
     signature=0
     tab_size=8
+    terminal_title=
     unread_indicator=N
 
 ### attachment_indicator
@@ -976,6 +977,10 @@ Example signature files: [signature.txt](/doc/signature.txt),
 
 Tabs are expanded to spaces when viewed in nmail. This parameter controls the
 space between tab stops (default 8).
+
+### terminal_title
+
+Specifies custom terminal title, ex: `terminal_title=nmail - d99kris@email.com`.
 
 ### unread_indicator
 

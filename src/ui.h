@@ -405,6 +405,8 @@ private:
   bool m_SearchShowFolder = false;
   bool m_Signature = false;
 
+  std::string m_TerminalTitle;
+
   int m_AttrsDialog = A_REVERSE;
   int m_AttrsHelpDesc = A_NORMAL;
   int m_AttrsHelpKeys = A_REVERSE;

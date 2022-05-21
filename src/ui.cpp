@@ -43,15 +43,6 @@ Ui::~Ui()
 
 void Ui::Init()
 {
-  setlocale(LC_ALL, "");
-  initscr();
-  noecho();
-  cbreak();
-  keypad(stdscr, TRUE);
-  curs_set(0);
-  timeout(0);
-  LOG_IF_NONZERO(pipe(m_Pipe));
-
   const std::map<std::string, std::string> defaultConfig =
   {
     { "compose_line_wrap", "0" },
@@ -152,6 +143,7 @@ void Ui::Init()
     { "search_show_folder", "0" },
     { "localized_subject_prefixes", "" },
     { "signature", "0" },
+    { "terminal_title", "" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -242,6 +234,22 @@ void Ui::Init()
     LOG_WARNING("terminal does not support colors");
     m_ColorsEnabled = false;
   }
+
+  m_TerminalTitle = m_Config.Get("terminal_title");
+
+  if (!m_TerminalTitle.empty())
+  {
+    printf("\033]0;%s\007", m_TerminalTitle.c_str());
+  }
+
+  setlocale(LC_ALL, "");
+  initscr();
+  noecho();
+  cbreak();
+  keypad(stdscr, TRUE);
+  curs_set(0);
+  timeout(0);
+  LOG_IF_NONZERO(pipe(m_Pipe));
 
   if (m_ColorsEnabled)
   {
@@ -339,6 +347,11 @@ void Ui::Cleanup()
   close(m_Pipe[1]);
   wclear(stdscr);
   endwin();
+
+  if (!m_TerminalTitle.empty())
+  {
+    printf("\033]0;%s\007", "");
+  }
 }
 
 void Ui::InitWindows()
