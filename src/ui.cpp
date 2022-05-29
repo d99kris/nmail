@@ -229,12 +229,6 @@ void Ui::Init()
   m_ShowRichHeader = m_Config.Get("show_rich_header") == "1";
 
   m_ColorsEnabled = m_Config.Get("colors_enabled") == "1";
-  if (m_ColorsEnabled && !has_colors())
-  {
-    LOG_WARNING("terminal does not support colors");
-    m_ColorsEnabled = false;
-  }
-
   m_TerminalTitle = m_Config.Get("terminal_title");
 
   if (!m_TerminalTitle.empty())
@@ -250,6 +244,12 @@ void Ui::Init()
   curs_set(0);
   timeout(0);
   LOG_IF_NONZERO(pipe(m_Pipe));
+
+  if (m_ColorsEnabled && !has_colors())
+  {
+    LOG_WARNING("terminal does not support colors");
+    m_ColorsEnabled = false;
+  }
 
   if (m_ColorsEnabled)
   {
