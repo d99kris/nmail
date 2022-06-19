@@ -25,6 +25,7 @@
 #include "smtpmanager.h"
 #include "ui.h"
 #include "util.h"
+#include "version.h"
 
 static bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
                            const uint16_t p_Imapport, const std::string& p_Smtphost,
@@ -133,7 +134,7 @@ int main(int argc, char* argv[])
   THREAD_REGISTER();
   Util::RegisterSignalHandlers();
 
-  const std::string appVersion = Util::GetUiAppVersion();
+  const std::string appVersion = Version::GetUiAppVersion();
   LOG_INFO("starting %s", appVersion.c_str());
 
   Util::InitTempDir();
@@ -433,7 +434,7 @@ static void ShowHelp()
 static void ShowVersion()
 {
   std::cout <<
-    Util::GetUiAppVersion() << "\n"
+    Version::GetUiAppVersion() << "\n"
     "\n"
     "Copyright (c) 2019-2022 Kristofer Berggren\n"
     "\n"
@@ -713,10 +714,10 @@ bool ReportConfigError(const std::string& p_Param)
 
 void LogSystemInfo()
 {
-  const std::string buildOs = Util::GetBuildOs();
+  const std::string buildOs = Version::GetBuildOs();
   LOG_DEBUG("build os:  %s", buildOs.c_str());
 
-  const std::string compiler = Util::GetCompiler();
+  const std::string compiler = Version::GetCompiler();
   LOG_DEBUG("compiler:  %s", compiler.c_str());
 
   const std::string systemOs = Util::GetSystemOs();

@@ -19,6 +19,7 @@
 #include "offlinequeue.h"
 #include "sethelp.h"
 #include "status.h"
+#include "version.h"
 
 bool Ui::s_Running = false;
 
@@ -488,7 +489,7 @@ void Ui::DrawTop()
   werase(m_TopWin);
   wattron(m_TopWin, m_AttrsTopBar);
 
-  std::string version = "  " + Util::GetUiAppVersion();
+  std::string version = "  " + Version::GetUiAppVersion();
   std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";

@@ -218,10 +218,6 @@ public:
   static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
   static void DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
   static void DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
-  static std::string GetUiAppVersion();
-  static std::string GetMessageIdAppVersion();
-  static std::string GetBuildOs();
-  static std::string GetCompiler();
 
   static void RegisterSignalHandlers();
   static void RegisterIgnoredSignalHandlers();

@@ -1346,56 +1346,6 @@ void Util::DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p
   p_CurPos -= (p_CurPos - startPos);
 }
 
-std::string Util::GetUiAppVersion()
-{
-#ifdef PROJECT_VERSION
-  static std::string version = "nmail v" PROJECT_VERSION;
-#else
-  static std::string version = "nmail";
-#endif
-  return version;
-}
-
-std::string Util::GetMessageIdAppVersion()
-{
-#ifdef PROJECT_VERSION
-  static std::string version = "nmail." PROJECT_VERSION;
-#else
-  static std::string version = "nmail";
-#endif
-  return version;
-}
-
-std::string Util::GetBuildOs()
-{
-#if defined(_WIN32)
-  return "Windows";
-#elif defined(__APPLE__)
-  return "macOS";
-#elif defined(__linux__)
-  return "Linux";
-#elif defined(BSD)
-  return "BSD";
-#else
-  return "Unknown OS";
-#endif
-}
-
-std::string Util::GetCompiler()
-{
-#if defined(_MSC_VER)
-  return "msvc-" + std::to_string(_MSC_VER);
-#elif defined(__clang__)
-  return "clang-" + std::to_string(__clang_major__) + "." + std::to_string(__clang_minor__)
-         + "." + std::to_string(__clang_patchlevel__);
-#elif defined(__GNUC__)
-  return "gcc-" + std::to_string(__GNUC__) + "." + std::to_string(__GNUC_MINOR__)
-         + "." + std::to_string(__GNUC_PATCHLEVEL__);
-#else
-  return "Unknown Compiler";
-#endif
-}
-
 std::map<int, std::string> Util::GetCrashingSignals()
 {
   static const std::map<int, std::string> crashingSignals =

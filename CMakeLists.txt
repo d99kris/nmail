@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(nmail VERSION "3.73" LANGUAGES CXX C)
+project(nmail LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
 
@@ -81,6 +81,8 @@ add_executable(nmail
   src/ui.h
   src/util.cpp
   src/util.h
+  src/version.cpp
+  src/version.h
 )
 install(TARGETS nmail DESTINATION bin)
 
@@ -106,8 +108,6 @@ set_target_properties(nmail PROPERTIES COMPILE_FLAGS
                        -Wcast-qual -Wno-missing-braces -Wswitch-default \
                        -Wunreachable-code -Wuninitialized -Wcast-align")
 # todo: add -Wundef
-
-target_compile_definitions(nmail PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 
 # Dependency ncurses
 set(CURSES_NEED_NCURSES TRUE)
