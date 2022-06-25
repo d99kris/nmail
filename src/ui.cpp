@@ -1790,11 +1790,9 @@ void Ui::DrawComposeMessage()
   int cursX = 0;
   if (m_IsComposeHeader)
   {
-    if (m_ComposeHeaderLine < (int)m_ComposeHeaderStr.size())
-    {
-      cursY = m_ComposeHeaderLine;
-      cursX = m_ComposeHeaderPos + 10;
-    }
+    m_ComposeHeaderLine = std::min(m_ComposeHeaderLine, (int)m_ComposeHeaderStr.size() - 1);
+    cursY = m_ComposeHeaderLine;
+    cursX = m_ComposeHeaderPos + 10;
   }
   else
   {
@@ -3578,7 +3576,7 @@ void Ui::SetState(Ui::State p_State)
     SetComposeStr(HeaderAll, L"");
     SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
-    m_ComposeHeaderLine = 0;
+    m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
     m_ComposeHeaderPos = 0;
     m_ComposeHeaderRef.clear();
     m_ComposeMessageStr.clear();
@@ -3662,7 +3660,7 @@ void Ui::SetState(Ui::State p_State)
     SetComposeStr(HeaderAll, L"");
     SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
-    m_ComposeHeaderLine = 3;
+    m_ComposeHeaderLine = m_ShowRichHeader ? 5 : 3;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
@@ -3781,7 +3779,7 @@ void Ui::SetState(Ui::State p_State)
     SetComposeStr(HeaderAll, L"");
     SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
     StartComposeBackup();
-    m_ComposeHeaderLine = 0;
+    m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
     m_ComposeHeaderPos = 0;
     m_ComposeMessageStr.clear();
     m_ComposeMessagePos = 0;
