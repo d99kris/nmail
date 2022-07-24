@@ -648,7 +648,7 @@ std::string Util::GetSenderHostname()
     char hostname[256]; // @todo: use HOST_NAME_MAX?
     gethostname(hostname, sizeof(hostname));
     return std::string(hostname);
-  } ();
+  }();
 
   static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : sysHostname;
   return senderHostname;
@@ -1786,7 +1786,7 @@ int Util::GetColor(const std::string& p_Str)
     }
 
     return colors;
-  } ();
+  }();
 
   if (p_Str.empty() || (p_Str == "normal")) return -1;
 
@@ -1904,7 +1904,7 @@ void Util::NormalizeSubject(std::string& p_String, bool p_ToLower)
     prefixes.insert(prefixes.end(), customPrefixes.begin(), customPrefixes.end());
     std::string prefixesJoined = Join(prefixes, "|");
     return std::regex("^((" + prefixesJoined + ") *(:) *)+", std::regex_constants::icase);
-  } ();
+  }();
 
   p_String = std::regex_replace(p_String, re, "");
   if (p_ToLower)

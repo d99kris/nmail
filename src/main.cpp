@@ -733,7 +733,7 @@ void LogSystemInfo()
   const std::string libetpanVersion = Util::GetLibetpanVersion();
   LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
 
-  const std::string saslMechs = Sasl::GetMechanisms();
+  const std::string saslMechs = Sasl::GetMechanismsStr();
   LOG_DEBUG("saslmechs: %s", saslMechs.c_str());
 
   const std::string libxapianVersion = SearchEngine::GetXapianVersion();

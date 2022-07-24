@@ -660,7 +660,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyFilterSortReset), "FiltReset",
     });
     return listHelp;
-  } ();
+  }();
 
   static std::vector<std::vector<std::string>> viewMessagesListSearchHelp = [&]()
   {
@@ -682,7 +682,7 @@ void Ui::DrawHelp()
     });
 
     return listHelp;
-  } ();
+  }();
 
   static std::vector<std::vector<std::string>> viewMessageHelp =
   {

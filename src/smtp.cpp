@@ -16,6 +16,7 @@
 #include "auth.h"
 #include "log.h"
 #include "loghelp.h"
+#include "sasl.h"
 
 Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
            const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout)
@@ -168,7 +169,16 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
       rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
     }
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR)
+    {
+      if (!Sasl::IsMechanismsSupported(smtp->auth))
+      {
+        LOG_ERROR("requested auth mechanism not available, please ensure "
+                  "libsasl2-modules or equivalent package is installed");
+      }
+
+      return false;
+    }
   }
 
   static int msgid = 0;

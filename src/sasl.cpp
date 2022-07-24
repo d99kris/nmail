@@ -1,6 +1,6 @@
 // sasl.cpp
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,8 @@
 #include "sasl.h"
 
 #include <sasl/sasl.h>
+
+#include "loghelp.h"
 
 // Ideally Cyrus SASL should not be a direct dependency of nmail (it's an
 // indirect dependency through libetpan), however there's been quite a bit
@@ -22,30 +24,77 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-std::string Sasl::GetMechanisms()
+std::string Sasl::GetMechanismsStr()
 {
-  int rv = 0;
-
-  rv = sasl_client_init(NULL);
-  if (rv != SASL_OK)
+  std::string mechanismsStr;
+  std::set<std::string> mechanisms = GetMechanisms();
+  for (const auto& mechanism : mechanisms)
   {
-    return "";
+    mechanismsStr += std::string((mechanismsStr.empty()) ? "" : ", ") + mechanism;
   }
 
-  std::string mechstr;
-  const char** mechs = sasl_global_listmech();
-  for (int i = 0; (mechs != NULL) && (mechs[i] != NULL); ++i)
-  {
-    mechstr += std::string((i == 0) ? "" : ", ") + std::string(mechs[i]);
-  }
+  return mechanismsStr;
+}
 
-  rv = sasl_client_done();
-  if (rv != SASL_OK)
-  {
-    return "";
-  }
+bool Sasl::IsMechanismsSupported(int p_Auths /* contains flags MAILSMTP_AUTH_* */)
+{
+  bool isMechanismsSupported =
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_LOGIN, "LOGIN") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_CRAM_MD5, "CRAM_MD5") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_PLAIN, "PLAIN") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_DIGEST_MD5, "DIGEST_MD5") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_GSSAPI, "GSSAPI") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_SRP, "SRP") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_NTLM, "NTLM") &&
+    IsRequestedMechanismSupported(p_Auths, MAILSMTP_AUTH_KERBEROS_V4, "KERBEROS_V4");
 
-  return mechstr;
+  return isMechanismsSupported;
+}
+
+std::set<std::string> Sasl::GetMechanisms()
+{
+  static const std::set<std::string> s_Mechanisms = []()
+  {
+    std::set<std::string> mechanisms;
+
+    if (LOG_IF_NOT_EQUAL(sasl_client_init(NULL), SASL_OK) != SASL_OK)
+    {
+      return std::set<std::string>();
+    }
+
+    const char** mechs = sasl_global_listmech();
+    for (int i = 0; (mechs != NULL) && (mechs[i] != NULL); ++i)
+    {
+      std::string mechstr = std::string(mechs[i]);
+      std::transform(mechstr.begin(), mechstr.end(), mechstr.begin(), ::toupper);
+      mechanisms.insert(mechstr);
+    }
+
+    sasl_client_done();
+
+    return mechanisms;
+  }();
+
+  return s_Mechanisms;
+}
+
+bool Sasl::IsRequestedMechanismSupported(int p_Auths, int p_ReqAuth, const std::string& p_AuthStr)
+{
+  if (p_Auths & p_ReqAuth)
+  {
+    const std::set<std::string>& mechanisms = GetMechanisms();
+    bool isSupported = mechanisms.count(p_AuthStr);
+    if (!isSupported)
+    {
+      LOG_ERROR("sasl auth mechanism %s not available", p_AuthStr.c_str());
+    }
+
+    return isSupported;
+  }
+  else
+  {
+    return true;
+  }
 }
 
 #ifdef __APPLE__
