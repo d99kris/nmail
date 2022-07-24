@@ -85,7 +85,7 @@ SmtpManager::Result SmtpManager::SyncAction(const SmtpManager::Action& p_Action)
   {
     LOG_WARNING("action not permitted while offline");
     Result result;
-    result.m_Result = false;
+    result.m_SmtpStatus = SmtpStatusFailed;
     result.m_Action = p_Action;
     return result;
   }
@@ -181,8 +181,8 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   if (p_Action.m_IsSendMessage)
   {
     SetStatus(Status::FlagSending);
-    result.m_Result = smtp.Send(p_Action.m_Subject, p_Action.m_Body, p_Action.m_HtmlBody,
-                                to, cc, bcc, ref, from, att, flow, result.m_Message);
+    result.m_SmtpStatus = smtp.Send(p_Action.m_Subject, p_Action.m_Body, p_Action.m_HtmlBody,
+                                    to, cc, bcc, ref, from, att, flow, result.m_Message);
     ClearStatus(Status::FlagSending);
   }
   else if (p_Action.m_IsCreateMessage)
@@ -190,12 +190,12 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
     const std::string& header = smtp.GetHeader(p_Action.m_Subject, to, cc, bcc, ref, from);
     const std::string& body = smtp.GetBody(p_Action.m_Body, p_Action.m_HtmlBody, att, false);
     result.m_Message = header + body;
-    result.m_Result = !result.m_Message.empty();
+    result.m_SmtpStatus = !result.m_Message.empty() ? SmtpStatusOk : SmtpStatusFailed;
   }
   else if (p_Action.m_IsSendCreatedMessage)
   {
     SetStatus(Status::FlagSending);
-    result.m_Result = smtp.Send(p_Action.m_CreatedMsg, to, cc, bcc);
+    result.m_SmtpStatus = smtp.Send(p_Action.m_CreatedMsg, to, cc, bcc);
     ClearStatus(Status::FlagSending);
   }
   else

@@ -15,6 +15,17 @@
 
 #include "contact.h"
 
+enum SmtpStatus
+{
+  SmtpStatusOk = 0,
+  SmtpStatusFailed = 1,
+  SmtpStatusSaslFailed = 2,
+  SmtpStatusAuthFailed = 3,
+  SmtpStatusConnFailed = 4,
+  SmtpStatusInitFailed = 5,
+  SmtpStatusMessageFailed = 6,
+};
+
 class Smtp
 {
 public:
@@ -22,26 +33,27 @@ public:
        const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout);
   virtual ~Smtp();
 
-  bool Send(const std::string& p_Subject, const std::string& p_Message,
-            const std::string& p_HtmlMessage,
-            const std::vector<Contact>& p_To,
-            const std::vector<Contact>& p_Cc,
-            const std::vector<Contact>& p_Bcc,
-            const std::string& p_RefMsgId,
-            const Contact& p_From,
-            const std::vector<std::string>& p_AttachmentPaths,
-            const bool p_Flowed,
-            std::string& p_ResultMessage);
-  bool Send(const std::string& p_Data, const std::vector<Contact>& p_To,
-            const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
+  SmtpStatus Send(const std::string& p_Subject, const std::string& p_Message,
+                  const std::string& p_HtmlMessage,
+                  const std::vector<Contact>& p_To,
+                  const std::vector<Contact>& p_Cc,
+                  const std::vector<Contact>& p_Bcc,
+                  const std::string& p_RefMsgId,
+                  const Contact& p_From,
+                  const std::vector<std::string>& p_AttachmentPaths,
+                  const bool p_Flowed,
+                  std::string& p_ResultMessage);
+  SmtpStatus Send(const std::string& p_Data, const std::vector<Contact>& p_To,
+                  const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc);
   std::string GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
                         const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
                         const std::string& p_RefMsgId, const Contact& p_From);
   std::string GetBody(const std::string& p_Message, const std::string& p_HtmlMessage,
                       const std::vector<std::string>& p_AttachmentPaths, bool p_Flowed);
+  static std::string GetErrorMessage(SmtpStatus p_SmtpStatus);
 
 private:
-  bool SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients);
+  SmtpStatus SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients);
   struct mailmime* GetMimeTextPart(const char* p_MimeType, const std::string& p_Message, bool p_Flowed);
   struct mailmime* GetMimeFilePart(const std::string& p_Path,
                                    const std::string& p_MimeType = "application/octet-stream");

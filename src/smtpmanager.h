@@ -20,6 +20,7 @@
 
 #include "contact.h"
 #include "log.h"
+#include "smtp.h"
 #include "status.h"
 
 class SmtpManager
@@ -47,7 +48,7 @@ public:
 
   struct Result
   {
-    bool m_Result = false;
+    SmtpStatus m_SmtpStatus = SmtpStatusFailed;
     std::string m_Message;
     Action m_Action;
   };

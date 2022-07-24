@@ -4297,10 +4297,14 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
     }
     else
     {
+      const std::string errStr = Smtp::GetErrorMessage(p_Result.m_SmtpStatus);
+      const std::string errMsg = (!errStr.empty())
+        ? "Send failed (" + errStr + ")."
+        : "Send failed.";
       const std::string msg =
         (smtpAction.m_ComposeDraftUid != 0)
-        ? "Send message failed. Overwrite draft (y) or queue send (n)?"
-        : "Send message failed. Save draft (y) or queue send (n)?";
+        ? errMsg + " Overwrite draft (y) or queue send (n)?"
+        : errMsg + " Save draft (y) or queue send (n)?";
       if (PromptYesNo(msg))
       {
         saveDraft = true;
@@ -4308,7 +4312,7 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
         smtpAction.m_IsCreateMessage = true;
 
         SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-        if (smtpResult.m_Result)
+        if (smtpResult.m_SmtpStatus == SmtpStatusOk)
         {
           draftMessage = smtpResult.m_Message;
         }
@@ -4345,7 +4349,7 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
       smtpAction.m_IsSendMessage = false;
       smtpAction.m_IsCreateMessage = true;
       SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-      if (smtpResult.m_Result)
+      if (smtpResult.m_SmtpStatus == SmtpStatusOk)
       {
         draftMessage = smtpResult.m_Message;
       }
@@ -4367,7 +4371,7 @@ void Ui::SmtpResultHandlerError(const SmtpManager::Result& p_Result)
 
 void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
 {
-  if (!p_Result.m_Result)
+  if (p_Result.m_SmtpStatus != SmtpStatusOk)
   {
     std::unique_lock<std::mutex> lock(m_SmtpErrorMutex);
     m_SmtpErrorResults.push_back(p_Result);
@@ -4755,7 +4759,7 @@ void Ui::SendComposedMessage()
   {
     smtpAction.m_IsCreateMessage = true;
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-    if (smtpResult.m_Result)
+    if (smtpResult.m_SmtpStatus == SmtpStatusOk)
     {
       OfflineQueue::PushOutboxMessage(smtpResult.m_Message);
       SetDialogMessage("Message queued for sending");
@@ -4784,7 +4788,7 @@ void Ui::UploadDraftMessage()
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-    if (smtpResult.m_Result)
+    if (smtpResult.m_SmtpStatus == SmtpStatusOk)
     {
       ImapManager::Action imapAction;
       imapAction.m_UploadDraft = true;
@@ -6211,7 +6215,7 @@ void Ui::ComposeBackupProcess()
       smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
       SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
-      if (smtpResult.m_Result)
+      if (smtpResult.m_SmtpStatus == SmtpStatusOk)
       {
         OfflineQueue::PushComposeMessage(smtpResult.m_Message);
         LOG_DEBUG("backup thread message saved");

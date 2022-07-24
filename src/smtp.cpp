@@ -42,15 +42,15 @@ Smtp::~Smtp()
   LOG_DEBUG_FUNC(STR());
 }
 
-bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
-                const std::string& p_HtmlMessage,
-                const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
-                const std::vector<Contact>& p_Bcc,
-                const std::string& p_RefMsgId,
-                const Contact& p_From,
-                const std::vector<std::string>& p_AttachmentPaths,
-                const bool p_Flowed,
-                std::string& p_ResultMessage)
+SmtpStatus Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
+                      const std::string& p_HtmlMessage,
+                      const std::vector<Contact>& p_To, const std::vector<Contact>& p_Cc,
+                      const std::vector<Contact>& p_Bcc,
+                      const std::string& p_RefMsgId,
+                      const Contact& p_From,
+                      const std::vector<std::string>& p_AttachmentPaths,
+                      const bool p_Flowed,
+                      std::string& p_ResultMessage)
 {
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Subject, p_Message, p_To, p_Cc, p_Bcc, p_RefMsgId, p_From, p_AttachmentPaths, p_Flowed));
@@ -68,8 +68,8 @@ bool Smtp::Send(const std::string& p_Subject, const std::string& p_Message,
   return SendMessage(data, recipients);
 }
 
-bool Smtp::Send(const std::string& p_Data, const std::vector<Contact>& p_To,
-                const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc)
+SmtpStatus Smtp::Send(const std::string& p_Data, const std::vector<Contact>& p_To,
+                      const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc)
 {
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Data, p_To, p_Cc, p_Bcc));
@@ -84,7 +84,7 @@ bool Smtp::Send(const std::string& p_Data, const std::vector<Contact>& p_To,
   return SendMessage(dataNoBcc, recipients);
 }
 
-bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients)
+SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients)
 {
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Data, p_Recipients));
@@ -95,7 +95,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
   const bool enableLmtp = !enableEsmtp;
 
   mailsmtp* smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
-  if (smtp == NULL) return false;
+  if (smtp == NULL) return SmtpStatusFailed;
 
   if (Log::GetTraceEnabled())
   {
@@ -114,7 +114,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
     rv = LOG_IF_SMTP_ERR(mailsmtp_socket_connect(smtp, m_Host.c_str(), m_Port));
   }
 
-  if (rv != MAILSMTP_NO_ERROR) return false;
+  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
 
   bool esmtpMode = false;
   const std::string& hostname = Util::GetSenderHostname();
@@ -131,13 +131,13 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
     rv = LOG_IF_SMTP_ERR(mailsmtp_helo(smtp));
   }
 
-  if (rv != MAILSMTP_NO_ERROR) return false;
+  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
 
   if (esmtpMode && enableTls)
   {
     rv = LOG_IF_SMTP_ERR(mailsmtp_socket_starttls(smtp));
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
 
     if (enableLmtp)
     {
@@ -152,7 +152,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
       rv = LOG_IF_SMTP_ERR(mailsmtp_helo(smtp));
     }
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
   }
 
   if (esmtpMode)
@@ -173,11 +173,12 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
     {
       if (!Sasl::IsMechanismsSupported(smtp->auth))
       {
-        LOG_ERROR("requested auth mechanism not available, please ensure "
+        LOG_ERROR("requested sasl auth mechanism not available, please ensure "
                   "libsasl2-modules or equivalent package is installed");
+        return SmtpStatusSaslFailed;
       }
 
-      return false;
+      return SmtpStatusAuthFailed;
     }
   }
 
@@ -193,7 +194,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
     rv = LOG_IF_SMTP_ERR(mailsmtp_mail(smtp, m_Address.c_str()));
   }
 
-  if (rv != MAILSMTP_NO_ERROR) return false;
+  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
 
   clist* recipients = clist_new();
   for (auto& recipient : p_Recipients)
@@ -210,7 +211,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
       rv = LOG_IF_SMTP_ERR(mailsmtp_rcpt(smtp, r));
     }
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
 
     clist_append(recipients, (void*)r);
 
@@ -219,8 +220,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
 
   rv = LOG_IF_SMTP_ERR(mailsmtp_data(smtp));
 
-  if (rv != MAILSMTP_NO_ERROR) return false;
-
+  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
 
   if (enableLmtp)
   {
@@ -229,7 +229,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
     rv = LOG_IF_SMTP_ERR(maillmtp_data_message(smtp, p_Data.c_str(), p_Data.size(),
                                                recipients, retcodes));
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
 
     for (int i = 0; i < clist_count(recipients); i++)
     {
@@ -243,7 +243,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
   {
     rv = LOG_IF_SMTP_ERR(mailsmtp_data_message(smtp, p_Data.c_str(), p_Data.size()));
 
-    if (rv != MAILSMTP_NO_ERROR) return false;
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
   }
 
   clist_free(recipients);
@@ -251,7 +251,7 @@ bool Smtp::SendMessage(const std::string& p_Data, const std::vector<Contact>& p_
 
   LOG_DEBUG("send success");
 
-  return true;
+  return SmtpStatusOk;
 }
 
 std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Contact>& p_To,
@@ -430,6 +430,46 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
   mailmime_free(msg_mime);
 
   return out;
+}
+
+std::string Smtp::GetErrorMessage(SmtpStatus p_SmtpStatus)
+{
+  std::string msg;
+  switch (p_SmtpStatus)
+  {
+    case SmtpStatusOk:
+      msg = "";
+      break;
+
+    case SmtpStatusFailed:
+      msg = "unknown error";
+      break;
+
+    case SmtpStatusSaslFailed:
+      msg = "no sasl mechs";
+      break;
+
+    case SmtpStatusAuthFailed:
+      msg = "auth error";
+      break;
+
+    case SmtpStatusConnFailed:
+      msg = "connect error";
+      break;
+
+    case SmtpStatusInitFailed:
+      msg = "protocol error";
+      break;
+
+    case SmtpStatusMessageFailed:
+      msg = "transfer error";
+      break;
+
+    default:
+      break;
+  }
+
+  return msg;
 }
 
 mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Message, bool p_Flowed)
