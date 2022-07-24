@@ -593,7 +593,7 @@ copy of `~/.nmail/log.txt` when reporting the issue is preferred.
 
 Different verbosity levels are supported. The default logging level is very
 brief, primarily to minimize performance overhead. However, when encountering
-issued and reporting bugs, it is generally preferred to provide logs produced
+issues and reporting bugs, it is generally preferred to provide logs produced
 in verbose mode. To enable verbose logging:
 
     nmail --verbose
