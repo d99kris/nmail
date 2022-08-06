@@ -154,8 +154,7 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
     LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
-    m_RequestsTotal = m_Requests.size();
-    m_RequestsDone = 0;
+    ProgressCountRequestAdd(p_Request, false /* p_IsPrefetch */);
   }
   else
   {
@@ -170,13 +169,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
     LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
-    m_PrefetchRequestsTotal = 0;
-    for (auto it = m_PrefetchRequests.begin(); it != m_PrefetchRequests.end(); ++it)
-    {
-      m_PrefetchRequestsTotal += it->second.size();
-    }
-
-    m_PrefetchRequestsDone = 0;
+    ProgressCountRequestAdd(p_Request, true /* p_IsPrefetch */);
   }
   else
   {
@@ -452,6 +445,7 @@ void ImapManager::Process()
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
         bool isConnected = true;
+        int32_t progress = 0;
 
         while (!m_Actions.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
@@ -493,14 +487,11 @@ void ImapManager::Process()
           }
         }
 
-        const int progressReportMinTasks = 2;
+        progress = 0;
         while (!m_Requests.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
           Request request = m_Requests.front();
           m_Requests.pop_front();
-
-          uint32_t progress = (m_RequestsTotal >= progressReportMinTasks) ?
-            ((m_RequestsDone * 100) / m_RequestsTotal) : 0;
 
           m_QueueMutex.unlock();
 
@@ -543,7 +534,8 @@ void ImapManager::Process()
           }
           else
           {
-            ++m_RequestsDone;
+            ProgressCountRequestDone(request, false /* p_IsPrefetch */);
+            progress = GetProgressPercentage(request, false /* p_IsPrefetch */);
           }
         }
 
@@ -551,6 +543,7 @@ void ImapManager::Process()
         ClearStatus(Status::FlagFetching);
         m_QueueMutex.lock();
 
+        progress = 0;
         while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() &&
                m_Running && isConnected && !authRefreshNeeded)
         {
@@ -560,9 +553,6 @@ void ImapManager::Process()
           {
             m_PrefetchRequests.erase(m_PrefetchRequests.begin());
           }
-
-          uint32_t progress = (m_PrefetchRequestsTotal >= progressReportMinTasks) ?
-            ((m_PrefetchRequestsDone * 100) / m_PrefetchRequestsTotal) : 0;
 
           m_QueueMutex.unlock();
 
@@ -605,7 +595,8 @@ void ImapManager::Process()
           }
           else
           {
-            ++m_PrefetchRequestsDone;
+            ProgressCountRequestDone(request, true /* p_IsPrefetch */);
+            progress = GetProgressPercentage(request, true /* p_IsPrefetch */);
           }
         }
 
@@ -623,14 +614,12 @@ void ImapManager::Process()
 
       if (m_Requests.empty())
       {
-        m_RequestsTotal = 0;
-        m_RequestsDone = 0;
+        ProgressCountReset(false /* p_IsPrefetch */);
       }
 
       if (m_PrefetchRequests.empty())
       {
-        m_PrefetchRequestsTotal = 0;
-        m_PrefetchRequestsDone = 0;
+        ProgressCountReset(true /* p_IsPrefetch */);
       }
 
       isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty();
@@ -957,4 +946,73 @@ void ImapManager::ClearStatus(uint32_t p_Flags)
   {
     m_StatusHandler(statusUpdate);
   }
+}
+
+void ImapManager::ProgressCountRequestAdd(const Request& p_Request, bool p_IsPrefetch)
+{
+  ProgressCount& progressCount = p_IsPrefetch ? m_PrefetchProgressCount : m_FetchProgressCount;
+  if (p_Request.m_GetUids)
+  {
+    ++progressCount.m_ListTotal;
+  }
+  else if (!p_Request.m_Folder.empty())
+  {
+    ++progressCount.m_ItemTotal[p_Request.m_Folder];
+    ++progressCount.m_ItemTotal[""];
+  }
+}
+
+void ImapManager::ProgressCountRequestDone(const Request& p_Request, bool p_IsPrefetch)
+{
+  ProgressCount& progressCount = p_IsPrefetch ? m_PrefetchProgressCount : m_FetchProgressCount;
+  if (p_Request.m_GetUids)
+  {
+    ++progressCount.m_ListDone;
+  }
+  else if (!p_Request.m_Folder.empty())
+  {
+    ++progressCount.m_ItemDone[p_Request.m_Folder];
+    ++progressCount.m_ItemDone[""];
+  }
+}
+
+void ImapManager::ProgressCountReset(bool p_IsPrefetch)
+{
+  ProgressCount& progressCount = p_IsPrefetch ? m_PrefetchProgressCount : m_FetchProgressCount;
+  progressCount.m_ListTotal = 0;
+  progressCount.m_ListDone = 0;
+  progressCount.m_ItemTotal.clear();
+  progressCount.m_ItemDone.clear();
+}
+
+int32_t ImapManager::GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch)
+{
+  ProgressCount& progressCount = p_IsPrefetch ? m_PrefetchProgressCount : m_FetchProgressCount;
+  int32_t progress = 0;
+  static const int32_t factor = 100;
+  if (progressCount.m_ListTotal > 0)
+  {
+    const int32_t listPart = (factor * std::max(0, (progressCount.m_ListDone - 1))) / progressCount.m_ListTotal;
+    int32_t itemPart = 0;
+    const std::string& folder = p_Request.m_Folder;
+    if (!folder.empty() && (progressCount.m_ItemTotal[folder] > 0))
+    {
+      itemPart = (factor * progressCount.m_ItemDone[folder]) / progressCount.m_ItemTotal[folder];
+    }
+
+    progress = listPart + (itemPart / progressCount.m_ListTotal);
+  }
+  else
+  {
+    if (progressCount.m_ItemTotal[""] > 0)
+    {
+      progress = (factor * progressCount.m_ItemDone[""]) / progressCount.m_ItemTotal[""];
+    }
+    else
+    {
+      progress = 0;
+    }
+  }
+
+  return progress;
 }

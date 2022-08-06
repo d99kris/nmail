@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -123,6 +124,15 @@ public:
   void SetCurrentFolder(const std::string& p_Folder);
 
 private:
+  struct ProgressCount
+  {
+    int32_t m_ListTotal = 0;
+    int32_t m_ListDone = 0;
+    std::unordered_map<std::string, int32_t> m_ItemTotal;
+    std::unordered_map<std::string, int32_t> m_ItemDone;
+  };
+
+private:
   bool ProcessIdle();
   int GetIdleDurationSec();
   void ProcessIdleOffline();
@@ -140,6 +150,10 @@ private:
   void SendActionResult(const Action& p_Action, bool p_Result);
   void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
+  void ProgressCountRequestAdd(const Request& p_Request, bool p_IsPrefetch);
+  void ProgressCountRequestDone(const Request& p_Request, bool p_IsPrefetch);
+  void ProgressCountReset(bool p_IsPrefetch);
+  int32_t GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch);
 
 private:
   Imap m_Imap;
@@ -161,10 +175,8 @@ private:
   std::deque<Request> m_CacheRequests;
   std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
-  uint32_t m_RequestsTotal = 0;
-  uint32_t m_RequestsDone = 0;
-  uint32_t m_PrefetchRequestsTotal = 0;
-  uint32_t m_PrefetchRequestsDone = 0;
+  ProgressCount m_FetchProgressCount;
+  ProgressCount m_PrefetchProgressCount;
   std::mutex m_QueueMutex;
   std::mutex m_CacheQueueMutex;
 
