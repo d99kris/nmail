@@ -700,6 +700,7 @@ file (platform-dependent defaults are left empty below):
     key_backward_word=
     key_cancel=KEY_CTRLC
     key_compose=c
+    key_compose_copy=C
     key_delete=d
     key_delete_line=KEY_CTRLK
     key_export=x
