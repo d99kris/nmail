@@ -393,7 +393,7 @@ private:
   int m_KeySearchCurrentSubject = 0;
   int m_KeySearchCurrentName = 0;
 
-  bool m_ShowProgress = false;
+  int m_ShowProgress = 1;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
   bool m_SendWithoutConfirm = false;

@@ -956,8 +956,12 @@ enabled).
 
 ### show_progress
 
-Determines whether nmail shall show a progress indication (in percentage) when
-fetching emails (default enabled).
+Specify how nmail shall show progress indication when fetching or indexing
+emails. Supported options:
+
+    0 = disabled
+    1 = show floating point percentage (default)
+    2 = show integer percentage
 
 ### show_rich_header
 

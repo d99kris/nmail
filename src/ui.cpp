@@ -221,7 +221,7 @@ void Ui::Init()
   m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
   m_KeySearchCurrentName = Util::GetKeyCode(m_Config.Get("key_search_current_name"));
 
-  m_ShowProgress = m_Config.Get("show_progress") == "1";
+  m_ShowProgress = Util::ToInteger(m_Config.Get("show_progress"));
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
   m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
@@ -336,6 +336,8 @@ void Ui::Init()
   catch (...)
   {
   }
+
+  m_Status.SetShowProgress(m_ShowProgress);
 
   SetRunning(true);
 }
@@ -4629,7 +4631,7 @@ std::string Ui::GetKeyDisplay(int p_Key)
 std::string Ui::GetStatusStr()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_Status.ToString(m_ShowProgress);
+  return m_Status.ToString();
 }
 
 std::string Ui::GetStateStr()

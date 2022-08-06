@@ -72,7 +72,7 @@ private:
   static void InitCacheTempDir();
   static void CleanupCacheTempDir();
 
-  void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
+  void SetStatus(uint32_t p_Flags, float p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
 
 private:

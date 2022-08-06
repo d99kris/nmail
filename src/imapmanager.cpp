@@ -445,7 +445,7 @@ void ImapManager::Process()
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
         bool isConnected = true;
-        int32_t progress = 0;
+        float progress = 0;
 
         while (!m_Actions.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
@@ -927,7 +927,7 @@ void ImapManager::SendActionResult(const Action& p_Action, bool p_Result)
   }
 }
 
-void ImapManager::SetStatus(uint32_t p_Flags, int32_t p_Progress /* = -1 */)
+void ImapManager::SetStatus(uint32_t p_Flags, float p_Progress /* = -1 */)
 {
   StatusUpdate statusUpdate;
   statusUpdate.SetFlags = p_Flags;
@@ -985,28 +985,28 @@ void ImapManager::ProgressCountReset(bool p_IsPrefetch)
   progressCount.m_ItemDone.clear();
 }
 
-int32_t ImapManager::GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch)
+float ImapManager::GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch)
 {
   ProgressCount& progressCount = p_IsPrefetch ? m_PrefetchProgressCount : m_FetchProgressCount;
-  int32_t progress = 0;
-  static const int32_t factor = 100;
+  float progress = 0;
+  static const float factor = 100.0;
   if (progressCount.m_ListTotal > 0)
   {
-    const int32_t listPart = (factor * std::max(0, (progressCount.m_ListDone - 1))) / progressCount.m_ListTotal;
-    int32_t itemPart = 0;
+    const float listPart = (factor * std::max(0.0f, (float)(progressCount.m_ListDone - 1))) / (float)progressCount.m_ListTotal;
+    float itemPart = 0;
     const std::string& folder = p_Request.m_Folder;
     if (!folder.empty() && (progressCount.m_ItemTotal[folder] > 0))
     {
-      itemPart = (factor * progressCount.m_ItemDone[folder]) / progressCount.m_ItemTotal[folder];
+      itemPart = (factor * (float)progressCount.m_ItemDone[folder]) / (float)progressCount.m_ItemTotal[folder];
     }
 
-    progress = listPart + (itemPart / progressCount.m_ListTotal);
+    progress = listPart + (itemPart / (float)progressCount.m_ListTotal);
   }
   else
   {
     if (progressCount.m_ItemTotal[""] > 0)
     {
-      progress = (factor * progressCount.m_ItemDone[""]) / progressCount.m_ItemTotal[""];
+      progress = (factor * (float)progressCount.m_ItemDone[""]) / (float)progressCount.m_ItemTotal[""];
     }
     else
     {

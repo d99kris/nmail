@@ -148,12 +148,12 @@ private:
   void PerformSearch(const SearchQuery& p_SearchQuery);
   void SendRequestResponse(const Request& p_Request, const Response& p_Response);
   void SendActionResult(const Action& p_Action, bool p_Result);
-  void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
+  void SetStatus(uint32_t p_Flags, float p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
   void ProgressCountRequestAdd(const Request& p_Request, bool p_IsPrefetch);
   void ProgressCountRequestDone(const Request& p_Request, bool p_IsPrefetch);
   void ProgressCountReset(bool p_IsPrefetch);
-  int32_t GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch);
+  float GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch);
 
 private:
   Imap m_Imap;
