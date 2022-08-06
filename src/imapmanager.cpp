@@ -992,7 +992,8 @@ float ImapManager::GetProgressPercentage(const Request& p_Request, bool p_IsPref
   static const float factor = 100.0;
   if (progressCount.m_ListTotal > 0)
   {
-    const float listPart = (factor * std::max(0.0f, (float)(progressCount.m_ListDone - 1))) / (float)progressCount.m_ListTotal;
+    const float listPart =
+      (factor * std::max(0.0f, (float)(progressCount.m_ListDone - 1))) / (float)progressCount.m_ListTotal;
     float itemPart = 0;
     const std::string& folder = p_Request.m_Folder;
     if (!folder.empty() && (progressCount.m_ItemTotal[folder] > 0))
