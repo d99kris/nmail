@@ -945,7 +945,7 @@ std::string Imap::EncodeFolderName(const std::string& p_Folder)
 
   const std::string encFolder = Encoding::Utf8ToImapUtf7(p_Folder);
   cacheMap[p_Folder] = encFolder;
-  
+
   return encFolder;
 }
 

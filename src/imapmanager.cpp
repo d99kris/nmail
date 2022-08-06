@@ -217,9 +217,27 @@ bool ImapManager::ProcessIdle()
   m_Mutex.unlock();
 
   bool rv = true;
+  bool firstIdle = true;
 
   if (true)
   {
+    // Get folders if not done before
+    if (firstIdle)
+    {
+      firstIdle = false;
+
+      // Check cache
+      Request request;
+      request.m_GetFolders = true;
+      Response response;
+      PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */, response);
+      if (response.m_Folders.empty())
+      {
+        // Fetch folders if cached list is empty
+        PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response);
+      }
+    }
+
     // Check mail before enter idle
     Request request;
     request.m_Folder = currentFolder;

@@ -1,6 +1,6 @@
 // imapcache.h
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -30,6 +30,7 @@ private:
   {
     HeadersDb = 0,
     BodysDb,
+    UidFlagsDb,
   };
 
   struct DbConnection;
@@ -73,6 +74,9 @@ private:
 
   void InitBodysCache();
   void CleanupBodysCache();
+
+  void InitUidFlagsCache();
+  void CleanupUidFlagsCache();
 
   static std::string GetDbTypeName(ImapCache::DbType p_DbType);
   static std::string GetCacheDir(ImapCache::DbType p_DbType);
