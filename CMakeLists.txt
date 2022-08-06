@@ -28,6 +28,8 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 add_executable(nmail
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
+  ext/cyrus-imap/lib/imapurl.c
+  ext/cyrus-imap/lib/imapurl.h
   ext/sqlite_modern_cpp/hdr/sqlite_modern_cpp.h
   src/addressbook.cpp
   src/addressbook.h
@@ -167,7 +169,7 @@ endif()
 
 # Includes
 include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr"
-                    "ext/cereal/include" ${LIBUUID_HEADERS})
+                    "ext/cereal/include" ${LIBUUID_HEADERS} "ext/cyrus-imap/lib")
 
 # Linking
 target_link_libraries(nmail PUBLIC

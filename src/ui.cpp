@@ -1410,7 +1410,7 @@ void Ui::DrawMessageListSearch()
       std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
 
       std::string folderTag = m_SearchShowFolder ? ("  [" + Util::BaseName(folder) + "]") : "";
-      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - folderTag.size() - 1;
+      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft + folderTag)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + folderTag + " ";
 

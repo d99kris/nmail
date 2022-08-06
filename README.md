@@ -1158,7 +1158,7 @@ Technical Details
 
 Third-party Libraries
 ---------------------
-nmail is implemented in C++. Its source tree includes the source code of the
+nmail is implemented in C++. Its source tree includes the source code from the
 following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) -
@@ -1167,6 +1167,8 @@ following third-party libraries:
   Copyright 2014 Randolph Voorhies, Shane Grant - [BSD-3 License](/ext/cereal/LICENSE)
 - [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) -
   Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
+- [cyrus-imap](https://opensource.apple.com/source/CyrusIMAP/CyrusIMAP-156.9/cyrus_imap) -
+  Copyright 1994-2000 Carnegie Mellon University - [BSD-3 License](/ext/cyrus-imap/COPYRIGHT)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
   Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
 

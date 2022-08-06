@@ -460,7 +460,7 @@ std::string ImapIndex::GetCacheIndexDbTempDir()
 
 void ImapIndex::InitCacheIndexDir()
 {
-  static const int version = 6; // note: keep synchronized with AddressBook (for now)
+  static const int version = 7; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
   Util::MkDir(GetCacheIndexDbDir());

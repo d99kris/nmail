@@ -1,6 +1,6 @@
 // imap.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -69,6 +69,8 @@ private:
   bool SelectedFolderIsEmpty();
   uint32_t GetUidValidity();
 
+  static std::string DecodeFolderName(const std::string& p_Folder);
+  static std::string EncodeFolderName(const std::string& p_Folder);
   static void Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData);
 
 private:

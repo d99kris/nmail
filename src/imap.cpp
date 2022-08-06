@@ -1,6 +1,6 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -12,6 +12,7 @@
 
 #include "auth.h"
 #include "crypto.h"
+#include "encoding.h"
 #include "flag.h"
 #include "imapcache.h"
 #include "log.h"
@@ -186,7 +187,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
           if (!((bflags->mbf_type == MAILIMAP_MBX_LIST_FLAGS_SFLAG) &&
                 (bflags->mbf_sflag == MAILIMAP_MBX_LIST_SFLAG_NOSELECT)))
           {
-            const std::string& folder = std::string(mblist->mb_name);
+            const std::string& folder = DecodeFolderName(std::string(mblist->mb_name));
             if (m_FoldersExclude.find(folder) == m_FoldersExclude.end())
             {
               LOG_DEBUG("folder include %s", folder.c_str());
@@ -734,7 +735,8 @@ bool Imap::MoveMessages(const std::string& p_Folder, const std::set<uint32_t>& p
     mailimap_set_add_single(set, uid);
   }
 
-  int rv = LOG_IF_IMAP_ERR(mailimap_uid_move(m_Imap, set, p_DestFolder.c_str()));
+  const std::string encDestFolder = EncodeFolderName(p_DestFolder);
+  int rv = LOG_IF_IMAP_ERR(mailimap_uid_move(m_Imap, set, encDestFolder.c_str()));
 
   mailimap_set_free(set);
 
@@ -837,7 +839,8 @@ bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, 
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
-  bool rv = (LOG_IF_IMAP_ERR(mailimap_append(m_Imap, p_Folder.c_str(), flaglist, datetime,
+  const std::string encFolder = EncodeFolderName(p_Folder);
+  bool rv = (LOG_IF_IMAP_ERR(mailimap_append(m_Imap, encFolder.c_str(), flaglist, datetime,
                                              p_Msg.c_str(), p_Msg.size())) == MAILIMAP_NO_ERROR);
 
   mailimap_date_time_free(datetime);
@@ -875,7 +878,8 @@ bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
 
   if (p_Force || (p_Folder != m_SelectedFolder))
   {
-    int rv = LOG_IF_IMAP_ERR(mailimap_select(m_Imap, p_Folder.c_str()));
+    const std::string encFolder = EncodeFolderName(p_Folder);
+    int rv = LOG_IF_IMAP_ERR(mailimap_select(m_Imap, encFolder.c_str()));
     if (rv == MAILIMAP_NO_ERROR)
     {
       m_SelectedFolder = p_Folder;
@@ -913,6 +917,36 @@ bool Imap::SelectedFolderIsEmpty()
 uint32_t Imap::GetUidValidity()
 {
   return m_Imap->imap_selection_info->sel_uidvalidity;
+}
+
+std::string Imap::DecodeFolderName(const std::string& p_Folder)
+{
+  static std::map<std::string, std::string> cacheMap;
+  std::map<std::string, std::string>::iterator it = cacheMap.find(p_Folder);
+  if (it != cacheMap.end())
+  {
+    return it->second;
+  }
+
+  std::string decFolder = Encoding::ImapUtf7ToUtf8(p_Folder);
+  cacheMap[p_Folder] = decFolder;
+
+  return decFolder;
+}
+
+std::string Imap::EncodeFolderName(const std::string& p_Folder)
+{
+  static std::map<std::string, std::string> cacheMap;
+  std::map<std::string, std::string>::iterator it = cacheMap.find(p_Folder);
+  if (it != cacheMap.end())
+  {
+    return it->second;
+  }
+
+  const std::string encFolder = Encoding::Utf8ToImapUtf7(p_Folder);
+  cacheMap[p_Folder] = encFolder;
+  
+  return encFolder;
 }
 
 void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData)

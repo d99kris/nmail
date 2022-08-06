@@ -1,6 +1,6 @@
 // encoding.cpp
 //
-// Copyright (c) 2021 Kristofer Berggren
+// Copyright (c) 2021-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -11,6 +11,8 @@
 
 #include <iconv.h>
 #include <magic.h>
+
+#include "imapurl.h"
 
 #include "log.h"
 #include "loghelp.h"
@@ -53,6 +55,24 @@ void Encoding::ConvertToUtf8(const std::string& p_Enc, std::string& p_Str)
 
     p_Str = newStr;
   }
+}
+
+std::string Encoding::ImapUtf7ToUtf8(const std::string& p_Src)
+{
+  char* cdst = (char*)malloc(p_Src.size() * 2);
+  MailboxToURL(cdst, p_Src.c_str(), 0);
+  std::string dst(cdst);
+  free(cdst);
+  return dst;
+}
+
+std::string Encoding::Utf8ToImapUtf7(const std::string& p_Src)
+{
+  char* cdst = (char*)malloc(p_Src.size() * 2);
+  URLtoMailbox(cdst, p_Src.c_str(), 0);
+  std::string dst(cdst);
+  free(cdst);
+  return dst;
 }
 
 std::string Encoding::Detect(const std::string& p_Str)
