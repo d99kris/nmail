@@ -1,6 +1,6 @@
 // header.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -222,23 +222,23 @@ void Header::Parse()
                 break;
 
               case MAILIMF_FIELD_FROM:
-                addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list));
+                addrs = MailboxListToStrings(field->fld_data.fld_from->frm_mb_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                 m_From = Util::Join(addrs, ", ");
-                addrs = Util::MimeToUtf8(MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true));
+                addrs = MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true);
                 m_ShortFrom = Util::Join(addrs, ", ");
                 break;
 
               case MAILIMF_FIELD_TO:
-                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list));
+                addrs = AddressListToStrings(field->fld_data.fld_to->to_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                 m_To = Util::Join(addrs, ", ");
-                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_to->to_addr_list, true));
+                addrs = AddressListToStrings(field->fld_data.fld_to->to_addr_list, true);
                 m_ShortTo = Util::Join(addrs, ", ");
                 break;
 
               case MAILIMF_FIELD_CC:
-                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list));
+                addrs = AddressListToStrings(field->fld_data.fld_cc->cc_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                 m_Cc = Util::Join(addrs, ", ");
                 break;
@@ -246,7 +246,7 @@ void Header::Parse()
               case MAILIMF_FIELD_BCC:
                 if (field->fld_data.fld_bcc->bcc_addr_list != nullptr)
                 {
-                  addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list));
+                  addrs = AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list);
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                   m_Bcc = Util::Join(addrs, ", ");
                 }
@@ -261,7 +261,7 @@ void Header::Parse()
                 break;
 
               case MAILIMF_FIELD_REPLY_TO:
-                addrs = Util::MimeToUtf8(AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list));
+                addrs = AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
                 m_ReplyTo = Util::Join(addrs, ", ");
                 break;
@@ -354,7 +354,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   {
     if (p_Mailbox->mb_display_name != NULL)
     {
-      str = std::string(p_Mailbox->mb_display_name);
+      str = Util::MimeToUtf8(std::string(p_Mailbox->mb_display_name));
     }
     else
     {
@@ -365,8 +365,8 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   {
     if ((p_Mailbox->mb_display_name != NULL) && (strlen(p_Mailbox->mb_display_name) > 0))
     {
-      str = Util::EscapeName(std::string(p_Mailbox->mb_display_name)) + std::string(" ");
-      str += std::string("<") + std::string(p_Mailbox->mb_addr_spec) + std::string(">");
+      str = Util::EscapeName(Util::MimeToUtf8(std::string(p_Mailbox->mb_display_name)));
+      str += std::string(" <") + std::string(p_Mailbox->mb_addr_spec) + std::string(">");
     }
     else
     {
@@ -380,7 +380,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
 std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
 {
   std::string str;
-  str += std::string(p_Group->grp_display_name) + std::string(": ");
+  str += Util::MimeToUtf8(std::string(p_Group->grp_display_name)) + std::string(": ");
 
   for (clistiter* it = clist_begin(p_Group->grp_mb_list->mb_list); it != NULL;
        it = clist_next(it))

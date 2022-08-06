@@ -213,13 +213,13 @@ void ImapIndex::Process()
       const bool isQueueEmpty = m_Queue.empty();
       lock.unlock();
 
-      uint32_t progress = 0;
+      float progress = 0;
       if (m_QueueSize > 1)
       {
-        int32_t completed = (int)m_QueueSize - (int)m_Queue.size();
+        float completed = (float)m_QueueSize - (float)m_Queue.size();
         if (completed > 0)
         {
-          progress = (completed * 100) / m_QueueSize;
+          progress = (completed * 100.0) / (float)m_QueueSize;
         }
       }
 
@@ -460,7 +460,7 @@ std::string ImapIndex::GetCacheIndexDbTempDir()
 
 void ImapIndex::InitCacheIndexDir()
 {
-  static const int version = 6; // note: keep synchronized with AddressBook (for now)
+  static const int version = 7; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
   Util::MkDir(GetCacheIndexDbDir());
@@ -477,7 +477,7 @@ void ImapIndex::CleanupCacheTempDir()
   Util::RmDir(GetCacheIndexDbTempDir());
 }
 
-void ImapIndex::SetStatus(uint32_t p_Flags, int32_t p_Progress /* = -1 */)
+void ImapIndex::SetStatus(uint32_t p_Flags, float p_Progress /* = -1 */)
 {
   StatusUpdate statusUpdate;
   statusUpdate.SetFlags = p_Flags;

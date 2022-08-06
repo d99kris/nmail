@@ -1,6 +1,6 @@
 // cacheutil.cpp
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -13,7 +13,7 @@
 
 void CacheUtil::InitCacheDir()
 {
-  static const int version = 4;
+  static const int version = 5;
   const std::string cacheDir = GetCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, false /* p_Encrypted */);
 }

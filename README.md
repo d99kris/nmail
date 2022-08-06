@@ -267,6 +267,7 @@ Full example of a config file `~/.nmail/main.conf`:
     folders_exclude=
     html_to_text_cmd=
     html_viewer_cmd=
+    idle_fetch_flags=1
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
@@ -388,6 +389,11 @@ This field allows overriding the external viewer used when viewing message
 as html and previewing messages composed using markdown. The viewer may be
 a terminal-based program, e.g. `w3m -o confirm_qq=false`. By default nmail
 uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux.
+
+### idle_fetch_flags
+
+This parameter controls whether nmail shall fetch flags (unread/read) for
+current folder upon entering/exiting IMAP idle state (default enabled).
 
 ### imap_host
 
@@ -694,6 +700,7 @@ file (platform-dependent defaults are left empty below):
     key_backward_word=
     key_cancel=KEY_CTRLC
     key_compose=c
+    key_compose_copy=C
     key_delete=d
     key_delete_line=KEY_CTRLK
     key_export=x
@@ -949,8 +956,12 @@ enabled).
 
 ### show_progress
 
-Determines whether nmail shall show a progress indication (in percentage) when
-fetching emails (default enabled).
+Specify how nmail shall show progress indication when fetching or indexing
+emails. Supported options:
+
+    0 = disabled
+    1 = show floating point percentage (default)
+    2 = show integer percentage
 
 ### show_rich_header
 
@@ -1158,7 +1169,7 @@ Technical Details
 
 Third-party Libraries
 ---------------------
-nmail is implemented in C++. Its source tree includes the source code of the
+nmail is implemented in C++. Its source tree includes the source code from the
 following third-party libraries:
 
 - [apathy](https://github.com/dlecocq/apathy) -
@@ -1167,6 +1178,8 @@ following third-party libraries:
   Copyright 2014 Randolph Voorhies, Shane Grant - [BSD-3 License](/ext/cereal/LICENSE)
 - [cxx-prettyprint](https://github.com/louisdx/cxx-prettyprint) -
   Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
+- [cyrus-imap](https://opensource.apple.com/source/CyrusIMAP/CyrusIMAP-156.9/cyrus_imap) -
+  Copyright 1994-2000 Carnegie Mellon University - [BSD-3 License](/ext/cyrus-imap/COPYRIGHT)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
   Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
 

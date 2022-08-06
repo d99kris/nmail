@@ -27,13 +27,14 @@ public:
     StateGotoFolder = 2,
     StateMoveToFolder = 3,
     StateComposeMessage = 4,
-    StateReplyAllMessage = 5,
-    StateReplySenderMessage = 6,
-    StateForwardMessage = 7,
-    StateAddressList = 8,
-    StateFileList = 9,
-    StateViewPartList = 10,
-    StateFromAddressList = 11,
+    StateComposeCopyMessage = 5,
+    StateReplyAllMessage = 6,
+    StateReplySenderMessage = 7,
+    StateForwardMessage = 8,
+    StateAddressList = 9,
+    StateFileList = 10,
+    StateViewPartList = 11,
+    StateFromAddressList = 12,
   };
 
   enum UiRequest
@@ -338,6 +339,7 @@ private:
   int m_KeyForward = 0;
   int m_KeyDelete = 0;
   int m_KeyCompose = 0;
+  int m_KeyComposeCopy = 0;
   int m_KeyToggleUnread = 0;
   int m_KeyMove = 0;
   int m_KeyRefresh = 0;
@@ -391,7 +393,7 @@ private:
   int m_KeySearchCurrentSubject = 0;
   int m_KeySearchCurrentName = 0;
 
-  bool m_ShowProgress = false;
+  int m_ShowProgress = 1;
   bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
   bool m_SendWithoutConfirm = false;

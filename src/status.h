@@ -14,7 +14,7 @@ struct StatusUpdate
 {
   uint32_t SetFlags = 0;
   uint32_t ClearFlags = 0;
-  int32_t Progress = -1;
+  float Progress = -1;
 };
 
 class Status
@@ -44,11 +44,16 @@ public:
   Status();
   virtual ~Status();
 
+  void SetShowProgress(int p_ShowProgress);
   void Update(const StatusUpdate& p_StatusUpdate);
   bool IsSet(const Flag& p_Flag);
-  std::string ToString(bool p_ShowProgress);
+  std::string ToString();
+
+private:
+  std::string GetProgressString();
 
 private:
   uint32_t m_Flags = 0;
-  int32_t m_Progress = 0;
+  float m_Progress = 0;
+  int m_ShowProgress = 1;
 };

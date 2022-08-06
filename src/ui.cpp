@@ -72,6 +72,7 @@ void Ui::Init()
     { "key_forward", "f" },
     { "key_delete", "d" },
     { "key_compose", "c" },
+    { "key_compose_copy", "C" },
     { "key_toggle_unread", "u" },
     { "key_move", "m" },
     { "key_refresh", "l" },
@@ -167,6 +168,7 @@ void Ui::Init()
   m_KeyForward = Util::GetKeyCode(m_Config.Get("key_forward"));
   m_KeyDelete = Util::GetKeyCode(m_Config.Get("key_delete"));
   m_KeyCompose = Util::GetKeyCode(m_Config.Get("key_compose"));
+  m_KeyComposeCopy = Util::GetKeyCode(m_Config.Get("key_compose_copy"));
   m_KeyToggleUnread = Util::GetKeyCode(m_Config.Get("key_toggle_unread"));
   m_KeyMove = Util::GetKeyCode(m_Config.Get("key_move"));
   m_KeyRefresh = Util::GetKeyCode(m_Config.Get("key_refresh"));
@@ -219,7 +221,7 @@ void Ui::Init()
   m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
   m_KeySearchCurrentName = Util::GetKeyCode(m_Config.Get("key_search_current_name"));
 
-  m_ShowProgress = m_Config.Get("show_progress") == "1";
+  m_ShowProgress = Util::ToInteger(m_Config.Get("show_progress"));
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
   m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
@@ -335,6 +337,8 @@ void Ui::Init()
   {
   }
 
+  m_Status.SetShowProgress(m_ShowProgress);
+
   SetRunning(true);
 }
 
@@ -445,6 +449,7 @@ void Ui::DrawAll()
       break;
 
     case StateComposeMessage:
+    case StateComposeCopyMessage:
     case StateReplyAllMessage:
     case StateReplySenderMessage:
     case StateForwardMessage:
@@ -795,6 +800,7 @@ void Ui::DrawHelp()
         break;
 
       case StateComposeMessage:
+      case StateComposeCopyMessage:
       case StateReplyAllMessage:
       case StateReplySenderMessage:
       case StateForwardMessage:
@@ -1410,7 +1416,7 @@ void Ui::DrawMessageListSearch()
       std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
 
       std::string folderTag = m_SearchShowFolder ? ("  [" + Util::BaseName(folder) + "]") : "";
-      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - folderTag.size() - 1;
+      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft + folderTag)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + folderTag + " ";
 
@@ -2021,6 +2027,7 @@ void Ui::Run()
           break;
 
         case StateComposeMessage:
+        case StateComposeCopyMessage:
         case StateReplyAllMessage:
         case StateReplySenderMessage:
         case StateForwardMessage:
@@ -2476,6 +2483,26 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     SetState(StateComposeMessage);
   }
+  else if (p_Key == m_KeyComposeCopy)
+  {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      if (CurrentMessageBodyHeaderAvailable())
+      {
+        SetState(StateComposeCopyMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot compose copy of message not fetched");
+      }
+    }
+    else
+    {
+      SetDialogMessage("No message to copy for compose");
+    }
+  }
   else if ((p_Key == m_KeyReplyAll) || (p_Key == m_KeyReplySender))
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
@@ -2827,6 +2854,17 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyCompose)
   {
     SetState(StateComposeMessage);
+  }
+  else if (p_Key == m_KeyComposeCopy)
+  {
+    if (CurrentMessageBodyHeaderAvailable())
+    {
+      SetState(StateComposeCopyMessage);
+    }
+    else
+    {
+      SetDialogMessage("Cannot compose copy of message not fetched");
+    }
   }
   else if ((p_Key == m_KeyReplyAll) || (p_Key == m_KeyReplySender))
   {
@@ -3570,7 +3608,7 @@ void Ui::SetState(Ui::State p_State)
     m_HelpViewMessageOffset = 0;
     m_MessageFindMatchLine = -1;
   }
-  else if (m_State == StateComposeMessage)
+  else if ((m_State == StateComposeMessage) || (m_State == StateComposeCopyMessage))
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
@@ -3591,7 +3629,7 @@ void Ui::SetState(Ui::State p_State)
     const std::string& folder = m_CurrentFolderUid.first;
     const int uid = m_CurrentFolderUid.second;
 
-    if (folder == m_DraftsFolder)
+    if ((folder == m_DraftsFolder) || (m_State == StateComposeCopyMessage))
     {
       std::map<uint32_t, Header>& headers = m_Headers[folder];
       std::map<uint32_t, Body>& bodys = m_Bodys[folder];
@@ -3600,12 +3638,17 @@ void Ui::SetState(Ui::State p_State)
       std::map<uint32_t, Body>::iterator bit = bodys.find(uid);
       if ((hit != headers.end()) && (bit != bodys.end()))
       {
-        m_ComposeDraftUid = uid;
+        m_ComposeDraftUid = (m_State != StateComposeCopyMessage) ? uid : 0;
 
         Header& header = hit->second;
         Body& body = bit->second;
 
-        const std::string& bodyText = body.GetTextPlain();
+        std::string bodyText = body.GetTextPlain();
+        if ((folder != m_DraftsFolder) && !bodyText.empty() && bodyText[bodyText.size() - 1] == '\n')
+        {
+          bodyText = bodyText.substr(0, bodyText.size() - 1);
+        }
+
         m_ComposeMessageStr = Util::ToWString(bodyText);
         Util::StripCR(m_ComposeMessageStr);
 
@@ -3964,8 +4007,9 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
         for (auto& uid : p_Response.m_Uids)
         {
-          if ((flags.find(uid) == flags.end()) &&
-              (requestedFlags.find(uid) == requestedFlags.end()))
+          if (p_Request.m_IdleWake ||
+              ((flags.find(uid) == flags.end()) &&
+               (requestedFlags.find(uid) == requestedFlags.end())))
           {
             fetchFlagUids.insert(uid);
             requestedFlags.insert(uid);
@@ -4587,7 +4631,7 @@ std::string Ui::GetKeyDisplay(int p_Key)
 std::string Ui::GetStatusStr()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_Status.ToString(m_ShowProgress);
+  return m_Status.ToString();
 }
 
 std::string Ui::GetStateStr()
@@ -4631,6 +4675,8 @@ std::string Ui::GetStateStr()
       return "Move To Folder";
     case StateComposeMessage:
       return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateComposeCopyMessage:
+      return std::string("Compose Copy") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateReplyAllMessage:
     case StateReplySenderMessage:
       return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");

@@ -1734,16 +1734,6 @@ std::string Util::MimeToUtf8(const std::string& p_Str)
   }
 }
 
-std::vector<std::string> Util::MimeToUtf8(const std::vector<std::string>& p_Strs)
-{
-  std::vector<std::string> strs;
-  for (auto& str : p_Strs)
-  {
-    strs.push_back(MimeToUtf8(str));
-  }
-  return strs;
-}
-
 std::string Util::GetSQLiteVersion()
 {
   return std::string(SQLITE_VERSION);

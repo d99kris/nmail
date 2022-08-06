@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -45,6 +46,7 @@ public:
     bool m_GetFolders = false;
     bool m_GetUids = false;
     bool m_ProcessHtml = false;
+    bool m_IdleWake = false;
     std::set<uint32_t> m_GetHeaders;
     std::set<uint32_t> m_GetFlags;
     std::set<uint32_t> m_GetBodys;
@@ -103,6 +105,7 @@ public:
               const uint16_t p_Port, const bool p_Connect, const int64_t p_Timeout,
               const bool p_CacheEncrypt,
               const bool p_CacheIndexEncrypt,
+              const bool p_IdleFetchFlags,
               const std::set<std::string>& p_FoldersExclude,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
@@ -121,6 +124,15 @@ public:
   void SetCurrentFolder(const std::string& p_Folder);
 
 private:
+  struct ProgressCount
+  {
+    int32_t m_ListTotal = 0;
+    int32_t m_ListDone = 0;
+    std::unordered_map<std::string, int32_t> m_ItemTotal;
+    std::unordered_map<std::string, int32_t> m_ItemDone;
+  };
+
+private:
   bool ProcessIdle();
   int GetIdleDurationSec();
   void ProcessIdleOffline();
@@ -136,8 +148,12 @@ private:
   void PerformSearch(const SearchQuery& p_SearchQuery);
   void SendRequestResponse(const Request& p_Request, const Response& p_Response);
   void SendActionResult(const Action& p_Action, bool p_Result);
-  void SetStatus(uint32_t p_Flags, int32_t p_Progress = -1);
+  void SetStatus(uint32_t p_Flags, float p_Progress = -1);
   void ClearStatus(uint32_t p_Flags);
+  void ProgressCountRequestAdd(const Request& p_Request, bool p_IsPrefetch);
+  void ProgressCountRequestDone(const Request& p_Request, bool p_IsPrefetch);
+  void ProgressCountReset(bool p_IsPrefetch);
+  float GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch);
 
 private:
   Imap m_Imap;
@@ -146,6 +162,7 @@ private:
   std::function<void(const ImapManager::Action&, const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
+  bool m_IdleFetchFlags = false;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
   std::atomic<bool> m_CacheRunning;
@@ -158,10 +175,8 @@ private:
   std::deque<Request> m_CacheRequests;
   std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
-  uint32_t m_RequestsTotal = 0;
-  uint32_t m_RequestsDone = 0;
-  uint32_t m_PrefetchRequestsTotal = 0;
-  uint32_t m_PrefetchRequestsDone = 0;
+  ProgressCount m_FetchProgressCount;
+  ProgressCount m_PrefetchProgressCount;
   std::mutex m_QueueMutex;
   std::mutex m_CacheQueueMutex;
 
