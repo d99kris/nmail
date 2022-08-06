@@ -18,6 +18,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_Connect, const int64_t p_Timeout,
                          const bool p_CacheEncrypt,
                          const bool p_CacheIndexEncrypt,
+                         const bool p_IdleFetchFlags,
                          const std::set<std::string>& p_FoldersExclude,
                          const std::function<void(const ImapManager::Request&,
                                                   const ImapManager::Response&)>& p_ResponseHandler,
@@ -33,6 +34,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_SearchHandler(p_SearchHandler)
+  , m_IdleFetchFlags(p_IdleFetchFlags)
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
@@ -239,20 +241,36 @@ bool ImapManager::ProcessIdle()
     }
 
     // Check mail before enter idle
-    Request request;
-    request.m_Folder = currentFolder;
-    request.m_GetUids = true;
-    Response response;
-    rv = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response);
-
+    Request uidsRequest;
+    uidsRequest.m_Folder = currentFolder;
+    uidsRequest.m_GetUids = true;
+    Response uidsResponse;
+    rv = PerformRequest(uidsRequest, false /* p_Cached */, false /* p_Prefetch */, uidsResponse);
     if (rv)
     {
-      SendRequestResponse(request, response);
+      SendRequestResponse(uidsRequest, uidsResponse);
     }
-
-    if (!rv)
+    else
     {
       return rv;
+    }
+
+    // Check flags before enter idle
+    if (m_IdleFetchFlags)
+    {
+      Request flagsRequest;
+      flagsRequest.m_Folder = currentFolder;
+      flagsRequest.m_GetFlags = uidsResponse.m_Uids;
+      Response flagsResponse;
+      rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);
+      if (rv)
+      {
+        SendRequestResponse(flagsRequest, flagsResponse);
+      }
+      else
+      {
+        return rv;
+      }
     }
   }
 
@@ -304,6 +322,7 @@ bool ImapManager::ProcessIdle()
       request.m_Folder = m_CurrentFolder;
       m_Mutex.unlock();
       request.m_GetUids = true;
+      request.m_IdleWake = m_IdleFetchFlags;
       AsyncRequest(request);
       break;
     }

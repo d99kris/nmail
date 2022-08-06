@@ -267,6 +267,7 @@ Full example of a config file `~/.nmail/main.conf`:
     folders_exclude=
     html_to_text_cmd=
     html_viewer_cmd=
+    idle_fetch_flags=1
     imap_host=imap.example.com
     imap_port=993
     inbox=INBOX
@@ -388,6 +389,11 @@ This field allows overriding the external viewer used when viewing message
 as html and previewing messages composed using markdown. The viewer may be
 a terminal-based program, e.g. `w3m -o confirm_qq=false`. By default nmail
 uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux.
+
+### idle_fetch_flags
+
+This parameter controls whether nmail shall fetch flags (unread/read) for
+current folder upon entering/exiting IMAP idle state (default enabled).
 
 ### imap_host
 

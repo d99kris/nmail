@@ -178,6 +178,7 @@ int main(int argc, char* argv[])
     { "sender_hostname", "" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
+    { "idle_fetch_flags", "1" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -247,6 +248,7 @@ int main(int argc, char* argv[])
   Util::SetSenderHostname(mainConfig->Get("sender_hostname"));
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
+  const bool idleFetchFlags = (mainConfig->Get("idle_fetch_flags") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -344,6 +346,7 @@ int main(int argc, char* argv[])
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
                                   networkTimeout,
                                   cacheEncrypt, cacheIndexEncrypt,
+                                  idleFetchFlags,
                                   foldersExclude,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1,
                                             std::placeholders::_2),
