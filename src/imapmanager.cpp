@@ -217,7 +217,7 @@ bool ImapManager::ProcessIdle()
   m_Mutex.unlock();
 
   bool rv = true;
-  bool firstIdle = true;
+  static bool firstIdle = true;
 
   if (true)
   {
