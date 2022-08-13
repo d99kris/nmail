@@ -53,13 +53,13 @@ std::string Util::m_MsgViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
-std::string Util::m_SenderHostname;
 std::string Util::m_DownloadsDir;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
 std::string Util::m_FilePickerCmd;
 bool Util::m_AddressBookEncrypt = false;
+bool Util::m_SendHostname = false;
 std::string Util::m_LocalizedSubjectPrefixes;
 
 bool Util::Exists(const std::string& p_Path)
@@ -634,22 +634,14 @@ std::string Util::MakeForwardSubject(const std::string& p_Str)
   return ("Fwd: " + subject);
 }
 
-std::string Util::GetSenderHostname()
+bool Util::GetSendHostname()
 {
-  static std::string sysHostname = [&]()
-  {
-    char hostname[256]; // @todo: use HOST_NAME_MAX?
-    gethostname(hostname, sizeof(hostname));
-    return std::string(hostname);
-  }();
-
-  static std::string senderHostname = !m_SenderHostname.empty() ? m_SenderHostname : sysHostname;
-  return senderHostname;
+  return m_SendHostname;
 }
 
-void Util::SetSenderHostname(const std::string& p_SenderHostname)
+void Util::SetSendHostname(bool p_SendHostname)
 {
-  m_SenderHostname = p_SenderHostname;
+  m_SendHostname = p_SendHostname;
 }
 
 std::string Util::ToString(const std::wstring& p_WStr)

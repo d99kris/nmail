@@ -65,6 +65,10 @@ private:
 
   std::string GenerateMessageId() const;
 
+  static std::string GetHostname();
+  static std::string GetIp(int p_Socket);
+  static std::string GetSenderName(mailsmtp* p_Smtp, bool p_UseHostname);
+
   static void Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
                      void* p_UserData);
 

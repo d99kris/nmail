@@ -1,6 +1,6 @@
 // smtp.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -9,7 +9,10 @@
 
 #include <cstring>
 
+#include <netdb.h>
 #include <unistd.h>
+
+#include <sys/socket.h>
 
 #include <uuid/uuid.h>
 
@@ -116,19 +119,22 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
 
   if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
 
+  static const bool useHostname = Util::GetSendHostname();
+  static const int useip = useHostname ? 0 : 1;
+  const std::string senderName = GetSenderName(smtp, useHostname);
   bool esmtpMode = false;
-  const std::string& hostname = Util::GetSenderHostname();
+
   if (enableLmtp)
   {
-    rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, hostname.c_str()));
+    rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, senderName.c_str()));
   }
-  else if (enableEsmtp && (rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo(smtp))) == MAILSMTP_NO_ERROR)
+  else if (enableEsmtp && (rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo_with_ip(smtp, useip))) == MAILSMTP_NO_ERROR)
   {
     esmtpMode = true;
   }
   else if (!enableEsmtp || (rv == MAILSMTP_ERROR_NOT_IMPLEMENTED))
   {
-    rv = LOG_IF_SMTP_ERR(mailsmtp_helo(smtp));
+    rv = LOG_IF_SMTP_ERR(mailsmtp_helo_with_ip(smtp, useip));
   }
 
   if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
@@ -141,15 +147,15 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
 
     if (enableLmtp)
     {
-      rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, hostname.c_str()));
+      rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, senderName.c_str()));
     }
-    else if (enableEsmtp && ((rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo(smtp))) == MAILSMTP_NO_ERROR))
+    else if (enableEsmtp && ((rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo_with_ip(smtp, useip))) == MAILSMTP_NO_ERROR))
     {
       esmtpMode = true;
     }
     else if (!enableEsmtp || rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
     {
-      rv = LOG_IF_SMTP_ERR(mailsmtp_helo(smtp));
+      rv = LOG_IF_SMTP_ERR(mailsmtp_helo_with_ip(smtp, useip));
     }
 
     if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
@@ -182,8 +188,7 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
     }
   }
 
-  static int msgid = 0;
-  std::string envid = std::to_string(++msgid) + std::string("@") + hostname;
+  const std::string envid = GenerateMessageId();
 
   if (esmtpMode)
   {
@@ -699,6 +704,46 @@ std::string Smtp::GenerateMessageId() const
   uuid_generate(uuid);
   uuid_unparse(uuid, uuid_str);
   return std::string(uuid_str) + "@" + Util::GetDomainName(m_Host);
+}
+
+std::string Smtp::GetHostname()
+{
+  char hostname[HOST_NAME_MAX];
+  gethostname(hostname, sizeof(hostname));
+  return std::string(hostname);
+}
+
+std::string Smtp::GetIp(int p_Socket)
+{
+  const std::string fallbackIp = "127.0.0.1";
+
+  if (p_Socket < 0) return fallbackIp;
+
+  struct sockaddr addr;
+  socklen_t addr_len = 0;
+  if (getsockname(p_Socket, &addr, &addr_len) != 0) return fallbackIp;
+
+  char hostname[HOST_NAME_MAX];
+  if (getnameinfo(&addr, sizeof(addr), hostname, sizeof(hostname),
+                  NULL, 0, NI_NUMERICHOST) != 0) return fallbackIp;
+
+  return std::string(hostname);
+}
+
+std::string Smtp::GetSenderName(mailsmtp* p_Smtp, bool p_UseHostname)
+{
+  std::string senderName;
+  if (p_UseHostname)
+  {
+    senderName = GetHostname();
+  }
+  else
+  {
+    senderName = "[" + GetIp(mailstream_low_get_fd(mailstream_get_low(p_Smtp->stream))) + "]";
+  }
+
+  LOG_WARNING("sender name %s", senderName.c_str());
+  return senderName;
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,

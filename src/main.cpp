@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     { "queue_encrypt", "1" },
     { "auth", "pass" },
     { "auth_encrypt", "1" },
-    { "sender_hostname", "" },
+    { "send_hostname", "0" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
     { "idle_fetch_flags", "1" },
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
-  Util::SetSenderHostname(mainConfig->Get("sender_hostname"));
+  Util::SetSendHostname(mainConfig->Get("send_hostname") == "1");
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
   const bool idleFetchFlags = (mainConfig->Get("idle_fetch_flags") == "1");
