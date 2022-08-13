@@ -97,19 +97,12 @@ void Util::WriteFile(const std::string& p_Path, const std::string& p_Str)
 
 std::wstring Util::ReadWFile(const std::string& p_Path)
 {
-  std::locale::global(std::locale(""));
-  std::wifstream file(p_Path, std::ios::binary);
-  std::wstringstream wss;
-  wss << file.rdbuf();
-  return wss.str();
+  return ToWString(ReadFile(p_Path));
 }
 
 void Util::WriteWFile(const std::string& p_Path, const std::wstring& p_WStr)
 {
-  MkDir(DirName(p_Path));
-  std::locale::global(std::locale(""));
-  std::wofstream file(p_Path, std::ios::binary);
-  file << p_WStr;
+  WriteFile(p_Path, ToString(p_WStr));
 }
 
 std::string Util::BaseName(const std::string& p_Path)

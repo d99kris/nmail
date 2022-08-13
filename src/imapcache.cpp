@@ -20,6 +20,7 @@
 #include "util.h"
 #include "serialization.h"
 #include "sethelp.h"
+#include "sqlitehelp.h"
 
 struct ImapCache::DbConnection
 {
@@ -159,12 +160,19 @@ std::set<uint32_t> ImapCache::GetUids(const std::string& p_Folder)
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
   std::set<uint32_t> uids;
-  auto lambda = [&](const std::vector<uint32_t>& data)
+  try
   {
-    uids = ToSet(data);
-  };
+    auto lambda = [&](const std::vector<uint32_t>& data)
+    {
+      uids = ToSet(data);
+    };
 
-  *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
+    *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   return uids;
 }
@@ -178,6 +186,7 @@ void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p
 
   std::string delUidList;
 
+  try
   {
     std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
     std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -210,21 +219,35 @@ void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p
       *db << "commit;";
     }
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   if (!delUidList.empty())
   {
+    try
     {
       std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
       std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
       *db << "DELETE FROM bodys WHERE uid IN (" + delUidList + ");";
     }
+    catch (const sqlite::sqlite_exception& ex)
+    {
+      HANDLE_SQLITE_EXCEPTION(ex);
+    }
 
+    try
     {
       std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
       std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
       *db << "DELETE FROM headers WHERE uid IN (" + delUidList + ");";
+    }
+    catch (const sqlite::sqlite_exception& ex)
+    {
+      HANDLE_SQLITE_EXCEPTION(ex);
     }
   }
 }
@@ -239,6 +262,7 @@ std::map<uint32_t, Header> ImapCache::GetHeaders(const std::string& p_Folder, co
 
   std::map<uint32_t, Header> updateCacheHeaders;
 
+  try
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, false /* p_Writable */);
@@ -274,6 +298,10 @@ std::map<uint32_t, Header> ImapCache::GetHeaders(const std::string& p_Folder, co
       *db << "SELECT uid FROM headers WHERE uid IN (" + uidlist + ");" >> lambda;
     }
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   if (!updateCacheHeaders.empty())
   {
@@ -293,13 +321,21 @@ void ImapCache::SetHeaders(const std::string& p_Folder, const std::map<uint32_t,
   std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-  *db << "begin;";
-  for (const auto& header : p_Headers)
+  try
   {
-    const uint32_t uid = header.first;
-    *db << "INSERT OR REPLACE INTO headers (uid, data) VALUES (?, ?);" << uid << Serialization::ToBytes(header.second);
+    *db << "begin;";
+    for (const auto& header : p_Headers)
+    {
+      const uint32_t uid = header.first;
+      *db << "INSERT OR REPLACE INTO headers (uid, data) VALUES (?, ?);" << uid <<
+        Serialization::ToBytes(header.second);
+    }
+    *db << "commit;";
   }
-  *db << "commit;";
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // get specified flags
@@ -318,12 +354,19 @@ std::map<uint32_t, uint32_t> ImapCache::GetFlags(const std::string& p_Folder, co
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  auto lambda = [&](const uint32_t& uid, const uint32_t& flag)
+  try
   {
-    flags.insert(std::make_pair(uid, flag));
-  };
+    auto lambda = [&](const uint32_t& uid, const uint32_t& flag)
+    {
+      flags.insert(std::make_pair(uid, flag));
+    };
 
-  *db << "SELECT uid, flag FROM flags WHERE uid IN (" + uidlist + ");" >> lambda;
+    *db << "SELECT uid, flag FROM flags WHERE uid IN (" + uidlist + ");" >> lambda;
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   return flags;
 }
@@ -336,12 +379,19 @@ void ImapCache::SetFlags(const std::string& p_Folder, const std::map<uint32_t, u
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-  *db << "begin;";
-  for (const auto& flag : p_Flags)
+  try
   {
-    *db << "INSERT OR REPLACE INTO flags (uid, flag) VALUES (?, ?);" << flag.first << flag.second;
+    *db << "begin;";
+    for (const auto& flag : p_Flags)
+    {
+      *db << "INSERT OR REPLACE INTO flags (uid, flag) VALUES (?, ?);" << flag.first << flag.second;
+    }
+    *db << "commit;";
   }
-  *db << "commit;";
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // get specified bodys
@@ -354,6 +404,7 @@ std::map<uint32_t, Body> ImapCache::GetBodys(const std::string& p_Folder, const 
 
   std::map<uint32_t, Body> updateCacheBodys;
 
+  try
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, false /* p_Writable */);
@@ -389,6 +440,10 @@ std::map<uint32_t, Body> ImapCache::GetBodys(const std::string& p_Folder, const 
       *db << "SELECT uid FROM bodys WHERE uid IN (" + uidlist + ");" >> lambda;
     }
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   if (!updateCacheBodys.empty())
   {
@@ -408,13 +463,20 @@ void ImapCache::SetBodys(const std::string& p_Folder, const std::map<uint32_t, B
   std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-  *db << "begin;";
-  for (const auto& body : p_Bodys)
+  try
   {
-    *db << "INSERT OR REPLACE INTO bodys (uid, data) VALUES (?, ?);" << body.first <<
-      Serialization::ToBytes(body.second);
+    *db << "begin;";
+    for (const auto& body : p_Bodys)
+    {
+      *db << "INSERT OR REPLACE INTO bodys (uid, data) VALUES (?, ?);" << body.first <<
+        Serialization::ToBytes(body.second);
+    }
+    *db << "commit;";
   }
-  *db << "commit;";
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // checks cached uid validity and clears existing cache if invalid
@@ -422,6 +484,7 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_UidValidity)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_UidValidity));
   bool rv = true;
+  try
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
     int storedUidValidity = -1;
@@ -457,6 +520,10 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_UidValidity)
       rv = false;
     }
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
   if (!rv)
   {
@@ -480,7 +547,14 @@ void ImapCache::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  *db << "UPDATE flags SET flag = ? WHERE uid IN (" + uidlist + ");" << (uint32_t)p_Value;
+  try
+  {
+    *db << "UPDATE flags SET flag = ? WHERE uid IN (" + uidlist + ");" << (uint32_t)p_Value;
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // clear specified folder
@@ -489,23 +563,38 @@ void ImapCache::ClearFolder(const std::string& p_Folder)
   LOG_DEBUG_FUNC(STR(p_Folder));
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
 
+  try
   {
     std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
     std::shared_ptr<sqlite::database> db = dbCon->m_Database;
     *db << "DELETE FROM headers;";
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
+  try
   {
     std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
     std::shared_ptr<sqlite::database> db = dbCon->m_Database;
     *db << "DELETE FROM bodys;";
   }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 
+  try
   {
     std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
     std::shared_ptr<sqlite::database> db = dbCon->m_Database;
     *db << "DELETE FROM uids;";
     *db << "DELETE FROM flags;";
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
   }
 }
 
@@ -526,23 +615,30 @@ void ImapCache::DeleteUids(const std::string& p_Folder, const std::set<uint32_t>
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-  std::set<uint32_t> uids;
-  auto lambda = [&](const std::vector<uint32_t>& data)
+  try
   {
-    uids = ToSet(data);
-  };
+    std::set<uint32_t> uids;
+    auto lambda = [&](const std::vector<uint32_t>& data)
+    {
+      uids = ToSet(data);
+    };
 
-  *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
+    *db << "SELECT uids.uids FROM uids LIMIT 1" >> lambda;
 
-  for (auto& uid : p_Uids)
-  {
-    uids.erase(uid);
+    for (auto& uid : p_Uids)
+    {
+      uids.erase(uid);
+    }
+
+    *db << "begin;";
+    *db << "DELETE FROM uids;";
+    *db << "INSERT INTO uids (uids) VALUES (?);" << ToVector(uids);
+    *db << "commit;";
   }
-
-  *db << "begin;";
-  *db << "DELETE FROM uids;";
-  *db << "INSERT INTO uids (uids) VALUES (?);" << ToVector(uids);
-  *db << "commit;";
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // delete specified flags
@@ -558,7 +654,14 @@ void ImapCache::DeleteFlags(const std::string& p_Folder, const std::set<uint32_t
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  *db << "DELETE FROM flags WHERE uid IN (" + uidlist + ");";
+  try
+  {
+    *db << "DELETE FROM flags WHERE uid IN (" + uidlist + ");";
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // delete specified headers
@@ -574,7 +677,14 @@ void ImapCache::DeleteHeaders(const std::string& p_Folder, const std::set<uint32
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  *db << "DELETE FROM headers WHERE uid IN (" + uidlist + ");";
+  try
+  {
+    *db << "DELETE FROM headers WHERE uid IN (" + uidlist + ");";
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 // delete specified bodys
@@ -590,7 +700,14 @@ void ImapCache::DeleteBodys(const std::string& p_Folder, const std::set<uint32_t
   std::string uidlist = sstream.str();
   uidlist.pop_back(); // assumes non-empty input set
 
-  *db << "DELETE FROM bodys WHERE uid IN (" + uidlist + ");";
+  try
+  {
+    *db << "DELETE FROM bodys WHERE uid IN (" + uidlist + ");";
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 bool ImapCache::Export(const std::string& p_Path)
@@ -770,20 +887,27 @@ void ImapCache::CreateDb(ImapCache::DbType p_DbType, const std::string& p_DbPath
 {
   LOG_DEBUG_FUNC(STR(GetDbTypeName(p_DbType), p_DbPath));
 
-  sqlite::database db(p_DbPath);
-  if (p_DbType == HeadersDb)
+  try
   {
-    db << "CREATE TABLE IF NOT EXISTS headers (uid INT, data BLOB, PRIMARY KEY (uid));";
+    sqlite::database db(p_DbPath);
+    if (p_DbType == HeadersDb)
+    {
+      db << "CREATE TABLE IF NOT EXISTS headers (uid INT, data BLOB, PRIMARY KEY (uid));";
+    }
+    else if (p_DbType == BodysDb)
+    {
+      db << "CREATE TABLE IF NOT EXISTS bodys (uid INT, data BLOB, PRIMARY KEY (uid));";
+    }
+    else if (p_DbType == UidFlagsDb)
+    {
+      db << "CREATE TABLE IF NOT EXISTS uids (uids BLOB);";
+      db << "CREATE TABLE IF NOT EXISTS uidvalidity (uidvalidity BLOB);";
+      db << "CREATE TABLE IF NOT EXISTS flags (uid INT, flag INT, PRIMARY KEY (uid));";
+    }
   }
-  else if (p_DbType == BodysDb)
+  catch (const sqlite::sqlite_exception& ex)
   {
-    db << "CREATE TABLE IF NOT EXISTS bodys (uid INT, data BLOB, PRIMARY KEY (uid));";
-  }
-  else if (p_DbType == UidFlagsDb)
-  {
-    db << "CREATE TABLE IF NOT EXISTS uids (uids BLOB);";
-    db << "CREATE TABLE IF NOT EXISTS uidvalidity (uidvalidity BLOB);";
-    db << "CREATE TABLE IF NOT EXISTS flags (uid INT, flag INT, PRIMARY KEY (uid));";
+    HANDLE_SQLITE_EXCEPTION(ex);
   }
 }
 

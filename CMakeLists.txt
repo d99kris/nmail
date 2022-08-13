@@ -77,6 +77,8 @@ add_executable(nmail
   src/smtp.h
   src/smtpmanager.cpp
   src/smtpmanager.h
+  src/sqlitehelp.cpp
+  src/sqlitehelp.h
   src/status.cpp
   src/status.h
   src/ui.cpp

@@ -1,6 +1,6 @@
 // addressbook.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -18,6 +18,7 @@
 #include "log.h"
 #include "loghelp.h"
 #include "maphelp.h"
+#include "sqlitehelp.h"
 #include "util.h"
 
 std::mutex AddressBook::m_Mutex;
@@ -50,9 +51,16 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
 
   if (!m_Db) return;
 
-  *m_Db << "CREATE TABLE IF NOT EXISTS msgids (msgid TEXT PRIMARY KEY NOT NULL);";
-  *m_Db << "CREATE TABLE IF NOT EXISTS addresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
-  *m_Db << "CREATE TABLE IF NOT EXISTS fromaddresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
+  try
+  {
+    *m_Db << "CREATE TABLE IF NOT EXISTS msgids (msgid TEXT PRIMARY KEY NOT NULL);";
+    *m_Db << "CREATE TABLE IF NOT EXISTS addresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
+    *m_Db << "CREATE TABLE IF NOT EXISTS fromaddresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 void AddressBook::Cleanup()
@@ -93,38 +101,45 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
 
   if (!m_Db) return;
 
-  // check if msgid already processed
-  int msgidExists = 0;
-  *m_Db << "SELECT COUNT(msgid) FROM msgids WHERE msgid=?;" << p_MsgId >> msgidExists;
-  if (msgidExists)
+  try
   {
-    LOG_TRACE("skip already processed msgid %s", p_MsgId.c_str());
-    return;
-  }
-  else
-  {
-    LOG_TRACE("add msgid %s", p_MsgId.c_str());
-    *m_Db << "INSERT INTO msgids (msgid) VALUES (?);" << p_MsgId;
-  }
-
-  for (const auto& address : p_Addresses)
-  {
-    int addressExists = 0;
-    *m_Db << "SELECT COUNT(usages) FROM addresses WHERE address=?;" << address >> addressExists;
-    if (addressExists == 0)
+    // check if msgid already processed
+    int msgidExists = 0;
+    *m_Db << "SELECT COUNT(msgid) FROM msgids WHERE msgid=?;" << p_MsgId >> msgidExists;
+    if (msgidExists)
     {
-      // add address
-      LOG_TRACE("add address %s", address.c_str());
-      *m_Db << "INSERT INTO addresses (address, usages) VALUES (?, 1);" << address;
+      LOG_TRACE("skip already processed msgid %s", p_MsgId.c_str());
+      return;
     }
     else
     {
-      // increment address usage
-      LOG_TRACE("increment address %s", address.c_str());
-      *m_Db << "UPDATE addresses SET usages = usages + 1 WHERE address = ?;" << address;
+      LOG_TRACE("add msgid %s", p_MsgId.c_str());
+      *m_Db << "INSERT INTO msgids (msgid) VALUES (?);" << p_MsgId;
     }
 
-    m_Dirty = true;
+    for (const auto& address : p_Addresses)
+    {
+      int addressExists = 0;
+      *m_Db << "SELECT COUNT(usages) FROM addresses WHERE address=?;" << address >> addressExists;
+      if (addressExists == 0)
+      {
+        // add address
+        LOG_TRACE("add address %s", address.c_str());
+        *m_Db << "INSERT INTO addresses (address, usages) VALUES (?, 1);" << address;
+      }
+      else
+      {
+        // increment address usage
+        LOG_TRACE("increment address %s", address.c_str());
+        *m_Db << "UPDATE addresses SET usages = usages + 1 WHERE address = ?;" << address;
+      }
+
+      m_Dirty = true;
+    }
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
   }
 }
 
@@ -134,22 +149,29 @@ void AddressBook::AddFrom(const std::string& p_Address)
 
   if (!m_Db) return;
 
-  int addressExists = 0;
-  *m_Db << "SELECT COUNT(usages) FROM fromaddresses WHERE address=?;" << p_Address >> addressExists;
-  if (addressExists == 0)
+  try
   {
-    // add address
-    LOG_TRACE("add fromaddress %s", p_Address.c_str());
-    *m_Db << "INSERT INTO fromaddresses (address, usages) VALUES (?, 1);" << p_Address;
-  }
-  else
-  {
-    // increment address usage
-    LOG_TRACE("increment fromaddress %s", p_Address.c_str());
-    *m_Db << "UPDATE fromaddresses SET usages = usages + 1 WHERE address = ?;" << p_Address;
-  }
+    int addressExists = 0;
+    *m_Db << "SELECT COUNT(usages) FROM fromaddresses WHERE address=?;" << p_Address >> addressExists;
+    if (addressExists == 0)
+    {
+      // add address
+      LOG_TRACE("add fromaddress %s", p_Address.c_str());
+      *m_Db << "INSERT INTO fromaddresses (address, usages) VALUES (?, 1);" << p_Address;
+    }
+    else
+    {
+      // increment address usage
+      LOG_TRACE("increment fromaddress %s", p_Address.c_str());
+      *m_Db << "UPDATE fromaddresses SET usages = usages + 1 WHERE address = ?;" << p_Address;
+    }
 
-  m_Dirty = true;
+    m_Dirty = true;
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    HANDLE_SQLITE_EXCEPTION(ex);
+  }
 }
 
 std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
@@ -159,16 +181,23 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
   if (!m_Db) return std::vector<std::string>();
 
   std::vector<std::string> addresses;
-  if (p_Filter.empty())
+  try
   {
-    *m_Db << "SELECT address FROM addresses ORDER BY usages DESC;" >>
-      [&](const std::string& address) { addresses.push_back(address); };
+    if (p_Filter.empty())
+    {
+      *m_Db << "SELECT address FROM addresses ORDER BY usages DESC;" >>
+        [&](const std::string& address) { addresses.push_back(address); };
+    }
+    else
+    {
+      // @todo: strip out any % from p_Filter?
+      *m_Db << "SELECT address FROM addresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
+        [&](const std::string& address) { addresses.push_back(address); };
+    }
   }
-  else
+  catch (const sqlite::sqlite_exception& ex)
   {
-    // @todo: strip out any % from p_Filter?
-    *m_Db << "SELECT address FROM addresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
-      [&](const std::string& address) { addresses.push_back(address); };
+    HANDLE_SQLITE_EXCEPTION(ex);
   }
 
   return addresses;
@@ -181,16 +210,24 @@ std::vector<std::string> AddressBook::GetFrom(const std::string& p_Filter)
   if (!m_Db) return std::vector<std::string>();
 
   std::vector<std::string> addresses;
-  if (p_Filter.empty())
+  try
   {
-    *m_Db << "SELECT address FROM fromaddresses ORDER BY usages DESC;" >>
-      [&](const std::string& address) { addresses.push_back(address); };
+    if (p_Filter.empty())
+    {
+      *m_Db << "SELECT address FROM fromaddresses ORDER BY usages DESC;" >>
+        [&](const std::string& address) { addresses.push_back(address); };
+    }
+    else
+    {
+      // @todo: strip out any % from p_Filter?
+      *m_Db << "SELECT address FROM fromaddresses WHERE address LIKE ? ORDER BY usages DESC;" <<
+        ("%" + p_Filter + "%") >>
+        [&](const std::string& address) { addresses.push_back(address); };
+    }
   }
-  else
+  catch (const sqlite::sqlite_exception& ex)
   {
-    // @todo: strip out any % from p_Filter?
-    *m_Db << "SELECT address FROM fromaddresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
-      [&](const std::string& address) { addresses.push_back(address); };
+    HANDLE_SQLITE_EXCEPTION(ex);
   }
 
   return addresses;
