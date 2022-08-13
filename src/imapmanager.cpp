@@ -1,6 +1,6 @@
 // imapmanager.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -207,6 +207,7 @@ void ImapManager::SetCurrentFolder(const std::string& p_Folder)
 
 bool ImapManager::ProcessIdle()
 {
+  LOG_TRACE_FUNC("");
   m_Mutex.lock();
   const std::string currentFolder = m_CurrentFolder;
   m_Mutex.unlock();
@@ -348,7 +349,7 @@ int ImapManager::GetIdleDurationSec()
 
 void ImapManager::ProcessIdleOffline()
 {
-  LOG_DEBUG("entering idle");
+  LOG_TRACE_FUNC("");
   m_Imap.IndexNotifyIdle(true);
 
   int selrv = 0;
@@ -409,17 +410,20 @@ void ImapManager::Process()
     bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty();
     m_QueueMutex.unlock();
 
-    if (isQueueEmpty)
+    if (isQueueEmpty || !m_OnceConnected)
     {
+      LOG_TRACE("queue empty");
       selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
+      LOG_TRACE("selrv = %d", selrv);
     }
 
     bool idleRv = true;
     bool authRefreshNeeded = AuthRefreshNeeded();
 
-    if ((selrv == 0) && !authRefreshNeeded && isQueueEmpty)
+    if (m_Running && !authRefreshNeeded &&
+        (selrv == 0))
     {
-      if (m_Imap.GetConnected())
+      if (m_OnceConnected)
       {
         idleRv &= ProcessIdle();
       }
@@ -428,8 +432,8 @@ void ImapManager::Process()
         ProcessIdleOffline();
       }
     }
-    else if ((FD_ISSET(m_Pipe[0], &fds) || !isQueueEmpty) && m_Imap.GetConnected() &&
-             !authRefreshNeeded)
+    else if (m_Running && !authRefreshNeeded &&
+             ((selrv > 0) || !isQueueEmpty))
     {
       int len = 0;
       ioctl(m_Pipe[0], FIONREAD, &len);
@@ -442,6 +446,7 @@ void ImapManager::Process()
       m_QueueMutex.lock();
 
       while (m_Running && !authRefreshNeeded &&
+             m_OnceConnected &&
              (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
       {
         bool isConnected = true;
