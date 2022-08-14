@@ -1,6 +1,6 @@
 // crypto.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2022 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -138,12 +138,30 @@ std::string Crypto::AESDecrypt(const std::string& p_Ciphertext, const std::strin
 
 std::string Crypto::SHA256(const std::string& p_Str)
 {
-  unsigned char hash[SHA256_DIGEST_LENGTH];
-  SHA256_CTX sha256;
-  SHA256_Init(&sha256);
-  SHA256_Update(&sha256, p_Str.c_str(), p_Str.size());
-  SHA256_Final(hash, &sha256);
-  return Util::ToHex(std::string((char*)hash, SHA256_DIGEST_LENGTH));
+  std::string hexDigest;
+  EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+  if (mdctx != nullptr)
+  {
+    if (EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr) == 1)
+    {
+      if (EVP_DigestUpdate(mdctx, p_Str.c_str(), p_Str.size()) == 1)
+      {
+        unsigned int resultLen = 0;
+        unsigned int digestLen = EVP_MD_size(EVP_sha256());
+        std::vector<char> digest(digestLen);
+
+        if ((EVP_DigestFinal_ex(mdctx, (unsigned char*)digest.data(), &resultLen) == 1) &&
+            (resultLen == digestLen))
+        {
+          hexDigest = Util::ToHex(std::string(digest.begin(), digest.end()));
+        }
+      }
+    }
+
+    EVP_MD_CTX_free(mdctx);
+  }
+
+  return hexDigest;
 }
 
 bool Crypto::AESEncryptFile(const std::string& p_InPath, const std::string& p_OutPath, const std::string& p_Pass)
