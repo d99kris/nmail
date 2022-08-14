@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     { "queue_encrypt", "1" },
     { "auth", "pass" },
     { "auth_encrypt", "1" },
-    { "send_hostname", "0" },
+    { "send_hostname", "1" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
     { "idle_fetch_flags", "1" },

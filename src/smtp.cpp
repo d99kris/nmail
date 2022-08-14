@@ -717,15 +717,25 @@ std::string Smtp::GetIp(int p_Socket)
 {
   const std::string fallbackIp = "127.0.0.1";
 
-  if (p_Socket < 0) return fallbackIp;
+  if (p_Socket < 0)
+  {
+    return fallbackIp;
+  }
 
   struct sockaddr addr;
   socklen_t addr_len = 0;
-  if (getsockname(p_Socket, &addr, &addr_len) != 0) return fallbackIp;
+  if (LOG_IF_NONZERO(getsockname(p_Socket, &addr, &addr_len)) != 0)
+  {
+    return fallbackIp;
+  }
 
   char hostname[HOST_NAME_MAX];
-  if (getnameinfo(&addr, sizeof(addr), hostname, sizeof(hostname),
-                  NULL, 0, NI_NUMERICHOST) != 0) return fallbackIp;
+  if (LOG_IF_NONZERO(getnameinfo(&addr, sizeof(addr), hostname, sizeof(hostname),
+                                 NULL, 0, NI_NUMERICHOST) != 0))
+  {
+    LOG_WARNING("errno %d", errno);
+    return fallbackIp;
+  }
 
   return std::string(hostname);
 }
@@ -742,7 +752,7 @@ std::string Smtp::GetSenderName(mailsmtp* p_Smtp, bool p_UseHostname)
     senderName = "[" + GetIp(mailstream_low_get_fd(mailstream_get_low(p_Smtp->stream))) + "]";
   }
 
-  LOG_WARNING("sender name %s", senderName.c_str());
+  LOG_DEBUG("sender name %s", senderName.c_str());
   return senderName;
 }
 
