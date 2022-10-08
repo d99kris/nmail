@@ -114,6 +114,8 @@ void Ui::Init()
     { "key_backward_kill_word", "\\033\\177" }, // alt-backspace
     { "key_kill_word", "0x206" }, // alt-delete
 #endif
+    { "key_begin_line", "KEY_CTRLA" },
+    { "key_end_line", "KEY_CTRLE" },
     { "key_prev_page", "KEY_PPAGE" },
     { "key_next_page", "KEY_NPAGE" },
     { "key_filter_sort_reset", "`" },
@@ -218,6 +220,8 @@ void Ui::Init()
   m_KeyBackwardKillWord = Util::GetKeyCode(m_Config.Get("key_backward_kill_word"));
   m_KeyKillWord = Util::GetKeyCode(m_Config.Get("key_kill_word"));
 
+  m_KeyBeginLine = Util::GetKeyCode(m_Config.Get("key_begin_line"));
+  m_KeyEndLine = Util::GetKeyCode(m_Config.Get("key_end_line"));
   m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
   m_KeyFilterSortReset = Util::GetKeyCode(m_Config.Get("key_filter_sort_reset"));
@@ -3233,6 +3237,35 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       Util::DeleteToNextMatch(m_ComposeMessageStr, m_ComposeMessagePos, ' ');
       m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
+    }
+    else if (p_Key == m_KeyBeginLine)
+    {
+      if (m_ComposeMessagePos > 0)
+      {
+        size_t searchPos = m_ComposeMessagePos - 1;
+        size_t prevLineBreakPos = m_ComposeMessageStr.rfind('\n', searchPos);
+        if (prevLineBreakPos != std::string::npos)
+        {
+          m_ComposeMessagePos = Util::Bound(0, (int)prevLineBreakPos + 1, (int)m_ComposeMessageStr.size());
+        }
+        else
+        {
+          m_ComposeMessagePos = 0;
+        }
+      }
+    }
+    else if (p_Key == m_KeyEndLine)
+    {
+      size_t searchPos = m_ComposeMessagePos;
+      size_t nextLineBreakPos = m_ComposeMessageStr.find('\n', searchPos);
+      if (nextLineBreakPos != std::string::npos)
+      {
+        m_ComposeMessagePos = Util::Bound(0, (int)nextLineBreakPos, (int)m_ComposeMessageStr.size());
+      }
+      else
+      {
+        m_ComposeMessagePos = m_ComposeMessageStr.size();
+      }
     }
     else
     {

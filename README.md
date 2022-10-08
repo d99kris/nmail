@@ -698,11 +698,13 @@ file (platform-dependent defaults are left empty below):
     key_back=,
     key_backward_kill_word=
     key_backward_word=
+    key_begin_line=KEY_CTRLA
     key_cancel=KEY_CTRLC
     key_compose=c
     key_compose_copy=C
     key_delete=d
     key_delete_line=KEY_CTRLK
+    key_end_line=KEY_CTRLE
     key_export=x
     key_ext_editor=KEY_CTRLW
     key_ext_html_preview=KEY_CTRLV
