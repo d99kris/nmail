@@ -3159,14 +3159,6 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
-    else if (p_Key == KEY_HOME)
-    {
-      // @todo: implement home/end handling in compose
-    }
-    else if (p_Key == KEY_END)
-    {
-      // @todo: implement home/end handling in compose
-    }
     else if (p_Key == KEY_LEFT)
     {
       --m_ComposeMessagePos;
@@ -3266,6 +3258,14 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       {
         m_ComposeMessagePos = m_ComposeMessageStr.size();
       }
+    }
+    else if (p_Key == KEY_HOME)
+    {
+      m_ComposeMessagePos = 0;
+    }
+    else if (p_Key == KEY_END)
+    {
+      m_ComposeMessagePos = m_ComposeMessageStr.size();
     }
     else
     {
