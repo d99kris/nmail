@@ -1343,26 +1343,6 @@ void Util::HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint3
   p_B = (val % 0x100);
 }
 
-void Util::DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar)
-{
-  size_t endPos = p_Str.find(p_EndChar, p_StartPos);
-  p_Str.erase(p_StartPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_StartPos + 1));
-}
-
-void Util::DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar)
-{
-  size_t endPos = p_Str.find(p_EndChar, p_CurPos + 1);
-  p_Str.erase(p_CurPos, (endPos == std::wstring::npos) ? endPos : (endPos - p_CurPos));
-}
-
-void Util::DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar)
-{
-  size_t startPos = p_Str.rfind(p_EndChar, (p_CurPos > 1) ? (p_CurPos - 2) : p_CurPos);
-  startPos = (startPos == std::wstring::npos) ? 0 : startPos + 1;
-  p_Str.erase(startPos, (p_CurPos - startPos));
-  p_CurPos -= (p_CurPos - startPos);
-}
-
 std::map<int, std::string> Util::GetCrashingSignals()
 {
   static const std::map<int, std::string> crashingSignals =
@@ -2078,4 +2058,61 @@ void Util::SetDownloadsDir(const std::string& p_DownloadsDir)
 bool Util::IsDir(const std::string& p_Path)
 {
   return apathy::Path(p_Path).is_directory();
+}
+
+void Util::DeleteToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars)
+{
+  int searchPos = std::max(0, (p_Pos + p_Offs));
+  size_t nextMatchPos = p_Str.find_first_of(p_Chars, searchPos);
+  if (nextMatchPos != std::string::npos)
+  {
+    p_Str.erase(p_Pos, (nextMatchPos - searchPos + 1));
+  }
+  else
+  {
+    p_Str.erase(p_Pos);
+  }
+
+  p_Pos = std::min(p_Pos, (int)p_Str.size());
+}
+
+void Util::DeleteToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars)
+{
+  int searchPos = std::max(0, (p_Pos + p_Offs));
+  size_t prevMatchPos = p_Str.find_last_of(p_Chars, searchPos);
+  if (prevMatchPos == std::string::npos)
+  {
+    prevMatchPos = 0;
+  }
+
+  p_Str.erase(prevMatchPos, p_Pos - prevMatchPos);
+  p_Pos = std::min((int)prevMatchPos, (int)p_Str.size());
+}
+
+void Util::JumpToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars)
+{
+  int searchPos = std::max(0, (p_Pos + p_Offs));
+  size_t nextMatchPos = p_Str.find_first_of(p_Chars, searchPos);
+  if (nextMatchPos != std::string::npos)
+  {
+    p_Pos = std::min((int)nextMatchPos, (int)p_Str.size());
+  }
+  else
+  {
+    p_Pos = p_Str.size();
+  }
+}
+
+void Util::JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars)
+{
+  int searchPos = std::max(0, (p_Pos + p_Offs));
+  size_t prevMatchPos = p_Str.find_last_of(p_Chars, searchPos);
+  if (prevMatchPos != std::string::npos)
+  {
+    p_Pos = std::min((int)prevMatchPos + 1, (int)p_Str.size());
+  }
+  else
+  {
+    p_Pos = 0;
+  }
 }

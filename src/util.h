@@ -216,9 +216,6 @@ public:
   static std::string ToHexString(int p_Val);
   static std::string FromOctString(const std::string& p_Str);
   static void HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint32_t& p_B);
-  static void DeleteToMatch(std::wstring& p_Str, const int p_StartPos, const wchar_t p_EndChar);
-  static void DeleteToNextMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
-  static void DeleteToPrevMatch(std::wstring& p_Str, int& p_CurPos, const wchar_t p_EndChar);
 
   static void RegisterSignalHandlers();
   static void RegisterIgnoredSignalHandlers();
@@ -279,6 +276,11 @@ public:
   static std::string GetDownloadsDir();
   static void SetDownloadsDir(const std::string& p_DownloadsDir);
   static bool IsDir(const std::string& p_Path);
+
+  static void DeleteToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
+  static void DeleteToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
+  static void JumpToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
+  static void JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

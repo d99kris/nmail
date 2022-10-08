@@ -706,7 +706,8 @@ file (platform-dependent defaults are left empty below):
     key_compose=c
     key_compose_copy=C
     key_delete=d
-    key_delete_line=KEY_CTRLK
+    key_delete_line_after_cursor=KEY_CTRLK
+    key_delete_line_before_cursor=KEY_CTRLU
     key_end_line=KEY_CTRLE
     key_export=x
     key_ext_editor=KEY_CTRLW

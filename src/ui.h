@@ -238,6 +238,11 @@ private:
   std::string GetDefaultFrom();
   std::wstring GetSignatureStr(bool p_NoPrefix = false);
 
+  inline bool HandleListKey(int p_Key, int& p_Index);
+  inline bool HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  inline bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  inline bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
   std::shared_ptr<SmtpManager> m_SmtpManager;
@@ -347,7 +352,9 @@ private:
   int m_KeyToggleTextHtml = 0;
   int m_KeyCancel = 0;
   int m_KeySend = 0;
-  int m_KeyDeleteLine = 0;
+  int m_KeyDeleteCharAfterCursor = 0;
+  int m_KeyDeleteLineAfterCursor = 0;
+  int m_KeyDeleteLineBeforeCursor = 0;
   int m_KeyOpen = 0;
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;

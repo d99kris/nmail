@@ -80,7 +80,9 @@ void Ui::Init()
     { "key_toggle_text_html", "t" },
     { "key_cancel", "KEY_CTRLC" },
     { "key_send", "KEY_CTRLX" },
-    { "key_delete_line", "KEY_CTRLK" },
+    { "key_delete_char_after_cursor", "KEY_CTRLD" },
+    { "key_delete_line_after_cursor", "KEY_CTRLK" },
+    { "key_delete_line_before_cursor", "KEY_CTRLU" },
     { "key_open", "." },
     { "key_back", "," },
     { "key_goto_folder", "g" },
@@ -193,7 +195,9 @@ void Ui::Init()
   m_KeyToggleTextHtml = Util::GetKeyCode(m_Config.Get("key_toggle_text_html"));
   m_KeyCancel = Util::GetKeyCode(m_Config.Get("key_cancel"));
   m_KeySend = Util::GetKeyCode(m_Config.Get("key_send"));
-  m_KeyDeleteLine = Util::GetKeyCode(m_Config.Get("key_delete_line"));
+  m_KeyDeleteCharAfterCursor = Util::GetKeyCode(m_Config.Get("key_delete_char_after_cursor"));
+  m_KeyDeleteLineAfterCursor = Util::GetKeyCode(m_Config.Get("key_delete_line_after_cursor"));
+  m_KeyDeleteLineBeforeCursor = Util::GetKeyCode(m_Config.Get("key_delete_line_before_cursor"));
   m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
@@ -742,7 +746,6 @@ void Ui::DrawHelp()
   {
     {
       GetKeyDisplay(m_KeySend), "Send",
-      GetKeyDisplay(m_KeyDeleteLine), "DelLine",
       GetKeyDisplay(m_KeyExtEditor), "ExtEdit",
       GetKeyDisplay(m_KeyRichHeader), "RichHdr",
       GetKeyDisplay(m_KeyToggleMarkdownCompose), "TgMkDown",
@@ -1012,6 +1015,14 @@ void Ui::DrawFileList()
     }
   }
 
+  int maxWidth = (m_ScreenWidth - 4);
+  std::wstring dirLabel = L"Dir: ";
+  int maxDirLen = maxWidth - dirLabel.size();
+  std::wstring dirPath = Util::ToWString(m_CurrentDir);
+  int dirPathRight = ((int)dirPath.size() < maxDirLen) ? 0 : (dirPath.size() - maxDirLen);
+  dirLabel += dirPath.substr(dirPathRight);
+  mvwaddnwstr(m_MainWin, 0, 2, dirLabel.c_str(), dirLabel.size());
+
   int count = files.size();
   if (count > 0)
   {
@@ -1022,14 +1033,6 @@ void Ui::DrawFileList()
     int idxOffs = Util::Bound(0, (int)(m_FileListCurrentIndex - ((itemsMax - 1) / 2)),
                               std::max(0, (int)files.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)files.size());
-
-    int maxWidth = (m_ScreenWidth - 4);
-    std::wstring dirLabel = L"Dir: ";
-    int maxDirLen = maxWidth - dirLabel.size();
-    std::wstring dirPath = Util::ToWString(m_CurrentDir);
-    int dirPathRight = ((int)dirPath.size() < maxDirLen) ? 0 : (dirPath.size() - maxDirLen);
-    dirLabel += dirPath.substr(dirPathRight);
-    mvwaddnwstr(m_MainWin, 0, 2, dirLabel.c_str(), dirLabel.size());
 
     for (int i = idxOffs; i < idxMax; ++i)
     {
@@ -2094,30 +2097,6 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   {
     SetState(StateViewMessageList);
   }
-  else if (p_Key == KEY_UP)
-  {
-    --m_FolderListCurrentIndex;
-  }
-  else if (p_Key == KEY_DOWN)
-  {
-    ++m_FolderListCurrentIndex;
-  }
-  else if (p_Key == m_KeyPrevPage)
-  {
-    m_FolderListCurrentIndex = m_FolderListCurrentIndex - m_MainWinHeight;
-  }
-  else if (p_Key == m_KeyNextPage)
-  {
-    m_FolderListCurrentIndex = m_FolderListCurrentIndex + m_MainWinHeight;
-  }
-  else if (p_Key == KEY_HOME)
-  {
-    m_FolderListCurrentIndex = 0;
-  }
-  else if (p_Key == KEY_END)
-  {
-    m_FolderListCurrentIndex = std::numeric_limits<int>::max() - 1;
-  }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
   {
@@ -2157,33 +2136,17 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
       ClearSelection();
     }
   }
-  else if (p_Key == KEY_LEFT)
+  else if (HandleListKey(p_Key, m_FolderListCurrentIndex))
   {
-    m_FolderListFilterPos = Util::Bound(0, m_FolderListFilterPos - 1,
-                                        (int)m_FolderListFilterStr.size());
+    // none
   }
-  else if (p_Key == KEY_RIGHT)
+  else if (HandleLineKey(p_Key, m_FolderListFilterStr, m_FolderListFilterPos))
   {
-    m_FolderListFilterPos = Util::Bound(0, m_FolderListFilterPos + 1,
-                                        (int)m_FolderListFilterStr.size());
+    // none
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  else if (HandleTextKey(p_Key, m_FolderListFilterStr, m_FolderListFilterPos))
   {
-    if (m_FolderListFilterPos > 0)
-    {
-      m_FolderListFilterStr.erase(--m_FolderListFilterPos, 1);
-    }
-  }
-  else if (p_Key == KEY_DC)
-  {
-    if (m_FolderListFilterPos < (int)m_FolderListFilterStr.size())
-    {
-      m_FolderListFilterStr.erase(m_FolderListFilterPos, 1);
-    }
-  }
-  else if (IsValidTextKey(p_Key))
-  {
-    m_FolderListFilterStr.insert(m_FolderListFilterPos++, 1, p_Key);
+    // none
   }
 
   DrawAll();
@@ -2194,30 +2157,6 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   if (p_Key == m_KeyCancel)
   {
     SetState(m_LastMessageState);
-  }
-  else if (p_Key == KEY_UP)
-  {
-    --m_AddressListCurrentIndex;
-  }
-  else if (p_Key == KEY_DOWN)
-  {
-    ++m_AddressListCurrentIndex;
-  }
-  else if (p_Key == m_KeyPrevPage)
-  {
-    m_AddressListCurrentIndex = m_AddressListCurrentIndex - m_MainWinHeight;
-  }
-  else if (p_Key == m_KeyNextPage)
-  {
-    m_AddressListCurrentIndex = m_AddressListCurrentIndex + m_MainWinHeight;
-  }
-  else if (p_Key == KEY_HOME)
-  {
-    m_AddressListCurrentIndex = 0;
-  }
-  else if (p_Key == KEY_END)
-  {
-    m_AddressListCurrentIndex = std::numeric_limits<int>::max();
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
@@ -2232,33 +2171,17 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
     }
     SetState(m_LastMessageState);
   }
-  else if (p_Key == KEY_LEFT)
+  else if (HandleListKey(p_Key, m_AddressListCurrentIndex))
   {
-    m_AddressListFilterPos = Util::Bound(0, m_AddressListFilterPos - 1,
-                                         (int)m_AddressListFilterStr.size());
+    // none
   }
-  else if (p_Key == KEY_RIGHT)
+  else if (HandleLineKey(p_Key, m_AddressListFilterStr, m_AddressListFilterPos))
   {
-    m_AddressListFilterPos = Util::Bound(0, m_AddressListFilterPos + 1,
-                                         (int)m_AddressListFilterStr.size());
+    // none
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  else if (HandleTextKey(p_Key, m_AddressListFilterStr, m_AddressListFilterPos))
   {
-    if (m_AddressListFilterPos > 0)
-    {
-      m_AddressListFilterStr.erase(--m_AddressListFilterPos, 1);
-    }
-  }
-  else if (p_Key == KEY_DC)
-  {
-    if (m_AddressListFilterPos < (int)m_AddressListFilterStr.size())
-    {
-      m_AddressListFilterStr.erase(m_AddressListFilterPos, 1);
-    }
-  }
-  else if (IsValidTextKey(p_Key))
-  {
-    m_AddressListFilterStr.insert(m_AddressListFilterPos++, 1, p_Key);
+    // none
   }
 
   DrawAll();
@@ -2269,30 +2192,6 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   if (p_Key == m_KeyCancel)
   {
     SetState(m_LastMessageState);
-  }
-  else if (p_Key == KEY_UP)
-  {
-    --m_FileListCurrentIndex;
-  }
-  else if (p_Key == KEY_DOWN)
-  {
-    ++m_FileListCurrentIndex;
-  }
-  else if (p_Key == m_KeyPrevPage)
-  {
-    m_FileListCurrentIndex = m_FileListCurrentIndex - m_MainWinHeight;
-  }
-  else if (p_Key == m_KeyNextPage)
-  {
-    m_FileListCurrentIndex = m_FileListCurrentIndex + m_MainWinHeight;
-  }
-  else if (p_Key == KEY_HOME)
-  {
-    m_FileListCurrentIndex = 0;
-  }
-  else if (p_Key == KEY_END)
-  {
-    m_FileListCurrentIndex = std::numeric_limits<int>::max();
   }
   else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
            ((p_Key == KEY_RIGHT) && (m_FileListFilterPos == (int)m_FileListFilterStr.size())))
@@ -2313,7 +2212,7 @@ void Ui::ViewFileListKeyHandler(int p_Key)
       SetState(m_LastMessageState);
     }
   }
-  else if ((p_Key == KEY_LEFT) && (m_FileListFilterPos == 0))
+  else if ((m_FileListFilterPos == 0) && (p_Key == KEY_LEFT))
   {
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
@@ -2336,43 +2235,27 @@ void Ui::ViewFileListKeyHandler(int p_Key)
       m_FileListCurrentFile.m_Name = "";
     }
   }
-  else if (p_Key == KEY_LEFT)
+  else if ((m_FileListFilterPos == 0) && ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE)))
   {
-    m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos - 1,
-                                      (int)m_FileListFilterStr.size());
+    // backspace with empty filter goes up one directory level
+    m_FileListFilterPos = 0;
+    m_FileListFilterStr.clear();
+    m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
+    m_Files = Util::ListPaths(m_CurrentDir);
+    m_FileListCurrentIndex = 0;
+    m_FileListCurrentFile.m_Name = "";
   }
-  else if (p_Key == KEY_RIGHT)
+  else if (HandleListKey(p_Key, m_FileListCurrentIndex))
   {
-    m_FileListFilterPos = Util::Bound(0, m_FileListFilterPos + 1,
-                                      (int)m_FileListFilterStr.size());
+    // none
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  else if (HandleLineKey(p_Key, m_FileListFilterStr, m_FileListFilterPos))
   {
-    if (m_FileListFilterPos > 0)
-    {
-      m_FileListFilterStr.erase(--m_FileListFilterPos, 1);
-    }
-    else
-    {
-      // backspace with empty filter goes up one directory level
-      m_FileListFilterPos = 0;
-      m_FileListFilterStr.clear();
-      m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
-      m_Files = Util::ListPaths(m_CurrentDir);
-      m_FileListCurrentIndex = 0;
-      m_FileListCurrentFile.m_Name = "";
-    }
+    // none
   }
-  else if (p_Key == KEY_DC)
+  else if (HandleTextKey(p_Key, m_FileListFilterStr, m_FileListFilterPos))
   {
-    if (m_FileListFilterPos < (int)m_FileListFilterStr.size())
-    {
-      m_FileListFilterStr.erase(m_FileListFilterPos, 1);
-    }
-  }
-  else if (IsValidTextKey(p_Key))
-  {
-    m_FileListFilterStr.insert(m_FileListFilterPos++, 1, p_Key);
+    // none
   }
 
   DrawAll();
@@ -2781,14 +2664,6 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     Quit();
   }
-  else if (p_Key == KEY_UP)
-  {
-    --m_MessageViewLineOffset;
-  }
-  else if (p_Key == KEY_DOWN)
-  {
-    ++m_MessageViewLineOffset;
-  }
   else if (p_Key == m_KeyPrevMsg)
   {
     int prevIndex = m_MessageListCurrentIndex[m_CurrentFolder]--;
@@ -2817,21 +2692,13 @@ void Ui::ViewMessageKeyHandler(int p_Key)
       m_MessageFindMatchLine = -1;
     }
   }
-  else if (p_Key == m_KeyPrevPage)
+  else if (HandleListKey(p_Key, m_MessageViewLineOffset))
   {
-    m_MessageViewLineOffset = m_MessageViewLineOffset - m_MainWinHeight;
+    // none
   }
-  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
+  else if (p_Key == KEY_SPACE) // alternative next page key
   {
     m_MessageViewLineOffset = m_MessageViewLineOffset + m_MainWinHeight;
-  }
-  else if (p_Key == KEY_HOME)
-  {
-    m_MessageViewLineOffset = 0;
-  }
-  else if (p_Key == KEY_END)
-  {
-    m_MessageViewLineOffset = std::numeric_limits<int>::max();
   }
   else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
@@ -3036,149 +2903,47 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         FilePickerOrStateFileList();
       }
     }
-    else if (p_Key == KEY_LEFT)
+    else if ((p_Key == KEY_LEFT) && (m_ComposeHeaderPos == 0))
     {
-      --m_ComposeHeaderPos;
-      if (m_ComposeHeaderPos < 0)
+      --m_ComposeHeaderLine;
+      if (m_ComposeHeaderLine < 0)
       {
-        --m_ComposeHeaderLine;
-        if (m_ComposeHeaderLine < 0)
-        {
-          m_ComposeHeaderPos = 0;
-        }
-        else
-        {
-          m_ComposeHeaderPos = std::numeric_limits<int>::max();
-        }
+        m_ComposeHeaderPos = 0;
+      }
+      else
+      {
+        m_ComposeHeaderPos = std::numeric_limits<int>::max();
+      }
 
-        m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
+      m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
+                                        (int)m_ComposeHeaderStr.size() - 1);
+      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
+                                       (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+    }
+    else if ((p_Key == KEY_RIGHT) && (m_ComposeHeaderPos == (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size()))
+    {
+      m_ComposeHeaderPos = 0;
+
+      if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
+      {
+        m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine + 1,
                                           (int)m_ComposeHeaderStr.size() - 1);
         m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                          (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
       }
       else
       {
-        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+        m_IsComposeHeader = false;
+        m_ComposeMessagePos = 0;
       }
     }
-    else if (p_Key == KEY_RIGHT)
+    else if (HandleLineKey(p_Key, m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos))
     {
-      ++m_ComposeHeaderPos;
-      if (m_ComposeHeaderPos > (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size())
-      {
-        m_ComposeHeaderPos = 0;
-
-        if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
-        {
-          m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine + 1,
-                                            (int)m_ComposeHeaderStr.size() - 1);
-          m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                           (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
-        }
-        else
-        {
-          m_IsComposeHeader = false;
-          m_ComposeMessagePos = 0;
-        }
-      }
-      else
-      {
-        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
-      }
+      // none
     }
-    else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+    else if (HandleDocKey(p_Key, m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos))
     {
-      if (m_ComposeHeaderPos > 0)
-      {
-        m_ComposeHeaderStr[m_ComposeHeaderLine].erase(--m_ComposeHeaderPos, 1);
-      }
-    }
-    else if (p_Key == KEY_DC)
-    {
-      if (m_ComposeHeaderPos < (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size())
-      {
-        m_ComposeHeaderStr[m_ComposeHeaderLine].erase(m_ComposeHeaderPos, 1);
-      }
-    }
-    else if (p_Key == m_KeyDeleteLine)
-    {
-      Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
-    }
-    else if (p_Key == m_KeyBackwardWord)
-    {
-      size_t searchPos = (m_ComposeHeaderPos > 0) ? (m_ComposeHeaderPos - 2) : 0;
-      size_t prevSpacePos = m_ComposeHeaderStr[m_ComposeHeaderLine].rfind(' ', searchPos);
-      if (prevSpacePos != std::string::npos)
-      {
-        m_ComposeHeaderPos = Util::Bound(0, (int)prevSpacePos + 1, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-      }
-      else
-      {
-        m_ComposeHeaderPos = 0;
-      }
-    }
-    else if (p_Key == m_KeyForwardWord)
-    {
-      size_t searchPos = m_ComposeHeaderPos + 1;
-      size_t nextSpacePos = m_ComposeHeaderStr[m_ComposeHeaderLine].find(' ', searchPos);
-      if (nextSpacePos != std::string::npos)
-      {
-        m_ComposeHeaderPos = Util::Bound(0, (int)nextSpacePos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-      }
-      else
-      {
-        m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
-      }
-    }
-    else if (p_Key == m_KeyBackwardKillWord)
-    {
-      Util::DeleteToPrevMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, ' ');
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-    }
-    else if (p_Key == m_KeyKillWord)
-    {
-      Util::DeleteToNextMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, ' ');
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-    }
-    else if (p_Key == m_KeyBeginLine)
-    {
-      if (m_ComposeHeaderPos > 0)
-      {
-        size_t searchPos = m_ComposeHeaderPos - 1;
-        size_t prevLineBreakPos = m_ComposeHeaderStr[m_ComposeHeaderLine].rfind('\n', searchPos);
-        if (prevLineBreakPos != std::string::npos)
-        {
-          m_ComposeHeaderPos = Util::Bound(0, (int)prevLineBreakPos + 1,
-                                           (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-        }
-        else
-        {
-          m_ComposeHeaderPos = 0;
-        }
-      }
-    }
-    else if (p_Key == m_KeyEndLine)
-    {
-      size_t searchPos = m_ComposeHeaderPos;
-      size_t nextLineBreakPos = m_ComposeHeaderStr[m_ComposeHeaderLine].find('\n', searchPos);
-      if (nextLineBreakPos != std::string::npos)
-      {
-        m_ComposeHeaderPos = Util::Bound(0, (int)nextLineBreakPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
-      }
-      else
-      {
-        m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
-      }
-    }
-    else if (p_Key == KEY_HOME)
-    {
-      m_ComposeHeaderPos = 0;
-    }
-    else if (p_Key == KEY_END)
-    {
-      m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+      // none
     }
     else
     {
@@ -3225,113 +2990,19 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
-    else if (p_Key == KEY_LEFT)
+    else if ((p_Key == KEY_LEFT) && (m_ComposeMessagePos == 0))
     {
-      --m_ComposeMessagePos;
-      if (m_ComposeMessagePos < 0)
-      {
-        m_IsComposeHeader = true;
-        m_ComposeHeaderPos = (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size();
-      }
-
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos,
-                                        (int)m_ComposeMessageStr.size());
+      // switch to header
+      m_IsComposeHeader = true;
+      m_ComposeHeaderPos = (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size();
     }
-    else if (p_Key == KEY_RIGHT)
+    else if (HandleLineKey(p_Key, m_ComposeMessageStr, m_ComposeMessagePos))
     {
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + 1,
-                                        (int)m_ComposeMessageStr.size());
+      // none
     }
-    else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+    else if (HandleDocKey(p_Key, m_ComposeMessageStr, m_ComposeMessagePos))
     {
-      if (m_ComposeMessagePos > 0)
-      {
-        m_ComposeMessageStr.erase(--m_ComposeMessagePos, 1);
-      }
-    }
-    else if (p_Key == KEY_DC)
-    {
-      if (m_ComposeMessagePos < (int)m_ComposeMessageStr.size())
-      {
-        m_ComposeMessageStr.erase(m_ComposeMessagePos, 1);
-      }
-    }
-    else if (p_Key == m_KeyDeleteLine)
-    {
-      Util::DeleteToMatch(m_ComposeMessageStr, m_ComposeMessagePos, '\n');
-    }
-    else if (p_Key == m_KeyBackwardWord)
-    {
-      size_t searchPos = (m_ComposeMessagePos > 0) ? (m_ComposeMessagePos - 2) : 0;
-      size_t prevSpacePos = m_ComposeMessageStr.rfind(' ', searchPos);
-      if (prevSpacePos != std::string::npos)
-      {
-        m_ComposeMessagePos = Util::Bound(0, (int)prevSpacePos + 1, (int)m_ComposeMessageStr.size());
-      }
-      else
-      {
-        m_ComposeMessagePos = 0;
-      }
-    }
-    else if (p_Key == m_KeyForwardWord)
-    {
-      size_t searchPos = m_ComposeMessagePos + 1;
-      size_t nextSpacePos = m_ComposeMessageStr.find(' ', searchPos);
-      if (nextSpacePos != std::string::npos)
-      {
-        m_ComposeMessagePos = Util::Bound(0, (int)nextSpacePos, (int)m_ComposeMessageStr.size());
-      }
-      else
-      {
-        m_ComposeMessagePos = m_ComposeMessageStr.size();
-      }
-    }
-    else if (p_Key == m_KeyBackwardKillWord)
-    {
-      Util::DeleteToPrevMatch(m_ComposeMessageStr, m_ComposeMessagePos, ' ');
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
-    }
-    else if (p_Key == m_KeyKillWord)
-    {
-      Util::DeleteToNextMatch(m_ComposeMessageStr, m_ComposeMessagePos, ' ');
-      m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
-    }
-    else if (p_Key == m_KeyBeginLine)
-    {
-      if (m_ComposeMessagePos > 0)
-      {
-        size_t searchPos = m_ComposeMessagePos - 1;
-        size_t prevLineBreakPos = m_ComposeMessageStr.rfind('\n', searchPos);
-        if (prevLineBreakPos != std::string::npos)
-        {
-          m_ComposeMessagePos = Util::Bound(0, (int)prevLineBreakPos + 1, (int)m_ComposeMessageStr.size());
-        }
-        else
-        {
-          m_ComposeMessagePos = 0;
-        }
-      }
-    }
-    else if (p_Key == m_KeyEndLine)
-    {
-      size_t searchPos = m_ComposeMessagePos;
-      size_t nextLineBreakPos = m_ComposeMessageStr.find('\n', searchPos);
-      if (nextLineBreakPos != std::string::npos)
-      {
-        m_ComposeMessagePos = Util::Bound(0, (int)nextLineBreakPos, (int)m_ComposeMessageStr.size());
-      }
-      else
-      {
-        m_ComposeMessagePos = m_ComposeMessageStr.size();
-      }
-    }
-    else if (p_Key == KEY_HOME)
-    {
-      m_ComposeMessagePos = 0;
-    }
-    else if (p_Key == KEY_END)
-    {
-      m_ComposeMessagePos = m_ComposeMessageStr.size();
+      // none
     }
     else
     {
@@ -3483,30 +3154,6 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     Quit();
   }
-  else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
-  {
-    --m_PartListCurrentIndex;
-  }
-  else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
-  {
-    ++m_PartListCurrentIndex;
-  }
-  else if (p_Key == m_KeyPrevPage)
-  {
-    m_PartListCurrentIndex = m_PartListCurrentIndex - m_MainWinHeight;
-  }
-  else if ((p_Key == m_KeyNextPage) || (p_Key == KEY_SPACE))
-  {
-    m_PartListCurrentIndex = m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
-  }
-  else if (p_Key == KEY_HOME)
-  {
-    m_PartListCurrentIndex = 0;
-  }
-  else if (p_Key == KEY_END)
-  {
-    m_PartListCurrentIndex = std::numeric_limits<int>::max();
-  }
   else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
   {
     const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
@@ -3637,6 +3284,10 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     {
       SetDialogMessage("Save cancelled");
     }
+  }
+  else if (HandleListKey(p_Key, m_PartListCurrentIndex))
+  {
+    // none
   }
   else if (m_InvalidInputNotify)
   {
@@ -5488,39 +5139,19 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
       rv = true;
       break;
     }
-    else if (key == KEY_LEFT)
-    {
-      m_FilenameEntryStringPos = Util::Bound(0, m_FilenameEntryStringPos - 1,
-                                             (int)m_FilenameEntryString.size());
-    }
-    else if (key == KEY_RIGHT)
-    {
-      m_FilenameEntryStringPos = Util::Bound(0, m_FilenameEntryStringPos + 1,
-                                             (int)m_FilenameEntryString.size());
-    }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
              (key == m_KeyPrevPage) || (key == m_KeyNextPage) ||
              (key == KEY_HOME) || (key == KEY_END))
     {
       // ignore
     }
-    else if ((key == KEY_BACKSPACE) || (key == KEY_DELETE))
+    else if (HandleLineKey(key, m_FilenameEntryString, m_FilenameEntryStringPos))
     {
-      if (m_FilenameEntryStringPos > 0)
-      {
-        m_FilenameEntryString.erase(--m_FilenameEntryStringPos, 1);
-      }
+      // none
     }
-    else if (key == KEY_DC)
+    else if (HandleTextKey(key, m_FilenameEntryString, m_FilenameEntryStringPos))
     {
-      if (m_FilenameEntryStringPos < (int)m_FilenameEntryString.size())
-      {
-        m_FilenameEntryString.erase(m_FilenameEntryStringPos, 1);
-      }
-    }
-    else if (IsValidTextKey(key))
-    {
-      m_FilenameEntryString.insert(m_FilenameEntryStringPos++, 1, key);
+      // none
     }
   }
 
@@ -6974,4 +6605,134 @@ std::wstring Ui::GetSignatureStr(bool p_NoPrefix /*= false*/)
   Util::StripCR(signatureWStr);
 
   return signatureWStr;
+}
+
+bool Ui::HandleListKey(int p_Key, int& p_Index)
+{
+  if (p_Key == KEY_UP)
+  {
+    --p_Index;
+  }
+  else if (p_Key == KEY_DOWN)
+  {
+    ++p_Index;
+  }
+  else if (p_Key == m_KeyPrevPage)
+  {
+    p_Index = p_Index - m_MainWinHeight;
+  }
+  else if (p_Key == m_KeyNextPage)
+  {
+    p_Index = p_Index + m_MainWinHeight;
+  }
+  else if (p_Key == KEY_HOME)
+  {
+    p_Index = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    p_Index = std::numeric_limits<int>::max() - 1;
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Ui::HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos)
+{
+  if (p_Key == KEY_LEFT)
+  {
+    p_Pos = Util::Bound(0, p_Pos - 1, (int)p_Str.size());
+  }
+  else if (p_Key == KEY_RIGHT)
+  {
+    p_Pos = Util::Bound(0, p_Pos + 1, (int)p_Str.size());
+  }
+  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  {
+    if (p_Pos > 0)
+    {
+      p_Str.erase(--p_Pos, 1);
+    }
+  }
+  else if ((p_Key == KEY_DC) || (p_Key == m_KeyDeleteCharAfterCursor))
+  {
+    if (p_Pos < (int)p_Str.size())
+    {
+      p_Str.erase(p_Pos, 1);
+    }
+  }
+  else if (p_Key == m_KeyDeleteLineAfterCursor)
+  {
+    Util::DeleteToNextMatch(p_Str, p_Pos, 0, L"\n");
+  }
+  else if (p_Key == m_KeyDeleteLineBeforeCursor)
+  {
+    Util::DeleteToPrevMatch(p_Str, p_Pos, -1, L"\n");
+  }
+  else if (p_Key == m_KeyBeginLine)
+  {
+    Util::JumpToPrevMatch(p_Str, p_Pos, -1, L"\n");
+  }
+  else if (p_Key == m_KeyEndLine)
+  {
+    Util::JumpToNextMatch(p_Str, p_Pos, 0, L"\n");
+  }
+  else if (p_Key == m_KeyBackwardWord)
+  {
+    Util::JumpToPrevMatch(p_Str, p_Pos, -2, L" \n");
+  }
+  else if (p_Key == m_KeyForwardWord)
+  {
+    Util::JumpToNextMatch(p_Str, p_Pos, 1, L" \n");
+  }
+  else if (p_Key == m_KeyBackwardKillWord)
+  {
+    Util::DeleteToPrevMatch(p_Str, p_Pos, -1, L" \n");
+  }
+  else if (p_Key == m_KeyKillWord)
+  {
+    Util::DeleteToNextMatch(p_Str, p_Pos, 0, L" \n");
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Ui::HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos)
+{
+  if (IsValidTextKey(p_Key))
+  {
+    p_Str.insert(p_Pos++, 1, p_Key);
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Ui::HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos)
+{
+  if (p_Key == KEY_HOME)
+  {
+    p_Pos = 0;
+  }
+  else if (p_Key == KEY_END)
+  {
+    p_Pos = p_Str.size();
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
 }
