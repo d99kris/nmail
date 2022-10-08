@@ -151,6 +151,21 @@ void Ui::Init()
   m_Config = Config(configPath, defaultConfig);
   m_Config.LogParams();
 
+  m_TerminalTitle = m_Config.Get("terminal_title");
+
+  if (!m_TerminalTitle.empty())
+  {
+    printf("\033]0;%s\007", m_TerminalTitle.c_str());
+  }
+
+  setlocale(LC_ALL, "");
+  initscr();
+  noecho();
+  cbreak();
+  keypad(stdscr, TRUE);
+  curs_set(0);
+  timeout(0);
+
   m_ComposeLineWrap = Util::ToInteger(m_Config.Get("compose_line_wrap"));
   m_RespectFormatFlowed = m_Config.Get("respect_format_flowed") == "1";
   m_RewrapQuotedLines = m_Config.Get("rewrap_quoted_lines") == "1";
@@ -232,20 +247,7 @@ void Ui::Init()
   m_ShowRichHeader = m_Config.Get("show_rich_header") == "1";
 
   m_ColorsEnabled = m_Config.Get("colors_enabled") == "1";
-  m_TerminalTitle = m_Config.Get("terminal_title");
 
-  if (!m_TerminalTitle.empty())
-  {
-    printf("\033]0;%s\007", m_TerminalTitle.c_str());
-  }
-
-  setlocale(LC_ALL, "");
-  initscr();
-  noecho();
-  cbreak();
-  keypad(stdscr, TRUE);
-  curs_set(0);
-  timeout(0);
   LOG_IF_NONZERO(pipe(m_Pipe));
 
   if (m_ColorsEnabled && !has_colors())
