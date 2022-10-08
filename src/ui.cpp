@@ -3020,13 +3020,21 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       m_IsComposeHeader = false;
     }
-    else if (p_Key == KEY_HOME)
+    else if (p_Key == m_KeyToSelect)
     {
-      // @todo: implement home/end handling in compose
-    }
-    else if (p_Key == KEY_END)
-    {
-      // @todo: implement home/end handling in compose
+      int headerField = GetCurrentHeaderField();
+      if ((headerField == HeaderTo) || (headerField == HeaderCc) || (headerField == HeaderBcc))
+      {
+        SetState(StateAddressList);
+      }
+      else if (headerField == HeaderFrom)
+      {
+        SetState(StateFromAddressList);
+      }
+      else if (headerField == HeaderAtt)
+      {
+        FilePickerOrStateFileList();
+      }
     }
     else if (p_Key == KEY_LEFT)
     {
@@ -3098,21 +3106,78 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       Util::DeleteToMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, '\n');
     }
-    else if (p_Key == m_KeyToSelect)
+    else if (p_Key == m_KeyBackwardWord)
     {
-      int headerField = GetCurrentHeaderField();
-      if ((headerField == HeaderTo) || (headerField == HeaderCc) || (headerField == HeaderBcc))
+      size_t searchPos = (m_ComposeHeaderPos > 0) ? (m_ComposeHeaderPos - 2) : 0;
+      size_t prevSpacePos = m_ComposeHeaderStr[m_ComposeHeaderLine].rfind(' ', searchPos);
+      if (prevSpacePos != std::string::npos)
       {
-        SetState(StateAddressList);
+        m_ComposeHeaderPos = Util::Bound(0, (int)prevSpacePos + 1, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
       }
-      else if (headerField == HeaderFrom)
+      else
       {
-        SetState(StateFromAddressList);
+        m_ComposeHeaderPos = 0;
       }
-      else if (headerField == HeaderAtt)
+    }
+    else if (p_Key == m_KeyForwardWord)
+    {
+      size_t searchPos = m_ComposeHeaderPos + 1;
+      size_t nextSpacePos = m_ComposeHeaderStr[m_ComposeHeaderLine].find(' ', searchPos);
+      if (nextSpacePos != std::string::npos)
       {
-        FilePickerOrStateFileList();
+        m_ComposeHeaderPos = Util::Bound(0, (int)nextSpacePos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
       }
+      else
+      {
+        m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+      }
+    }
+    else if (p_Key == m_KeyBackwardKillWord)
+    {
+      Util::DeleteToPrevMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, ' ');
+      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
+    }
+    else if (p_Key == m_KeyKillWord)
+    {
+      Util::DeleteToNextMatch(m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos, ' ');
+      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
+    }
+    else if (p_Key == m_KeyBeginLine)
+    {
+      if (m_ComposeHeaderPos > 0)
+      {
+        size_t searchPos = m_ComposeHeaderPos - 1;
+        size_t prevLineBreakPos = m_ComposeHeaderStr[m_ComposeHeaderLine].rfind('\n', searchPos);
+        if (prevLineBreakPos != std::string::npos)
+        {
+          m_ComposeHeaderPos = Util::Bound(0, (int)prevLineBreakPos + 1, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
+        }
+        else
+        {
+          m_ComposeHeaderPos = 0;
+        }
+      }
+    }
+    else if (p_Key == m_KeyEndLine)
+    {
+      size_t searchPos = m_ComposeHeaderPos;
+      size_t nextLineBreakPos = m_ComposeHeaderStr[m_ComposeHeaderLine].find('\n', searchPos);
+      if (nextLineBreakPos != std::string::npos)
+      {
+        m_ComposeHeaderPos = Util::Bound(0, (int)nextLineBreakPos, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
+      }
+      else
+      {
+        m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
+      }
+    }
+    else if (p_Key == KEY_HOME)
+    {
+      m_ComposeHeaderPos = 0;
+    }
+    else if (p_Key == KEY_END)
+    {
+      m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
     }
     else
     {
