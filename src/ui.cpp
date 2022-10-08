@@ -86,7 +86,7 @@ void Ui::Init()
     { "key_goto_folder", "g" },
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
-    { "key_ext_editor", "KEY_CTRLE" },
+    { "key_ext_editor", "KEY_CTRLW" },
     { "key_ext_pager", "e" },
     { "key_postpone", "KEY_CTRLO" },
     { "key_othercmd_help", "o" },

@@ -704,7 +704,7 @@ file (platform-dependent defaults are left empty below):
     key_delete=d
     key_delete_line=KEY_CTRLK
     key_export=x
-    key_ext_editor=KEY_CTRLE
+    key_ext_editor=KEY_CTRLW
     key_ext_html_preview=KEY_CTRLV
     key_ext_html_viewer=v
     key_ext_msg_viewer=w
