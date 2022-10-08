@@ -58,6 +58,9 @@ Command-line Options:
     -h, --help
         display this help and exit
 
+    -k, --keydump
+        key code dump mode
+
     -o, --offline
         run in offline mode
 
@@ -843,17 +846,9 @@ bindings may be specified in the following formats:
 - Octal key code sequence (ex: `\033\177`)
 - Plain-text lower-case ASCII (ex: `r`)
 
-Octal key code sequence for a key combination can be determined for example
-using the command `sed -n l` and pressing the combination, e.g. `alt-left`
-and then `enter`. The keycode for non-printable keys is then displayed in
-octal format in the terminal, for example:
-
-    \033b$
-
-The trailing `$` shall be ignored, and to comply with `nmail` config required
-input format, the printable `b` needs to be converted to octal format. A quick
-lookup using `man ascii` shows `b` is 142 in octal format. The resulting key
-code to use in the config file is `\033\142`.
+To determine the key code sequence for a key, one can run nmail in key code
+dump mode `nmail -k` which will output the octal code, and ncurses macro name
+(if present).
 
 ### localized_subject_prefixes
 

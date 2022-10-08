@@ -199,6 +199,7 @@ public:
   static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
   static int ReserveVirtualKeyCode();
   static int GetKeyCode(const std::string& p_KeyName);
+  static std::string GetKeyName(int p_KeyCode);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                             bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,

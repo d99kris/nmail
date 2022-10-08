@@ -3150,7 +3150,8 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         size_t prevLineBreakPos = m_ComposeHeaderStr[m_ComposeHeaderLine].rfind('\n', searchPos);
         if (prevLineBreakPos != std::string::npos)
         {
-          m_ComposeHeaderPos = Util::Bound(0, (int)prevLineBreakPos + 1, (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
+          m_ComposeHeaderPos = Util::Bound(0, (int)prevLineBreakPos + 1,
+                                           (int)m_ComposeHeaderStr[m_ComposeHeaderLine].size());
         }
         else
         {
