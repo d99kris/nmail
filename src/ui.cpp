@@ -109,10 +109,10 @@ void Ui::Init()
     { "key_backward_kill_word", "\\033\\177" }, // opt-backspace
     { "key_kill_word", "\\033\\010" }, // opt-delete
 #else // defined(__linux__)
-    { "key_backward_word", "0x220" }, // alt-left
-    { "key_forward_word", "0x22f" }, // alt-right
+    { "key_backward_word", "\\1040" }, // alt-left
+    { "key_forward_word", "\\1057" }, // alt-right
     { "key_backward_kill_word", "\\033\\177" }, // alt-backspace
-    { "key_kill_word", "0x206" }, // alt-delete
+    { "key_kill_word", "\\1006" }, // alt-delete
 #endif
     { "key_begin_line", "KEY_CTRLA" },
     { "key_end_line", "KEY_CTRLE" },

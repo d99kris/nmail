@@ -980,9 +980,18 @@ int Util::GetKeyCode(const std::string& p_KeyName)
   }
   else if ((p_KeyName.size() > 1) && (p_KeyName.substr(0, 1) == "\\"))
   {
-    keyCode = ReserveVirtualKeyCode();
-    std::string keyStr = Util::FromOctString(p_KeyName);
-    define_key(keyStr.c_str(), keyCode);
+    if (std::count(p_KeyName.begin(), p_KeyName.end(), '\\') > 1)
+    {
+      keyCode = ReserveVirtualKeyCode();
+      std::string keyStr = Util::FromOctString(p_KeyName);
+      define_key(keyStr.c_str(), keyCode);
+    }
+    else
+    {
+      std::string valstr = p_KeyName.substr(1);
+      keyCode = strtol(valstr.c_str(), 0, 8);
+    }
+
     LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
   }
   else
