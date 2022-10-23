@@ -242,6 +242,7 @@ private:
   inline bool HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos);
   inline bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
   inline bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  inline bool HandleComposeKey(int p_Key);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;

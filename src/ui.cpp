@@ -2937,6 +2937,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeMessagePos = 0;
       }
     }
+    else if (HandleComposeKey(p_Key))
+    {
+      // none
+    }
     else if (HandleLineKey(p_Key, m_ComposeHeaderStr[m_ComposeHeaderLine], m_ComposeHeaderPos))
     {
       // none
@@ -2996,6 +3000,21 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_IsComposeHeader = true;
       m_ComposeHeaderPos = (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size();
     }
+    else if (p_Key == KEY_TAB)
+    {
+      DrawAll(); // redraw to update current column position (m_ComposeMessageWrapPos)
+      int tabSpaces = (m_TabSize - (m_ComposeMessageWrapPos % m_TabSize));
+      for (int i = 0; i < tabSpaces; ++i)
+      {
+        m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, ' ');
+      }
+
+      asyncRedraw = true;
+    }
+    else if (HandleComposeKey(p_Key))
+    {
+      // none
+    }
     else if (HandleLineKey(p_Key, m_ComposeMessageStr, m_ComposeMessagePos))
     {
       // none
@@ -3013,113 +3032,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   // process common key handling last (if not handled above)
   if (continueProcess)
   {
-    if (p_Key == m_KeyCancel)
-    {
-      if (m_CancelWithoutConfirm || Ui::PromptYesNo("Cancel message (y/n)?"))
-      {
-        Util::RmDir(Util::GetPreviewTempDir());
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        SetLastStateOrMessageList();
-        Util::RmDir(m_ComposeTempDirectory);
-        StopComposeBackup();
-      }
-    }
-    else if (p_Key == m_KeySend)
-    {
-      if (ComposedMessageIsValid(true /* p_ForSend */) &&
-          (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?")))
-      {
-        Util::RmDir(Util::GetPreviewTempDir());
-        SendComposedMessage();
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        if (m_ComposeDraftUid != 0)
-        {
-          SetState(StateViewMessageList);
-        }
-        else
-        {
-          SetLastStateOrMessageList();
-        }
-
-        StopComposeBackup();
-      }
-    }
-    else if (p_Key == m_KeyPostpone)
-    {
-      if (ComposedMessageIsValid(false /* p_ForSend */) &&
-          (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?")))
-      {
-        Util::RmDir(Util::GetPreviewTempDir());
-        UploadDraftMessage();
-        UpdateUidFromIndex(true /* p_UserTriggered */);
-        if (m_ComposeDraftUid != 0)
-        {
-          SetState(StateViewMessageList);
-        }
-        else
-        {
-          SetLastStateOrMessageList();
-        }
-
-        StopComposeBackup();
-      }
-    }
-    else if (p_Key == m_KeyExtEditor)
-    {
-      ExtEditor(m_ComposeMessageStr, m_ComposeMessagePos);
-    }
-    else if (p_Key == m_KeyRichHeader)
-    {
-      std::wstring from = GetComposeStr(HeaderFrom);
-      std::wstring to = GetComposeStr(HeaderTo);
-      std::wstring cc = GetComposeStr(HeaderCc);
-      std::wstring bcc = GetComposeStr(HeaderBcc);
-      std::wstring att = GetComposeStr(HeaderAtt);
-      std::wstring sub = GetComposeStr(HeaderSub);
-
-      m_ShowRichHeader = !m_ShowRichHeader;
-
-      SetComposeStr(HeaderAll, L"");
-      SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
-      SetComposeStr(HeaderTo, to);
-      SetComposeStr(HeaderCc, cc);
-      SetComposeStr(HeaderBcc, bcc);
-      SetComposeStr(HeaderAtt, att);
-      SetComposeStr(HeaderSub, sub);
-    }
-    else if (p_Key == m_KeyExtHtmlPreview)
-    {
-      if (m_CurrentMarkdownHtmlCompose)
-      {
-        std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
-        std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
-        Util::WriteFile(tempFilePath, htmlStr);
-        ExtHtmlViewer(tempFilePath);
-      }
-      else
-      {
-        SetDialogMessage("Markdown compose is not enabled");
-      }
-    }
-    else if (p_Key == m_KeyToggleMarkdownCompose)
-    {
-      m_CurrentMarkdownHtmlCompose = !m_CurrentMarkdownHtmlCompose;
-    }
-    else if (p_Key == 0x9)
-    {
-      if (!m_IsComposeHeader)
-      {
-        DrawAll(); // redraw to update current column position (m_ComposeMessageWrapPos)
-        int tabSpaces = (m_TabSize - (m_ComposeMessageWrapPos % m_TabSize));
-        for (int i = 0; i < tabSpaces; ++i)
-        {
-          m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, ' ');
-        }
-      }
-
-      asyncRedraw = true;
-    }
-    else if (IsValidTextKey(p_Key))
+    if (IsValidTextKey(p_Key))
     {
       if (m_IsComposeHeader)
       {
@@ -6728,6 +6641,108 @@ bool Ui::HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos)
   else if (p_Key == KEY_END)
   {
     p_Pos = p_Str.size();
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Ui::HandleComposeKey(int p_Key)
+{
+  if (p_Key == m_KeyCancel)
+  {
+    if (m_CancelWithoutConfirm || Ui::PromptYesNo("Cancel message (y/n)?"))
+    {
+      Util::RmDir(Util::GetPreviewTempDir());
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      SetLastStateOrMessageList();
+      Util::RmDir(m_ComposeTempDirectory);
+      StopComposeBackup();
+    }
+  }
+  else if (p_Key == m_KeySend)
+  {
+    if (ComposedMessageIsValid(true /* p_ForSend */) &&
+        (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?")))
+    {
+      Util::RmDir(Util::GetPreviewTempDir());
+      SendComposedMessage();
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
+
+      StopComposeBackup();
+    }
+  }
+  else if (p_Key == m_KeyPostpone)
+  {
+    if (ComposedMessageIsValid(false /* p_ForSend */) &&
+        (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?")))
+    {
+      Util::RmDir(Util::GetPreviewTempDir());
+      UploadDraftMessage();
+      UpdateUidFromIndex(true /* p_UserTriggered */);
+      if (m_ComposeDraftUid != 0)
+      {
+        SetState(StateViewMessageList);
+      }
+      else
+      {
+        SetLastStateOrMessageList();
+      }
+
+      StopComposeBackup();
+    }
+  }
+  else if (p_Key == m_KeyExtEditor)
+  {
+    ExtEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+  }
+  else if (p_Key == m_KeyRichHeader)
+  {
+    std::wstring from = GetComposeStr(HeaderFrom);
+    std::wstring to = GetComposeStr(HeaderTo);
+    std::wstring cc = GetComposeStr(HeaderCc);
+    std::wstring bcc = GetComposeStr(HeaderBcc);
+    std::wstring att = GetComposeStr(HeaderAtt);
+    std::wstring sub = GetComposeStr(HeaderSub);
+
+    m_ShowRichHeader = !m_ShowRichHeader;
+
+    SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderTo, to);
+    SetComposeStr(HeaderCc, cc);
+    SetComposeStr(HeaderBcc, bcc);
+    SetComposeStr(HeaderAtt, att);
+    SetComposeStr(HeaderSub, sub);
+  }
+  else if (p_Key == m_KeyExtHtmlPreview)
+  {
+    if (m_CurrentMarkdownHtmlCompose)
+    {
+      std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
+      std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+      Util::WriteFile(tempFilePath, htmlStr);
+      ExtHtmlViewer(tempFilePath);
+    }
+    else
+    {
+      SetDialogMessage("Markdown compose is not enabled");
+    }
+  }
+  else if (p_Key == m_KeyToggleMarkdownCompose)
+  {
+    m_CurrentMarkdownHtmlCompose = !m_CurrentMarkdownHtmlCompose;
   }
   else
   {
