@@ -31,6 +31,7 @@ private:
     HeadersDb = 0,
     BodysDb,
     UidFlagsDb,
+    ValidityDb,
   };
 
   struct DbConnection;
@@ -59,7 +60,7 @@ public:
                                     const bool p_Prefetch);
   void SetBodys(const std::string& p_Folder, const std::map<uint32_t, Body>& p_Bodys);
 
-  bool CheckUidValidity(const std::string& p_Folder, int p_UidValidity);
+  bool CheckUidValidity(const std::string& p_Folder, int p_Uid);
   void SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, const bool p_Value);
 
   void ClearFolder(const std::string& p_Folder);
@@ -77,6 +78,9 @@ private:
 
   void InitUidFlagsCache();
   void CleanupUidFlagsCache();
+
+  void InitValidityCache();
+  void CleanupValidityCache();
 
   static std::string GetDbTypeName(ImapCache::DbType p_DbType);
   static std::string GetCacheDir(ImapCache::DbType p_DbType);

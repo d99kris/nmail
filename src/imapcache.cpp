@@ -54,6 +54,7 @@ ImapCache::ImapCache(const bool p_CacheEncrypt, const std::string& p_Pass)
   InitHeadersCache();
   InitBodysCache();
   InitUidFlagsCache();
+  InitValidityCache();
 
   m_Folders = GetFolders();
 }
@@ -63,6 +64,7 @@ ImapCache::~ImapCache()
   CleanupHeadersCache();
   CleanupBodysCache();
   CleanupUidFlagsCache();
+  CleanupValidityCache();
 }
 
 bool ImapCache::ChangePass(const bool p_CacheEncrypt,
@@ -105,6 +107,21 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
   for (const auto& uidFlagFile : uidFlagFiles)
   {
     std::string path = uidFlagsDir + uidFlagFile;
+    std::string tmpPath = path + ".tmp";
+    if (!Crypto::AESDecryptFile(path, tmpPath, p_OldPass)) return false;
+
+    if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
+
+    Util::DeleteFile(tmpPath);
+
+    std::cout << ".";
+  }
+
+  std::string validityDir = GetCacheDbDir(ValidityDb);
+  std::vector<std::string> validityFiles = Util::ListDir(validityDir);
+  for (const auto& validityFile : validityFiles)
+  {
+    std::string path = validityDir + validityFile;
     std::string tmpPath = path + ".tmp";
     if (!Crypto::AESDecryptFile(path, tmpPath, p_OldPass)) return false;
 
@@ -480,45 +497,81 @@ void ImapCache::SetBodys(const std::string& p_Folder, const std::map<uint32_t, B
 }
 
 // checks cached uid validity and clears existing cache if invalid
-bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_UidValidity)
+bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_Uid)
 {
-  LOG_DEBUG_FUNC(STR(p_Folder, p_UidValidity));
+  LOG_DEBUG_FUNC(STR(p_Folder, p_Uid));
   bool rv = true;
   try
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
-    int storedUidValidity = -1;
+    int storedUid = -1;
 
+    const std::string commonFolder = "common";
+    const std::string dbFolder = Util::ToHex(p_Folder);
+    if (storedUid == -1)
     {
-      std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, false /* p_Writable */);
+      std::shared_ptr<DbConnection> dbCon = GetDb(ValidityDb, commonFolder,
+                                                  false /* p_Writable */);
+      std::shared_ptr<sqlite::database> db = dbCon->m_Database;
+
+      auto lambda = [&](const uint32_t& uid)
+      {
+        storedUid = uid;
+      };
+
+      *db << "SELECT validity.uid FROM validity WHERE folder = '" + dbFolder + "'"
+          >> lambda;
+    }
+
+    // @todo: remove below when we update version in InitUidFlagsCache().
+    bool isLegacy = false;
+    if (storedUid == -1)
+    {
+      std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder,
+                                                  false /* p_Writable */);
       std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
       auto lambda = [&](const std::vector<int32_t>& vecdata)
       {
         if (vecdata.size() == 1)
         {
-          storedUidValidity = vecdata.at(0);
+          storedUid = vecdata.at(0);
         }
       };
 
       *db << "SELECT uidvalidity.uidvalidity FROM uidvalidity LIMIT 1" >> lambda;
+      isLegacy = (storedUid != -1);
     }
 
-    if (p_UidValidity != storedUidValidity)
+    if (isLegacy || (p_Uid != storedUid))
     {
-      LOG_DEBUG("folder %s uidvalidity %d", p_Folder.c_str(), p_UidValidity);
+      LOG_DEBUG("folder %s uidvalidity %d", p_Folder.c_str(), p_Uid);
 
-      std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
+      std::shared_ptr<DbConnection> dbCon = GetDb(ValidityDb, commonFolder,
+                                                  true /* p_Writable */);
       std::shared_ptr<sqlite::database> db = dbCon->m_Database;
 
-      const std::vector<int32_t> vecdata = { p_UidValidity };
-      *db << "begin;";
-      *db << "DELETE FROM uidvalidity;";
-      *db << "INSERT INTO uidvalidity (uidvalidity) VALUES (?);" << vecdata;
-      *db << "commit;";
+      *db << "INSERT OR REPLACE INTO validity (folder, uid) VALUES (?, ?);"
+          << dbFolder << p_Uid;
 
-      rv = false;
+      if (storedUid != -1)
+      {
+        if (p_Uid == storedUid) // isLegacy
+        {
+          LOG_INFO("folder %s uidvalidity migrated", p_Folder.c_str());
+        }
+        else
+        {
+          LOG_INFO("folder %s uidvalidity updated", p_Folder.c_str());
+        }
+      }
+      else
+      {
+        LOG_DEBUG("folder %s uidvalidity created", p_Folder.c_str());
+      }
     }
+
+    rv = (p_Uid == storedUid);
   }
   catch (const sqlite::sqlite_exception& ex)
   {
@@ -712,7 +765,7 @@ void ImapCache::DeleteBodys(const std::string& p_Folder, const std::set<uint32_t
 
 bool ImapCache::Export(const std::string& p_Path)
 {
-  // @todo: determine what is correct/portable MailDir format and implement export for it
+  // @todo: determine what is correct/portable MailDir format
   Util::MkDir(p_Path);
   Util::MkDir(p_Path + "/new");
   Util::MkDir(p_Path + "/tmp");
@@ -802,6 +855,25 @@ void ImapCache::CleanupUidFlagsCache()
   CloseDbs(UidFlagsDb);
 }
 
+void ImapCache::InitValidityCache()
+{
+  std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+  static const int version = 1;
+  CacheUtil::CommonInitCacheDir(GetCacheDir(ValidityDb), version, m_CacheEncrypt);
+  Util::MkDir(GetCacheDbDir(ValidityDb));
+  if (m_CacheEncrypt)
+  {
+    Util::RmDir(GetTempDbDir(ValidityDb));
+    Util::MkDir(GetTempDbDir(ValidityDb));
+  }
+}
+
+void ImapCache::CleanupValidityCache()
+{
+  std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
+  CloseDbs(ValidityDb);
+}
+
 std::string ImapCache::GetDbTypeName(ImapCache::DbType p_DbType)
 {
   static const std::map<DbType, std::string> dbTypeNames =
@@ -809,6 +881,7 @@ std::string ImapCache::GetDbTypeName(ImapCache::DbType p_DbType)
     { HeadersDb, "headers" },
     { BodysDb, "messages" },
     { UidFlagsDb, "uidflags" },
+    { ValidityDb, "validity" },
   };
   return dbTypeNames.at(p_DbType);
 }
@@ -901,8 +974,13 @@ void ImapCache::CreateDb(ImapCache::DbType p_DbType, const std::string& p_DbPath
     else if (p_DbType == UidFlagsDb)
     {
       db << "CREATE TABLE IF NOT EXISTS uids (uids BLOB);";
+      // @todo: remove uidvalidity creation on update of version in InitUidFlagsCache
       db << "CREATE TABLE IF NOT EXISTS uidvalidity (uidvalidity BLOB);";
       db << "CREATE TABLE IF NOT EXISTS flags (uid INT, flag INT, PRIMARY KEY (uid));";
+    }
+    else if (p_DbType == ValidityDb)
+    {
+      db << "CREATE TABLE IF NOT EXISTS validity (folder TEXT, uid INT, PRIMARY KEY (folder));";
     }
   }
   catch (const sqlite::sqlite_exception& ex)
