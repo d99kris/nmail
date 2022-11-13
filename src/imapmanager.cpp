@@ -214,27 +214,41 @@ bool ImapManager::ProcessIdle()
 
   bool rv = true;
   static bool firstIdle = true;
-
-  if (true)
+  std::set<uint32_t> uids;
+  Imap::FolderInfo lastFolderInfo = m_Imap.GetFolderInfo(m_CurrentFolder);
+  if (!lastFolderInfo.IsValid())
   {
-    // Get folders if not done before
-    if (firstIdle)
-    {
-      firstIdle = false;
+    LOG_WARNING("idle folder info failed");
+    return false;
+  }
 
-      // Check cache
-      Request request;
-      request.m_GetFolders = true;
-      Response response;
-      PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */, response);
-      if (response.m_Folders.empty())
+  // Get folders if not done before
+  if (firstIdle)
+  {
+    LOG_DEBUG("idle first folder fetch");
+
+    firstIdle = false;
+
+    // Check cache
+    Request request;
+    request.m_GetFolders = true;
+    Response response;
+    PerformRequest(request, true /* p_Cached */, false /* p_Prefetch */, response);
+    if (response.m_Folders.empty())
+    {
+      // Fetch folders if cached list is empty
+      rv = PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response);
+      if (!rv)
       {
-        // Fetch folders if cached list is empty
-        PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response);
+        return rv;
       }
     }
+  }
 
-    // Check mail before enter idle
+  // Check mail before enter idle
+  {
+    LOG_DEBUG("idle fetch uids");
+
     Request uidsRequest;
     uidsRequest.m_Folder = currentFolder;
     uidsRequest.m_GetUids = true;
@@ -243,27 +257,30 @@ bool ImapManager::ProcessIdle()
     if (rv)
     {
       SendRequestResponse(uidsRequest, uidsResponse);
+      uids = uidsResponse.m_Uids;
     }
     else
     {
       return rv;
     }
+  }
 
-    // Check flags before enter idle
+  // Check flags before enter idle
+  {
+    LOG_DEBUG("idle fetch flags");
+
+    Request flagsRequest;
+    flagsRequest.m_Folder = currentFolder;
+    flagsRequest.m_GetFlags = uids;
+    Response flagsResponse;
+    rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);
+    if (rv)
     {
-      Request flagsRequest;
-      flagsRequest.m_Folder = currentFolder;
-      flagsRequest.m_GetFlags = uidsResponse.m_Uids;
-      Response flagsResponse;
-      rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);
-      if (rv)
-      {
-        SendRequestResponse(flagsRequest, flagsResponse);
-      }
-      else
-      {
-        return rv;
-      }
+      SendRequestResponse(flagsRequest, flagsResponse);
+    }
+    else
+    {
+      return rv;
     }
   }
 
@@ -294,11 +311,28 @@ bool ImapManager::ProcessIdle()
 
     if (!idleRv)
     {
+      LOG_DEBUG("idle fail");
       rv = false;
       break;
     }
 
-    if ((selrv != 0) && FD_ISSET(idlefd, &fds) && m_Running)
+    if (!m_Running)
+    {
+      LOG_DEBUG("idle stop");
+      break;
+    }
+
+    if (selrv == 0)
+    {
+      LOG_DEBUG("idle timeout");
+    }
+    else if (FD_ISSET(m_Pipe[0], &fds))
+    {
+      LOG_DEBUG("idle cancel");
+      rv = true;
+      break;
+    }
+    else if (FD_ISSET(idlefd, &fds))
     {
       LOG_DEBUG("idle notification");
 
@@ -309,19 +343,57 @@ bool ImapManager::ProcessIdle()
         std::vector<char> buf(len);
         LOG_IF_NOT_EQUAL(read(idlefd, &buf[0], len), len);
       }
+    }
 
-      ImapManager::Request request;
-      m_Mutex.lock();
-      request.m_Folder = m_CurrentFolder;
-      m_Mutex.unlock();
-      request.m_GetUids = true;
-      AsyncRequest(request);
-      break;
-    }
-    else
+    const Imap::FolderInfo newFolderInfo = m_Imap.GetFolderInfo(m_CurrentFolder);
+    if (!newFolderInfo.IsValid())
     {
-      LOG_DEBUG("idle timeout/restart");
+      LOG_WARNING("idle folder info failed");
+      return false;
     }
+
+    if (!lastFolderInfo.IsUidsEqual(newFolderInfo))
+    {
+      LOG_DEBUG("idle fetch uids");
+
+      // Check mail if uids don't match
+      Request uidsRequest;
+      uidsRequest.m_Folder = currentFolder;
+      uidsRequest.m_GetUids = true;
+      Response uidsResponse;
+      rv = PerformRequest(uidsRequest, false /* p_Cached */, false /* p_Prefetch */, uidsResponse);
+      if (rv)
+      {
+        SendRequestResponse(uidsRequest, uidsResponse);
+        uids = uidsResponse.m_Uids;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    if (!lastFolderInfo.IsUnseenEqual(newFolderInfo) || !lastFolderInfo.IsUidsEqual(newFolderInfo))
+    {
+      LOG_DEBUG("idle fetch flags");
+
+      // Check flags if unseen or uids don't match
+      Request flagsRequest;
+      flagsRequest.m_Folder = currentFolder;
+      flagsRequest.m_GetFlags = uids;
+      Response flagsResponse;
+      rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);
+      if (rv)
+      {
+        SendRequestResponse(flagsRequest, flagsResponse);
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    lastFolderInfo = newFolderInfo;
   }
 
   LOG_DEBUG("exiting idle");

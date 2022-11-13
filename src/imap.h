@@ -21,6 +21,29 @@
 class Imap
 {
 public:
+  struct FolderInfo
+  {
+    bool IsValid() const
+    {
+      return ((m_Count != -1) && (m_NextUid != -1) && (m_Unseen != -1));
+    }
+
+    bool IsUidsEqual(const FolderInfo& p_Other) const
+    {
+      return ((m_Count == p_Other.m_Count) && (m_NextUid == p_Other.m_NextUid));
+    }
+
+    bool IsUnseenEqual(const FolderInfo& p_Other) const
+    {
+      return (m_Unseen == p_Other.m_Unseen);
+    }
+
+    int32_t m_Count = -1;
+    int32_t m_NextUid = -1;
+    int32_t m_Unseen = -1;
+  };
+
+public:
   Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
        const uint16_t p_Port, const int64_t p_Timeout,
        const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
@@ -63,6 +86,8 @@ public:
   void IndexNotifyIdle(bool p_IsIdle);
 
   bool SetBodysCache(const std::string& p_Folder, const std::map<uint32_t, Body>& p_Bodys);
+
+  FolderInfo GetFolderInfo(const std::string& p_Folder);
 
 private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);

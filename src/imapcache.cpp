@@ -520,7 +520,7 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_Uid)
       };
 
       *db << "SELECT validity.uid FROM validity WHERE folder = '" + dbFolder + "'"
-          >> lambda;
+        >> lambda;
     }
 
     // @todo: remove below when we update version in InitUidFlagsCache().

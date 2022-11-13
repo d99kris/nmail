@@ -872,6 +872,63 @@ bool Imap::SetBodysCache(const std::string& p_Folder, const std::map<uint32_t, B
   return true;
 }
 
+Imap::FolderInfo Imap::GetFolderInfo(const std::string& p_Folder)
+{
+  FolderInfo folderInfo;
+
+  if (!SelectFolder(p_Folder))
+  {
+    return folderInfo;
+  }
+
+  struct mailimap_status_att_list* status_att_list =
+    mailimap_status_att_list_new_empty();
+  mailimap_status_att_list_add(status_att_list, MAILIMAP_STATUS_ATT_UNSEEN);
+  mailimap_status_att_list_add(status_att_list, MAILIMAP_STATUS_ATT_MESSAGES);
+  mailimap_status_att_list_add(status_att_list, MAILIMAP_STATUS_ATT_UIDNEXT);
+
+  struct mailimap_mailbox_data_status* status = nullptr;
+
+  int rv = LOG_IF_IMAP_ERR(mailimap_status(m_Imap, p_Folder.c_str(),
+                                           status_att_list, &status));
+  if ((rv == MAILIMAP_NO_ERROR) && (status != nullptr))
+  {
+    for (clistiter* it = clist_begin(status->st_info_list); it != nullptr;
+         it = clist_next(it))
+    {
+      struct mailimap_status_info* status_info =
+        (struct mailimap_status_info*)clist_content(it);
+
+      switch (status_info->st_att)
+      {
+        case MAILIMAP_STATUS_ATT_MESSAGES:
+          folderInfo.m_Count = status_info->st_value;
+          break;
+
+        case MAILIMAP_STATUS_ATT_UIDNEXT:
+          folderInfo.m_NextUid = status_info->st_value;
+          break;
+
+        case MAILIMAP_STATUS_ATT_UNSEEN:
+          folderInfo.m_Unseen = status_info->st_value;
+          break;
+
+        default:
+          break;
+      }
+    }
+  }
+
+  if (status != nullptr)
+  {
+    mailimap_mailbox_data_status_free(status);
+  }
+
+  mailimap_status_att_list_free(status_att_list);
+
+  return folderInfo;
+}
+
 bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Force));
