@@ -18,6 +18,7 @@
 #include "maphelp.h"
 #include "offlinequeue.h"
 #include "sethelp.h"
+#include "sleepdetect.h"
 #include "status.h"
 #include "version.h"
 
@@ -350,10 +351,14 @@ void Ui::Init()
   m_Status.SetShowProgress(m_ShowProgress);
 
   SetRunning(true);
+
+  m_SleepDetect.reset(new SleepDetect(std::bind(&Ui::OnWakeUp, this), 10));
 }
 
 void Ui::Cleanup()
 {
+  m_SleepDetect.reset();
+
   m_Config.Set("plain_text", m_Plaintext ? "1" : "0");
   m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
   m_Config.Set("search_show_folder", m_SearchShowFolder ? "1" : "0");
@@ -6749,4 +6754,14 @@ bool Ui::HandleComposeKey(int p_Key)
   }
 
   return true;
+}
+
+void Ui::OnWakeUp()
+{
+  LOG_DEBUG_FUNC(STR());
+
+  // Dummy request to trigger exit of idle
+  ImapManager::Request request;
+  LOG_DEBUG("async req none");
+  m_ImapManager->AsyncRequest(request);
 }

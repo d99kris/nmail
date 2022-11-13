@@ -17,6 +17,8 @@
 #include "imapmanager.h"
 #include "smtpmanager.h"
 
+class SleepDetect;
+
 class Ui
 {
 public:
@@ -243,6 +245,8 @@ private:
   inline bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
   inline bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
   inline bool HandleComposeKey(int p_Key);
+
+  void OnWakeUp();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -516,6 +520,8 @@ private:
 
   std::map<std::string, std::set<uint32_t>> m_SelectedUids;
   bool m_AllSelected = false;
+
+  std::unique_ptr<SleepDetect> m_SleepDetect;
 
 private:
   static bool s_Running;

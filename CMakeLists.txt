@@ -73,6 +73,8 @@ add_executable(nmail
   src/searchengine.cpp
   src/searchengine.h
   src/serialization.h
+  src/sleepdetect.cpp
+  src/sleepdetect.h
   src/smtp.cpp
   src/smtp.h
   src/smtpmanager.cpp
