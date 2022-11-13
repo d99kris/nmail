@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
     { "send_hostname", "1" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
-    { "idle_fetch_flags", "1" },
+    { "idle_timeout", "29" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -254,7 +254,6 @@ int main(int argc, char* argv[])
   Util::SetSendHostname(mainConfig->Get("send_hostname") == "1");
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
-  const bool idleFetchFlags = (mainConfig->Get("idle_fetch_flags") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -285,12 +284,14 @@ int main(int argc, char* argv[])
   uint16_t smtpPort = 0;
   uint32_t prefetchLevel = 0;
   uint64_t networkTimeout = 0;
+  uint32_t idleTimeout = 29;
   try
   {
     imapPort = std::stoi(mainConfig->Get("imap_port"));
     smtpPort = std::stoi(mainConfig->Get("smtp_port"));
     prefetchLevel = std::stoi(mainConfig->Get("prefetch_level"));
     networkTimeout = std::stoll(mainConfig->Get("network_timeout"));
+    idleTimeout = std::stoi(mainConfig->Get("idle_timeout"));
   }
   catch (...)
   {
@@ -352,7 +353,7 @@ int main(int argc, char* argv[])
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
                                   networkTimeout,
                                   cacheEncrypt, cacheIndexEncrypt,
-                                  idleFetchFlags,
+                                  idleTimeout,
                                   foldersExclude,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1,
                                             std::placeholders::_2),

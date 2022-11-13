@@ -46,7 +46,6 @@ public:
     bool m_GetFolders = false;
     bool m_GetUids = false;
     bool m_ProcessHtml = false;
-    bool m_IdleWake = false;
     std::set<uint32_t> m_GetHeaders;
     std::set<uint32_t> m_GetFlags;
     std::set<uint32_t> m_GetBodys;
@@ -105,7 +104,7 @@ public:
               const uint16_t p_Port, const bool p_Connect, const int64_t p_Timeout,
               const bool p_CacheEncrypt,
               const bool p_CacheIndexEncrypt,
-              const bool p_IdleFetchFlags,
+              const uint32_t p_IdleTimeout,
               const std::set<std::string>& p_FoldersExclude,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
@@ -162,7 +161,7 @@ private:
   std::function<void(const ImapManager::Action&, const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
-  bool m_IdleFetchFlags = false;
+  uint32_t m_IdleTimeout = 29;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
   std::atomic<bool> m_CacheRunning;

@@ -3672,8 +3672,7 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
         for (auto& uid : p_Response.m_Uids)
         {
-          if (p_Request.m_IdleWake ||
-              ((flags.find(uid) == flags.end()) &&
+          if (((flags.find(uid) == flags.end()) &&
                (requestedFlags.find(uid) == requestedFlags.end())))
           {
             fetchFlagUids.insert(uid);

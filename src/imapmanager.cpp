@@ -18,7 +18,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_Connect, const int64_t p_Timeout,
                          const bool p_CacheEncrypt,
                          const bool p_CacheIndexEncrypt,
-                         const bool p_IdleFetchFlags,
+                         const uint32_t p_IdleTimeout,
                          const std::set<std::string>& p_FoldersExclude,
                          const std::function<void(const ImapManager::Request&,
                                                   const ImapManager::Response&)>& p_ResponseHandler,
@@ -34,7 +34,6 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_SearchHandler(p_SearchHandler)
-  , m_IdleFetchFlags(p_IdleFetchFlags)
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
@@ -43,6 +42,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   LOG_IF_NONZERO(pipe(m_Pipe));
   LOG_IF_NONZERO(pipe(m_CachePipe));
   m_Connecting = m_Connect;
+  m_IdleTimeout = std::max(1U, p_IdleTimeout);
 }
 
 ImapManager::~ImapManager()
@@ -250,7 +250,6 @@ bool ImapManager::ProcessIdle()
     }
 
     // Check flags before enter idle
-    if (m_IdleFetchFlags)
     {
       Request flagsRequest;
       flagsRequest.m_Folder = currentFolder;
@@ -316,7 +315,6 @@ bool ImapManager::ProcessIdle()
       request.m_Folder = m_CurrentFolder;
       m_Mutex.unlock();
       request.m_GetUids = true;
-      request.m_IdleWake = m_IdleFetchFlags;
       AsyncRequest(request);
       break;
     }
@@ -333,7 +331,7 @@ bool ImapManager::ProcessIdle()
 
 int ImapManager::GetIdleDurationSec()
 {
-  int idleDuration = (29 * 60);
+  int idleDuration = (m_IdleTimeout * 60);
   if (Auth::IsOAuthEnabled())
   {
     int timeToOAuthExpiry = static_cast<int>(Auth::GetTimeToExpirySec());
@@ -353,7 +351,7 @@ void ImapManager::ProcessIdleOffline()
   m_Imap.IndexNotifyIdle(true);
 
   int selrv = 0;
-  int idleDuration = (29 * 60);
+  int idleDuration = (m_IdleTimeout * 60);
   while (m_Running && (selrv == 0))
   {
     fd_set fds;
