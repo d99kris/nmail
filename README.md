@@ -593,51 +593,14 @@ Press `<` or `Left` to exit search results and go back to current folder
 message list.
 
 
-Reporting Bugs
-==============
+Troubleshooting
+===============
 
-The preferred way of reporting bugs is by opening
-[a Github issue](https://github.com/d99kris/nmail/issues/new). Providing a
-copy of `~/.nmail/log.txt` when reporting the issue is preferred.
-
-Different verbosity levels are supported. The default logging level is very
-brief, primarily to minimize performance overhead. However, when encountering
-issues and reporting bugs, it is generally preferred to provide logs produced
-in verbose mode. To enable verbose logging:
+If any issues are observed, try running nmail with verbose logging
 
     nmail --verbose
 
-For certain low-level bugs it may be required to collect extra verbose logs.
-This produces very large log files with detailed information. The extra verbose
-logs typically contain actual email contents. Review and edit such logs to
-remove any private information before sharing. To enable extra verbose logging:
-
-    nmail --extra-verbose
-
-Default logging verbosity can be configured with `verbose_logging` parameter in
-`~/.nmail/main.conf`.
-
-Finally, for issues where the logging above does not provide sufficient
-information, it may be necessary to run nmail through a debugger and capture
-detailed backtraces for all threads when an issue occurs. A simple utility
-is provided to run `nmail` through a debugger in the source package. Example
-usage:
-
-    ./utils/debug-nmail.sh
-
-The utility also supports passing arguments to nmail, enabling running nmail
-with a custom config directory, for example:
-
-    ./utils/debug-nmail.sh -d ~/.nmail-hm
-
-Once nmail exits, either normally or caused by a crash, the script outputs
-information on where to obtain the log file, for example:
-
-    gdb log file written to:
-    /tmp/nmail-gdb-5244.txt
-
-Review the resulting log file and ensure there are no clear text passwords
-in it, before sharing it with others.
+and provide a copy of `~/.nmail/log.txt` when reporting a bug.
 
 
 User Discussion Forums
@@ -645,10 +608,6 @@ User Discussion Forums
 
 For discussing nmail usage (including getting help from other users) a mailing
 list and a Telegram group are available.
-
-Bug reports and feature requests should however be reported using
-[Github issues](https://github.com/d99kris/nmail/issues/new) to ensure they
-are properly tracked and get addressed.
 
 Mailing List
 ------------
