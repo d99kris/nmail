@@ -2488,7 +2488,15 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeyExport)
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    ExportMessage();
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      ExportMessage();
+    }
+    else
+    {
+      SetDialogMessage("No message to export");
+    }
   }
   else if (p_Key == m_KeyImport)
   {
