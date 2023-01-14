@@ -1,6 +1,6 @@
 // auth.cpp
 //
-// Copyright (c) 2021 Kristofer Berggren
+// Copyright (c) 2021-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -34,7 +34,7 @@ void Auth::Init(const std::string& p_Auth, const bool p_AuthEncrypt,
   m_Auth = p_Auth;
   m_AuthEncrypt = p_AuthEncrypt;
   m_Pass = p_Pass;
-  m_OAuthEnabled = (m_Auth == "gmail-oauth2");
+  m_OAuthEnabled = (m_Auth == "gmail-oauth2") || (m_Auth == "outlook-oauth2");
 
   if (!m_OAuthEnabled) return;
 
@@ -94,7 +94,7 @@ bool Auth::GenerateToken(const std::string& p_Auth)
   Util::RmDir(GetAuthTempDir());
   Util::MkDir(GetAuthTempDir());
 
-  m_OAuthEnabled = (m_Auth == "gmail-oauth2");
+  m_OAuthEnabled = (m_Auth == "gmail-oauth2") || (m_Auth == "outlook-oauth2");
 
   if (!m_OAuthEnabled) return false;
 
@@ -216,11 +216,20 @@ std::string Auth::GetClientId()
   {
     return m_CustomClientId;
   }
-  else
+  else if (m_Auth == "gmail-oauth2")
   {
     return Util::FromHex("3639393831313539393539322D6338697569646B743963663773347034"
                          "646376726B636A747136687269346F702E617070732E676F6F676C6575"
                          "736572636F6E74656E742E636F6D");
+  }
+  else if (m_Auth == "outlook-oauth2")
+  {
+    return Util::FromHex("66373837663138382D643839622D343163342D613939612D3566363963"
+                         "61313863313166");
+  }
+  else
+  {
+    return "";
   }
 }
 
@@ -230,9 +239,18 @@ std::string Auth::GetClientSecret()
   {
     return m_CustomClientSecret;
   }
-  else
+  else if (m_Auth == "gmail-oauth2")
   {
     return Util::FromHex("6A79664B785F67683536537377486A5952764A4C32564A77");
+  }
+  else if (m_Auth == "outlook-oauth2")
+  {
+    return Util::FromHex("59414538517E656747595937344551527436496248757232"
+                         "613739554E73676A5669743577634538");
+  }
+  else
+  {
+    return "";
   }
 }
 

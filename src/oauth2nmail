@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+# oauth2nmail
+#
+# Copyright (c) 2021-2023 Kristofer Berggren
+# All rights reserved.
+#
+# nmail is distributed under the MIT license, see LICENSE for details.
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 import json
@@ -12,9 +19,28 @@ import time
 import urllib.parse
 import webbrowser
 
-version = "1.01"
-base_url = "https://accounts.google.com"
+version = "1.02"
 pathServed = ""
+providers = {
+    "gmail-oauth2": {
+        "auth_scope": "openid profile email https://mail.google.com/",
+        "mail_scope": "openid profile email https://mail.google.com/",
+        "user_scope": "openid profile email https://mail.google.com/",
+        "auth_url": "https://accounts.google.com/o/oauth2/auth",
+        "conv_url": "https://accounts.google.com/o/oauth2/token",
+        "refr_url": "https://accounts.google.com/o/oauth2/token",
+        "info_url": "https://openidconnect.googleapis.com/v1/userinfo",
+    },
+    "outlook-oauth2": {
+        "auth_scope": "offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send https://graph.microsoft.com/User.Read",
+        "mail_scope": "offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send",
+        "user_scope": "offline_access https://graph.microsoft.com/User.Read",
+        "auth_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        "conv_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        "refr_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        "info_url": "https://graph.microsoft.com/v1.0/me",
+    },
+}
 
 
 def show_help():
@@ -57,7 +83,7 @@ def show_help():
 def show_version():
     print("oauth2nmail v" + version)
     print("")
-    print("Copyright (c) 2021 Kristofer Berggren")
+    print("Copyright (c) 2021-2023 Kristofer Berggren")
     print("")
     print("oauth2nmail is distributed under the MIT license.")
     print("")
@@ -98,9 +124,9 @@ def generate(provider, client_id, client_secret, token_store):
     params = {}
     params["client_id"] = client_id
     params["redirect_uri"] = redirectUri
-    params["scope"] = "openid profile email https://mail.google.com/"
+    params["scope"] = providers[provider]["auth_scope"]
     params["response_type"] = "code"
-    url = base_url + "/o/oauth2/auth?" + url_params(params)
+    url = providers[provider]["auth_url"] +  "?" + url_params(params)
     webbrowser.open(url, new = 0, autoraise = True)
 
     # local web server handling redirect
@@ -141,22 +167,27 @@ def generate(provider, client_id, client_secret, token_store):
     
     code = queryDict["code"]
 
-    # exchange auth code for access and refresh token
+    # exchange auth code for mail access and refresh token
     convParams = {}
     convParams["client_id"] = client_id
-    convParams["client_secret"] = client_secret
     convParams["code"] = code
     convParams["redirect_uri"] = redirectUri
     convParams["grant_type"] = "authorization_code"
-    convUrl = base_url + "/o/oauth2/token"
+    convParams["scope"] = providers[provider]["mail_scope"]
+    if provider == "gmail-oauth2":
+        convParams["client_secret"] = client_secret
+
+    convUrl = providers[provider]["conv_url"]
+    convHdr = {'Content-Type': 'application/x-www-form-urlencoded'}
     try:
-        convResponse = requests.post(convUrl, convParams)
+        convResponse = requests.post(convUrl, data=convParams, headers=convHdr)
     except Exception as e:
         sys.stderr.write("token request http post failed " + str(e) + "\n")
         return 4
 
     if convResponse.status_code != 200:
         sys.stderr.write("token request failed " + str(convResponse) + "\n")
+        sys.stderr.write(str(json.loads(convResponse.text)) + "\n")
         return 5
 
     # save tokens
@@ -171,26 +202,65 @@ def generate(provider, client_id, client_secret, token_store):
         sys.stderr.write("access_token not available\n")
         return 6
 
+    # use special access token for outlook user id
+    if provider == "outlook-oauth2":
+        # exchange auth code for user info access token
+        convParams = {}
+        convParams["client_id"] = client_id
+        convParams["grant_type"] = "refresh_token"
+        convParams["refresh_token"] = tokens["refresh_token"]
+        convParams["scope"] = providers[provider]["user_scope"]
+        convParams["requested_token_use"] = "on_behalf_of"
+        convUrl = providers[provider]["conv_url"]
+        try:
+            convResponse = requests.post(convUrl, data=convParams)
+        except Exception as e:
+            sys.stderr.write("user token request http post failed " + str(e) + "\n")
+            return 4
+
+        if convResponse.status_code != 200:
+            sys.stderr.write("user token request failed " + str(convResponse) + "\n")
+            sys.stderr.write(str(json.loads(convResponse.text)) + "\n")
+            return 5
+
+        # ensure access_token is present
+        jsonResponse = json.loads(convResponse.text)
+        infoTokens = jsonResponse.items()
+        for key, value in infoTokens:
+            if key == "access_token":
+                access_token = value
+
+        if not access_token:
+            sys.stderr.write("user access_token not available\n")
+            return 6
+
     # request email address
-    emailParams = {}
-    emailParams["access_token"] = access_token
+    infoUrl = providers[provider]["info_url"]
+    infoParams = {}
+    infoParams["access_token"] = access_token
+    infoHeaders = {'Authorization': 'Bearer ' + access_token}
     try:
-        emailResponse = requests.get("https://openidconnect.googleapis.com/v1/userinfo", emailParams)
+        infoResponse = requests.get(infoUrl, infoParams, headers=infoHeaders)
     except Exception as e:
         sys.stderr.write("email address get request failed " + str(e) + "\n")
         return 4
 
-    if emailResponse.status_code != 200:
-        sys.stderr.write("email address request failed " + str(emailResponse) + "\n")
+    if infoResponse.status_code != 200:
+        sys.stderr.write("email address request failed " + str(infoResponse) + "\n")
+        sys.stderr.write(str(json.loads(infoResponse.text)) + "\n")
         return 5
 
     # save user info (email, name)
-    jsonEmailResponse = json.loads(emailResponse.text)
-    emailItems = jsonEmailResponse.items()
+    jsonInfoResponse = json.loads(infoResponse.text)
+    emailItems = jsonInfoResponse.items()
     for key, value in emailItems:
         if key == "email" or key == "name":
             tokens[key] = value
-    
+        elif key == "userPrincipalName":
+            tokens["email"] = value
+        elif key == "displayName":
+            tokens["name"] = value
+
     save_tokens(token_store, tokens.items())
     return 0
 
@@ -207,25 +277,29 @@ def refresh(provider, client_id, client_secret, token_store):
         return 1
     
     # use refresh code to request new access token
-    refreshParams = {}
-    refreshParams["client_id"] = client_id
-    refreshParams["client_secret"] = client_secret
-    refreshParams["refresh_token"] = refresh_token
-    refreshParams["grant_type"] = "refresh_token"
-    refreshUrl = base_url + "/o/oauth2/token"
+    refrParams = {}
+    refrParams["client_id"] = client_id
+
+    refrParams["refresh_token"] = refresh_token
+    refrParams["grant_type"] = "refresh_token"
+    if provider == "gmail-oauth2":
+        refrParams["client_secret"] = client_secret
+
+    refrUrl = providers[provider]["refr_url"]
     try:
-        refreshResponse = requests.post(refreshUrl, refreshParams)
+        refrResponse = requests.post(refrUrl, refrParams)
     except Exception as e:
         sys.stderr.write("token refresh http post failed " + str(e) + "\n")
         return 4
 
-    if refreshResponse.status_code != 200:
-        sys.stderr.write("token refresh failed " + str(refreshResponse) + "\n")
+    if refrResponse.status_code != 200:
+        sys.stderr.write("token refresh failed " + str(refrResponse) + "\n")
+        sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
         return 5
 
     # save received tokens
-    jsonRefreshResponse = json.loads(refreshResponse.text)
-    refreshedTokens = jsonRefreshResponse.items()
+    jsonRefrResponse = json.loads(refrResponse.text)
+    refreshedTokens = jsonRefrResponse.items()
     for key, value in refreshedTokens:
         tokens[key] = value
 
@@ -261,7 +335,7 @@ def main(argv):
     if not provider:
         sys.stderr.write("env OAUTH2_TYPE not set\n")
         sys.exit(1)
-    elif provider != "gmail-oauth2":
+    elif provider not in providers:
         sys.stderr.write("OAUTH2_TYPE provider " + provider + " not supported\n")
         sys.exit(1)
 

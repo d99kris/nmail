@@ -46,6 +46,8 @@ static void SetupGmailCommon(std::shared_ptr<Config> p_Config);
 static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config);
 static void SetupICloud(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
+static void SetupOutlookCommon(std::shared_ptr<Config> p_Config);
+static void SetupOutlookOAuth2(std::shared_ptr<Config> p_Config);
 static void LogSystemInfo();
 static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
                             std::shared_ptr<Config> p_SecretConfig);
@@ -195,7 +197,7 @@ int main(int argc, char* argv[])
   const bool isSetup = !setup.empty();
   if (isSetup)
   {
-    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook"))
+    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook") && (setup != "outlook-oauth2"))
     {
       std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
       ShowHelp();
@@ -219,6 +221,10 @@ int main(int argc, char* argv[])
     else if (setup == "outlook")
     {
       SetupOutlook(mainConfig);
+    }
+    else if (setup == "outlook-oauth2")
+    {
+      SetupOutlookOAuth2(mainConfig);
     }
 
     remove(mainConfigPath.c_str());
@@ -430,7 +436,8 @@ static void ShowHelp()
     "   -o, --offline           run in offline mode\n"
     "   -p, --pass              change password\n"
     "   -s, --setup <SERVICE>   setup wizard for specified service, supported\n"
-    "                           services: gmail, gmail-oauth2, icloud, outlook\n"
+    "                           services: gmail, gmail-oauth2, icloud, outlook,\n"
+    "                           outlook-oauth2\n"
     "   -v, --version           output version information and exit\n"
     "   -x, --export <DIR>      export cache to specified dir in Maildir format\n"
     "\n"
@@ -529,12 +536,38 @@ static void SetupOutlook(std::shared_ptr<Config> p_Config)
 {
   SetupPromptUserDetails(p_Config);
 
+  SetupOutlookCommon(p_Config);
   p_Config->Set("imap_host", "imap-mail.outlook.com");
   p_Config->Set("smtp_host", "smtp-mail.outlook.com");
+}
+
+static void SetupOutlookCommon(std::shared_ptr<Config> p_Config)
+{
   p_Config->Set("inbox", "Inbox");
   p_Config->Set("trash", "Deleted");
   p_Config->Set("drafts", "Drafts");
   p_Config->Set("sent", "Sent");
+}
+
+static void SetupOutlookOAuth2(std::shared_ptr<Config> p_Config)
+{
+  std::string auth = "outlook-oauth2";
+  if (!Auth::GenerateToken(auth))
+  {
+    std::cout << auth << " setup failed, exiting.\n";
+    exit(1);
+  }
+
+  std::string name = Auth::GetName();
+  std::string email = Auth::GetEmail();
+  p_Config->Set("name", name);
+  p_Config->Set("address", email);
+  p_Config->Set("user", email);
+  p_Config->Set("auth", auth);
+
+  SetupOutlookCommon(p_Config);
+  p_Config->Set("imap_host", "outlook.office365.com");
+  p_Config->Set("smtp_host", "outlook.office365.com");
 }
 
 static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
