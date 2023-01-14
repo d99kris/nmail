@@ -18,7 +18,7 @@ Features
 - Address book auto-generated based on email messages
 - Viewing HTML emails (converted to text in terminal, or in external browser)
 - Opening/viewing attachments in external program
-- Simple setup wizard for Gmail and Outlook/Hotmail
+- Simple setup wizard for Gmail, iCloud and Outlook/Hotmail
 - Familiar UI for alpine / pine users
 - Compose message using external editor ($EDITOR)
 - View message using external viewer ($PAGER)
@@ -69,7 +69,7 @@ Command-line Options:
 
     -s, --setup <SERV>
         setup wizard for specified service, supported services: gmail,
-        gmail-oauth2, outlook
+        gmail-oauth2, icloud, outlook
 
     -v, --version
         output version information and exit

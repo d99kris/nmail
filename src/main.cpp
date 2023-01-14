@@ -1,6 +1,6 @@
 // main.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -44,6 +44,7 @@ static void SetupPromptUserDetails(std::shared_ptr<Config> p_Config);
 static void SetupGmail(std::shared_ptr<Config> p_Config);
 static void SetupGmailCommon(std::shared_ptr<Config> p_Config);
 static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config);
+static void SetupICloud(std::shared_ptr<Config> p_Config);
 static void SetupOutlook(std::shared_ptr<Config> p_Config);
 static void LogSystemInfo();
 static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
@@ -194,7 +195,7 @@ int main(int argc, char* argv[])
   const bool isSetup = !setup.empty();
   if (isSetup)
   {
-    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "outlook"))
+    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook"))
     {
       std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
       ShowHelp();
@@ -210,6 +211,10 @@ int main(int argc, char* argv[])
     else if (setup == "gmail-oauth2")
     {
       SetupGmailOAuth2(mainConfig);
+    }
+    else if (setup == "icloud")
+    {
+      SetupICloud(mainConfig);
     }
     else if (setup == "outlook")
     {
@@ -425,7 +430,7 @@ static void ShowHelp()
     "   -o, --offline           run in offline mode\n"
     "   -p, --pass              change password\n"
     "   -s, --setup <SERVICE>   setup wizard for specified service, supported\n"
-    "                           services: gmail, gmail-oauth2, outlook\n"
+    "                           services: gmail, gmail-oauth2, icloud, outlook\n"
     "   -v, --version           output version information and exit\n"
     "   -x, --export <DIR>      export cache to specified dir in Maildir format\n"
     "\n"
@@ -447,7 +452,7 @@ static void ShowVersion()
   std::cout <<
     Version::GetUiAppVersion() << "\n"
     "\n"
-    "Copyright (c) 2019-2022 Kristofer Berggren\n"
+    "Copyright (c) 2019-2023 Kristofer Berggren\n"
     "\n"
     "nmail is distributed under the MIT license.\n"
     "\n"
@@ -507,14 +512,25 @@ static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config)
   SetupGmailCommon(p_Config);
 }
 
+static void SetupICloud(std::shared_ptr<Config> p_Config)
+{
+  SetupPromptUserDetails(p_Config);
+
+  p_Config->Set("imap_host", "imap.mail.me.com");
+  p_Config->Set("smtp_host", "smtp.mail.me.com");
+  p_Config->Set("inbox", "INBOX");
+  p_Config->Set("trash", "Deleted Messages");
+  p_Config->Set("drafts", "Drafts");
+  p_Config->Set("sent", "Sent Messages");
+  p_Config->Set("client_store_sent", "1");
+}
+
 static void SetupOutlook(std::shared_ptr<Config> p_Config)
 {
   SetupPromptUserDetails(p_Config);
 
   p_Config->Set("imap_host", "imap-mail.outlook.com");
-  p_Config->Set("imap_port", "993");
   p_Config->Set("smtp_host", "smtp-mail.outlook.com");
-  p_Config->Set("smtp_port", "587");
   p_Config->Set("inbox", "Inbox");
   p_Config->Set("trash", "Deleted");
   p_Config->Set("drafts", "Drafts");
