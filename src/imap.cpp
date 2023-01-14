@@ -1,6 +1,6 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -179,25 +179,26 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
     for (clistiter* it = clist_begin(list); it != NULL; it = it->next)
     {
       struct mailimap_mailbox_list* mblist = (struct mailimap_mailbox_list*)clist_content(it);
-      if (mblist)
+      if (mblist && mblist->mb_name)
       {
+        const std::string& folder = DecodeFolderName(std::string(mblist->mb_name));
         mailimap_mbx_list_flags* bflags = mblist->mb_flag;
-        if (bflags)
+        if (bflags && ((bflags->mbf_type == MAILIMAP_MBX_LIST_FLAGS_SFLAG) &&
+                       (bflags->mbf_sflag == MAILIMAP_MBX_LIST_SFLAG_NOSELECT)))
         {
-          if (!((bflags->mbf_type == MAILIMAP_MBX_LIST_FLAGS_SFLAG) &&
-                (bflags->mbf_sflag == MAILIMAP_MBX_LIST_SFLAG_NOSELECT)))
-          {
-            const std::string& folder = DecodeFolderName(std::string(mblist->mb_name));
-            if (m_FoldersExclude.find(folder) == m_FoldersExclude.end())
-            {
-              LOG_DEBUG("folder include %s", folder.c_str());
-              p_Folders.insert(folder);
-            }
-            else
-            {
-              LOG_DEBUG("folder exclude %s", folder.c_str());
-            }
-          }
+          // Skip Gmail root folder [Gmail]
+          LOG_DEBUG("folder skip %s", folder.c_str());
+          continue;
+        }
+
+        if (m_FoldersExclude.find(folder) == m_FoldersExclude.end())
+        {
+          LOG_DEBUG("folder include %s", folder.c_str());
+          p_Folders.insert(folder);
+        }
+        else
+        {
+          LOG_DEBUG("folder exclude %s", folder.c_str());
         }
       }
     }
