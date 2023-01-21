@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -71,6 +71,7 @@ void Ui::Init()
     { "key_reply_all", "r" },
     { "key_reply_sender", "R" },
     { "key_forward", "f" },
+    { "key_forward_attached", "F" },
     { "key_delete", "d" },
     { "key_compose", "c" },
     { "key_compose_copy", "C" },
@@ -186,6 +187,7 @@ void Ui::Init()
   m_KeyReplyAll = Util::GetKeyCode(m_Config.Get("key_reply_all"));
   m_KeyReplySender = Util::GetKeyCode(m_Config.Get("key_reply_sender"));
   m_KeyForward = Util::GetKeyCode(m_Config.Get("key_forward"));
+  m_KeyForwardAttached = Util::GetKeyCode(m_Config.Get("key_forward_attached"));
   m_KeyDelete = Util::GetKeyCode(m_Config.Get("key_delete"));
   m_KeyCompose = Util::GetKeyCode(m_Config.Get("key_compose"));
   m_KeyComposeCopy = Util::GetKeyCode(m_Config.Get("key_compose_copy"));
@@ -468,6 +470,7 @@ void Ui::DrawAll()
     case StateReplyAllMessage:
     case StateReplySenderMessage:
     case StateForwardMessage:
+    case StateForwardAttachedMessage:
       DrawTop();
       DrawHelp();
       DrawDialog();
@@ -818,6 +821,7 @@ void Ui::DrawHelp()
       case StateReplyAllMessage:
       case StateReplySenderMessage:
       case StateForwardMessage:
+      case StateForwardAttachedMessage:
         DrawHelpText(composeMessageHelp);
         break;
 
@@ -2045,6 +2049,7 @@ void Ui::Run()
         case StateReplyAllMessage:
         case StateReplySenderMessage:
         case StateForwardMessage:
+        case StateForwardAttachedMessage:
           ComposeMessageKeyHandler(key);
           break;
 
@@ -2437,6 +2442,26 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("No message to forward");
     }
   }
+  else if (p_Key == m_KeyForwardAttached)
+  {
+    UpdateUidFromIndex(true /* p_UserTriggered */);
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      if (CurrentMessageBodyHeaderAvailable())
+      {
+        SetState(StateForwardAttachedMessage);
+      }
+      else
+      {
+        SetDialogMessage("Cannot forward message not fetched");
+      }
+    }
+    else
+    {
+      SetDialogMessage("No message to forward");
+    }
+  }
   else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
   {
     if (IsConnected())
@@ -2768,6 +2793,17 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     if (CurrentMessageBodyHeaderAvailable())
     {
       SetState(StateForwardMessage);
+    }
+    else
+    {
+      SetDialogMessage("Cannot forward message not fetched");
+    }
+  }
+  else if (p_Key == m_KeyForwardAttached)
+  {
+    if (CurrentMessageBodyHeaderAvailable())
+    {
+      SetState(StateForwardAttachedMessage);
     }
     else
     {
@@ -3584,6 +3620,53 @@ void Ui::SetState(Ui::State p_State)
 
     m_IsComposeHeader = true;
   }
+  else if (m_State == StateForwardAttachedMessage)
+  {
+    curs_set(1);
+    SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    StartComposeBackup();
+    m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
+    m_ComposeHeaderPos = 0;
+    m_ComposeMessageStr.clear();
+    m_ComposeMessagePos = 0;
+    m_ComposeMessageOffsetY = 0;
+    m_ComposeTempDirectory.clear();
+    m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
+
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+
+    std::map<uint32_t, Header>& headers = m_Headers[folder];
+    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+
+    std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+    std::map<uint32_t, Body>::iterator bit = bodys.find(uid);
+    if ((hit != headers.end()) && (bit != bodys.end()))
+    {
+      Header& header = hit->second;
+      Body& body = bit->second;
+
+      std::string tmppath = Util::GetTempDirectory();
+      std::string filename = header.GetSubject();
+      Util::RemoveNonAlphaNumSpace(filename);
+      Util::ReplaceString(filename, " ", "_");
+      std::string filepath = tmppath + "/" + filename + ".eml";
+      LOG_INFO("write to %s size %d", filepath.c_str(), body.GetData().size());
+      Util::WriteFile(filepath, body.GetData());
+
+      SetComposeStr(HeaderAtt,
+                    GetComposeStr(HeaderAtt) + Util::ToWString(filepath));
+
+      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeForwardSubject(header.GetSubject())));
+
+      m_ComposeHeaderRef = header.GetMessageId();
+      m_ComposeTempDirectory = tmppath;
+    }
+
+    m_IsComposeHeader = true;
+  }
   else if ((m_State == StateAddressList) || (m_State == StateFromAddressList))
   {
     curs_set(1);
@@ -4359,6 +4442,8 @@ std::string Ui::GetStateStr()
       return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateForwardMessage:
       return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
+    case StateForwardAttachedMessage:
+      return std::string("Forward Attached") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
     case StateAddressList:
     case StateFromAddressList:
       return "Address Book";

@@ -1,6 +1,6 @@
 // ui.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -33,10 +33,11 @@ public:
     StateReplyAllMessage = 6,
     StateReplySenderMessage = 7,
     StateForwardMessage = 8,
-    StateAddressList = 9,
-    StateFileList = 10,
-    StateViewPartList = 11,
-    StateFromAddressList = 12,
+    StateForwardAttachedMessage = 9,
+    StateAddressList = 10,
+    StateFileList = 11,
+    StateViewPartList = 12,
+    StateFromAddressList = 13,
   };
 
   enum UiRequest
@@ -347,6 +348,7 @@ private:
   int m_KeyReplyAll = 0;
   int m_KeyReplySender = 0;
   int m_KeyForward = 0;
+  int m_KeyForwardAttached = 0;
   int m_KeyDelete = 0;
   int m_KeyCompose = 0;
   int m_KeyComposeCopy = 0;

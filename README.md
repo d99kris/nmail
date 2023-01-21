@@ -683,6 +683,7 @@ file (platform-dependent defaults are left empty below):
     key_find=/
     key_find_next=?
     key_forward=f
+    key_forward_attached=F
     key_forward_word=
     key_goto_folder=g
     key_import=i

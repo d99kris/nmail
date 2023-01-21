@@ -282,6 +282,7 @@ public:
   static void DeleteToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
   static void JumpToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
   static void JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
+  static void RemoveNonAlphaNumSpace(std::string& p_Str);
 
 private:
   static std::string m_HtmlToTextConvertCmd;
