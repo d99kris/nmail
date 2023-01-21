@@ -300,7 +300,16 @@ std::map<uint32_t, Header> ImapCache::GetHeaders(const std::string& p_Folder, co
         {
           updateCacheHeaders[uid] = header;
         }
-        headers.insert(std::make_pair(uid, header));
+
+        if (header.GetTimeStamp() != 0)
+        {
+          headers.insert(std::make_pair(uid, header));
+        }
+        else
+        {
+          LOG_WARNING("invalid cached header folder %s uid = %d",
+                      p_Folder.c_str(), uid);
+        }
       };
 
       *db << "SELECT uid, data FROM headers WHERE uid IN (" + uidlist + ");" >> lambda;
