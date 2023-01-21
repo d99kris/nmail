@@ -1,6 +1,6 @@
 // smtp.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -56,7 +56,8 @@ private:
   SmtpStatus SendMessage(const std::string& p_Data, const std::vector<Contact>& p_Recipients);
   struct mailmime* GetMimeTextPart(const char* p_MimeType, const std::string& p_Message, bool p_Flowed);
   struct mailmime* GetMimeFilePart(const std::string& p_Path,
-                                   const std::string& p_MimeType = "application/octet-stream");
+                                   const std::string& p_MimeType);
+  std::string GetMimeType(const std::string& p_Path);
   struct mailmime* GetMimePart(struct mailmime_content* p_Content,
                                struct mailmime_fields* p_MimeFields,
                                bool p_ForceSingle);

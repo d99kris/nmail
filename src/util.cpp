@@ -1,6 +1,6 @@
 // util.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -1541,6 +1541,22 @@ std::string Util::ExtensionForMimeType(const std::string& p_MimeType)
   }
 
   return "";
+}
+
+std::string Util::MimeTypeForExtension(const std::string& p_Ext)
+{
+  static const std::map<std::string, std::string> extToType =
+  {
+    { ".eml", "message/rfc822" },
+  };
+
+  auto it = extToType.find(p_Ext);
+  if (it != extToType.end())
+  {
+    return it->second;
+  }
+
+  return "application/octet-stream";
 }
 
 void Util::InitStdErrRedirect(const std::string& p_Path)

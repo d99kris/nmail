@@ -1,6 +1,6 @@
 // smtp.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -408,7 +408,8 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
     {
       if (Util::Exists(path))
       {
-        struct mailmime* fileBodyPart = GetMimeFilePart(path);
+        const std::string fileMimeType = GetMimeType(path);
+        struct mailmime* fileBodyPart = GetMimeFilePart(path, fileMimeType);
         mailmime_smart_add_part(mainMultipart, fileBodyPart);
         LOG_DEBUG("attachment path \"%s\" added", path.c_str());
       }
@@ -523,6 +524,13 @@ mailmime* Smtp::GetMimeFilePart(const std::string& p_Path, const std::string& p_
   mailmime_set_body_file(mime, strdup(p_Path.c_str()));
 
   return mime;
+}
+
+std::string Smtp::GetMimeType(const std::string& p_Path)
+{
+  std::string fileExt = Util::GetFileExt(p_Path);
+  std::string mimeType = Util::MimeTypeForExtension(fileExt);
+  return mimeType;
 }
 
 mailmime* Smtp::GetMimePart(mailmime_content* p_Content, mailmime_fields* p_MimeFields,

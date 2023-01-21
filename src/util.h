@@ -1,6 +1,6 @@
 // util.h
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -227,6 +227,7 @@ public:
   static bool IsInteger(const std::string& p_Str);
   static long ToInteger(const std::string& p_Str);
   static std::string ExtensionForMimeType(const std::string& p_MimeType);
+  static std::string MimeTypeForExtension(const std::string& p_Ext);
   static void InitStdErrRedirect(const std::string& p_Path);
   static void CleanupStdErrRedirect();
   static void SetEditorCmd(const std::string& p_EditorCmd);
