@@ -543,6 +543,52 @@ such usage one can set up aliases for accessing different accounts, e.g.:
     alias hm='nmail -d ${HOME}/.nmail-hm' # hotmail
 
 
+Email Viewer
+============
+
+The email navigator / viewer supports the following commands:
+
+    <              select folder
+    >              view message / attachments
+    p              previous message
+    n              next message
+    r              reply all
+    R              reply to sender
+    f              forward
+    F              forward as attachment
+    d              delete
+    c              compose
+    C              compose copy of message
+    l              refresh current folder
+    m              move
+    t              toggle unread
+    v              view html part in external viewer
+    x              export
+    w              view message in external viewer
+    i              import
+    a              select all
+    /              search
+    <space>        select
+    s              start full sync
+    =              search messages with same subject
+    -              search messages with same sender
+    j              jump to message in search results
+
+    !              sort by unread flag
+    @              sort by attachment flag
+    #              sort by date
+    $              sort by sender name
+    %              sort by subject
+
+    1              filter by current message unread flag
+    2              filter by current message attachment flag
+    3              filter by current message date
+    4              filter by current message sender name
+    5              filter by current message subject
+
+    `              filter reset
+
+
 Compose Editor
 ==============
 
