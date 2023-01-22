@@ -31,6 +31,7 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
   , m_Pass(p_Pass)
   , m_Host(p_Host)
   , m_Port(p_Port)
+  , m_Timeout(p_Timeout)
   , m_CacheEncrypt(p_CacheEncrypt)
   , m_CacheIndexEncrypt(p_CacheIndexEncrypt)
   , m_FoldersExclude(p_FoldersExclude)
@@ -44,14 +45,7 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
     LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
   }
 
-  m_Imap = LOG_IF_NULL(mailimap_new(0, NULL));
-
-  if (Log::GetTraceEnabled())
-  {
-    mailimap_set_logger(m_Imap, Logger, NULL);
-  }
-
-  mailimap_set_timeout(m_Imap, p_Timeout);
+  InitImap();
 
   m_ImapCache.reset(new ImapCache(m_CacheEncrypt, m_Pass));
   m_ImapIndex.reset(new ImapIndex(m_CacheIndexEncrypt, m_Pass, m_ImapCache, p_StatusHandler));
@@ -70,11 +64,28 @@ Imap::~Imap()
   }
   else
   {
-    if (m_Imap != NULL)
-    {
-      mailimap_free(m_Imap);
-      m_Imap = NULL;
-    }
+    CleanupImap();
+  }
+}
+
+void Imap::InitImap()
+{
+  m_Imap = LOG_IF_NULL(mailimap_new(0, NULL));
+
+  if (Log::GetTraceEnabled())
+  {
+    mailimap_set_logger(m_Imap, Logger, NULL);
+  }
+
+  mailimap_set_timeout(m_Imap, m_Timeout);
+}
+
+void Imap::CleanupImap()
+{
+  if (m_Imap != NULL)
+  {
+    mailimap_free(m_Imap);
+    m_Imap = NULL;
   }
 }
 
@@ -106,6 +117,14 @@ bool Imap::Login()
       }
 
       connected = (rv == MAILIMAP_NO_ERROR);
+    }
+    else if (rv == MAILIMAP_ERROR_BAD_STATE)
+    {
+      LOG_WARNING("bad state reinit");
+
+      CleanupImap();
+
+      InitImap();
     }
   }
 

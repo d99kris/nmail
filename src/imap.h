@@ -1,6 +1,6 @@
 // imap.h
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -93,6 +93,8 @@ private:
   bool SelectFolder(const std::string& p_Folder, bool p_Force = false);
   bool SelectedFolderIsEmpty();
   uint32_t GetUidValidity();
+  void InitImap();
+  void CleanupImap();
 
   static std::string DecodeFolderName(const std::string& p_Folder);
   static std::string EncodeFolderName(const std::string& p_Folder);
@@ -103,6 +105,7 @@ private:
   std::string m_Pass;
   std::string m_Host;
   uint16_t m_Port = 0;
+  int64_t m_Timeout = 0;
   bool m_CacheEncrypt = false;
   bool m_CacheIndexEncrypt = false;
   std::set<std::string> m_FoldersExclude;
