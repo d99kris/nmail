@@ -292,13 +292,21 @@ def refresh(provider, client_id, client_secret, token_store):
         sys.stderr.write("token refresh http post failed " + str(e) + "\n")
         return 4
 
+    # parse response
+    jsonRefrResponse = json.loads(refrResponse.text)
+
+    if (refrResponse.status_code == 400) and (jsonRefrResponse["error"] == "invalid_grant") and (jsonRefrResponse["error_description"] == "Token has been expired or revoked."):
+        sys.stderr.write("token expired " + str(refrResponse) + "\n")
+        sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
+        sys.stderr.write("attempt to reauthenticate\n")
+        return generate(provider, client_id, client_secret, token_store)
+
     if refrResponse.status_code != 200:
         sys.stderr.write("token refresh failed " + str(refrResponse) + "\n")
         sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
         return 5
 
     # save received tokens
-    jsonRefrResponse = json.loads(refrResponse.text)
     refreshedTokens = jsonRefrResponse.items()
     for key, value in refreshedTokens:
         tokens[key] = value
