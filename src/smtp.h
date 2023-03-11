@@ -24,6 +24,7 @@ enum SmtpStatus
   SmtpStatusConnFailed = 4,
   SmtpStatusInitFailed = 5,
   SmtpStatusMessageFailed = 6,
+  SmtpStatusImplFailed = 7,
 };
 
 class Smtp

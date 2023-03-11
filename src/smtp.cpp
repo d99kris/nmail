@@ -183,6 +183,12 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
                   "libsasl2-modules or equivalent package is installed");
         return SmtpStatusSaslFailed;
       }
+      else if (rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
+      {
+        LOG_ERROR("requested sasl auth is available but not used by libetpan, "
+                  "please ensure libetpan is built with sasl support");
+        return SmtpStatusImplFailed;
+      }
 
       return SmtpStatusAuthFailed;
     }
@@ -452,7 +458,7 @@ std::string Smtp::GetErrorMessage(SmtpStatus p_SmtpStatus)
       break;
 
     case SmtpStatusSaslFailed:
-      msg = "no sasl mechs";
+      msg = "sasl not found";
       break;
 
     case SmtpStatusAuthFailed:
@@ -469,6 +475,10 @@ std::string Smtp::GetErrorMessage(SmtpStatus p_SmtpStatus)
 
     case SmtpStatusMessageFailed:
       msg = "transfer error";
+      break;
+
+    case SmtpStatusImplFailed:
+      msg = "libetpan missing sasl";
       break;
 
     default:
