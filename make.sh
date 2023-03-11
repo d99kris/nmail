@@ -2,7 +2,7 @@
 
 # make.sh
 #
-# Copyright (C) 2020-2021 Kristofer Berggren
+# Copyright (C) 2020-2023 Kristofer Berggren
 # All rights reserved.
 #
 # See LICENSE for redistribution information.
@@ -83,11 +83,14 @@ if [[ "${DEPS}" == "1" ]]; then
     unset NAME
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
     if [[ "${NAME}" == "Ubuntu" ]]; then
-      sudo apt update && sudo apt -y install build-essential cmake libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev uuid-dev || exiterr "deps failed (linux), exiting."
+      sudo apt update && sudo apt -y install build-essential cmake libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev uuid-dev || exiterr "deps failed (ubuntu), exiting."
     elif [[ "${NAME}" == "Fedora" ]]; then
-      sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel libuuid-devel clang || exiterr "deps failed (linux), exiting."
+      sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel libuuid-devel clang || exiterr "deps failed (fedora), exiting."
     elif [[ "${NAME}" == "Arch Linux" ]]; then
-      sudo pacman --needed -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file uuid clang || exiterr "deps failed (linux), exiting."
+      sudo pacman --needed -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file uuid clang || exiterr "deps failed (arch linux), exiting."
+    elif [[ "${NAME}" == "Gentoo" ]]; then
+      sudo sh -c 'echo "net-libs/libetpan sasl" > /etc/portage/package.use/d99kris-nmail' || exiterr "deps failed (gentoo), exiting."
+      sudo emerge -n dev-util/cmake net-libs/libetpan dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl sys-apps/file || exiterr "deps failed (gentoo), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
