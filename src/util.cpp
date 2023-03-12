@@ -48,6 +48,7 @@ std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 std::string Util::m_HtmlToTextConvertCmd;
 std::string Util::m_TextToHtmlConvertCmd;
 std::string Util::m_PartsViewerCmd;
+std::string Util::m_HtmlPreviewCmd;
 std::string Util::m_HtmlViewerCmd;
 std::string Util::m_MsgViewerCmd;
 std::string Util::m_ApplicationDir;
@@ -676,6 +677,36 @@ std::string Util::GetDefaultHtmlViewerCmd()
 bool Util::IsDefaultHtmlViewerCmd()
 {
   return m_HtmlViewerCmd.empty();
+}
+
+std::string Util::GetHtmlPreviewCmd()
+{
+  if (!m_HtmlPreviewCmd.empty()) return m_HtmlPreviewCmd;
+
+  static std::string defaultHtmlPreviewCmd = GetDefaultHtmlPreviewCmd();
+
+  return defaultHtmlPreviewCmd;
+}
+
+void Util::SetHtmlPreviewCmd(const std::string& p_HtmlPreviewCmd)
+{
+  m_HtmlPreviewCmd = p_HtmlPreviewCmd;
+}
+
+std::string Util::GetDefaultHtmlPreviewCmd()
+{
+#if defined(__APPLE__)
+  return "open";
+#elif defined(__linux__)
+  return "xdg-open >/dev/null 2>&1";
+#else
+  return "";
+#endif
+}
+
+bool Util::IsDefaultHtmlPreviewCmd()
+{
+  return m_HtmlPreviewCmd.empty();
 }
 
 std::string Util::GetMsgViewerCmd()

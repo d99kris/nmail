@@ -268,6 +268,7 @@ Full example of a config file `~/.nmail/main.conf`:
     editor_cmd=
     file_picker_cmd=
     folders_exclude=
+    html_preview_cmd=
     html_to_text_cmd=
     html_viewer_cmd=
     idle_timeout=29
@@ -371,6 +372,13 @@ access on server side. In Gmail web interface, navigate to "Settings",
 "See all settings", "Labels" and untick "Show in IMAP" for "Starred",
 "Important" and "All Mail".
 
+### html_preview_cmd
+
+This field allows overriding the external viewer used when previewing
+messages composed using markdown. The viewer may be a terminal-based
+program, e.g. `w3m -o confirm_qq=false`. By default nmail uses `open`
+on macOS and `xdg-open >/dev/null 2>&1` on Linux.
+
 ### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
@@ -389,9 +397,9 @@ spec'ed system, consider using any of the other conversion utilities instead.
 ### html_viewer_cmd
 
 This field allows overriding the external viewer used when viewing message
-as html and previewing messages composed using markdown. The viewer may be
-a terminal-based program, e.g. `w3m -o confirm_qq=false`. By default nmail
-uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux.
+html using `V`. The viewer may be a terminal-based program, e.g.
+`w3m -o confirm_qq=false`. By default nmail uses `open` on macOS and
+`xdg-open >/dev/null 2>&1` on Linux.
 
 ### idle_timeout
 

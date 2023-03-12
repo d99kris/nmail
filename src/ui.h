@@ -193,6 +193,7 @@ private:
   int ExtPartsViewer(const std::string& p_Path);
   void ExtHtmlViewer();
   int ExtHtmlViewer(const std::string& p_Path);
+  int ExtHtmlPreview(const std::string& p_Path);
   void ExtMsgViewer();
   void ExtMsgViewer(const std::string& p_Path);
   void SetLastStateOrMessageList();

@@ -163,6 +163,10 @@ public:
   static void SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd);
   static std::string GetDefaultHtmlViewerCmd();
   static bool IsDefaultHtmlViewerCmd();
+  static std::string GetHtmlPreviewCmd();
+  static void SetHtmlPreviewCmd(const std::string& p_HtmlPreviewCmd);
+  static std::string GetDefaultHtmlPreviewCmd();
+  static bool IsDefaultHtmlPreviewCmd();
   static std::string GetMsgViewerCmd();
   static void SetMsgViewerCmd(const std::string& p_MsgViewerCmd);
   static std::string GetDefaultMsgViewerCmd();
@@ -290,6 +294,7 @@ private:
   static std::string m_HtmlToTextConvertCmd;
   static std::string m_TextToHtmlConvertCmd;
   static std::string m_PartsViewerCmd;
+  static std::string m_HtmlPreviewCmd;
   static std::string m_HtmlViewerCmd;
   static std::string m_MsgViewerCmd;
   static std::string m_ApplicationDir;

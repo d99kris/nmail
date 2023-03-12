@@ -5358,6 +5358,42 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   return rv;
 }
 
+int Ui::ExtHtmlPreview(const std::string& p_Path)
+{
+  const bool isDefaultHtmlPreviewCmd = Util::IsDefaultHtmlPreviewCmd();
+  if (!isDefaultHtmlPreviewCmd)
+  {
+    endwin();
+  }
+
+  const std::string& viewer = Util::GetHtmlPreviewCmd();
+  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  LOG_DEBUG("launching html viewer: %s", cmd.c_str());
+  int rv = system(cmd.c_str());
+  if (rv == 0)
+  {
+    LOG_DEBUG("html viewer exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("html viewer exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
+  }
+
+  if (!isDefaultHtmlPreviewCmd)
+  {
+    refresh();
+
+    wint_t key = 0;
+    while (get_wch(&key) != ERR)
+    {
+      // Discard any remaining input
+    }
+  }
+
+  return rv;
+}
+
 void Ui::ExtMsgViewer()
 {
   static const std::string& tempPath = Util::GetTempDir() + std::string("msgview/tmp.eml");
@@ -6834,7 +6870,7 @@ bool Ui::HandleComposeKey(int p_Key)
       std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
       std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
       Util::WriteFile(tempFilePath, htmlStr);
-      ExtHtmlViewer(tempFilePath);
+      ExtHtmlPreview(tempFilePath);
     }
     else
     {
