@@ -69,7 +69,7 @@ Command-line Options:
 
     -s, --setup <SERV>
         setup wizard for specified service, supported services: gmail,
-        gmail-oauth2, icloud, outlook
+        gmail-oauth2, icloud, outlook, outlook-oauth2
 
     -v, --version
         output version information and exit
