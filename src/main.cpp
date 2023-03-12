@@ -178,6 +178,7 @@ int main(int argc, char* argv[])
     { "verbose_logging", "0" },
     { "pager_cmd", "" },
     { "editor_cmd", "" },
+    { "spell_cmd", "" },
     { "folders_exclude", "" },
     { "server_timestamps", "0" },
     { "network_timeout", "30" },
@@ -258,6 +259,7 @@ int main(int argc, char* argv[])
   Util::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
+  Util::SetSpellCmd(mainConfig->Get("spell_cmd"));
   std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude"), true));
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");

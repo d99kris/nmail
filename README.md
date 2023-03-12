@@ -504,6 +504,16 @@ case the email account has different username and password for sending emails
 for sending emails). If not specified, the configured `user` field will be
 used.
 
+### spell_cmd
+
+This field specifies a custom command to use for spell checking composed
+messages. If not specified, nmail checks if `nspell-gpt`, `aspell` or `ispell`
+is available on the system (in that order), and uses the first found. The
+command used is one of:
+- `nspell-gpt`
+- `aspell -c`
+- `spell -o -x`
+
 ### text_to_html_cmd
 
 This field allows customizing how nmail should convert composed plain text
@@ -761,6 +771,7 @@ file (platform-dependent defaults are left empty below):
     key_sort_name=$
     key_sort_subject=%
     key_sort_unread=!
+    key_spell=KEY_CTRLS
     key_sync=s
     key_to_select=KEY_CTRLT
     key_toggle_full_header=h

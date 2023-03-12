@@ -138,6 +138,7 @@ void Ui::Init()
     { "key_select_item", "KEY_SPACE" },
     { "key_select_all", "a" },
     { "key_search_show_folder", "\\" },
+    { "key_spell", "KEY_CTRLS" },
     { "colors_enabled", "1" },
     { "attachment_indicator", " \xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
@@ -246,6 +247,7 @@ void Ui::Init()
   m_KeySearchShowFolder = Util::GetKeyCode(m_Config.Get("key_search_show_folder"));
   m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
   m_KeySearchCurrentName = Util::GetKeyCode(m_Config.Get("key_search_current_name"));
+  m_KeySpell = Util::GetKeyCode(m_Config.Get("key_spell"));
 
   m_ShowProgress = Util::ToInteger(m_Config.Get("show_progress"));
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -757,6 +759,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExtEditor), "ExtEdit",
       GetKeyDisplay(m_KeyRichHeader), "RichHdr",
       GetKeyDisplay(m_KeyToggleMarkdownCompose), "TgMkDown",
+      GetKeyDisplay(m_KeySpell), "Spell",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -3338,6 +3341,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
     m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
+    m_ComposeQuotedStart.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -3424,6 +3428,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
     m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
+    m_ComposeQuotedStart.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -3462,21 +3467,17 @@ void Ui::SetState(Ui::State p_State)
         indentBody = Util::ToString(Util::Join(indentBodyLines));
       }
 
+      m_ComposeQuotedStart = "On " + header.GetDateTime() + " " + header.GetFrom() + " wrote:\n\n";
       if (!m_BottomReply)
       {
         m_ComposeMessageStr = GetSignatureStr() +
-          Util::ToWString("\n\nOn " + header.GetDateTime() + " " +
-                          header.GetFrom() +
-                          " wrote:\n\n" +
-                          indentBody);
+          Util::ToWString("\n\n" + m_ComposeQuotedStart + indentBody);
         Util::StripCR(m_ComposeMessageStr);
       }
       else
       {
-        m_ComposeMessageStr = Util::ToWString("On " + header.GetDateTime() + " " +
-                                              header.GetFrom() +
-                                              " wrote:\n\n" +
-                                              indentBody + "\n\n\n");
+        m_ComposeMessageStr =
+          Util::ToWString(m_ComposeQuotedStart + indentBody + "\n\n\n");
         Util::StripCR(m_ComposeMessageStr);
         m_ComposeMessagePos = (int)m_ComposeMessageStr.size() - 1;
         int lineCount = Util::Split(Util::ToString(m_ComposeMessageStr), '\n').size();
@@ -3543,6 +3544,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
     m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
+    m_ComposeQuotedStart.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -3584,9 +3586,10 @@ void Ui::SetState(Ui::State p_State)
         }
       }
 
+      m_ComposeQuotedStart = "\n\n---------- Forwarded message ---------\n";
       m_ComposeMessageStr =
         GetSignatureStr() +
-        Util::ToWString("\n\n---------- Forwarded message ---------\n"
+        Util::ToWString(m_ComposeQuotedStart +
                         "From: " + header.GetFrom() + "\n"
                         "Date: " + header.GetDateTime() + "\n"
                         "Subject: " + header.GetSubject() + "\n"
@@ -3633,6 +3636,7 @@ void Ui::SetState(Ui::State p_State)
     m_ComposeMessageOffsetY = 0;
     m_ComposeTempDirectory.clear();
     m_CurrentMarkdownHtmlCompose = m_MarkdownHtmlCompose;
+    m_ComposeQuotedStart.clear();
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     const std::string& folder = m_CurrentFolderUid.first;
@@ -5189,13 +5193,12 @@ void Ui::InvalidateUiCache(const std::string& p_Folder)
   m_RequestedFlags[p_Folder].clear();
 }
 
-void Ui::ExtEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
+void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
 {
   endwin();
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteWFile(tempPath, p_ComposeMessageStr);
-  const std::string& editor = Util::GetEditorCmd();
-  const std::string& cmd = editor + " " + tempPath;
+  const std::string& cmd = p_EditorCmd + " " + tempPath;
   LOG_DEBUG("launching external editor: %s", cmd.c_str());
   int rv = system(cmd.c_str());
   if (rv == 0)
@@ -6802,7 +6805,8 @@ bool Ui::HandleComposeKey(int p_Key)
   }
   else if (p_Key == m_KeyExtEditor)
   {
-    ExtEditor(m_ComposeMessageStr, m_ComposeMessagePos);
+    const std::string editorCmd = Util::GetEditorCmd();
+    ExtEditor(editorCmd, m_ComposeMessageStr, m_ComposeMessagePos);
   }
   else if (p_Key == m_KeyRichHeader)
   {
@@ -6840,6 +6844,29 @@ bool Ui::HandleComposeKey(int p_Key)
   else if (p_Key == m_KeyToggleMarkdownCompose)
   {
     m_CurrentMarkdownHtmlCompose = !m_CurrentMarkdownHtmlCompose;
+  }
+  else if (p_Key == m_KeySpell)
+  {
+    const std::string spellCmd = Util::GetSpellCmd();
+    if (!spellCmd.empty())
+    {
+      size_t quoteStartPos = !m_ComposeQuotedStart.empty() ? m_ComposeMessageStr.find(Util::ToWString(m_ComposeQuotedStart)) : std::string::npos;
+      if (quoteStartPos == std::string::npos)
+      {
+        ExtEditor(spellCmd, m_ComposeMessageStr, m_ComposeMessagePos);
+      }
+      else
+      {
+        std::wstring messageComposed = m_ComposeMessageStr.substr(0, quoteStartPos);
+        std::wstring messageQuoted = m_ComposeMessageStr.substr(quoteStartPos);
+        ExtEditor(spellCmd, messageComposed, m_ComposeMessagePos);
+        m_ComposeMessageStr = messageComposed + messageQuoted;
+      }
+    }
+    else
+    {
+      SetDialogMessage("Spell command not found", true);
+    }
   }
   else
   {

@@ -53,6 +53,7 @@ std::string Util::m_MsgViewerCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
+std::string Util::m_SpellCmd;
 std::string Util::m_DownloadsDir;
 int Util::m_OrgStdErr = -1;
 int Util::m_NewStdErr = -1;
@@ -1590,6 +1591,52 @@ std::string Util::GetEditorCmd()
   if (!m_EditorCmd.empty()) return m_EditorCmd;
 
   return std::string(getenv("EDITOR") ? getenv("EDITOR") : "nano");
+}
+
+void Util::SetSpellCmd(const std::string& p_SpellCmd)
+{
+  m_SpellCmd = p_SpellCmd;
+}
+
+std::string Util::GetSpellCmd()
+{
+  static const std::string cmd = []()
+  {
+    std::string spellCheckCommand = m_SpellCmd;
+    if (spellCheckCommand.empty())
+    {
+      const std::string& commandOutPath = Util::GetTempFilename(".txt");
+      const std::string& whichCommand =
+        std::string("which nspell-gpt aspell ispell 2> /dev/null | head -1 > ") + commandOutPath;
+
+      if (system(whichCommand.c_str()) == 0)
+      {
+        std::string output = Util::ReadFile(commandOutPath);
+        output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
+        if (!output.empty())
+        {
+          if (output.find("/nspell-gpt") != std::string::npos)
+          {
+            spellCheckCommand = "nspell-gpt";
+          }
+          else if (output.find("/aspell") != std::string::npos)
+          {
+            spellCheckCommand = "aspell -c";
+          }
+          else if (output.find("/ispell") != std::string::npos)
+          {
+            spellCheckCommand = "ispell -o -x";
+          }
+        }
+      }
+
+      Util::DeleteFile(commandOutPath);
+    }
+
+    return spellCheckCommand;
+  }();
+
+  return cmd;
 }
 
 void Util::SetPagerCmd(const std::string& p_PagerCmd)

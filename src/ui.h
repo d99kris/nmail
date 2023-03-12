@@ -188,7 +188,7 @@ private:
                     std::string& p_Entry);
   bool CurrentMessageBodyHeaderAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
-  void ExtEditor(std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
+  void ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void ExtPager();
   int ExtPartsViewer(const std::string& p_Path);
   void ExtHtmlViewer();
@@ -408,6 +408,7 @@ private:
   int m_KeySearchShowFolder = 0;
   int m_KeySearchCurrentSubject = 0;
   int m_KeySearchCurrentName = 0;
+  int m_KeySpell = 0;
 
   int m_ShowProgress = 1;
   bool m_NewMsgBell = false;
@@ -472,6 +473,7 @@ private:
   int m_ComposeMessageWrapPos = 0;
   int m_ComposeMessageOffsetY = 0;
   uint32_t m_ComposeDraftUid = 0;
+  std::string m_ComposeQuotedStart;
 
   std::deque<SmtpManager::Result> m_SmtpErrorResults;
   std::mutex m_SmtpErrorMutex;

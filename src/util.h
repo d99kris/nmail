@@ -232,6 +232,8 @@ public:
   static void CleanupStdErrRedirect();
   static void SetEditorCmd(const std::string& p_EditorCmd);
   static std::string GetEditorCmd();
+  static void SetSpellCmd(const std::string& p_SpellCmd);
+  static std::string GetSpellCmd();
   static void SetPagerCmd(const std::string& p_PagerCmd);
   static std::string GetPagerCmd();
   static void StripCR(std::wstring& p_Str);
@@ -293,6 +295,7 @@ private:
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;
+  static std::string m_SpellCmd;
   static std::string m_DownloadsDir;
   static int m_OrgStdErr;
   static int m_NewStdErr;
