@@ -236,11 +236,9 @@ def generate(provider, client_id, client_secret, token_store):
 
     # request email address
     infoUrl = providers[provider]["info_url"]
-    infoParams = {}
-    infoParams["access_token"] = access_token
     infoHeaders = {'Authorization': 'Bearer ' + access_token}
     try:
-        infoResponse = requests.get(infoUrl, infoParams, headers=infoHeaders)
+        infoResponse = requests.get(infoUrl, headers=infoHeaders)
     except Exception as e:
         sys.stderr.write("email address get request failed " + str(e) + "\n")
         return 4
