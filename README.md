@@ -46,6 +46,9 @@ Usage:
 
 Command-line Options:
 
+    -c, --cache-encrypt
+        prompt for cache encryption during oauth2 setup
+
     -d, --confdir <DIR>
         use a different directory than ~/.nmail
 

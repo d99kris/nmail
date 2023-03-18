@@ -35,6 +35,7 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
                                 std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
                                 std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
 static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
+                                       bool p_SetupAllowCacheEncrypt,
                                        std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
                                        std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
 static bool ReportConfigError(const std::string& p_Param);
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
   Log::SetVerboseLevel(Log::INFO_LEVEL);
   bool online = true;
   bool changePass = false;
+  bool setupAllowCacheEncrypt = false;
   std::string setup;
   std::string exportDir;
 
@@ -70,7 +72,11 @@ int main(int argc, char* argv[])
   std::vector<std::string> args(argv + 1, argv + argc);
   for (auto it = args.begin(); it != args.end(); ++it)
   {
-    if (((*it == "-d") || (*it == "--configdir")) && (std::distance(it + 1, args.end()) > 0))
+    if ((*it == "-c") || (*it == "--cache-encrypt"))
+    {
+      setupAllowCacheEncrypt = true;
+    }
+    else if (((*it == "-d") || (*it == "--configdir")) && (std::distance(it + 1, args.end()) > 0))
     {
       ++it;
       Util::SetApplicationDir(*it);
@@ -334,7 +340,7 @@ int main(int argc, char* argv[])
   }
   else
   {
-    if (!ObtainCacheEncryptPassword(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
+    if (!ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass, secretConfig, mainConfig))
     {
       return 1;
     }
@@ -432,6 +438,7 @@ static void ShowHelp()
     "Usage: nmail [OPTION]\n"
     "\n"
     "Options:\n"
+    "   -c, --cache-encrypt     prompt for cache encryption during oauth2 setup\n"
     "   -d, --confdir <DIR>     use a different directory than ~/.nmail\n"
     "   -e, --verbose           enable verbose logging\n"
     "   -ee, --extra-verbose    enable extra verbose logging\n"
@@ -658,13 +665,17 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
 }
 
 static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
+                                       bool p_SetupAllowCacheEncrypt,
                                        std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
                                        std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
 {
   if (p_IsSetup)
   {
-    std::cout << "Cache Encryption Password (optional): ";
-    p_Pass = Util::GetPass();
+    if (p_SetupAllowCacheEncrypt)
+    {
+      std::cout << "Cache Encryption Password (optional): ";
+      p_Pass = Util::GetPass();
+    }
 
     if (p_Pass.empty())
     {
