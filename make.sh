@@ -84,6 +84,8 @@ if [[ "${DEPS}" == "1" ]]; then
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
     if [[ "${NAME}" == "Ubuntu" ]]; then
       sudo apt update && sudo apt -y install build-essential cmake libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libmagic-dev uuid-dev || exiterr "deps failed (ubuntu), exiting."
+    elif [[ "${NAME}" == "Raspbian GNU/Linux" ]]; then
+      sudo apt update && sudo apt -y install build-essential cmake libssl-dev libreadline-dev libncurses5-dev libetpan-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev uuid-dev || exiterr "deps failed (raspbian gnu/linux), exiting."
     elif [[ "${NAME}" == "Fedora" ]]; then
       sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel libuuid-devel clang || exiterr "deps failed (fedora), exiting."
     elif [[ "${NAME}" == "Arch Linux" ]]; then
