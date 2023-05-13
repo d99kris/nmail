@@ -94,17 +94,36 @@ bool Imap::Login()
   LOG_DEBUG_FUNC(STR());
 
   bool connected = false;
+  bool isSSL = (m_Port == 993);
+  bool isStartTLS = (m_Port == 143);
 
   {
     std::lock_guard<std::mutex> imapLock(m_ImapMutex);
     m_SelectedFolder.clear();
-    int rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect(m_Imap, m_Host.c_str(), m_Port));
+
+    int rv = 0;
+    if (isSSL)
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect(m_Imap, m_Host.c_str(), m_Port));
+    }
+    else if (isStartTLS)
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, m_Host.c_str(), m_Port));
+      if (rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
+      {
+        rv = LOG_IF_IMAP_ERR(mailimap_socket_starttls(m_Imap));
+      }
+    }
+    else
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, m_Host.c_str(), m_Port));
+    }
 
     if (rv == MAILIMAP_NO_ERROR_AUTHENTICATED)
     {
       connected = true;
     }
-    else if (rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
+    else if ((rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED) || (isStartTLS && (rv == MAILIMAP_NO_ERROR)))
     {
       if (Auth::IsOAuthEnabled())
       {
