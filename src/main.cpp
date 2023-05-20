@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     {
       setupAllowCacheEncrypt = true;
     }
-    else if (((*it == "-d") || (*it == "--configdir")) && (std::distance(it + 1, args.end()) > 0))
+    else if (((*it == "-d") || (*it == "--confdir")) && (std::distance(it + 1, args.end()) > 0))
     {
       ++it;
       Util::SetApplicationDir(*it);
