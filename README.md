@@ -120,7 +120,7 @@ Linux
 
 Required:
 
-    sudo apt install git cmake build-essential libetpan-dev libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev uuid-dev
+    sudo apt install git cmake build-essential libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev libcurl4-openssl-dev libexpat-dev zlib1g-dev uuid-dev
 
 Optional (to view/compose HTML emails):
 
@@ -130,7 +130,7 @@ Optional (to view/compose HTML emails):
 
 Required:
 
-    sudo yum -y install cmake libetpan-devel openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain file-devel libuuid-devel clang
+    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang
 
 Optional (to view/compose HTML emails):
 
@@ -140,7 +140,7 @@ Optional (to view/compose HTML emails):
 
 Required:
 
-    sudo pacman -Sy cmake make libetpan openssl ncurses xapian-core sqlite cyrus-sasl file uuid clang
+    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file
 
 Optional (to view/compose HTML emails):
 
@@ -171,7 +171,7 @@ macOS
 
 Required:
 
-    brew install cmake libetpan openssl ncurses xapian sqlite libmagic ossp-uuid
+    brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid
 
 Optional (for OAuth 2.0 support):
 
@@ -1206,6 +1206,8 @@ following third-party libraries:
   Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
 - [cyrus-imap](https://opensource.apple.com/source/CyrusIMAP/CyrusIMAP-156.9/cyrus_imap) -
   Copyright 1994-2000 Carnegie Mellon University - [BSD-3 License](/ext/cyrus-imap/COPYRIGHT)
+- [libetpan](https://github.com/dinhvh/libetpan) -
+  Copyright 2001-2005 Dinh Viet Hoa - [BSD-3 License](/ext/libetpan/COPYRIGHT)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
   Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
 

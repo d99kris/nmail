@@ -1788,9 +1788,17 @@ std::string Util::GetLibetpanVersion()
   std::string version;
 #if defined(LIBETPAN_VERSION_MAJOR) && defined(LIBETPAN_VERSION_MINOR)
   version += std::to_string(LIBETPAN_VERSION_MAJOR) + "." + std::to_string(LIBETPAN_VERSION_MINOR);
+#if defined(LIBETPAN_VERSION_MICRO)
+  version += "." + std::to_string(LIBETPAN_VERSION_MICRO);
+#endif
 #ifdef LIBETPAN_API_CURRENT
   version += " API " + std::to_string(LIBETPAN_API_CURRENT);
 #endif
+#endif
+#if defined(LIBETPAN_CUSTOM)
+  version += " Custom";
+#else
+  version += " System";
 #endif
   return version;
 }

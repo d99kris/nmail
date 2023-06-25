@@ -133,15 +133,27 @@ find_package(Xapian REQUIRED)
 find_package(SQLite3 REQUIRED)
 
 # Dependency libetpan
-find_path(LIBETPAN_INCLUDE_DIR
-  NAMES libetpan/libetpan.h
-  PATHS ${additional_includes}
-)
-
-find_library(LIBETPAN_LIBRARY
-  NAMES etpan
-  PATHS ${additional_lib_searchpath}
-)
+option(HAS_CUSTOM_LIBETPAN "Custom libetpan" ON)
+message(STATUS "Custom libetpan: ${HAS_CUSTOM_LIBETPAN}")
+if(HAS_CUSTOM_LIBETPAN)
+  set(LIBETPAN_STATIC ON)
+  set(LIBETPAN_NOINSTALL ON)
+  set(LIBETPAN_LIBNAME "etpan-nmail")
+  add_subdirectory(ext/libetpan)
+  add_dependencies(nmail etpan-nmail)
+  target_compile_definitions(nmail PRIVATE LIBETPAN_CUSTOM=1)
+  set(LIBETPAN_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/libetpan/include)
+  set(LIBETPAN_LIBRARY etpan-nmail)
+else()
+  find_path(LIBETPAN_INCLUDE_DIR
+    NAMES libetpan/libetpan.h
+    PATHS ${additional_includes}
+  )
+  find_library(LIBETPAN_LIBRARY
+    NAMES etpan
+    PATHS ${additional_lib_searchpath}
+  )
+endif()
 
 if(NOT LIBETPAN_INCLUDE_DIR OR NOT LIBETPAN_LIBRARY)
   message(FATAL_ERROR "ERROR: Could not find libetpan")
@@ -154,13 +166,20 @@ find_library(CYRUS_SASL_LIBRARY sasl2)
 find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
-# Dependency execinfo / magic
+# Dependency execinfo
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
 if(FOUND_EXECINFO)
   target_compile_definitions(nmail PRIVATE HAVE_EXECINFO_H=1)
 endif()
 
+# Dependency magic
 find_library(MAGIC_LIBRARY magic)
+find_path(MAGIC_HEADERS magic.h)
+if(NOT MAGIC_LIBRARY OR NOT MAGIC_HEADERS)
+  message(FATAL_ERROR "ERROR: Could not find libmagic")
+else()
+  message(STATUS "Found libmagic: ${MAGIC_LIBRARY} and ${MAGIC_HEADERS}")
+endif()
 
 # Dependency libuuid
 find_library(LIBUUID_LIBRARIES NAMES uuid)
@@ -172,8 +191,10 @@ else()
 endif()
 
 # Includes
-include_directories(${LIBETPAN_INCLUDE_DIR} ${CYRUS_SASL_INCLUDE_DIR} "ext/sqlite_modern_cpp/hdr"
-                    "ext/cereal/include" ${LIBUUID_HEADERS} "ext/cyrus-imap/lib")
+target_include_directories(nmail PRIVATE ${LIBETPAN_INCLUDE_DIR} ${XAPIAN_INCLUDE_DIR}
+                           ${MAGIC_HEADERS} ${CYRUS_SASL_INCLUDE_DIR}
+                           "ext/sqlite_modern_cpp/hdr" "ext/cereal/include" ${LIBUUID_HEADERS}
+                           "ext/cyrus-imap/lib")
 
 # Linking
 target_link_libraries(nmail PUBLIC
