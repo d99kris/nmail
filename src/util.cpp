@@ -61,7 +61,7 @@ int Util::m_NewStdErr = -1;
 bool Util::m_UseServerTimestamps = false;
 std::string Util::m_FilePickerCmd;
 bool Util::m_AddressBookEncrypt = false;
-bool Util::m_SendHostname = false;
+bool Util::m_SendIp = true;
 std::string Util::m_LocalizedSubjectPrefixes;
 
 static std::map<std::string, int> s_KeyCodes =
@@ -810,14 +810,14 @@ std::string Util::MakeForwardSubject(const std::string& p_Str)
   return ("Fwd: " + subject);
 }
 
-bool Util::GetSendHostname()
+bool Util::GetSendIp()
 {
-  return m_SendHostname;
+  return m_SendIp;
 }
 
-void Util::SetSendHostname(bool p_SendHostname)
+void Util::SetSendIp(bool p_SendIp)
 {
-  m_SendHostname = p_SendHostname;
+  m_SendIp = p_SendIp;
 }
 
 std::string Util::ToString(const std::wstring& p_WStr)

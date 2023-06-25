@@ -92,10 +92,9 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
   LOG_DEBUG_FUNC(STR());
   LOG_TRACE_FUNC(STR(p_Data, p_Recipients));
 
-  const bool enableSsl = (m_Port == 465);
-  const bool enableTls = !enableSsl;
-  const bool enableEsmtp = true;
-  const bool enableLmtp = !enableEsmtp;
+  const bool isSSL = (m_Port == 465);
+  const bool isStartTLS = (m_Port == 587);
+  const bool isUseIP = Util::GetSendIp();
 
   mailsmtp* smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return SmtpStatusFailed;
@@ -108,95 +107,103 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
   mailsmtp_set_timeout(smtp, m_Timeout);
 
   int rv = MAILSMTP_NO_ERROR;
-  if (enableSsl)
+
+  if (isStartTLS)
+  {
+    rv = LOG_IF_SMTP_ERR(mailsmtp_socket_connect(smtp, m_Host.c_str(), m_Port));
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
+
+    if (isUseIP)
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init_with_ip(smtp, 1));
+    }
+    else
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init(smtp));
+    }
+
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
+
+    rv = LOG_IF_SMTP_ERR(mailsmtp_socket_starttls(smtp));
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
+
+    if (isUseIP)
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init_with_ip(smtp, 1));
+    }
+    else
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init(smtp));
+    }
+
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
+  }
+  else if (isSSL)
   {
     rv = LOG_IF_SMTP_ERR(mailsmtp_ssl_connect(smtp, m_Host.c_str(), m_Port));
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
+
+    if (isUseIP)
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init_with_ip(smtp, 1));
+    }
+    else
+    {
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init(smtp));
+    }
+
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
   }
   else
   {
     rv = LOG_IF_SMTP_ERR(mailsmtp_socket_connect(smtp, m_Host.c_str(), m_Port));
-  }
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
 
-  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusConnFailed;
-
-  static const bool useHostname = Util::GetSendHostname();
-  static const int useip = useHostname ? 0 : 1;
-  const std::string senderName = GetSenderName(smtp, useHostname);
-  bool esmtpMode = false;
-
-  if (enableLmtp)
-  {
-    rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, senderName.c_str()));
-  }
-  else if (enableEsmtp && (rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo_with_ip(smtp, useip))) == MAILSMTP_NO_ERROR)
-  {
-    esmtpMode = true;
-  }
-  else if (!enableEsmtp || (rv == MAILSMTP_ERROR_NOT_IMPLEMENTED))
-  {
-    rv = LOG_IF_SMTP_ERR(mailsmtp_helo_with_ip(smtp, useip));
-  }
-
-  if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
-
-  if (esmtpMode && enableTls)
-  {
-    rv = LOG_IF_SMTP_ERR(mailsmtp_socket_starttls(smtp));
-
-    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
-
-    if (enableLmtp)
+    if (isUseIP)
     {
-      rv = LOG_IF_SMTP_ERR(mailesmtp_lhlo(smtp, senderName.c_str()));
-    }
-    else if (enableEsmtp && ((rv = LOG_IF_SMTP_ERR(mailesmtp_ehlo_with_ip(smtp, useip))) == MAILSMTP_NO_ERROR))
-    {
-      esmtpMode = true;
-    }
-    else if (!enableEsmtp || rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
-    {
-      rv = LOG_IF_SMTP_ERR(mailsmtp_helo_with_ip(smtp, useip));
-    }
-
-    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
-  }
-
-  if (esmtpMode)
-  {
-    LOG_DEBUG("smtp->auth = 0x%x", smtp->auth);
-
-    if (Auth::IsOAuthEnabled())
-    {
-      std::string token = Auth::GetAccessToken();
-      rv = LOG_IF_SMTP_ERR(mailsmtp_oauth2_authenticate(smtp, m_User.c_str(), token.c_str()));
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init_with_ip(smtp, 1));
     }
     else
     {
-      rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
+      rv = LOG_IF_SMTP_ERR(mailsmtp_init(smtp));
     }
 
-    if (rv != MAILSMTP_NO_ERROR)
+    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusInitFailed;
+  }
+
+  LOG_DEBUG("smtp->auth = 0x%x", smtp->auth);
+
+  if (Auth::IsOAuthEnabled())
+  {
+    std::string token = Auth::GetAccessToken();
+    rv = LOG_IF_SMTP_ERR(mailsmtp_oauth2_authenticate(smtp, m_User.c_str(), token.c_str()));
+  }
+  else
+  {
+    rv = LOG_IF_SMTP_ERR(mailsmtp_auth(smtp, m_User.c_str(), m_Pass.c_str()));
+  }
+
+  if (rv != MAILSMTP_NO_ERROR)
+  {
+    if (!Sasl::IsMechanismsSupported(smtp->auth))
     {
-      if (!Sasl::IsMechanismsSupported(smtp->auth))
-      {
-        LOG_ERROR("requested sasl auth mechanism not available, please ensure "
-                  "libsasl2-modules or equivalent package is installed");
-        return SmtpStatusSaslFailed;
-      }
-      else if (rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
-      {
-        LOG_ERROR("requested sasl auth is available but not used by libetpan, "
-                  "please ensure libetpan is built with sasl support");
-        return SmtpStatusImplFailed;
-      }
-
-      return SmtpStatusAuthFailed;
+      LOG_ERROR("requested sasl auth mechanism not available, please ensure "
+                "libsasl2-modules or equivalent package is installed");
+      return SmtpStatusSaslFailed;
     }
+    else if (rv == MAILSMTP_ERROR_NOT_IMPLEMENTED)
+    {
+      LOG_ERROR("requested sasl auth is available but not used by libetpan, "
+                "please ensure libetpan is built with sasl support");
+      return SmtpStatusImplFailed;
+    }
+
+    return SmtpStatusAuthFailed;
   }
 
   const std::string envid = GenerateMessageId();
 
-  if (esmtpMode)
+  if (smtp->esmtp & MAILSMTP_ESMTP)
   {
     rv = LOG_IF_SMTP_ERR(mailesmtp_mail(smtp, m_Address.c_str(), 1, envid.c_str()));
   }
@@ -211,7 +218,7 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
   for (auto& recipient : p_Recipients)
   {
     char* r = strdup(recipient.GetAddress().c_str());
-    if (esmtpMode)
+    if (smtp->esmtp & MAILSMTP_ESMTP)
     {
       rv = LOG_IF_SMTP_ERR(mailesmtp_rcpt(smtp, r,
                                           MAILSMTP_DSN_NOTIFY_FAILURE | MAILSMTP_DSN_NOTIFY_DELAY,
@@ -233,24 +240,6 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
 
   if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
 
-  if (enableLmtp)
-  {
-    int* retcodes = (int*)malloc((clist_count(recipients) * sizeof(int)));
-
-    rv = LOG_IF_SMTP_ERR(maillmtp_data_message(smtp, p_Data.c_str(), p_Data.size(),
-                                               recipients, retcodes));
-
-    if (rv != MAILSMTP_NO_ERROR) return SmtpStatusMessageFailed;
-
-    for (int i = 0; i < clist_count(recipients); i++)
-    {
-      LOG_WARNING("recipient \"%s\" returned %d", (char*)clist_nth_data(recipients, i),
-                  retcodes[i]);
-    }
-
-    free(retcodes);
-  }
-  else
   {
     rv = LOG_IF_SMTP_ERR(mailsmtp_data_message(smtp, p_Data.c_str(), p_Data.size()));
 
@@ -722,56 +711,6 @@ std::string Smtp::GenerateMessageId() const
   uuid_generate(uuid);
   uuid_unparse(uuid, uuid_str);
   return std::string(uuid_str) + "@" + Util::GetDomainName(m_Host);
-}
-
-std::string Smtp::GetHostname()
-{
-  char hostname[HOST_NAME_MAX];
-  gethostname(hostname, sizeof(hostname));
-  return std::string(hostname);
-}
-
-std::string Smtp::GetIp(int p_Socket)
-{
-  const std::string fallbackIp = "127.0.0.1";
-
-  if (p_Socket < 0)
-  {
-    return fallbackIp;
-  }
-
-  struct sockaddr addr;
-  socklen_t addr_len = 0;
-  if (LOG_IF_NONZERO(getsockname(p_Socket, &addr, &addr_len)) != 0)
-  {
-    return fallbackIp;
-  }
-
-  char hostname[HOST_NAME_MAX];
-  if (LOG_IF_NONZERO(getnameinfo(&addr, sizeof(addr), hostname, sizeof(hostname),
-                                 NULL, 0, NI_NUMERICHOST) != 0))
-  {
-    LOG_WARNING("errno %d", errno);
-    return fallbackIp;
-  }
-
-  return std::string(hostname);
-}
-
-std::string Smtp::GetSenderName(mailsmtp* p_Smtp, bool p_UseHostname)
-{
-  std::string senderName;
-  if (p_UseHostname)
-  {
-    senderName = GetHostname();
-  }
-  else
-  {
-    senderName = "[" + GetIp(mailstream_low_get_fd(mailstream_get_low(p_Smtp->stream))) + "]";
-  }
-
-  LOG_DEBUG("sender name %s", senderName.c_str());
-  return senderName;
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,

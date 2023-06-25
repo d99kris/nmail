@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
     { "queue_encrypt", "1" },
     { "auth", "pass" },
     { "auth_encrypt", "1" },
-    { "send_hostname", "1" },
+    { "send_ip", "1" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
     { "idle_timeout", "29" },
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
   Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
-  Util::SetSendHostname(mainConfig->Get("send_hostname") == "1");
+  Util::SetSendIp(mainConfig->Get("send_ip") == "1");
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
 

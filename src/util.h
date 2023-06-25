@@ -181,8 +181,8 @@ public:
   static std::string AddIndent(const std::string& p_Str, const std::string& p_Indent);
   static std::string MakeReplySubject(const std::string& p_Str);
   static std::string MakeForwardSubject(const std::string& p_Str);
-  static bool GetSendHostname();
-  static void SetSendHostname(bool p_SendHostname);
+  static bool GetSendIp();
+  static void SetSendIp(bool p_SendIp);
   static std::string ToString(const std::wstring& p_WStr);
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, int p_Len);
@@ -307,6 +307,6 @@ private:
   static bool m_UseServerTimestamps;
   static std::string m_FilePickerCmd;
   static bool m_AddressBookEncrypt;
-  static bool m_SendHostname;
+  static bool m_SendIp;
   static std::string m_LocalizedSubjectPrefixes;
 };

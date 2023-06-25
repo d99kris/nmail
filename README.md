@@ -287,7 +287,7 @@ Full example of a config file `~/.nmail/main.conf`:
     prefetch_level=2
     queue_encrypt=1
     save_pass=1
-    send_hostname=1
+    send_ip=1
     sent=Sent
     server_timestamps=0
     smtp_host=smtp.example.com
@@ -484,10 +484,10 @@ Indicates whether nmail shall encrypt local message offline queue or not
 
 Specifies whether nmail shall store the password(s) (default enabled).
 
-### send_hostname
+### send_ip
 
-Controls whether to send client hostname in SMTP authentication when sending
-outgoing emails. If disabled, nmail uses client local IP address.
+Controls whether to send client local IP address (otherwise local hostname) in
+SMTP handshaking when sending outgoing emails (default enabled).
 
 ### sent
 
