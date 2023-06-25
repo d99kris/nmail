@@ -518,10 +518,9 @@ used.
 ### spell_cmd
 
 This field specifies a custom command to use for spell checking composed
-messages. If not specified, nmail checks if `nspell-gpt`, `aspell` or `ispell`
-is available on the system (in that order), and uses the first found. The
-command used is one of:
-- `nspell-gpt`
+messages. If not specified, nmail checks if `aspell` or `ispell` is available
+on the system (in that order), and uses the first found. The command used is
+one of:
 - `aspell -c`
 - `spell -o -x`
 
