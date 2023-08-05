@@ -1,6 +1,6 @@
 // body.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -444,22 +444,9 @@ void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::strin
   {
     mailmime_single_fields_init(&fields, p_Mime->mm_mime_fields, p_Mime->mm_content_type);
 
-    if (fields.fld_disposition != NULL)
-    {
-      struct mailmime_disposition_type* type = fields.fld_disposition->dsp_type;
-      if (type != NULL)
-      {
-        p_IsAttachment = (type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
-      }
-    }
-
     if (fields.fld_disposition_filename != NULL)
     {
       p_Filename = std::string(fields.fld_disposition_filename);
-    }
-    else if (fields.fld_content_name != NULL)
-    {
-      p_Filename = std::string(fields.fld_content_name);
     }
 
     if (fields.fld_id != NULL)
@@ -471,6 +458,8 @@ void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::strin
     {
       p_Charset = Util::ToLower(std::string(fields.fld_content_charset));
     }
+
+    p_IsAttachment = (!p_Filename.empty());
   }
 }
 
