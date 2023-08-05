@@ -115,6 +115,16 @@ static size_t mail_iconv (iconv_t cd, const char **inbuf, size_t *inbytesleft,
 	}
       }
     }
+
+    if (ibl == 0) {
+      /* Flush any partially converted input by passing NULL as input*/
+#ifdef HAVE_ICONV_PROTO_CONST
+      iconv (cd, (const char **) NULL, &ibl, &ob, &obl);
+#else
+      iconv (cd, NULL, &ibl, &ob, &obl);
+#endif
+    }
+
     *inbuf = ib, *inbytesleft = ibl;
     *outbuf = ob, *outbytesleft = obl;
     return ret;
