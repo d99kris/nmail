@@ -448,6 +448,10 @@ void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::strin
     {
       p_Filename = std::string(fields.fld_disposition_filename);
     }
+    else if (fields.fld_content_name != NULL)
+    {
+      p_Filename = std::string(fields.fld_content_name);
+    }
 
     if (fields.fld_id != NULL)
     {
