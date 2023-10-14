@@ -136,7 +136,7 @@ fi
 
 # tests
 if [[ "${TESTS}" == "1" ]]; then
-  cd build && ctest --output-on-failure && cd .. || exiterr "tests failed, exiting."
+  true # currently this project has no tests
 fi
 
 # doc

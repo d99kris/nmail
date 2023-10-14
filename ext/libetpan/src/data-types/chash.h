@@ -3,7 +3,7 @@
  *
  * chash - Implements generic hash tables.
  *
- * Copyright (c) 1999-2005, Gaël Roualland <gael.roualland@iname.com>
+ * Copyright (c) 1999-2005, GaÃ«l Roualland <gael.roualland@iname.com>
  * interface changes - 2005 - DINH Viet Hoa
  * All rights reserved.
  *

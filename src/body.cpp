@@ -7,7 +7,7 @@
 
 #include "body.h"
 
-#include <libetpan/libetpan.h>
+#include <libetpan/mailmime.h>
 
 #include "encoding.h"
 #include "header.h"

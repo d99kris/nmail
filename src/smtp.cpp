@@ -14,6 +14,9 @@
 
 #include <sys/socket.h>
 
+#include <libetpan/mailimf.h>
+#include <libetpan/mailmime.h>
+#include <libetpan/mailsmtp.h>
 #include <uuid/uuid.h>
 
 #include "auth.h"

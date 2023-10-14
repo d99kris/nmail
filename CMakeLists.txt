@@ -1,8 +1,9 @@
 # Project
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...3.22 FATAL_ERROR)
 project(nmail LANGUAGES CXX C)
 include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
+message(STATUS "Using cmake ${CMAKE_VERSION}")
 
 # Ccache
 find_program(CCACHE_PROGRAM ccache)
@@ -99,7 +100,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   FIND_LIBRARY(CARBON_LIBRARY CoreFoundation)
   FIND_LIBRARY(CARBON_LIBRARY CFNetwork)
   FIND_LIBRARY(CARBON_LIBRARY Security)
-  target_link_libraries(nmail PUBLIC iconv z "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+  target_link_libraries(nmail PUBLIC z iconv "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
 endif()
 
 # Headers

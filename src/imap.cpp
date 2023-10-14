@@ -8,7 +8,7 @@
 #include "imap.h"
 
 #include <libetpan/imapdriver_tools.h>
-#include <libetpan/libetpan.h>
+#include <libetpan/mailimap.h>
 
 #include "auth.h"
 #include "crypto.h"

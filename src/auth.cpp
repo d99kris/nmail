@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <string>
 
+#include <sys/time.h>
+
 #include "cacheutil.h"
 #include "config.h"
 #include "log.h"

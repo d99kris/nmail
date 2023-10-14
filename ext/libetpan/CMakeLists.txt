@@ -1,5 +1,5 @@
 # Project
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...3.22 FATAL_ERROR)
 project(libetpan LANGUAGES C)
 if(LIBETPAN_LIBNAME)
   set(LIBNAME ${LIBETPAN_LIBNAME})
@@ -62,7 +62,7 @@ set(LIB_SOURCES
   src/low-level/imap/clientid.c
   src/low-level/imap/acl_parser.c
   src/low-level/imap/uidplus_parser.c
-  src/low-level/imap/mailimap_print.c
+  $<$<CONFIG:Debug>:src/low-level/imap/mailimap_print.c>
   src/low-level/imap/mailimap.c
   src/low-level/imap/uidplus_sender.c
   src/low-level/imap/acl_sender.c
@@ -149,7 +149,6 @@ set(LIB_SOURCES
   src/data-types/mailstream.c
   src/data-types/md5.c
   src/data-types/carray.c
-  src/data-types/mail_cache_lmdb.c
   src/data-types/chash.c
   src/data-types/mailstream_socket.c
   src/data-types/mailstream_ssl.c
@@ -271,7 +270,7 @@ add_dependencies(${LIBNAME} libetpan_headers)
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan)
 
-# Standard Headers
+# Headers - Standard
 check_include_add_define("arpa/inet.h" HAVE_ARPA_INET_H WARNING)
 check_include_add_define("ctype.h" HAVE_CTYPE_H WARNING)
 check_include_add_define("dlfcn.h" HAVE_DLFCN_H WARNING)
@@ -297,6 +296,9 @@ check_include_add_define("sys/types.h" HAVE_SYS_TYPES_H WARNING)
 check_include_add_define("sys/uio.h" HAVE_SYS_UIO_H WARNING)
 check_include_add_define("unistd.h" HAVE_UNISTD_H WARNING)
 
+# Headers - Others (Disabled)
+#check_include_add_define("lmdb.h" HAVE_LMDB_H NOTICE)
+
 # Capabilities - Required
 target_compile_definitions(${LIBNAME} PRIVATE HAVE___ATTRIBUTE__=1)
 target_compile_definitions(${LIBNAME} PRIVATE HAVE_CURL=1)
@@ -316,6 +318,12 @@ target_compile_definitions(${LIBNAME} PRIVATE USE_SSL=1)
 if(WIN32)
   target_compile_definitions(${LIBNAME} PRIVATE HAVE_MINGW32_SYSTEM=1)
   target_compile_definitions(${LIBNAME} PRIVATE HAVE_WINSOCK2_H=1)
+endif()
+
+# Capabilities - Optional
+if(${HAVE_LMDB_H})
+  target_compile_definitions(${LIBNAME} PRIVATE LMDB=1)
+  target_sources(${LIBNAME} PRIVATE "src/data-types/mail_cache_lmdb.c")
 endif()
 
 # Capabilities - Disabled
@@ -359,12 +367,15 @@ endif()
 find_package(ZLIB REQUIRED)
 target_include_directories(${LIBNAME} PRIVATE ${ZLIB_INCLUDE_DIRS})
 
+# Compilation
+target_compile_options(${LIBNAME} PRIVATE -w -Wall $<$<CONFIG:Debug>:-DDEBUG>)
+
 # Linking
 target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${ZLIB_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${CYRUS_SASL_LIBRARY})
 
 # Linking (macOS)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(${LIBNAME} PUBLIC iconv "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+  target_link_libraries(${LIBNAME} PUBLIC "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
 endif()
 
 # Install

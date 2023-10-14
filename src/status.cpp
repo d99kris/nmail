@@ -1,6 +1,6 @@
 // status.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,8 @@
 #include "status.h"
 
 #include <iomanip>
+
+#include <sys/time.h>
 
 #include "loghelp.h"
 #include "util.h"

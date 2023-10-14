@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-#include <libetpan/libetpan.h>
-
 #include "contact.h"
+
+struct mailsmtp;
 
 enum SmtpStatus
 {

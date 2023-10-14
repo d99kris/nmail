@@ -1,6 +1,6 @@
 // loghelp.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -9,8 +9,6 @@
 
 #include <cstring>
 #include <sstream>
-
-#include <libetpan/libetpan.h>
 
 #include "cxx-prettyprint/prettyprint.hpp"
 
@@ -59,47 +57,9 @@ public:
   static std::string ImapErrToStr(int p_ImapErr);
   static std::string SmtpErrToStr(int p_SmtpErr);
 
-  static inline int LogImap(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
-  {
-    if (p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
-    {
-      Log::Error(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
-    }
-    else if (Log::GetDebugEnabled())
-    {
-      Log::Debug(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
-    }
-
-    return p_Rv;
-  }
-
-  static inline int LogImapLogout(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
-  {
-    if ((p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED) && (p_Rv != MAILIMAP_ERROR_STREAM))
-    {
-      Log::Error(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
-    }
-    else if (Log::GetDebugEnabled())
-    {
-      Log::Debug(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
-    }
-
-    return p_Rv;
-  }
-
-  static inline int LogSmtp(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
-  {
-    if (p_Rv != MAILSMTP_NO_ERROR)
-    {
-      Log::Error(p_File, p_Line, "%s = %s", p_Expr, SmtpErrToStr(p_Rv).c_str());
-    }
-    else if (Log::GetDebugEnabled())
-    {
-      Log::Debug(p_File, p_Line, "%s = %s", p_Expr, SmtpErrToStr(p_Rv).c_str());
-    }
-
-    return p_Rv;
-  }
+  static int LogImap(int p_Rv, const char* p_Expr, const char* p_File, int p_Line);
+  static int LogImapLogout(int p_Rv, const char* p_Expr, const char* p_File, int p_Line);
+  static int LogSmtp(int p_Rv, const char* p_Expr, const char* p_File, int p_Line);
 
   template<typename T>
   struct identity { typedef T type; };

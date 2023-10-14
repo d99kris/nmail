@@ -14,14 +14,14 @@
 #include <string>
 #include <vector>
 
-#include <libetpan/mailimap.h>
-
 #define KEY_TAB 9
 #define KEY_RETURN 10
 #define KEY_SPACE 32
 #define KEY_DELETE 127
 
 #define THREAD_REGISTER() ThreadRegister threadRegister(__PRETTY_FUNCTION__)
+
+struct mailimap_date_time;
 
 struct Fileinfo
 {

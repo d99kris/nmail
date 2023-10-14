@@ -1,12 +1,13 @@
 // sasl.cpp
 //
-// Copyright (c) 2020-2022 Kristofer Berggren
+// Copyright (c) 2020-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include "sasl.h"
 
+#include <libetpan/mailsmtp_types.h>
 #include <sasl/sasl.h>
 
 #include "loghelp.h"

@@ -1,6 +1,6 @@
 // encoding.cpp
 //
-// Copyright (c) 2021-2022 Kristofer Berggren
+// Copyright (c) 2021-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,6 +10,7 @@
 #include <string>
 
 #include <iconv.h>
+#include <libetpan/charconv.h>
 #include <magic.h>
 
 #include "imapurl.h"

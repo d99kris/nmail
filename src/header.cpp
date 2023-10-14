@@ -1,6 +1,6 @@
 // header.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,7 +10,7 @@
 #include <cstring>
 #include <set>
 
-#include <libetpan/libetpan.h>
+#include <libetpan/mailmime.h>
 
 #include "body.h"
 #include "crypto.h"

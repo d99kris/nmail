@@ -1,6 +1,6 @@
 // loghelp.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,6 +10,9 @@
 #include <map>
 #include <sstream>
 #include <string>
+
+#include <libetpan/mailimap_types.h>
+#include <libetpan/mailsmtp_types.h>
 
 #define STRINGIFY(name) STRINGIFY_HELPER(name)
 #define STRINGIFY_HELPER(name) #name
@@ -113,4 +116,46 @@ std::string LogHelp::SmtpErrToStr(int p_SmtpErr)
   auto it = errMap.find(p_SmtpErr);
 
   return (it != errMap.end()) ? it->second : std::to_string(p_SmtpErr);
+}
+
+int LogHelp::LogImap(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
+{
+  if (p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
+  {
+    Log::Error(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
+  }
+  else if (Log::GetDebugEnabled())
+  {
+    Log::Debug(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
+  }
+
+  return p_Rv;
+}
+
+int LogHelp::LogImapLogout(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
+{
+  if ((p_Rv > MAILIMAP_NO_ERROR_NON_AUTHENTICATED) && (p_Rv != MAILIMAP_ERROR_STREAM))
+  {
+    Log::Error(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
+  }
+  else if (Log::GetDebugEnabled())
+  {
+    Log::Debug(p_File, p_Line, "%s = %s", p_Expr, ImapErrToStr(p_Rv).c_str());
+  }
+
+  return p_Rv;
+}
+
+int LogHelp::LogSmtp(int p_Rv, const char* p_Expr, const char* p_File, int p_Line)
+{
+  if (p_Rv != MAILSMTP_NO_ERROR)
+  {
+    Log::Error(p_File, p_Line, "%s = %s", p_Expr, SmtpErrToStr(p_Rv).c_str());
+  }
+  else if (Log::GetDebugEnabled())
+  {
+    Log::Debug(p_File, p_Line, "%s = %s", p_Expr, SmtpErrToStr(p_Rv).c_str());
+  }
+
+  return p_Rv;
 }
