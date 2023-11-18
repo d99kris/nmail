@@ -752,7 +752,8 @@ file (platform-dependent defaults are left empty below):
     key_forward_attached=F
     key_forward_word=
     key_goto_folder=g
-    key_import=i
+    key_goto_inbox=i
+    key_import=z
     key_jump_to=j
     key_kill_word=
     key_move=m

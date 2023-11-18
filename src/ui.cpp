@@ -88,6 +88,7 @@ void Ui::Init()
     { "key_open", "." },
     { "key_back", "," },
     { "key_goto_folder", "g" },
+    { "key_goto_inbox", "i" },
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
     { "key_ext_editor", "KEY_CTRLW" },
@@ -95,7 +96,7 @@ void Ui::Init()
     { "key_postpone", "KEY_CTRLO" },
     { "key_othercmd_help", "o" },
     { "key_export", "x" },
-    { "key_import", "i" },
+    { "key_import", "z" },
     { "key_rich_header", "KEY_CTRLR" },
     { "key_ext_html_viewer", "v" },
     { "key_ext_html_preview", "KEY_CTRLV" },
@@ -205,6 +206,7 @@ void Ui::Init()
   m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
   m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
   m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
+  m_KeyGotoInbox = Util::GetKeyCode(m_Config.Get("key_goto_inbox"));
   m_KeyToSelect = Util::GetKeyCode(m_Config.Get("key_to_select"));
   m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
   m_KeyExtEditor = Util::GetKeyCode(m_Config.Get("key_ext_editor"));
@@ -657,7 +659,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
       GetKeyDisplay(m_KeySelectAll), "SelectAll",
-      GetKeyDisplay(m_KeySelectItem), "Select",
+      GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
       GetKeyDisplay(m_KeySearchCurrentSubject), "SearcSubj",
       GetKeyDisplay(m_KeySearchCurrentName), "SearcName",
     },
@@ -739,6 +741,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyFind), "Find",
       GetKeyDisplay(m_KeyFindNext), "FindNext",
       GetKeyDisplay(m_KeyToggleFullHeader), "TgFullHdr",
+      GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
     },
   };
 
@@ -2361,6 +2364,17 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetState(StateGotoFolder);
     }
   }
+  else if (p_Key == m_KeyGotoInbox)
+  {
+    if (m_MessageListSearch)
+    {
+      m_MessageListSearch = false;
+      m_PreviousFolder = "";
+    }
+
+    m_CurrentFolder = m_Inbox;
+    SetState(StateViewMessageList);
+  }
   else if (p_Key == m_KeyMove)
   {
     if (IsConnected())
@@ -2752,6 +2766,17 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyGotoFolder)
   {
     SetState(StateGotoFolder);
+  }
+  else if (p_Key == m_KeyGotoInbox)
+  {
+    if (m_MessageListSearch)
+    {
+      m_MessageListSearch = false;
+      m_PreviousFolder = "";
+    }
+
+    m_CurrentFolder = m_Inbox;
+    SetState(StateViewMessageList);
   }
   else if (p_Key == m_KeyMove)
   {

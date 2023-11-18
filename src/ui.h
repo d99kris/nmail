@@ -366,6 +366,7 @@ private:
   int m_KeyOpen = 0;
   int m_KeyBack = 0;
   int m_KeyGotoFolder = 0;
+  int m_KeyGotoInbox = 0;
   int m_KeyToSelect = 0;
   int m_KeySaveFile = 0;
   int m_KeyExtEditor = 0;
