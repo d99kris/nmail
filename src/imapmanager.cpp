@@ -1,6 +1,6 @@
 // imapmanager.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -196,6 +196,12 @@ void ImapManager::AsyncSearch(const SearchQuery& p_SearchQuery)
   std::unique_lock<std::mutex> lock(m_SearchMutex);
   m_SearchQueue.push_front(p_SearchQuery);
   m_SearchCond.notify_one();
+}
+
+void ImapManager::SyncSearch(const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult)
+{
+  m_Imap.Search(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
+                p_SearchResult.m_Headers, p_SearchResult.m_FolderUids, p_SearchResult.m_HasMore);
 }
 
 void ImapManager::SetCurrentFolder(const std::string& p_Folder)

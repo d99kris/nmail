@@ -1,6 +1,6 @@
 // imapmanager.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2023 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -90,6 +90,17 @@ public:
     std::string m_QueryStr;
     unsigned m_Offset = 0;
     unsigned m_Max = 0;
+
+    SearchQuery()
+    {
+    }
+
+    SearchQuery(const std::string& p_QueryStr, unsigned p_Offset, unsigned p_Max)
+      : m_QueryStr(p_QueryStr)
+      , m_Offset(p_Offset)
+      , m_Max(p_Max)
+    {
+    }
   };
 
   struct SearchResult
@@ -119,6 +130,7 @@ public:
   void PrefetchRequest(const Request& p_Request);
   void AsyncAction(const Action& p_Action);
   void AsyncSearch(const SearchQuery& p_SearchQuery);
+  void SyncSearch(const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult);
 
   void SetCurrentFolder(const std::string& p_Folder);
 

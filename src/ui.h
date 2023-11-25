@@ -249,6 +249,7 @@ private:
   inline bool HandleComposeKey(int p_Key);
 
   void OnWakeUp();
+  void AutoSelectMoveFolder();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
@@ -330,6 +331,7 @@ private:
   bool m_Plaintext = true;
   bool m_MarkdownHtmlCompose = false;
   bool m_CurrentMarkdownHtmlCompose = false;
+  bool m_IsAutoMove = false;
 
   int m_FolderListCurrentIndex = 0;
   std::string m_FolderListCurrentFolder;
@@ -355,6 +357,7 @@ private:
   int m_KeyComposeCopy = 0;
   int m_KeyToggleUnread = 0;
   int m_KeyMove = 0;
+  int m_KeyAutoMove = 0;
   int m_KeyRefresh = 0;
   int m_KeyQuit = 0;
   int m_KeyToggleTextHtml = 0;

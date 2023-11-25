@@ -580,7 +580,8 @@ The email navigator / viewer supports the following commands:
     c              compose
     C              compose copy of message
     l              refresh current folder
-    m              move
+    m              move with auto-selection of folder
+    M              move without auto-selection of folder
     t              toggle unread
     v              view html part in external viewer
     x              export

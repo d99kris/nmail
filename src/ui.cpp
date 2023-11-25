@@ -76,7 +76,8 @@ void Ui::Init()
     { "key_compose", "c" },
     { "key_compose_copy", "C" },
     { "key_toggle_unread", "u" },
-    { "key_move", "m" },
+    { "key_move", "M" },
+    { "key_auto_move", "m" },
     { "key_refresh", "l" },
     { "key_quit", "q" },
     { "key_toggle_text_html", "t" },
@@ -195,6 +196,7 @@ void Ui::Init()
   m_KeyComposeCopy = Util::GetKeyCode(m_Config.Get("key_compose_copy"));
   m_KeyToggleUnread = Util::GetKeyCode(m_Config.Get("key_toggle_unread"));
   m_KeyMove = Util::GetKeyCode(m_Config.Get("key_move"));
+  m_KeyAutoMove = Util::GetKeyCode(m_Config.Get("key_auto_move"));
   m_KeyRefresh = Util::GetKeyCode(m_Config.Get("key_refresh"));
   m_KeyQuit = Util::GetKeyCode(m_Config.Get("key_quit"));
   m_KeyToggleTextHtml = Util::GetKeyCode(m_Config.Get("key_toggle_text_html"));
@@ -644,7 +646,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyNextMsg), "NextMsg",
       GetKeyDisplay(m_KeyForward), "Forward",
       GetKeyDisplay(m_KeyCompose), "Compose",
-      GetKeyDisplay(m_KeyMove), "Move",
+      GetKeyDisplay(m_KeyAutoMove), "Move",
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
     {
@@ -726,7 +728,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyNextMsg), "NextMsg",
       GetKeyDisplay(m_KeyForward), "Forward",
       GetKeyDisplay(m_KeyCompose), "Compose",
-      GetKeyDisplay(m_KeyMove), "Move",
+      GetKeyDisplay(m_KeyAutoMove), "Move",
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
     {
@@ -888,14 +890,17 @@ void Ui::DrawFolderList()
 
   std::set<std::string> folders;
 
+  bool hasFolders = false;
   if (m_FolderListFilterStr.empty())
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    hasFolders = !m_Folders.empty();
     folders = m_Folders;
   }
   else
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    hasFolders = !m_Folders.empty();
     for (const auto& folder : m_Folders)
     {
       if (Util::ToLower(folder).find(Util::ToLower(Util::ToString(m_FolderListFilterStr)))
@@ -914,7 +919,7 @@ void Ui::DrawFolderList()
       for (int i = 0; i < count; ++i)
       {
         const std::string& folder = *std::next(folders.begin(), i);
-        if (folder == m_CurrentFolder)
+        if (folder == m_FolderListCurrentFolder)
         {
           m_FolderListCurrentIndex = i;
         }
@@ -949,7 +954,10 @@ void Ui::DrawFolderList()
   }
   else
   {
-    m_FolderListCurrentFolder = "";
+    if (hasFolders)
+    {
+      m_FolderListCurrentFolder = "";
+    }
   }
 
   wrefresh(m_MainWin);
@@ -2375,7 +2383,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     m_CurrentFolder = m_Inbox;
     SetState(StateViewMessageList);
   }
-  else if (p_Key == m_KeyMove)
+  else if ((p_Key == m_KeyMove) || (p_Key == m_KeyAutoMove))
   {
     if (IsConnected())
     {
@@ -2383,6 +2391,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       const int uid = m_CurrentFolderUid.second;
       if (uid != -1)
       {
+        m_IsAutoMove = (p_Key != m_KeyMove);
         SetState(StateMoveToFolder);
       }
       else
@@ -2778,11 +2787,12 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     m_CurrentFolder = m_Inbox;
     SetState(StateViewMessageList);
   }
-  else if (p_Key == m_KeyMove)
+  else if ((p_Key == m_KeyMove) || (p_Key == m_KeyAutoMove))
   {
     if (IsConnected())
     {
       ClearSelection();
+      m_IsAutoMove = (p_Key != m_KeyMove);
       SetState(StateMoveToFolder);
     }
     else
@@ -3319,12 +3329,24 @@ void Ui::SetState(Ui::State p_State)
   else if (m_State == StateMoveToFolder)
   {
     curs_set(1);
-    if (m_PersistFolderFilter)
+    if (m_IsAutoMove)
+    {
+      AutoSelectMoveFolder();
+    }
+    else if (m_PersistFolderFilter)
     {
       m_FolderListFilterPos = m_PersistedFolderListFilterPos;
       m_FolderListFilterStr = m_PersistedFolderListFilterStr;
-      m_FolderListCurrentFolder = m_PersistedFolderListCurrentFolder;
-      m_FolderListCurrentIndex = m_PersistedFolderListCurrentIndex;
+      if (!m_PersistedFolderListCurrentFolder.empty())
+      {
+        m_FolderListCurrentFolder = m_PersistedFolderListCurrentFolder;
+        m_FolderListCurrentIndex = m_PersistedFolderListCurrentIndex;
+      }
+      else
+      {
+        m_FolderListCurrentFolder = m_CurrentFolder;
+        m_FolderListCurrentIndex = INT_MAX;
+      }
     }
     else
     {
@@ -6945,4 +6967,77 @@ void Ui::OnWakeUp()
   ImapManager::Request request;
   LOG_DEBUG("async req none");
   m_ImapManager->AsyncRequest(request);
+}
+
+void Ui::AutoSelectMoveFolder()
+{
+  LOG_DEBUG_FUNC(STR());
+
+  std::string subject;
+  std::string sender;
+  std::string selfSender = m_Name;;
+  std::string foundFolder;
+  static const int maxSearchCount = 10;
+  static const int minLengthPrefix = 8;
+  auto IsFolderExcluded = [&](const std::string& p_Folder) -> bool
+  {
+    return ((p_Folder == m_SentFolder) || (p_Folder == m_CurrentFolder) || (p_Folder == m_TrashFolder));
+  };
+
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::string& folder = m_CurrentFolderUid.first;
+    const int uid = m_CurrentFolderUid.second;
+    std::map<uint32_t, Header>& headers = m_Headers[folder];
+    std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+    if (hit != headers.end())
+    {
+      subject = Util::Trim(hit->second.GetSubject());
+      sender = Util::Trim(((folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo()));
+    }
+  }
+
+  if (!subject.empty())
+  {
+    Util::NormalizeSubject(subject, true /*p_ToLower*/);
+    Util::NormalizeName(sender);
+    Util::NormalizeName(selfSender);
+    const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
+
+    std::vector<std::string> queryStrs;
+    queryStrs.push_back("subject:\"" + subject + "\""); // full subject
+    if (sender == selfSender)
+    {
+      queryStrs.push_back("subject:\"" + subjectPrefix + "*\""); // subject prefix
+      queryStrs.push_back("from:\"" + sender + "\""); // sender name
+    }
+    else
+    {
+      queryStrs.push_back("from:\"" + sender + "\""); // sender name
+      queryStrs.push_back("subject:\"" + subjectPrefix + "*\""); // subject prefix
+    }
+
+    for (const auto& queryStr : queryStrs)
+    {
+      ImapManager::SearchQuery searchQuery(queryStr, 0, maxSearchCount);
+      ImapManager::SearchResult searchResult;
+      m_ImapManager->SyncSearch(searchQuery, searchResult);
+      for (const auto& folderUid : searchResult.m_FolderUids)
+      {
+        if (!IsFolderExcluded(folderUid.first))
+        {
+          LOG_DEBUG("found %s for query %s", folderUid.first.c_str(), queryStr.c_str());
+          foundFolder = folderUid.first;
+          break;
+        }
+      }
+
+      if (!foundFolder.empty()) break;
+    }
+  }
+
+  m_FolderListFilterPos = 0;
+  m_FolderListFilterStr.clear();
+  m_FolderListCurrentFolder = !foundFolder.empty() ? foundFolder : m_CurrentFolder;
+  m_FolderListCurrentIndex = INT_MAX;
 }
