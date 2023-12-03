@@ -7,6 +7,7 @@
 
 #include "imap.h"
 
+#include "libetpan_help.h"
 #include <libetpan/imapdriver_tools.h>
 #include <libetpan/mailimap.h>
 

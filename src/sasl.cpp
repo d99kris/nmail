@@ -7,6 +7,7 @@
 
 #include "sasl.h"
 
+#include "libetpan_help.h"
 #include <libetpan/mailsmtp_types.h>
 #include <sasl/sasl.h>
 

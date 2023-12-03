@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 
+#include "libetpan_help.h"
 #include <libetpan/mailimap_types.h>
 #include <libetpan/mailsmtp_types.h>
 

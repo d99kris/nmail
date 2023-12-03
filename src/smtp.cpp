@@ -14,6 +14,7 @@
 
 #include <sys/socket.h>
 
+#include "libetpan_help.h"
 #include <libetpan/mailimf.h>
 #include <libetpan/mailmime.h>
 #include <libetpan/mailsmtp.h>

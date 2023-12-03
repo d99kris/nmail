@@ -33,6 +33,7 @@
 #include <linux/limits.h>
 #endif
 
+#include "libetpan_help.h"
 #include <libetpan/mailimap.h>
 #include <libetpan/mailmime.h>
 #include <ncurses.h>
