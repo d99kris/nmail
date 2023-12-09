@@ -120,9 +120,7 @@ Linux
 
 Required:
 
-    sudo apt install git cmake build-essential libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev libcurl4-openssl-dev libexpat-dev zlib1g-dev uuid-dev libsasl2-2 libsasl2-dev
-
-> while compiling on Ubuntu jammy 22.04: you need to install libsasl2-2 libsasl2-dev for _CYRUS_SASL_LIBRARY_
+    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev
 
 Optional (to view/compose HTML emails):
 
