@@ -120,7 +120,7 @@ Linux
 
 Required:
 
-    sudo apt install git cmake build-essential libssl-dev libncurses-dev libxapian-dev libsqlite3-dev libsasl2-modules libmagic-dev libcurl4-openssl-dev libexpat-dev zlib1g-dev uuid-dev
+    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev
 
 Optional (to view/compose HTML emails):
 
