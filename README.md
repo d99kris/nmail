@@ -106,55 +106,61 @@ Supported Platforms
 nmail is developed and tested on Linux and macOS. Current version has been
 tested on:
 
-- macOS Big Sur 11.0
-- Ubuntu 20.04 LTS
+- macOS Sonoma 14.0
+- Ubuntu 22.04 LTS
 
+Install using Package Manager
+=============================
 
-Build / Install
-===============
-
-Linux
+macOS
 -----
+**Build / Install Stable Release**
 
-**Dependencies Ubuntu**
+    brew tap d99kris/nmail
+    brew install nmail
 
-Required:
+Build from Source
+=================
+**Get Source**
+
+    git clone https://github.com/d99kris/nmail && cd nmail
+
+Using make.sh script
+--------------------
+If using macOS, Arch, Fedora, Gentoo, Raspbian or Ubuntu, one can use
+the `make.sh` script provided.
+
+**Dependencies**
+
+    ./make.sh deps
+
+**Build / Install**
+
+    ./make.sh build && ./make.sh install
+
+Manually
+--------
+**Dependencies**
+
+macOS
+
+    brew install openssl ncurses xapian sqlite libmagic ossp-uuid
+
+Arch
+
+    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file pandoc
+
+Debian-based (Ubuntu, Raspbian, etc)
 
     sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev
 
-Optional (to view/compose HTML emails):
+Fedora
 
-    sudo apt install pandoc
+    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang pandoc
 
-**Dependencies Fedora**
+Gentoo
 
-Required:
-
-    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang
-
-Optional (to view/compose HTML emails):
-
-    sudo yum -y install pandoc
-
-**Dependencies Arch Linux**
-
-Required:
-
-    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file
-
-Optional (to view/compose HTML emails):
-
-    sudo pacman -Sy pandoc
-
-**Dependencies Common Linux**
-
-Optional (for OAuth 2.0 support):
-
-    pip3 install -U requests
-
-**Source**
-
-    git clone https://github.com/d99kris/nmail && cd nmail
+    sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file
 
 **Build**
 
@@ -164,35 +170,9 @@ Optional (for OAuth 2.0 support):
 
     sudo make install
 
-macOS
------
-
-**Dependencies**
-
-Required:
-
-    brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid
-
-Optional (for OAuth 2.0 support):
+**Optional (for OAuth 2.0 support):**
 
     pip3 install -U requests
-
-Optional (to view/compose HTML emails):
-
-    brew install pandoc
-
-**Source**
-
-    git clone https://github.com/d99kris/nmail && cd nmail
-
-**Build**
-
-    mkdir -p build && cd build && cmake .. && make -s
-
-**Install**
-
-    make install
-
 
 Getting Started
 ===============
