@@ -1,6 +1,6 @@
 // main.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -166,6 +166,7 @@ int main(int argc, char* argv[])
     { "smtp_port", "587" },
     { "smtp_user", "" },
     { "save_pass", "0" },
+    { "idle_inbox", "1" },
     { "inbox", "INBOX" },
     { "trash", "" },
     { "drafts", "" },
@@ -259,6 +260,7 @@ int main(int argc, char* argv[])
   std::string drafts = mainConfig->Get("drafts");
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
+  const bool idleInbox = (mainConfig->Get("idle_inbox") == "1");
   Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
   Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
   Util::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
@@ -382,7 +384,8 @@ int main(int argc, char* argv[])
                                             std::placeholders::_2),
                                   std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1),
                                   std::bind(&Ui::SearchHandler, std::ref(ui), std::placeholders::_1,
-                                            std::placeholders::_2));
+                                            std::placeholders::_2),
+                                  idleInbox, inbox);
 
   std::shared_ptr<SmtpManager> smtpManager =
     std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
@@ -470,7 +473,7 @@ static void ShowVersion()
   std::cout <<
     Version::GetUiAppVersion() << "\n"
     "\n"
-    "Copyright (c) 2019-2023 Kristofer Berggren\n"
+    "Copyright (c) 2019-2024 Kristofer Berggren\n"
     "\n"
     "nmail is distributed under the MIT license.\n"
     "\n"

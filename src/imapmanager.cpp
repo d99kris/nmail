@@ -1,6 +1,6 @@
 // imapmanager.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -26,7 +26,9 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                                                   const ImapManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler,
                          const std::function<void(const SearchQuery&,
-                                                  const SearchResult&)>& p_SearchHandler)
+                         const SearchResult&)>& p_SearchHandler,
+                         const bool p_IdleInbox,
+                         const std::string& p_Inbox)
   : m_Imap(p_User, p_Pass, p_Host, p_Port, p_Timeout,
            p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude, p_StatusHandler)
   , m_Connect(p_Connect)
@@ -34,6 +36,8 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_SearchHandler(p_SearchHandler)
+  , m_IdleInbox(p_IdleInbox)
+  , m_Inbox(p_Inbox)
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
@@ -215,7 +219,7 @@ bool ImapManager::ProcessIdle()
 {
   LOG_TRACE_FUNC("");
   m_Mutex.lock();
-  const std::string currentFolder = m_CurrentFolder;
+  const std::string idleFolder = (m_IdleInbox && !m_Inbox.empty()) ? m_Inbox : m_CurrentFolder;
   m_Mutex.unlock();
 
   bool rv = true;
@@ -255,7 +259,7 @@ bool ImapManager::ProcessIdle()
     LOG_DEBUG("idle fetch uids");
 
     Request uidsRequest;
-    uidsRequest.m_Folder = currentFolder;
+    uidsRequest.m_Folder = idleFolder;
     uidsRequest.m_GetUids = true;
     Response uidsResponse;
     rv = PerformRequest(uidsRequest, false /* p_Cached */, false /* p_Prefetch */, uidsResponse);
@@ -272,7 +276,7 @@ bool ImapManager::ProcessIdle()
     LOG_DEBUG("idle fetch flags");
 
     Request flagsRequest;
-    flagsRequest.m_Folder = currentFolder;
+    flagsRequest.m_Folder = idleFolder;
     flagsRequest.m_GetFlags = uids;
     Response flagsResponse;
     rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);
@@ -293,7 +297,7 @@ bool ImapManager::ProcessIdle()
   SetStatus(Status::FlagIdle);
   while (m_Running)
   {
-    int idlefd = m_Imap.IdleStart(currentFolder);
+    int idlefd = m_Imap.IdleStart(idleFolder);
     if ((idlefd == -1) || !m_Running)
     {
       rv = false;
@@ -345,7 +349,7 @@ bool ImapManager::ProcessIdle()
       }
     }
 
-    const Imap::FolderInfo newFolderInfo = m_Imap.GetFolderInfo(m_CurrentFolder);
+    const Imap::FolderInfo newFolderInfo = m_Imap.GetFolderInfo(idleFolder);
     if (!newFolderInfo.IsValid())
     {
       LOG_WARNING("idle folder info failed");
@@ -366,7 +370,7 @@ bool ImapManager::ProcessIdle()
 
         // Check mail if uids don't match
         Request uidsRequest;
-        uidsRequest.m_Folder = currentFolder;
+        uidsRequest.m_Folder = idleFolder;
         uidsRequest.m_GetUids = true;
         Response uidsResponse;
         rv = PerformRequest(uidsRequest, false /* p_Cached */, false /* p_Prefetch */, uidsResponse);
@@ -383,7 +387,7 @@ bool ImapManager::ProcessIdle()
 
         // Check flags
         Request flagsRequest;
-        flagsRequest.m_Folder = currentFolder;
+        flagsRequest.m_Folder = idleFolder;
         flagsRequest.m_GetFlags = uids;
         Response flagsResponse;
         rv = PerformRequest(flagsRequest, false /* p_Cached */, false /* p_Prefetch */, flagsResponse);

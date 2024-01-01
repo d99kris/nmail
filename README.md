@@ -254,6 +254,7 @@ Full example of a config file `~/.nmail/main.conf`:
     html_preview_cmd=
     html_to_text_cmd=
     html_viewer_cmd=
+    idle_inbox=1
     idle_timeout=29
     imap_host=imap.example.com
     imap_port=993
@@ -383,6 +384,11 @@ This field allows overriding the external viewer used when viewing message
 html using `V`. The viewer may be a terminal-based program, e.g.
 `w3m -o confirm_qq=false`. By default nmail uses `open` on macOS and
 `xdg-open >/dev/null 2>&1` on Linux.
+
+### idle_inbox
+
+This parameter controls whether imap idle should watch the inbox for new
+messages (default enabled) or the currently selected imap folder.
 
 ### idle_timeout
 

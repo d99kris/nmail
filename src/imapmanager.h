@@ -1,6 +1,6 @@
 // imapmanager.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -121,7 +121,9 @@ public:
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler,
               const std::function<void(const ImapManager::SearchQuery&,
-                                       const ImapManager::SearchResult&)>& p_SearchHandler);
+              const ImapManager::SearchResult&)>& p_SearchHandler,
+              const bool p_IdleInbox,
+              const std::string& p_Inbox);
   virtual ~ImapManager();
 
   void Start();
@@ -173,6 +175,8 @@ private:
   std::function<void(const ImapManager::Action&, const ImapManager::Result&)> m_ResultHandler;
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
+  bool m_IdleInbox = true;
+  std::string m_Inbox = "";
   uint32_t m_IdleTimeout = 29;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;

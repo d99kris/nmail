@@ -1,13 +1,13 @@
 // version.cpp
 //
-// Copyright (c) 2022-2023 Kristofer Berggren
+// Copyright (c) 2022-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include "version.h"
 
-#define NMAIL_VERSION "4.35"
+#define NMAIL_VERSION "4.36"
 
 std::string Version::GetBuildOs()
 {
