@@ -1,6 +1,6 @@
 // imapindex.cpp
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -402,7 +402,7 @@ void ImapIndex::AddMessage(const std::string& p_Folder, uint32_t p_Uid)
       const std::string& to = header.GetTo() + " " + header.GetCc() + " " + header.GetBcc();
 
       LOG_DEBUG("add %s", docId.c_str());
-      m_SearchEngine->Index(docId, timeStamp, bodyText, subject, from, to);
+      m_SearchEngine->Index(docId, timeStamp, bodyText, subject, from, to, p_Folder);
       m_Dirty = true;
 
       // @todo: decouple addressbook population from cache index
@@ -460,7 +460,7 @@ std::string ImapIndex::GetCacheIndexDbTempDir()
 
 void ImapIndex::InitCacheIndexDir()
 {
-  static const int version = 7; // note: keep synchronized with AddressBook (for now)
+  static const int version = 8; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
   Util::MkDir(GetCacheIndexDbDir());

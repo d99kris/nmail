@@ -1,6 +1,6 @@
 // searchengine.cpp
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -21,7 +21,8 @@ SearchEngine::~SearchEngine()
 }
 
 void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const std::string& p_Body,
-                         const std::string& p_Subject, const std::string& p_From, const std::string& p_To)
+                         const std::string& p_Subject, const std::string& p_From, const std::string& p_To,
+                         const std::string& p_Folder)
 {
   Xapian::TermGenerator termGenerator;
   termGenerator.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
@@ -36,6 +37,8 @@ void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const
   termGenerator.index_text(p_From, 1, "F");
   termGenerator.increase_termpos();
   termGenerator.index_text(p_To, 1, "T");
+  termGenerator.increase_termpos();
+  termGenerator.index_text(p_Folder, 1, "D");
   termGenerator.increase_termpos();
 
   doc.set_data(p_DocId);
@@ -74,12 +77,14 @@ std::vector<std::string> SearchEngine::Search(const std::string& p_QueryStr, con
     queryParser.add_prefix("", "S");
     queryParser.add_prefix("", "F");
     queryParser.add_prefix("", "T");
+    queryParser.add_prefix("", "D");
 
     // supported search prefixes to specify specific fields
     queryParser.add_prefix("body", "B");
     queryParser.add_prefix("subject", "S");
     queryParser.add_prefix("from", "F");
     queryParser.add_prefix("to", "T");
+    queryParser.add_prefix("folder", "D");
 
     // flags
     unsigned flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD;

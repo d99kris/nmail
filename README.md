@@ -638,9 +638,9 @@ local cache can be fully syncronized with server by pressing `s`. The search
 engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
 `partialstring*`, `AND`, `OR`, `XOR` and `NOT`.
 
-Search terms may be prefixed by `body:`, `subject:`, `from:` or `to:` to
-search only specified fields. By default search query terms are combined
-with `AND` unless specified. Results are sorted by email timestamp.
+Search terms may be prefixed by `body:`, `subject:`, `from:`, `to:` or
+`folder:` to search only specified fields. By default search query terms are
+combined with `AND` unless specified. Results are sorted by email timestamp.
 
 Press `<` or `Left` to exit search results and go back to current folder
 message list.

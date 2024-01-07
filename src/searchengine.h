@@ -1,6 +1,6 @@
 // searchengine.h
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -21,7 +21,8 @@ public:
   virtual ~SearchEngine();
 
   void Index(const std::string& p_DocId, const int64_t p_Time, const std::string& p_Body,
-             const std::string& p_Subject, const std::string& p_From, const std::string& p_To);
+             const std::string& p_Subject, const std::string& p_From, const std::string& p_To,
+             const std::string& p_Folder);
   void Remove(const std::string& p_DocId);
   void Commit();
 
