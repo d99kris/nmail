@@ -172,9 +172,10 @@ int main(int argc, char* argv[])
     { "drafts", "" },
     { "sent", "" },
     { "addressbook_encrypt", "0" },
-    { "client_store_sent", "0" },
     { "cache_encrypt", "0" },
     { "cache_index_encrypt", "0" },
+    { "client_store_sent", "0" },
+    { "coredump_enabled", "0" },
     { "html_to_text_cmd", "" },
     { "text_to_html_cmd", "" },
     { "parts_viewer_cmd", "" },
@@ -277,6 +278,7 @@ int main(int argc, char* argv[])
   Util::SetSendIp(mainConfig->Get("send_ip") == "1");
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
+  const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -289,6 +291,16 @@ int main(int argc, char* argv[])
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
+  }
+
+  // Init core dump
+  if (isCoredumpEnabled)
+  {
+#ifndef HAS_COREDUMP
+    LOG_WARNING("core dump not supported");
+#else
+    Util::InitCoredump();
+#endif
   }
 
   // Crypto init

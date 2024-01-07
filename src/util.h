@@ -1,6 +1,6 @@
 // util.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -289,6 +289,7 @@ public:
   static void JumpToNextMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
   static void JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
   static void RemoveNonAlphaNumSpace(std::string& p_Str);
+  static void InitCoredump();
 
 private:
   static std::string m_HtmlToTextConvertCmd;

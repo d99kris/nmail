@@ -1,6 +1,6 @@
 // util.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -24,6 +24,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <wordexp.h>
+
+#include <sys/resource.h>
 
 #ifdef __APPLE__
 #include <libproc.h>
@@ -1389,7 +1391,9 @@ std::map<int, std::string> Util::GetCrashingSignals()
     { SIGSEGV, "SIGSEGV" },
     { SIGSYS, "SIGSYS" },
     { SIGTRAP, "SIGTRAP" },
+#ifdef HAS_THREADS_CRASH_STACKS
     { SIGUSR1, "SIGUSR1" },
+#endif
   };
   return crashingSignals;
 }
@@ -1488,13 +1492,13 @@ void Util::SignalCrashHandler(int p_Signal)
       std::cerr << logMsg << "\n" << callstackStr << "\n";
     }
 
+#ifdef HAS_THREADS_CRASH_STACKS
     if (Log::GetTraceEnabled())
     {
       ThreadRegister::SignalThreads(SIGUSR1);
       sleep(1);
     }
-
-    exit(1);
+#endif
   }
   else
   {
@@ -2224,4 +2228,36 @@ void Util::RemoveNonAlphaNumSpace(std::string& p_Str)
   });
 
   p_Str.erase(it, p_Str.end());
+}
+
+void Util::InitCoredump()
+{
+  struct rlimit lim;
+  int rv = 0;
+  rv = getrlimit(RLIMIT_CORE, &lim);
+  if (rv != 0)
+  {
+    LOG_WARNING("getrlimit failed %d errno %d", rv, errno);
+  }
+  else
+  {
+    lim.rlim_cur = lim.rlim_max;
+    rv = setrlimit(RLIMIT_CORE, &lim);
+    if (rv != 0)
+    {
+      LOG_WARNING("setrlimit failed %d errno %d", rv, errno);
+    }
+    else
+    {
+      LOG_DEBUG("setrlimit cur %llu max %llu", lim.rlim_cur, lim.rlim_max);
+    }
+  }
+
+#ifdef __APPLE__
+  rv = access("/cores", W_OK);
+  if (rv == -1)
+  {
+    LOG_WARNING("/cores is not writable");
+  }
+#endif
 }
