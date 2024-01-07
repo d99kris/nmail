@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -6979,10 +6979,6 @@ void Ui::AutoSelectMoveFolder()
   std::string foundFolder;
   static const int maxSearchCount = 10;
   static const int minLengthPrefix = 8;
-  auto IsFolderExcluded = [&](const std::string& p_Folder) -> bool
-  {
-    return ((p_Folder == m_SentFolder) || (p_Folder == m_CurrentFolder) || (p_Folder == m_TrashFolder));
-  };
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -7003,36 +6999,31 @@ void Ui::AutoSelectMoveFolder()
     Util::NormalizeName(sender);
     Util::NormalizeName(selfSender);
     const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
+    const std::string queryCommon =
+      " AND NOT folder:\"" + m_SentFolder + "\"" +
+      " AND NOT folder:\"" + m_CurrentFolder + "\"" +
+      " AND NOT folder:\"" + m_TrashFolder + "\"";
 
     std::vector<std::string> queryStrs;
-    queryStrs.push_back("subject:\"" + subject + "\""); // full subject
-    if (sender == selfSender)
-    {
-      queryStrs.push_back("subject:\"" + subjectPrefix + "*\""); // subject prefix
-      queryStrs.push_back("from:\"" + sender + "\""); // sender name
-    }
-    else
-    {
-      queryStrs.push_back("from:\"" + sender + "\""); // sender name
-      queryStrs.push_back("subject:\"" + subjectPrefix + "*\""); // subject prefix
-    }
+    queryStrs.push_back("subject:\"" + subject + "\"" + queryCommon); // full subject
+    queryStrs.push_back("subject:\"" + subjectPrefix + "*\"" + queryCommon); // subject prefix
+    queryStrs.push_back("from:\"" + sender + "\"" + queryCommon); // sender name
 
     for (const auto& queryStr : queryStrs)
     {
       ImapManager::SearchQuery searchQuery(queryStr, 0, maxSearchCount);
       ImapManager::SearchResult searchResult;
       m_ImapManager->SyncSearch(searchQuery, searchResult);
-      for (const auto& folderUid : searchResult.m_FolderUids)
+      if (searchResult.m_FolderUids.empty())
       {
-        if (!IsFolderExcluded(folderUid.first))
-        {
-          LOG_DEBUG("found %s for query %s", folderUid.first.c_str(), queryStr.c_str());
-          foundFolder = folderUid.first;
-          break;
-        }
+        LOG_DEBUG("no matches for query %s", queryStr.c_str());
       }
-
-      if (!foundFolder.empty()) break;
+      else
+      {
+        foundFolder = searchResult.m_FolderUids.begin()->first;
+        LOG_DEBUG("found %s for query %s", foundFolder.c_str(), queryStr.c_str());
+        break;
+      }
     }
   }
 
