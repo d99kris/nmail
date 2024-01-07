@@ -1499,6 +1499,9 @@ void Util::SignalCrashHandler(int p_Signal)
       sleep(1);
     }
 #endif
+
+    signal(p_Signal, SIG_DFL);
+    kill(getpid(), p_Signal);
   }
   else
   {
