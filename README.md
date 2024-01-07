@@ -654,11 +654,7 @@ message list.
 Troubleshooting
 ===============
 
-If any issues are observed, try running nmail with verbose logging
-
-    nmail --verbose
-
-and provide a copy of `~/.nmail/log.txt` when reporting a bug.
+Refer to [Debugging](DEBUGGING.md) for details.
 
 
 User Discussion Forums
