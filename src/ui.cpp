@@ -6982,8 +6982,20 @@ void Ui::AutoSelectMoveFolder()
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
+    std::string folder;
+    uint32_t uid = 0;
+    auto selectedUidsIt = m_SelectedUids.find(m_CurrentFolder);
+    if ((selectedUidsIt != m_SelectedUids.end()) && (!selectedUidsIt->second.empty()))
+    {
+      folder = m_CurrentFolder;
+      uid = *(selectedUidsIt->second.begin());
+    }
+    else
+    {
+      folder = m_CurrentFolderUid.first;
+      uid = m_CurrentFolderUid.second;
+    }
+
     std::map<uint32_t, Header>& headers = m_Headers[folder];
     std::map<uint32_t, Header>::iterator hit = headers.find(uid);
     if (hit != headers.end())
