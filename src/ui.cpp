@@ -2380,7 +2380,15 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_PreviousFolder = "";
     }
 
-    m_CurrentFolder = m_Inbox;
+    if (m_CurrentFolder != m_Inbox)
+    {
+      m_CurrentFolder = m_Inbox;
+    }
+    else
+    {
+      m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+    }
+
     SetState(StateViewMessageList);
   }
   else if ((p_Key == m_KeyMove) || (p_Key == m_KeyAutoMove))
