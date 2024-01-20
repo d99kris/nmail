@@ -2,7 +2,7 @@
 
 # make.sh
 #
-# Copyright (C) 2020-2023 Kristofer Berggren
+# Copyright (C) 2020-2024 Kristofer Berggren
 # All rights reserved.
 #
 # See LICENSE for redistribution information.
@@ -82,21 +82,19 @@ if [[ "${DEPS}" == "1" ]]; then
   if [ "${OS}" == "Linux" ]; then
     unset NAME
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
-    if [[ "${NAME}" == "Ubuntu" ]]; then
-      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (ubuntu), exiting."
-    elif [[ "${NAME}" == "Raspbian GNU/Linux" ]]; then
-      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (raspbian gnu/linux), exiting."
+    if [[ "${NAME}" == "Ubuntu" ]] || [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]]; then
+      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Fedora" ]] || [[ "${NAME}" == "Fedora Linux" ]]; then
-      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (fedora), exiting."
+      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Arch Linux" ]]; then
-      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file || exiterr "deps failed (arch linux), exiting."
+      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Gentoo" ]]; then
-      sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file || exiterr "deps failed (gentoo), exiting."
+      sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file || exiterr "deps failed (${NAME}), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
-    brew install openssl ncurses xapian sqlite libmagic ossp-uuid || exiterr "deps failed (mac), exiting."
+    brew install openssl ncurses xapian sqlite libmagic ossp-uuid || exiterr "deps failed (${OS}), exiting."
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
