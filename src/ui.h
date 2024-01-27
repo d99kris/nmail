@@ -1,6 +1,6 @@
 // ui.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -436,6 +436,7 @@ private:
   int m_AttrsHelpKeys = A_REVERSE;
   int m_AttrsHighlightedText = A_REVERSE;
   int m_AttrsQuotedText = A_NORMAL;
+  int m_AttrsHiddenFile = A_NORMAL;
   int m_AttrsTopBar = A_REVERSE;
   int m_AttrsSelectedItem = A_NORMAL;
   int m_AttrsSelectedHighlighted = A_NORMAL;

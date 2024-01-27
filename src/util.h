@@ -55,13 +55,13 @@ struct FileinfoCompare
 {
   bool operator()(const Fileinfo& p_Lhs, const Fileinfo& p_Rhs) const
   {
-    if (p_Lhs.IsDir() != p_Rhs.IsDir())
-    {
-      return p_Lhs.IsDir() > p_Rhs.IsDir();
-    }
-    else if (p_Lhs.IsHidden() != p_Rhs.IsHidden())
+    if (p_Lhs.IsHidden() != p_Rhs.IsHidden())
     {
       return p_Lhs.IsHidden() < p_Rhs.IsHidden();
+    }
+    else if (p_Lhs.IsDir() != p_Rhs.IsDir())
+    {
+      return p_Lhs.IsDir() > p_Rhs.IsDir();
     }
     else
     {

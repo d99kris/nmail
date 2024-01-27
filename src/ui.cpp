@@ -279,6 +279,7 @@ void Ui::Init()
     assume_default_colors(-1, -1);
 
     const std::string defaultQuotedFg = (COLORS > 8) ? "gray" : "";
+    const std::string defaultHiddenFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultSelectedFg = (COLORS > 8) ? "gray" : "";
     const std::map<std::string, std::string> defaultColorsConfig =
     {
@@ -292,6 +293,8 @@ void Ui::Init()
       { "color_highlighted_text_fg", "reverse" },
       { "color_quoted_text_bg", "" },
       { "color_quoted_text_fg", defaultQuotedFg },
+      { "color_hidden_file_bg", "" },
+      { "color_hidden_file_fg", defaultHiddenFg },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
       { "color_selected_item_bg", "" },
@@ -316,6 +319,8 @@ void Ui::Init()
       Util::GetColorAttrs(colorsConfig.Get("color_highlighted_text_fg"), colorsConfig.Get("color_highlighted_text_bg"));
     m_AttrsQuotedText =
       Util::GetColorAttrs(colorsConfig.Get("color_quoted_text_fg"), colorsConfig.Get("color_quoted_text_bg"));
+    m_AttrsHiddenFile =
+      Util::GetColorAttrs(colorsConfig.Get("color_hidden_file_fg"), colorsConfig.Get("color_hidden_file_bg"));
     m_AttrsTopBar = Util::GetColorAttrs(colorsConfig.Get("color_top_bar_fg"), colorsConfig.Get("color_top_bar_bg"));
     m_AttrsSelectedItem =
       Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_selected_item_bg"));
@@ -1077,6 +1082,12 @@ void Ui::DrawFileList()
         name += L"  " + Util::ToWString(size);
       }
 
+      const bool isHidden = fileinfo.IsHidden();
+      if (isHidden)
+      {
+        wattron(m_MainWin, m_AttrsHiddenFile);
+      }
+
       if (i == m_FileListCurrentIndex)
       {
         wattron(m_MainWin, m_AttrsHighlightedText);
@@ -1088,6 +1099,11 @@ void Ui::DrawFileList()
       if (i == m_FileListCurrentIndex)
       {
         wattroff(m_MainWin, m_AttrsHighlightedText);
+      }
+
+      if (isHidden)
+      {
+        wattroff(m_MainWin, m_AttrsHiddenFile);
       }
     }
   }
