@@ -1,6 +1,6 @@
 // smtpmanager.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,7 @@
 #include "smtpmanager.h"
 
 #include <sys/ioctl.h>
+#include <sys/select.h>
 
 #include "loghelp.h"
 #include "smtp.h"
