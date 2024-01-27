@@ -2403,6 +2403,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     else
     {
       m_MessageListCurrentIndex[m_CurrentFolder] = 0;
+      UpdateUidFromIndex(true /* p_UserTriggered */);
     }
 
     SetState(StateViewMessageList);
