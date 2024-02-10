@@ -86,7 +86,7 @@ Configuration files:
         configures custom oauth2 client id and secret
 
     ~/.nmail/main.conf
-        configures mail account and general setings
+        configures mail account and general settings
 
     ~/.nmail/ui.conf
         customizes UI settings
@@ -342,11 +342,13 @@ specified, nmail will use the editor specified by the environment variable
 ### file_picker_cmd
 
 By default when using `Ctrl-T` to select attachment files, the nmail internal
-file picker is used. By specifying this paramater an external command may be
-used instead. The command must output selected file(s) separated by linebreaks,
-on stdout. One may use `nnn` by setting the parameter like this:
+file picker is used. By specifying this parameter an external command may be
+used instead. The command must output selected file(s) separated by line breaks,
+on stdout. Examples:
 
-```file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n' | uniq; rm ${TMP})```
+nnn: `file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n' | uniq; rm ${TMP})`
+
+ranger: `file_picker_cmd=TMP=$(mktemp); 2>&1 ranger --choosefiles=${TMP}; (cat ${TMP}; rm ${TMP})`
 
 ### folders_exclude
 
@@ -449,7 +451,7 @@ folder, or only the latest based on message uid. By disabling this option there
 is no guarantee folder message lists are sorted by timestamp, as only headers
 for the last messages stored/added in the folder will be retrieved from server.
 Also note that some other nmail features may operate in degraded mode when this
-setting is disabled. The ability to disable prefetching of all headers is
+setting is disabled. The ability to disable pre-fetching of all headers is
 mainly to encompass use-cases where one wants to minimize network usage, or
 use nmail without persistant cache. Default enabled.
 
@@ -813,7 +815,7 @@ Controls whether to reply at the bottom of emails (default disabled).
 
 ### cancel_without_confirm
 
-Allow canceling email compose without confirmation prompt (default disabled).
+Allow cancelling email compose without confirmation prompt (default disabled).
 
 ### colors_enabled
 
@@ -833,7 +835,7 @@ Specify how nmail shall wrap lines in outgoing emails. Supported options:
 
     0 = none (default)
     1 = using format=flowed
-    2 = hardwrap at 72 chars width
+    2 = hard wrap at 72 chars width
 
 ### delete_without_confirm
 
