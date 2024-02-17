@@ -7030,23 +7030,42 @@ void Ui::AutoMoveSelectFolder()
     }
   }
 
+  Util::NormalizeSubject(subject, true /*p_ToLower*/);
+  Util::NormalizeName(sender);
+  Util::NormalizeName(selfSender);
+  const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
+  const std::string queryCommon =
+    " AND NOT folder:\"" + m_SentFolder + "\"" +
+    " AND NOT folder:\"" + m_CurrentFolder + "\"" +
+    " AND NOT folder:\"" + m_TrashFolder + "\"";
+
+  std::vector<std::string> queryStrs;
   if (!subject.empty())
   {
-    Util::NormalizeSubject(subject, true /*p_ToLower*/);
-    Util::NormalizeName(sender);
-    Util::NormalizeName(selfSender);
-    const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
-    const std::string queryCommon =
-      " AND NOT folder:\"" + m_SentFolder + "\"" +
-      " AND NOT folder:\"" + m_CurrentFolder + "\"" +
-      " AND NOT folder:\"" + m_TrashFolder + "\"";
+    // full subject
+    queryStrs.push_back("subject:\"" + subject + "\"" + queryCommon);
+  }
 
-    std::vector<std::string> queryStrs;
-    queryStrs.push_back("subject:\"" + subject + "\"" + queryCommon); // full subject
-    queryStrs.push_back("subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"" + queryCommon); // subject prefix and sender name
-    queryStrs.push_back("subject:\"" + subjectPrefix + "*\"" + queryCommon); // subject prefix
-    queryStrs.push_back("from:\"" + sender + "\"" + queryCommon); // sender name
+  if (!subjectPrefix.empty() && !sender.empty())
+  {
+    // subject prefix and sender name
+    queryStrs.push_back("subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"" + queryCommon);
+  }
 
+  if (!subjectPrefix.empty())
+  {
+    // subject prefix
+    queryStrs.push_back("subject:\"" + subjectPrefix + "*\"" + queryCommon);
+  }
+
+  if (!sender.empty())
+  {
+    // sender name
+    queryStrs.push_back("from:\"" + sender + "\"" + queryCommon);
+  }
+
+  if (!queryStrs.empty())
+  {
     for (const auto& queryStr : queryStrs)
     {
       ImapManager::SearchQuery searchQuery(queryStr, 0, maxSearchCount);
@@ -7063,6 +7082,10 @@ void Ui::AutoMoveSelectFolder()
         break;
       }
     }
+  }
+  else
+  {
+    LOG_DEBUG("skip search subject \"%s\" sender \"%s\"", subject.c_str(), sender.c_str());
   }
 
   m_FolderListFilterPos = 0;
