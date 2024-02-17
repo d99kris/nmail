@@ -3356,7 +3356,7 @@ void Ui::SetState(Ui::State p_State)
     curs_set(1);
     if (m_IsAutoMove)
     {
-      AutoSelectMoveFolder();
+      AutoMoveSelectFolder();
     }
     else if (m_PersistFolderFilter)
     {
@@ -6994,7 +6994,7 @@ void Ui::OnWakeUp()
   m_ImapManager->AsyncRequest(request);
 }
 
-void Ui::AutoSelectMoveFolder()
+void Ui::AutoMoveSelectFolder()
 {
   LOG_DEBUG_FUNC(STR());
 
@@ -7043,6 +7043,7 @@ void Ui::AutoSelectMoveFolder()
 
     std::vector<std::string> queryStrs;
     queryStrs.push_back("subject:\"" + subject + "\"" + queryCommon); // full subject
+    queryStrs.push_back("subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"" + queryCommon); // subject prefix and sender name
     queryStrs.push_back("subject:\"" + subjectPrefix + "*\"" + queryCommon); // subject prefix
     queryStrs.push_back("from:\"" + sender + "\"" + queryCommon); // sender name
 

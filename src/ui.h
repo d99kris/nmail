@@ -249,7 +249,7 @@ private:
   inline bool HandleComposeKey(int p_Key);
 
   void OnWakeUp();
-  void AutoSelectMoveFolder();
+  void AutoMoveSelectFolder();
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;
