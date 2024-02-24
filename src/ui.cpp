@@ -7000,14 +7000,14 @@ void Ui::AutoMoveSelectFolder()
 
   std::string subject;
   std::string sender;
-  std::string selfSender = m_Name;;
+  std::string folder;
+  std::string selfSender = m_Name;
   std::string foundFolder;
   static const int maxSearchCount = 10;
   static const int minLengthPrefix = 8;
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    std::string folder;
     uint32_t uid = 0;
     auto selectedUidsIt = m_SelectedUids.find(m_CurrentFolder);
     if ((selectedUidsIt != m_SelectedUids.end()) && (!selectedUidsIt->second.empty()))
@@ -7034,10 +7034,24 @@ void Ui::AutoMoveSelectFolder()
   Util::NormalizeName(sender);
   Util::NormalizeName(selfSender);
   const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
-  const std::string queryCommon =
-    " AND NOT folder:\"" + m_SentFolder + "\"" +
-    " AND NOT folder:\"" + m_CurrentFolder + "\"" +
-    " AND NOT folder:\"" + m_TrashFolder + "\"";
+
+  static const std::string s_QueryCommonBase = [&]()
+  {
+    std::string queryCommonBase;
+    if (!m_SentFolder.empty())
+    {
+      queryCommonBase += " AND NOT folder:\"" + m_SentFolder + "\"";
+    }
+
+    if (!m_TrashFolder.empty())
+    {
+      queryCommonBase += " AND NOT folder:\"" + m_TrashFolder + "\"";
+    }
+
+    return queryCommonBase;
+  }();
+
+  const std::string queryCommon = s_QueryCommonBase + (!folder.empty() ? " AND NOT folder:\"" + folder + "\"" : "");
 
   std::vector<std::string> queryStrs;
   if (!subject.empty())
@@ -7090,6 +7104,6 @@ void Ui::AutoMoveSelectFolder()
 
   m_FolderListFilterPos = 0;
   m_FolderListFilterStr.clear();
-  m_FolderListCurrentFolder = !foundFolder.empty() ? foundFolder : m_CurrentFolder;
+  m_FolderListCurrentFolder = !foundFolder.empty() ? foundFolder : folder;
   m_FolderListCurrentIndex = INT_MAX;
 }
