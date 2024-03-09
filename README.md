@@ -114,10 +114,20 @@ Install using Package Manager
 
 macOS
 -----
-**Build / Install Stable Release**
+**Build / Install Stable Release using Brew**
 
     brew tap d99kris/nmail
     brew install nmail
+
+**Install Stable Release using MacPorts**
+
+    sudo port install nmail
+
+Arch Linux
+----------
+**Build / Install Stable Release**
+
+    yay -S nmail
 
 Build from Source
 =================
