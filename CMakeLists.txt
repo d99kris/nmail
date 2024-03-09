@@ -101,10 +101,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/opt/ncurses)
   list(APPEND OPENSSL_ROOT_DIR /usr/local/opt/openssl)
   list(APPEND OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl)
-  FIND_LIBRARY(CARBON_LIBRARY CoreFoundation)
-  FIND_LIBRARY(CARBON_LIBRARY CFNetwork)
-  FIND_LIBRARY(CARBON_LIBRARY Security)
-  target_link_libraries(nmail PUBLIC z iconv "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
 endif()
 
 # Headers
@@ -203,6 +199,16 @@ if(NOT LIBUUID_LIBRARIES OR NOT LIBUUID_HEADERS)
   message(FATAL_ERROR "ERROR: Could not find libuuid")
 else()
   message(STATUS "Found libuuid: ${LIBUUID_LIBRARIES} and ${LIBUUID_HEADERS}")
+endif()
+
+# Dependency platform specifics
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if (NOT HAS_CUSTOM_LIBETPAN)
+    FIND_LIBRARY(CARBON_LIBRARY CoreFoundation)
+    FIND_LIBRARY(CARBON_LIBRARY Security)
+    FIND_LIBRARY(CARBON_LIBRARY CFNetwork)
+    target_link_libraries(nmail PUBLIC z iconv "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+  endif()
 endif()
 
 # Includes

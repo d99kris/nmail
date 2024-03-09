@@ -298,6 +298,7 @@ check_include_add_define("unistd.h" HAVE_UNISTD_H WARNING)
 
 # Headers - Others (Disabled)
 #check_include_add_define("lmdb.h" HAVE_LMDB_H NOTICE)
+#check_include_add_define("CFNetwork/CFNetwork.h" HAVE_CFNETWORK NOTICE)
 
 # Capabilities - Required
 target_compile_definitions(${LIBNAME} PRIVATE HAVE___ATTRIBUTE__=1)
@@ -359,7 +360,9 @@ target_include_directories(${LIBNAME} PRIVATE ${CYRUS_SASL_INCLUDE_DIR})
 # Find Dependencies - System Libs
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   find_library(CARBON_LIBRARY CoreFoundation REQUIRED)
-  find_library(CARBON_LIBRARY CFNetwork REQUIRED)
+  if(${HAVE_CFNETWORK})
+    find_library(CARBON_LIBRARY CFNetwork REQUIRED)
+  endif()
   find_library(CARBON_LIBRARY Security REQUIRED)
 endif()
 
@@ -375,7 +378,10 @@ target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${Z
 
 # Linking (macOS)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(${LIBNAME} PUBLIC "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+  target_link_libraries(${LIBNAME} PUBLIC iconv "-framework CoreFoundation" "-framework Security")
+  if(${HAVE_CFNETWORK})
+    target_link_libraries(${LIBNAME} PUBLIC "-framework CFNetwork")
+  endif()
 endif()
 
 # Install
