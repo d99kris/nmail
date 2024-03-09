@@ -247,23 +247,23 @@ endif()
 add_custom_target(libetpan_headers
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND mkdir -p                                ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan
-    COMMAND cp -a src/low-level/imap/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/mh/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/mbox/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/imf/*.h             ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/feed/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/smtp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/pop3/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/mime/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/maildir/*.h         ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/low-level/nntp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/data-types/*.h                ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/driver/interface/*.h          ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/driver/tools/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/main/*.h                      ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/engine/*.h                    ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a src/driver/implementation/*/*.h   ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -a build-cmake/*.h                   ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/imap/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/mh/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/mbox/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/imf/*.h             ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/feed/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/smtp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/pop3/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/mime/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/maildir/*.h         ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/nntp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/data-types/*.h                ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/driver/interface/*.h          ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/driver/tools/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/main/*.h                      ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/engine/*.h                    ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/driver/implementation/*/*.h   ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR build-cmake/*.h                   ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
     COMMENT "Copy headers"
 )
 add_dependencies(${LIBNAME} libetpan_headers)
