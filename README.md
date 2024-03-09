@@ -127,7 +127,7 @@ Build from Source
 
 Using make.sh script
 --------------------
-If using macOS, Arch, Fedora, Gentoo, Raspbian or Ubuntu, one can use
+If using macOS, Alpine, Arch, Fedora, Gentoo, Raspbian or Ubuntu, one can use
 the `make.sh` script provided.
 
 **Dependencies**
