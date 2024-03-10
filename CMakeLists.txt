@@ -5,6 +5,9 @@ include(CheckIncludeFile)
 set(CMAKE_CXX_STANDARD 14)
 message(STATUS "Using cmake ${CMAKE_VERSION}")
 
+# Modules
+include(CheckIncludeFiles)
+
 # Ccache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -204,10 +207,18 @@ endif()
 # Dependency platform specifics
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   if (NOT HAS_CUSTOM_LIBETPAN)
-    FIND_LIBRARY(CARBON_LIBRARY CoreFoundation)
-    FIND_LIBRARY(CARBON_LIBRARY Security)
-    FIND_LIBRARY(CARBON_LIBRARY CFNetwork)
-    target_link_libraries(nmail PUBLIC z iconv "-framework CoreFoundation" "-framework Security" "-framework CFNetwork")
+    find_package(ZLIB REQUIRED)
+    find_library(ICONV_LIBRARY iconv REQUIRED)
+    find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+    find_library(SECURITY_LIBRARY Security REQUIRED)
+    target_link_libraries(nmail PUBLIC ${ZLIB_LIBRARIES} "${ICONV_LIBRARY}" "${COREFOUNDATION_LIBRARY}" "${SECURITY_LIBRARY}")
+
+    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})
+    check_include_files("CFNetwork/CFNetwork.h" HAVE_CFNETWORK LANGUAGE C)
+    if (HAVE_CFNETWORK)
+      find_library(CFNETWORK_LIBRARY CFNetwork REQUIRED)
+      target_link_libraries(nmail PUBLIC "${CFNETWORK_LIBRARY}")
+    endif()
   endif()
 endif()
 

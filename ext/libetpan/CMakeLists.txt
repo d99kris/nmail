@@ -357,15 +357,6 @@ find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 target_include_directories(${LIBNAME} PRIVATE ${CYRUS_SASL_INCLUDE_DIR})
 
-# Find Dependencies - System Libs
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  find_library(CARBON_LIBRARY CoreFoundation REQUIRED)
-  if(${HAVE_CFNETWORK})
-    find_library(CARBON_LIBRARY CFNetwork REQUIRED)
-  endif()
-  find_library(CARBON_LIBRARY Security REQUIRED)
-endif()
-
 # Find Dependencies - zlib
 find_package(ZLIB REQUIRED)
 target_include_directories(${LIBNAME} PRIVATE ${ZLIB_INCLUDE_DIRS})
@@ -378,9 +369,14 @@ target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${Z
 
 # Linking (macOS)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(${LIBNAME} PUBLIC iconv "-framework CoreFoundation" "-framework Security")
+  find_library(ICONV_LIBRARY iconv REQUIRED)
+  find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+  find_library(SECURITY_LIBRARY Security REQUIRED)
+
+  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}" "${COREFOUNDATION_LIBRARY}" "${SECURITY_LIBRARY}")
   if(${HAVE_CFNETWORK})
-    target_link_libraries(${LIBNAME} PUBLIC "-framework CFNetwork")
+    find_library(CFNETWORK_LIBRARY CFNetwork REQUIRED)
+    target_link_libraries(${LIBNAME} PUBLIC "${CFNETWORK_LIBRARY}")
   endif()
 endif()
 
