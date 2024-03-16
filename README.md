@@ -116,7 +116,6 @@ macOS
 -----
 **Build / Install Stable Release using Brew**
 
-    brew tap d99kris/nmail
     brew install nmail
 
 **Install Stable Release using MacPorts**
