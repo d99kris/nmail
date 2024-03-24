@@ -96,7 +96,13 @@ if [[ "${DEPS}" == "1" ]]; then
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
-    brew install openssl ncurses xapian sqlite libmagic ossp-uuid || exiterr "deps failed (${OS}), exiting."
+    if command -v brew &> /dev/null; then
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install openssl ncurses xapian sqlite libmagic ossp-uuid || exiterr "deps failed (${OS} brew), exiting."
+    elif command -v port &> /dev/null; then
+      sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid || exiterr "deps failed (${OS} port), exiting."
+    else
+      exiterr "deps failed (${OS} missing brew and port), exiting."
+    fi
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
