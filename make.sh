@@ -92,6 +92,8 @@ if [[ "${DEPS}" == "1" ]]; then
       sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Alpine Linux" ]]; then
       sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers || exiterr "deps failed (${NAME}), exiting."
+    elif [[ "${NAME}" == "openSUSE Tumbleweed" ]]; then
+      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel || exiterr "deps failed (${NAME}), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
