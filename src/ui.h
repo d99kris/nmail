@@ -195,7 +195,7 @@ private:
   int ExtHtmlViewer(const std::string& p_Path);
   int ExtHtmlPreview(const std::string& p_Path);
   void ExtMsgViewer();
-  void ExtMsgViewer(const std::string& p_Path);
+  int ExtMsgViewer(const std::string& p_Path);
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();

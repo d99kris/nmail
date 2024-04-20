@@ -5386,7 +5386,11 @@ void Ui::ExtHtmlViewer()
 
   if (Util::Exists(tempPath))
   {
-    ExtHtmlViewer(tempPath);
+    int rv = ExtHtmlViewer(tempPath);
+    if (rv == 0)
+    {
+      MarkSeen();
+    }
   }
   else
   {
@@ -5487,7 +5491,11 @@ void Ui::ExtMsgViewer()
 
   if (Util::Exists(tempPath))
   {
-    ExtMsgViewer(tempPath);
+    int rv = ExtMsgViewer(tempPath);
+    if (rv == 0)
+    {
+      MarkSeen();
+    }
   }
   else
   {
@@ -5495,7 +5503,7 @@ void Ui::ExtMsgViewer()
   }
 }
 
-void Ui::ExtMsgViewer(const std::string& p_Path)
+int Ui::ExtMsgViewer(const std::string& p_Path)
 {
   const bool isDefaultMsgViewerCmd = Util::IsDefaultMsgViewerCmd();
   if (!isDefaultMsgViewerCmd)
@@ -5527,6 +5535,8 @@ void Ui::ExtMsgViewer(const std::string& p_Path)
       // Discard any remaining input
     }
   }
+
+  return rv;
 }
 
 void Ui::SetLastStateOrMessageList()
