@@ -114,19 +114,23 @@ Install using Package Manager
 
 macOS
 -----
-**Build / Install Stable Release using Brew**
+**Brew**
 
     brew install nmail
 
-**Install Stable Release using MacPorts**
+**MacPorts**
 
     sudo port install nmail
 
-Arch Linux
-----------
-**Build / Install Stable Release**
+Linux
+-----
+**Arch**
 
     yay -S nmail
+
+**Guix**
+
+    guix install nmail
 
 Build from Source
 =================
@@ -170,10 +174,6 @@ Fedora
 Gentoo
 
     sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file
-
-Guix
-
-    guix install nmail
 
 **Build**
 
