@@ -20,6 +20,7 @@
 #define KEY_DELETE 127
 
 #define THREAD_REGISTER() ThreadRegister threadRegister(__PRETTY_FUNCTION__)
+#define UNUSED(x) Util::Unused(x)
 
 struct mailimap_date_time;
 
@@ -225,7 +226,6 @@ public:
   static void RestoreIgnoredSignalHandlers();
   static void SignalCrashHandler(int p_Signal);
   static void SignalTerminateHandler(int p_Signal);
-  static std::string BacktraceSymbolsStr(void* p_Callstack[], int p_Size);
 
   static bool IsInteger(const std::string& p_Str);
   static long ToInteger(const std::string& p_Str);
@@ -289,6 +289,12 @@ public:
   static void JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wstring p_Chars);
   static void RemoveNonAlphaNumSpace(std::string& p_Str);
   static void InitCoredump();
+
+  template<typename T>
+  static inline void Unused(const T& p_Arg)
+  {
+    (void)p_Arg;
+  }
 
 private:
   static std::string m_HtmlToTextConvertCmd;

@@ -441,6 +441,8 @@ int main(int argc, char* argv[])
 
   LOG_INFO("exiting nmail");
 
+  Log::Cleanup();
+
   return 0;
 }
 

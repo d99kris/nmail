@@ -1,23 +1,46 @@
 // log.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include "log.h"
 
+#include <cstring>
+
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+#include <fcntl.h>
 #include <stdarg.h>
+#include <unistd.h>
+
 #include <sys/time.h>
+
+#include "util.h"
 
 std::string Log::m_Path;
 int Log::m_VerboseLevel = 0;
 std::mutex Log::m_Mutex;
+int Log::m_LogFd = -1;
 
 void Log::SetPath(const std::string& p_Path)
 {
   m_Path = p_Path;
-  remove(m_Path.c_str());
+  const std::string archivePath = m_Path + ".1";
+  remove(archivePath.c_str());
+  rename(m_Path.c_str(), archivePath.c_str());
+  Dump("");
+  m_LogFd = open(m_Path.c_str(), O_WRONLY | O_APPEND);
+}
+
+void Log::Cleanup()
+{
+  if (m_LogFd != -1)
+  {
+    close(m_LogFd);
+  }
 }
 
 void Log::SetVerboseLevel(int p_Level)
@@ -84,6 +107,20 @@ void Log::Dump(const char* p_Str)
   {
     fprintf(file, "%s", p_Str);
     fclose(file);
+  }
+}
+
+void Log::Callstack(void* const* p_Callstack, int p_Size, const char* p_LogMsg)
+{
+  if (m_LogFd != -1)
+  {
+    UNUSED(write(m_LogFd, p_LogMsg, strlen(p_LogMsg)));
+#ifdef HAVE_EXECINFO_H
+    backtrace_symbols_fd(p_Callstack, p_Size, m_LogFd);
+#else
+    (void)p_Callstack;
+    (void)p_Size;
+#endif
   }
 }
 

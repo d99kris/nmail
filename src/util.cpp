@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <csignal>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -1386,9 +1387,6 @@ std::map<int, std::string> Util::GetCrashingSignals()
     { SIGSEGV, "SIGSEGV" },
     { SIGSYS, "SIGSYS" },
     { SIGTRAP, "SIGTRAP" },
-#ifdef HAS_THREADS_CRASH_STACKS
-    { SIGUSR1, "SIGUSR1" },
-#endif
   };
   return crashingSignals;
 }
@@ -1459,51 +1457,29 @@ void Util::RestoreIgnoredSignalHandlers()
   }
 }
 
-static std::mutex s_SignalMutex;
-
 void Util::SignalCrashHandler(int p_Signal)
 {
-  const std::string& threadLabel = "\nthread " + ThreadRegister::GetName() + "\n";
-  void* callstack[64];
+  char logMsg[64];
+  snprintf(logMsg, sizeof(logMsg), "unexpected termination %d\ncallstack:\n", p_Signal);
+  void* callstack[64] = { 0 };
 #ifdef HAVE_EXECINFO_H
   int size = backtrace(callstack, sizeof(callstack));
 #else
   int size = 0;
 #endif
-  const std::string& callstackStr = BacktraceSymbolsStr(callstack, size);
+  Log::Callstack(callstack, size, logMsg);
 
-  if (p_Signal != SIGUSR1)
-  {
-    {
-      std::lock_guard<std::mutex> lock(s_SignalMutex);
+  // non-signal safe code section
+  CleanupStdErrRedirect();
+  UNUSED(system("reset"));
+  UNUSED(write(STDERR_FILENO, logMsg, strlen(logMsg)));
 
-      const std::string& logMsg = "unexpected termination: " + GetSigName(p_Signal);
-      LOG_ERROR("%s", logMsg.c_str());
-      LOG_DUMP(threadLabel.c_str());
-      LOG_DUMP(callstackStr.c_str());
-
-      CleanupStdErrRedirect();
-      LOG_IF_NONZERO(system("reset"));
-      std::cerr << logMsg << "\n" << callstackStr << "\n";
-    }
-
-#ifdef HAS_THREADS_CRASH_STACKS
-    if (Log::GetTraceEnabled())
-    {
-      ThreadRegister::SignalThreads(SIGUSR1);
-      sleep(1);
-    }
+#ifdef HAVE_EXECINFO_H
+  backtrace_symbols_fd(callstack, size, STDERR_FILENO);
 #endif
 
-    signal(p_Signal, SIG_DFL);
-    kill(getpid(), p_Signal);
-  }
-  else
-  {
-    std::lock_guard<std::mutex> lock(s_SignalMutex);
-    LOG_DUMP(threadLabel.c_str());
-    LOG_DUMP(callstackStr.c_str());
-  }
+  signal(p_Signal, SIG_DFL);
+  kill(getpid(), p_Signal);
 }
 
 void Util::SignalTerminateHandler(int p_Signal)
@@ -1511,44 +1487,6 @@ void Util::SignalTerminateHandler(int p_Signal)
   const std::string& logMsg = "termination requested: " + GetSigName(p_Signal);
   LOG_WARNING("%s", logMsg.c_str());
   Ui::SetRunning(false);
-}
-
-std::string Util::BacktraceSymbolsStr(void* p_Callstack[], int p_Size)
-{
-  std::stringstream ss;
-  for (int i = 0; i < p_Size; ++i)
-  {
-    ss << std::left << std::setw(2) << std::setfill(' ') << i << "  ";
-    ss << "0x" << std::hex << std::setw(16) << std::setfill('0') << std::right
-       << (unsigned long long)p_Callstack[i] << "  ";
-
-    Dl_info dlinfo;
-    if (dladdr(p_Callstack[i], &dlinfo) && dlinfo.dli_sname)
-    {
-      if (dlinfo.dli_sname[0] == '_')
-      {
-        int status = -1;
-        char* demangled = NULL;
-        demangled = abi::__cxa_demangle(dlinfo.dli_sname, NULL, 0, &status);
-        if (demangled && (status == 0))
-        {
-          ss << demangled;
-          free(demangled);
-        }
-        else
-        {
-          ss << dlinfo.dli_sname;
-        }
-      }
-      else
-      {
-        ss << dlinfo.dli_sname;
-      }
-    }
-    ss << "\n";
-  }
-
-  return ss.str();
 }
 
 bool Util::IsInteger(const std::string& p_Str)
