@@ -150,7 +150,11 @@ int main(int argc, char* argv[])
   Util::RegisterSignalHandlers();
 
   const std::string appVersion = Version::GetUiAppVersion();
-  LOG_INFO("starting %s", appVersion.c_str());
+  LOG_INFO("%s", appVersion.c_str());
+  std::string osArch = Util::GetOsArch();
+  LOG_INFO("%s", osArch.c_str());
+  std::string compiler = Util::GetCompiler();
+  LOG_INFO("%s", compiler.c_str());
 
   Util::InitTempDir();
   CacheUtil::InitCacheDir();
@@ -439,7 +443,7 @@ int main(int argc, char* argv[])
 
   Util::CleanupStdErrRedirect();
 
-  LOG_INFO("exiting nmail");
+  LOG_INFO("exit");
 
   Log::Cleanup();
 
