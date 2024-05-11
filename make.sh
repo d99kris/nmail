@@ -82,7 +82,7 @@ if [[ "${DEPS}" == "1" ]]; then
   if [ "${OS}" == "Linux" ]; then
     unset NAME
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
-    if [[ "${NAME}" == "Ubuntu" ]] || [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]]; then
+    if [[ "${NAME}" == "Ubuntu" ]] || [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]] || [[ "${NAME}" == "Pop!_OS" ]]; then
       sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Fedora" ]] || [[ "${NAME}" == "Fedora Linux" ]] || [[ "${NAME}" == "Rocky Linux" ]]; then
       sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (${NAME}), exiting."
