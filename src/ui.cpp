@@ -3557,12 +3557,6 @@ void Ui::SetState(Ui::State p_State)
         m_ComposeMessageStr += GetSignatureStr();
       }
 
-      if (!header.GetReplyTo().empty())
-      {
-        SetComposeStr(HeaderTo, Util::ToWString(header.GetReplyTo()));
-        SetComposeStr(HeaderCc, L"");
-      }
-      else
       {
         if (folder == m_SentFolder)
         {
@@ -3570,7 +3564,14 @@ void Ui::SetState(Ui::State p_State)
         }
         else
         {
-          SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+          if (!header.GetReplyTo().empty())
+          {
+            SetComposeStr(HeaderTo, Util::ToWString(header.GetReplyTo()));
+          }
+          else
+          {
+            SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+          }
         }
 
         if (m_State == StateReplyAllMessage)
