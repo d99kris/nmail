@@ -243,8 +243,9 @@ and fill out the required fields:
     drafts=Drafts
     imap_host=imap.example.com
     imap_port=993
-    inbox=INBOX
+    inbox=Inbox
     name=Firstname Lastname
+    sent=Sent
     smtp_host=smtp.example.com
     smtp_port=587
     trash=Trash
@@ -272,7 +273,7 @@ Full example of a config file `~/.nmail/main.conf`:
     idle_timeout=29
     imap_host=imap.example.com
     imap_port=993
-    inbox=INBOX
+    inbox=Inbox
     msg_viewer_cmd=
     name=Firstname Lastname
     network_timeout=30
