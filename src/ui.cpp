@@ -785,6 +785,7 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyBack), "ViewMsg",
       GetKeyDisplay(m_KeyPrevMsg), "PrevPart",
       GetKeyDisplay(m_KeySaveFile), "Save",
+      GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
     },
     {
       GetKeyDisplay(m_KeyOpen), "ViewPart",
@@ -3309,6 +3310,17 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     {
       SetDialogMessage("Save cancelled");
     }
+  }
+  else if (p_Key == m_KeyGotoInbox)
+  {
+    if (m_MessageListSearch)
+    {
+      m_MessageListSearch = false;
+      m_PreviousFolder = "";
+    }
+
+    m_CurrentFolder = m_Inbox;
+    SetState(StateViewMessageList);
   }
   else if (HandleListKey(p_Key, m_PartListCurrentIndex))
   {
