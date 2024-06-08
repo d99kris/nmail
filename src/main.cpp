@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
   Log::SetPath(logPath);
 
   THREAD_REGISTER();
-  Util::RegisterSignalHandlers();
+  Util::InitAppSignalHandlers();
 
   const std::string appVersion = Version::GetUiAppVersion();
   LOG_INFO("%s", appVersion.c_str());

@@ -2021,7 +2021,7 @@ void Ui::Run()
   DrawAll();
   int64_t uiIdleTime = 0;
   LOG_INFO("entering ui loop");
-  Util::RegisterIgnoredSignalHandlers(); // ignore ctrl-c while ui is running
+  Util::InitUiSignalHandlers();
   raw();
 
   while (s_Running)
@@ -2126,7 +2126,7 @@ void Ui::Run()
   }
 
   noraw();
-  Util::RestoreIgnoredSignalHandlers();
+  Util::CleanupUiSignalHandlers();
   LOG_INFO("exiting ui loop");
 
   return;

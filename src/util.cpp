@@ -1411,7 +1411,6 @@ std::map<int, std::string> Util::GetIgnoredSignals()
 {
   static const std::map<int, std::string> ignoredSignals =
   {
-    { SIGINT, "SIGINT" },
     { SIGPIPE, "SIGPIPE" },
   };
   return ignoredSignals;
@@ -1424,7 +1423,7 @@ std::string Util::GetSigName(int p_Signal)
   return (it != signames.end()) ? it->second : std::to_string(p_Signal);
 }
 
-void Util::RegisterSignalHandlers()
+void Util::InitAppSignalHandlers()
 {
   const std::map<int, std::string>& crashingSignals = GetCrashingSignals();
   for (const auto& crashingSignal : crashingSignals)
@@ -1437,10 +1436,7 @@ void Util::RegisterSignalHandlers()
   {
     signal(terminatingSignal.first, SignalTerminateHandler);
   }
-}
 
-void Util::RegisterIgnoredSignalHandlers()
-{
   const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
   for (const auto& ignoredSignal : ignoredSignals)
   {
@@ -1448,13 +1444,14 @@ void Util::RegisterIgnoredSignalHandlers()
   }
 }
 
-void Util::RestoreIgnoredSignalHandlers()
+void Util::InitUiSignalHandlers()
 {
-  const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
-  for (const auto& ignoredSignal : ignoredSignals)
-  {
-    signal(ignoredSignal.first, SIG_DFL);
-  }
+  signal(SIGINT, SIG_IGN);
+}
+
+void Util::CleanupUiSignalHandlers()
+{
+  signal(SIGINT, SIG_DFL);
 }
 
 void Util::SignalCrashHandler(int p_Signal)

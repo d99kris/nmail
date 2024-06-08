@@ -221,9 +221,9 @@ public:
   static std::string FromOctString(const std::string& p_Str);
   static void HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint32_t& p_B);
 
-  static void RegisterSignalHandlers();
-  static void RegisterIgnoredSignalHandlers();
-  static void RestoreIgnoredSignalHandlers();
+  static void InitAppSignalHandlers();
+  static void InitUiSignalHandlers();
+  static void CleanupUiSignalHandlers();
   static void SignalCrashHandler(int p_Signal);
   static void SignalTerminateHandler(int p_Signal);
 
