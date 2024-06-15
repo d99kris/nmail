@@ -7,7 +7,7 @@
 
 #include "version.h"
 
-#define NMAIL_VERSION "4.66"
+#define NMAIL_VERSION "4.67"
 
 std::string Version::GetBuildOs()
 {

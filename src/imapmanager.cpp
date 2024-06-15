@@ -20,6 +20,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_CacheIndexEncrypt,
                          const uint32_t p_IdleTimeout,
                          const std::set<std::string>& p_FoldersExclude,
+                         const bool p_SniEnabled,
                          const std::function<void(const ImapManager::Request&,
                                                   const ImapManager::Response&)>& p_ResponseHandler,
                          const std::function<void(const ImapManager::Action&,
@@ -30,7 +31,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_IdleInbox,
                          const std::string& p_Inbox)
   : m_Imap(p_User, p_Pass, p_Host, p_Port, p_Timeout,
-           p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude, p_StatusHandler)
+           p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude, p_SniEnabled, p_StatusHandler)
   , m_Connect(p_Connect)
   , m_ResponseHandler(p_ResponseHandler)
   , m_ResultHandler(p_ResultHandler)

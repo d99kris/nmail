@@ -1,6 +1,6 @@
 // imap.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -48,6 +48,7 @@ public:
        const uint16_t p_Port, const int64_t p_Timeout,
        const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
        const std::set<std::string>& p_FoldersExclude,
+       const bool p_SniEnabled,
        const std::function<void(const StatusUpdate&)>& p_StatusHandler);
   virtual ~Imap();
 
@@ -109,6 +110,7 @@ private:
   bool m_CacheEncrypt = false;
   bool m_CacheIndexEncrypt = false;
   std::set<std::string> m_FoldersExclude;
+  bool m_SniEnabled = false;
 
   std::mutex m_ImapMutex;
   struct mailimap* m_Imap = NULL;

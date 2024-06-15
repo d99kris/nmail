@@ -1,6 +1,6 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -27,6 +27,7 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
            const uint16_t p_Port, const int64_t p_Timeout,
            const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
            const std::set<std::string>& p_FoldersExclude,
+           const bool p_SniEnabled,
            const std::function<void(const StatusUpdate&)>& p_StatusHandler)
   : m_User(p_User)
   , m_Pass(p_Pass)
@@ -36,6 +37,7 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
   , m_CacheEncrypt(p_CacheEncrypt)
   , m_CacheIndexEncrypt(p_CacheIndexEncrypt)
   , m_FoldersExclude(p_FoldersExclude)
+  , m_SniEnabled(p_SniEnabled)
 {
   if (Log::GetTraceEnabled())
   {
@@ -90,6 +92,15 @@ void Imap::CleanupImap()
   }
 }
 
+static void SslContextCallback(struct mailstream_ssl_context* p_SslContext, void* p_Data)
+{
+  if (p_Data != nullptr)
+  {
+    char* host = (char*)p_Data;
+    LOG_IF_IMAP_ERR(mailstream_ssl_set_server_name(p_SslContext, host));
+  }
+}
+
 bool Imap::Login()
 {
   LOG_DEBUG_FUNC(STR());
@@ -105,7 +116,14 @@ bool Imap::Login()
     int rv = 0;
     if (isSSL)
     {
-      rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect(m_Imap, m_Host.c_str(), m_Port));
+      char* sni = (m_SniEnabled && !Util::IsIpAddress(m_Host))
+        ? strdup(m_Host.c_str())
+        : nullptr;
+      rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect_with_callback(m_Imap, m_Host.c_str(), m_Port, SslContextCallback, sni));
+      if (sni != nullptr)
+      {
+        free(sni);
+      }
     }
     else if (isStartTLS)
     {

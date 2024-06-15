@@ -202,6 +202,7 @@ int main(int argc, char* argv[])
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
     { "idle_timeout", "29" },
+    { "sni_enabled", "1" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -283,6 +284,7 @@ int main(int argc, char* argv[])
   Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
   const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
+  const bool sniEnabled = (mainConfig->Get("sni_enabled") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -394,6 +396,7 @@ int main(int argc, char* argv[])
                                   cacheEncrypt, cacheIndexEncrypt,
                                   idleTimeout,
                                   foldersExclude,
+                                  sniEnabled,
                                   std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1,
                                             std::placeholders::_2),
                                   std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1,

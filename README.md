@@ -289,6 +289,7 @@ Full example of a config file `~/.nmail/main.conf`:
     smtp_host=smtp.example.com
     smtp_port=587
     smtp_user=
+    sni_enabled=1
     text_to_html_cmd=
     trash=Trash
     user=example@example.com
@@ -521,6 +522,10 @@ case the email account has different username and password for sending emails
 (or if one wants to use one email service provider for receiving and another
 for sending emails). If not specified, the configured `user` field will be
 used.
+
+### sni_enabled
+
+Controls whether to enable Server Name Indication (SNI) during TLS handshaking.
 
 ### spell_cmd
 

@@ -22,11 +22,14 @@
 #include <execinfo.h>
 #endif
 #include <libgen.h>
+#include <netdb.h>
 #include <termios.h>
 #include <unistd.h>
 #include <wordexp.h>
 
 #include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #ifdef __APPLE__
 #include <libproc.h>
@@ -2270,4 +2273,20 @@ std::string Util::ExtractString(const std::string& p_Str, const std::string& p_P
   }
 
   return "";
+}
+
+bool Util::IsIpAddress(const std::string& p_Str)
+{
+  struct addrinfo addrhints;
+  memset(&addrhints, 0, sizeof(struct addrinfo));
+  addrhints.ai_family = AF_UNSPEC;
+  addrhints.ai_flags = AI_NUMERICHOST;
+  struct addrinfo* addr = nullptr;
+  bool rv = (getaddrinfo(p_Str.c_str(), NULL, &addrhints, &addr) == 0);
+  if (rv && (addr != nullptr))
+  {
+    freeaddrinfo(addr);
+  }
+
+  return rv;
 }

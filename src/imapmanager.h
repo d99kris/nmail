@@ -117,6 +117,7 @@ public:
               const bool p_CacheIndexEncrypt,
               const uint32_t p_IdleTimeout,
               const std::set<std::string>& p_FoldersExclude,
+              const bool p_SniEnabled,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler,
