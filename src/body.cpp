@@ -140,6 +140,18 @@ void Body::Parse()
   size_t current_index = 0;
   mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
 
+  // clear all parsed members, in the event that it's a reparse due to version update
+  m_NumParts = 0;
+  m_PartInfos.clear();
+  m_PartDatas.clear();
+  m_TextPlainIndex = -1;
+  m_TextHtmlIndex = -1;
+  m_TextHtml.clear();
+  m_TextPlain.clear();
+  m_Html.clear();
+  m_HtmlParsed = false;
+  m_PartDatasParsed = false;
+
   if (mime != NULL)
   {
     ParseMime(mime, 0);
@@ -502,7 +514,8 @@ size_t Body::GetCurrentParseVersion()
 {
   static std::hash<std::string> hashStr;
   static size_t htmlToTextCmdHash = hashStr(Util::GetHtmlToTextConvertCmd());
-  static size_t parseVersion = 1 + htmlToTextCmdHash; // update offset when parsing changes
+  static size_t parseVersionOffset = 1; // bump version offset when parsing changes
+  static size_t parseVersion = parseVersionOffset + htmlToTextCmdHash;
   return parseVersion;
 }
 
