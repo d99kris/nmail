@@ -388,9 +388,9 @@ on macOS and `xdg-open >/dev/null 2>&1` on Linux.
 ### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
-If not specified, nmail checks if `pandoc`, `w3m`, `lynx` or `elinks` is
-available on the system (in that order), and uses the first found. The exact
-command used is one of:
+If not specified, nmail uses a helper script `html2nmail` which in turn uses
+`pandoc` (for html without tables), `w3m`, `lynx` or `elinks` if available
+on the system (in that order). The exact command used is one of:
 - `pandoc -f html -t plain+literate_haskell --wrap=preserve`
 - `w3m -T text/html -I utf-8 -dump`
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump`

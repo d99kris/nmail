@@ -535,14 +535,18 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
   std::string result;
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command =
-    std::string("which pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
+    std::string("which html2nmail pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
   if (system(command.c_str()) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
     if (!output.empty())
     {
-      if (output.find("/pandoc") != std::string::npos)
+      if (output.find("/html2nmail") != std::string::npos)
+      {
+        result = "html2nmail";
+      }
+      else if (output.find("/pandoc") != std::string::npos)
       {
         result = "pandoc -f html -t plain+literate_haskell --wrap=preserve";
       }
