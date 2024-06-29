@@ -681,19 +681,10 @@ Refer to [Debugging](DEBUGGING.md) for details.
 User Discussion Forums
 ======================
 
-For discussing nmail usage (including getting help from other users) a mailing
-list and a Telegram group are available.
-
-Mailing List
-------------
-Feel free to subscribe at
-[www.freelists.org/list/nmail-users](http://www.freelists.org/list/nmail-users)
-and once subscribed, send messages to nmail-users [at] freelists [dot] org
-
 Telegram Group
 --------------
-The Telegram group is available at
-[https://t.me/nmailusers](https://t.me/nmailusers)
+A Telegram group [https://t.me/nmailusers](https://t.me/nmailusers) is
+available for users to discuss nmail usage and related topics.
 
 
 Security
