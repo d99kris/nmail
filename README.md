@@ -393,7 +393,7 @@ available on the system (in that order), and uses the first found. The exact
 command used is one of:
 - `pandoc -f html -t plain+literate_haskell --wrap=preserve`
 - `w3m -T text/html -I utf-8 -dump`
-- `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump -stdin`
+- `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump`
 - `elinks -dump-charset utf-8 -dump`
 
 Note that while pandoc generally produces a better text-equivalent to an

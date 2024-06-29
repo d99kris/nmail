@@ -208,7 +208,7 @@ void Body::ParseHtml()
     const std::string& textHtmlPath = Util::GetTempFilename(".html");
     Util::WriteFile(textHtmlPath, partHtml);
 
-    const std::string& cmd = "cat " + textHtmlPath + " | " + Util::GetHtmlToTextConvertCmd();
+    const std::string cmd = Util::GetHtmlToTextConvertCmd() + " " + textHtmlPath;
     m_TextHtml = Util::RunCommand(cmd);
 
     Util::DeleteFile(textHtmlPath);

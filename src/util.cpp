@@ -552,7 +552,7 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
       }
       else if (output.find("/lynx") != std::string::npos)
       {
-        result = "lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump -stdin";
+        result = "lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump";
       }
       else if (output.find("/elinks") != std::string::npos)
       {
