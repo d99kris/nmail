@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+# html2nmail
+#
+# Copyright (c) 2024 Kristofer Berggren
+# All rights reserved.
+#
+# nmail is distributed under the MIT license, see LICENSE for details.
+
+INPATH=${1}
+
+if [[ ! -f "${INPATH}" ]]; then
+  >&2 echo "usage: html2nmail <html-file>"
+  exit 1
+fi
+
+# 1 = no table in html file
+NO_TABLE=$(grep -qi '<table' "${INPATH}" ; echo ${?})
+
+if [[ "${NO_TABLE}" == "1" ]]; then
+  if command -v pandoc &> /dev/null; then
+    pandoc -f html -t plain+literate_haskell --wrap=preserve "${INPATH}"
+    exit ${?}
+  fi
+fi
+
+if command -v w3m &> /dev/null; then
+  w3m -T text/html -I utf-8 -dump "${INPATH}"
+  exit ${?}
+fi
+
+if command -v lynx &> /dev/null; then
+  lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump "${INPATH}"
+  exit ${?}
+fi
+
+if command -v elinks &> /dev/null; then
+  elinks -dump-charset utf-8 -dump "${INPATH}"
+  exit ${?}
+fi
+
+>&2 echo "error: html2nmail found no supported html converter"
+exit 1
+

@@ -244,7 +244,9 @@ install(FILES src/nmail.1 DESTINATION share/man/man1)
 
 # Utils
 configure_file(src/oauth2nmail ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail COPYONLY)
+configure_file(src/html2nmail ${CMAKE_CURRENT_BINARY_DIR}/html2nmail COPYONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail DESTINATION bin)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/html2nmail DESTINATION bin)
 
 # Themes
 macro(add_theme themename)
@@ -259,5 +261,6 @@ add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/man/man1/nmail.1"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/oauth2nmail"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/html2nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_INSTALL_PREFIX}/share/nmail"
 )
