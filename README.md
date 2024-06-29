@@ -675,7 +675,7 @@ message list.
 Troubleshooting
 ===============
 
-Refer to [Debugging](DEBUGGING.md) for details.
+Refer to [Debugging](/doc/DEBUGGING.md) for details.
 
 
 User Discussion Forums
