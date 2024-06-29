@@ -395,6 +395,8 @@ private:
   int m_KeyEndLine = 0;
   int m_KeyPrevPage = 0;
   int m_KeyNextPage = 0;
+  int m_KeyPrevPageCompose = 0;
+  int m_KeyNextPageCompose = 0;
   int m_KeyFilterSortReset = 0;
   int m_KeyFilterShowUnread = 0;
   int m_KeyFilterShowHasAttachments = 0;

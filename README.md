@@ -768,11 +768,13 @@ file (platform-dependent defaults are left empty below):
     key_move=m
     key_next_msg=n
     key_next_page=KEY_NPAGE
+    key_next_page_compose=KEY_NPAGE
     key_open=.
     key_othercmd_help=o
     key_postpone=KEY_CTRLO
     key_prev_msg=p
     key_prev_page=KEY_PPAGE
+    key_prev_page_compose=KEY_PPAGE
     key_quit=q
     key_refresh=l
     key_reply_all=r

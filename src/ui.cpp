@@ -124,6 +124,8 @@ void Ui::Init()
     { "key_end_line", "KEY_CTRLE" },
     { "key_prev_page", "KEY_PPAGE" },
     { "key_next_page", "KEY_NPAGE" },
+    { "key_prev_page_compose", "KEY_PPAGE" },
+    { "key_next_page_compose", "KEY_NPAGE" },
     { "key_filter_sort_reset", "`" },
     { "key_filter_show_unread", "1" },
     { "key_filter_show_has_attachments", "2" },
@@ -236,6 +238,8 @@ void Ui::Init()
   m_KeyEndLine = Util::GetKeyCode(m_Config.Get("key_end_line"));
   m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
   m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
+  m_KeyPrevPageCompose = Util::GetKeyCode(m_Config.Get("key_prev_page_compose"));
+  m_KeyNextPageCompose = Util::GetKeyCode(m_Config.Get("key_next_page_compose"));
   m_KeyFilterSortReset = Util::GetKeyCode(m_Config.Get("key_filter_sort_reset"));
   m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
   m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
@@ -2991,12 +2995,12 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_IsComposeHeader = false;
       }
     }
-    else if (p_Key == m_KeyPrevPage)
+    else if (p_Key == m_KeyPrevPageCompose)
     {
       m_ComposeHeaderLine = 0;
       m_ComposeHeaderPos = 0;
     }
-    else if (p_Key == m_KeyNextPage)
+    else if (p_Key == m_KeyNextPageCompose)
     {
       m_IsComposeHeader = false;
     }
@@ -3077,7 +3081,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     {
       ComposeMessageNextLine();
     }
-    else if (p_Key == m_KeyPrevPage)
+    else if (p_Key == m_KeyPrevPageCompose)
     {
       const bool processFlowed = false; // only process when viewing message
       const bool outputFlowed = false; // only generate when sending after compose
@@ -3092,7 +3096,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
-    else if (p_Key == m_KeyNextPage)
+    else if (p_Key == m_KeyNextPageCompose)
     {
       const bool processFlowed = false; // only process when viewing message
       const bool outputFlowed = false; // only generate when sending after compose
@@ -5239,7 +5243,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
       break;
     }
     else if ((key == KEY_UP) || (key == KEY_DOWN) ||
-             (key == m_KeyPrevPage) || (key == m_KeyNextPage) ||
+             (key == m_KeyPrevPageCompose) || (key == m_KeyNextPageCompose) ||
              (key == KEY_HOME) || (key == KEY_END))
     {
       // ignore
