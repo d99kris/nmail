@@ -7,7 +7,7 @@
 
 #include "version.h"
 
-#define NMAIL_VERSION "4.72"
+#define NMAIL_VERSION "5.1.1"
 
 std::string Version::GetBuildOs()
 {
@@ -39,14 +39,7 @@ std::string Version::GetCompiler()
 #endif
 }
 
-std::string Version::GetMessageIdAppVersion()
+std::string Version::GetAppName(bool p_WithVersion)
 {
-  static std::string version = "nmail." NMAIL_VERSION;
-  return version;
-}
-
-std::string Version::GetUiAppVersion()
-{
-  static std::string version = "nmail v" NMAIL_VERSION;
-  return version;
+  return std::string("nmail") + (p_WithVersion ? " " NMAIL_VERSION : "");
 }

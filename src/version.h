@@ -1,6 +1,6 @@
 // version.h
 //
-// Copyright (c) 2022 Kristofer Berggren
+// Copyright (c) 2022-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -14,6 +14,5 @@ class Version
 public:
   static std::string GetBuildOs();
   static std::string GetCompiler();
-  static std::string GetMessageIdAppVersion();
-  static std::string GetUiAppVersion();
+  static std::string GetAppName(bool p_WithVersion);
 };

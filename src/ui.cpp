@@ -157,6 +157,7 @@ void Ui::Init()
     { "localized_subject_prefixes", "" },
     { "signature", "0" },
     { "terminal_title", "" },
+    { "top_bar_show_version", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -356,6 +357,7 @@ void Ui::Init()
   m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
   Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
   m_Signature = m_Config.Get("signature") == "1";
+  m_TopBarShowVersion = m_Config.Get("top_bar_show_version") == "1";
 
   try
   {
@@ -527,8 +529,8 @@ void Ui::DrawTop()
   werase(m_TopWin);
   wattron(m_TopWin, m_AttrsTopBar);
 
-  std::string version = "  " + Version::GetUiAppVersion();
-  std::string topLeft = Util::TrimPadString(version, (m_ScreenWidth - 13) / 2);
+  static const std::string appName = "  " + Version::GetAppName(m_TopBarShowVersion);
+  std::string topLeft = Util::TrimPadString(appName, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";
   int centerWidth = m_ScreenWidth - (int)topLeft.size() - (int)topRight.size() - 2;

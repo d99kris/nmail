@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
   THREAD_REGISTER();
   Util::InitAppSignalHandlers();
 
-  const std::string appVersion = Version::GetUiAppVersion();
+  const std::string appVersion = Version::GetAppName(true /*p_WithVersion*/);
   LOG_INFO("%s", appVersion.c_str());
   std::string osArch = Util::GetOsArch();
   LOG_INFO("%s", osArch.c_str());
@@ -511,7 +511,7 @@ static void ShowHelp()
 static void ShowVersion()
 {
   std::cout <<
-    Version::GetUiAppVersion() << "\n"
+    Version::GetAppName(true /*p_WithVersion*/) << "\n"
     "\n"
     "Copyright (c) 2019-2024 Kristofer Berggren\n"
     "\n"

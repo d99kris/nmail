@@ -430,6 +430,7 @@ private:
   bool m_ShowFullHeader = false;
   bool m_SearchShowFolder = false;
   bool m_Signature = false;
+  bool m_TopBarShowVersion = false;
 
   std::string m_TerminalTitle;
 

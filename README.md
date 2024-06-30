@@ -813,6 +813,7 @@ file (platform-dependent defaults are left empty below):
     signature=0
     tab_size=8
     terminal_title=
+    top_bar_show_version=0
     unread_indicator=N
 
 ### attachment_indicator
