@@ -877,6 +877,7 @@ bindings may be specified in the following formats:
 - Hex key code (ex: `0x22e`)
 - Octal key code sequence (ex: `\033\177`)
 - Plain-text lower-case ASCII (ex: `r`)
+- Disable key binding (`KEY_NONE`)
 
 To determine the key code sequence for a key, one can run nmail in key code
 dump mode `nmail -k` which will output the octal code, and ncurses macro name

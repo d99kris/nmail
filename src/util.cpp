@@ -75,6 +75,7 @@ std::string Util::m_LocalizedSubjectPrefixes;
 static std::map<std::string, int> s_KeyCodes =
 {
   // additional keys
+  { "KEY_NONE", KEY_NONE },
   { "KEY_TAB", KEY_TAB },
   { "KEY_RETURN", KEY_RETURN },
   { "KEY_SPACE", KEY_SPACE },

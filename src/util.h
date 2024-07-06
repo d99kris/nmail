@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#define KEY_NONE -1
 #define KEY_TAB 9
 #define KEY_RETURN 10
 #define KEY_SPACE 32
