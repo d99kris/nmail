@@ -168,6 +168,8 @@ private:
   void ProgressCountRequestDone(const Request& p_Request, bool p_IsPrefetch);
   void ProgressCountReset(bool p_IsPrefetch);
   float GetProgressPercentage(const Request& p_Request, bool p_IsPrefetch);
+  void PipeWriteOne(int p_Fds[2]);
+  void PipeReadAll(int p_Fds[2]);
 
 private:
   Imap m_Imap;

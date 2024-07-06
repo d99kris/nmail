@@ -70,7 +70,7 @@ ImapManager::~ImapManager()
     }
 
     m_Running = false;
-    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
+    PipeWriteOne(m_Pipe);
 
     if (m_ExitedCond.wait_for(lock, std::chrono::seconds(3)) != std::cv_status::timeout)
     {
@@ -103,7 +103,7 @@ ImapManager::~ImapManager()
     std::unique_lock<std::mutex> lock(m_ExitedCacheCondMutex);
 
     m_CacheRunning = false;
-    LOG_IF_NOT_EQUAL(write(m_CachePipe[1], "1", 1), 1);
+    PipeWriteOne(m_CachePipe);
 
     if (m_ExitedCacheCond.wait_for(lock, std::chrono::seconds(2)) != std::cv_status::timeout)
     {
@@ -151,14 +151,14 @@ void ImapManager::AsyncRequest(const ImapManager::Request& p_Request)
   {
     std::lock_guard<std::mutex> lock(m_CacheQueueMutex);
     m_CacheRequests.push_front(p_Request);
-    LOG_IF_NOT_EQUAL(write(m_CachePipe[1], "1", 1), 1);
+    PipeWriteOne(m_CachePipe);
   }
 
   if (m_Connecting || m_OnceConnected)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Requests.push_front(p_Request);
-    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
+    PipeWriteOne(m_Pipe);
     ProgressCountRequestAdd(p_Request, false /* p_IsPrefetch */);
   }
   else
@@ -173,7 +173,7 @@ void ImapManager::PrefetchRequest(const ImapManager::Request& p_Request)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_PrefetchRequests[p_Request.m_PrefetchLevel].push_front(p_Request);
-    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
+    PipeWriteOne(m_Pipe);
     ProgressCountRequestAdd(p_Request, true /* p_IsPrefetch */);
   }
   else
@@ -188,7 +188,7 @@ void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
   {
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     m_Actions.push_front(p_Action);
-    LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
+    PipeWriteOne(m_Pipe);
   }
   else
   {
@@ -519,15 +519,8 @@ void ImapManager::Process()
     else if (m_Running && !authRefreshNeeded &&
              ((selrv > 0) || !isQueueEmpty))
     {
-      int len = 0;
-      ioctl(m_Pipe[0], FIONREAD, &len);
-      if (len > 0)
-      {
-        std::vector<char> buf(len);
-        LOG_IF_NOT_EQUAL(read(m_Pipe[0], &buf[0], len), len);
-      }
-
       m_QueueMutex.lock();
+      PipeReadAll(m_Pipe);
 
       while (m_Running && !authRefreshNeeded &&
              m_OnceConnected &&
@@ -817,15 +810,8 @@ void ImapManager::CacheProcess()
 
     if ((selrv != 0) && FD_ISSET(m_CachePipe[0], &fds))
     {
-      int len = 0;
-      ioctl(m_CachePipe[0], FIONREAD, &len);
-      if (len > 0)
-      {
-        std::vector<char> buf(len);
-        LOG_IF_NOT_EQUAL(read(m_CachePipe[0], &buf[0], len), len);
-      }
-
       m_CacheQueueMutex.lock();
+      PipeReadAll(m_CachePipe);
 
       while (m_CacheRunning && !m_CacheRequests.empty())
       {
@@ -1105,4 +1091,27 @@ float ImapManager::GetProgressPercentage(const Request& p_Request, bool p_IsPref
   }
 
   return progress;
+}
+
+void ImapManager::PipeWriteOne(int p_Fds[2])
+{
+  const int readFd = p_Fds[0];
+  int len = 0;
+  ioctl(readFd, FIONREAD, &len);
+  if (len > 0) return; // bail out if already signaled
+
+  const int writeFd = p_Fds[1];
+  LOG_IF_NOT_EQUAL(write(writeFd, "1", 1), 1);
+}
+
+void ImapManager::PipeReadAll(int p_Fds[2])
+{
+  const int readFd = p_Fds[0];
+  int len = 0;
+  ioctl(readFd, FIONREAD, &len);
+  if (len > 0)
+  {
+    std::vector<char> buf(len);
+    LOG_IF_NOT_EQUAL(read(readFd, &buf[0], len), len);
+  }
 }
