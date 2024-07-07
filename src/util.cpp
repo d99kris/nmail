@@ -2295,3 +2295,25 @@ bool Util::IsIpAddress(const std::string& p_Str)
 
   return rv;
 }
+
+std::string Util::GetDefaultApplicationDir()
+{
+  char* homeEnv = getenv("HOME");
+  static const std::string homeDir = std::string((homeEnv != nullptr) ? homeEnv : "");
+
+  // Use old ~/.nmail if present, for backward compatibility
+  static const std::string legacyApplicationDir = homeDir + "/.nmail";
+  if (IsDir(legacyApplicationDir))
+  {
+    return legacyApplicationDir;
+  }
+
+  // Common value: export XDG_CONFIG_HOME="$HOME/.config"
+  char* xdgConfigHomeEnv = getenv("XDG_CONFIG_HOME");
+  static const std::string xdgConfigHomeDir = std::string((xdgConfigHomeEnv != nullptr) ? xdgConfigHomeEnv : "");
+  static const std::string configHomeDir = (!xdgConfigHomeDir.empty() ? xdgConfigHomeDir : (homeDir + "/.config"));
+
+  // Typically: ~/.config/nmail
+  static const std::string applicationDir = configHomeDir + "/nmail";
+  return applicationDir;
+}

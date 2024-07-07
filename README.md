@@ -50,7 +50,7 @@ Command-line Options:
         prompt for cache encryption during oauth2 setup
 
     -d, --confdir <DIR>
-        use a different directory than ~/.nmail
+        use a different directory than ~/.config/nmail
 
     -e, --verbose
         enable verbose logging
@@ -82,17 +82,14 @@ Command-line Options:
 
 Configuration files:
 
-    ~/.nmail/auth.conf
+    ~/.config/nmail/auth.conf
         configures custom oauth2 client id and secret
 
-    ~/.nmail/main.conf
+    ~/.config/nmail/main.conf
         configures mail account and general settings
 
-    ~/.nmail/ui.conf
+    ~/.config/nmail/ui.conf
         customizes UI settings
-
-    ~/.nmail/secret.conf
-        stores saved passwords
 
 Examples:
 
@@ -236,8 +233,8 @@ file:
 
     $ nmail
 
-Then open the config file `~/.nmail/main.conf` in your favourite text editor
-and fill out the required fields:
+Then open the config file `~/.config/nmail/main.conf` in your favourite text
+editor and fill out the required fields:
 
     address=example@example.com
     drafts=Drafts
@@ -251,7 +248,7 @@ and fill out the required fields:
     trash=Trash
     user=example@example.com
 
-Full example of a config file `~/.nmail/main.conf`:
+Full example of a config file `~/.config/nmail/main.conf`:
 
     address=example@example.com
     addressbook_encrypt=0
@@ -571,8 +568,8 @@ different config directories (and thus different email accounts), but it will
 be just that - multiple instances - each in its own terminal. To facilitate
 such usage one can set up aliases for accessing different accounts, e.g.:
 
-    alias gm='nmail -d ${HOME}/.nmail-gm' # gmail
-    alias hm='nmail -d ${HOME}/.nmail-hm' # hotmail
+    alias gm='nmail -d ${HOME}/.config/nmail-gm' # gmail
+    alias hm='nmail -d ${HOME}/.config/nmail-hm' # hotmail
 
 
 Email Viewer
@@ -699,7 +696,7 @@ encrypted).
 Storing the account password (`save_pass=1` in main.conf) is *not* secure.
 While nmail encrypts the password, the key is trivial to determine from
 the source code. Only store the password if measurements are taken to ensure
-`~/.nmail/secret.conf` cannot by accessed by a third-party.
+`~/.config/nmail/secret.conf` cannot by accessed by a third-party.
 
 
 Configuration
@@ -708,8 +705,8 @@ Configuration
 Aside from `main.conf` covered above, the following files can be used to
 configure nmail.
 
-~/.nmail/ui.conf
-----------------
+~/.config/nmail/ui.conf
+-----------------------
 This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
@@ -1002,10 +999,11 @@ an email (default disabled).
 ### signature
 
 Determines whether to suffix emails with a signature (default disabled). When
-enabled, nmail will use `~/.nmail/signature.txt` if present, or otherwise use
-`~/.signature` for signature plain text content. When composing markdown
-formatted emails, nmail will use `~/.nmail/signature.html` if present, for the
-html part, and otherwise simply convert the plain text signature to html.
+enabled, nmail will use `~/.config/nmail/signature.txt` if present, or
+otherwise use `~/.signature` for signature plain text content. When composing
+markdown formatted emails, nmail will use `~/.config/nmail/signature.html` if
+present, for the html part, and otherwise simply convert the plain text
+signature to html.
 
 Note: For **custom html** signature to work properly, the plain text signature
 should not be present more than once in the composed message, thus a very short
@@ -1029,14 +1027,14 @@ Controls which character to indicate that an email is unread (default: `N`).
 For a more graphical interface, an emoji such as `✉` can be used.
 
 
-~/.nmail/colors.conf
---------------------
+~/.config/nmail/colors.conf
+---------------------------
 This configuration file controls the configurable colors of nmail. For this
 configuration to take effect, `colors_enabled=1` must be set in
-`~/.nmail/ui.conf`.
+`~/.config/nmail/ui.conf`.
 
 Example color config files are provided in `/usr/local/share/nmail/themes`
-and can be used by overwriting `~/.nmail/colors.conf`.
+and can be used by overwriting `~/.config/nmail/colors.conf`.
 
 ### Htop style theme
 
@@ -1047,7 +1045,7 @@ nmail and htop.
 
 To use this config:
 
-    cp /usr/local/share/nmail/themes/htop-style.conf ~/.nmail/colors.conf
+    cp /usr/local/share/nmail/themes/htop-style.conf ~/.config/nmail/colors.conf
 
 ### Manual configuration
 
@@ -1119,8 +1117,8 @@ Selected messages in message list view.
 Top / title bar.
 
 
-~/.nmail/auth.conf
-------------------
+~/.config/nmail/auth.conf
+-------------------------
 This configuration file allows users to set up custom OAuth 2.0 client id and
 client secret. If not specified, nmail uses its own application id and secret.
 Default configuration file:
@@ -1164,7 +1162,7 @@ to `d99kris at gmail dot com` with subject `nmail google oauth2 invite` from
 the google account address you would like to be invited.
 
 Alternatively a user may set up their own OAuth 2.0 application with Google
-and configure `~/.nmail/auth.conf` accordingly.
+and configure `~/.config/nmail/auth.conf` accordingly.
 
 
 Accessing Email Cache using Other Email Clients

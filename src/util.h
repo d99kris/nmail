@@ -295,6 +295,7 @@ public:
   static std::string GetOsArch();
   static std::string ExtractString(const std::string& p_Str, const std::string& p_Prefix, const std::string& p_Suffix);
   static bool IsIpAddress(const std::string& p_Str);
+  static std::string GetDefaultApplicationDir();
 
   template<typename T>
   static inline void Unused(const T& p_Arg)
