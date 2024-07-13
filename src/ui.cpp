@@ -144,7 +144,7 @@ void Ui::Init()
     { "key_search_show_folder", "\\" },
     { "key_spell", "KEY_CTRLS" },
     { "colors_enabled", "1" },
-    { "attachment_indicator", " \xF0\x9F\x93\x8E" },
+    { "attachment_indicator", "\xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
     { "compose_backup_interval", "10" },
     { "persist_sortfilter", "1" },
@@ -1233,7 +1233,7 @@ void Ui::DrawMessageList()
 
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = selectFlag + unreadFlag + " " + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
       subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
@@ -1468,7 +1468,7 @@ void Ui::DrawMessageListSearch()
 
       shortDate = Util::TrimPadString(shortDate, 10);
       shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
-      std::string headerLeft = selectFlag + unreadFlag + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
+      std::string headerLeft = selectFlag + unreadFlag + " " + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
 
       std::string folderTag = m_SearchShowFolder ? ("  [" + Util::BaseName(folder) + "]") : "";
       int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft + folderTag)) - 1;

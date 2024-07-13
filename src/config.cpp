@@ -1,6 +1,6 @@
 // config.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 
 #include "loghelp.h"
+#include "util.h"
 
 Config::Config()
 {
@@ -57,7 +58,7 @@ void Config::Load(const std::string& p_Path)
     std::string value;
     std::getline(linestream, value);
 
-    m_Map[param] = value;
+    m_Map[Util::Trim(param)] = Util::Trim(value);
   }
 }
 
