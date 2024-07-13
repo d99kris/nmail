@@ -212,7 +212,8 @@ int main(int argc, char* argv[])
   const bool isSetup = !setup.empty();
   if (isSetup)
   {
-    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook") && (setup != "outlook-oauth2"))
+    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook") &&
+        (setup != "outlook-oauth2"))
     {
       std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
       ShowHelp();
@@ -360,7 +361,8 @@ int main(int argc, char* argv[])
   }
   else
   {
-    if (!ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass, secretConfig, mainConfig))
+    if (!ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass, secretConfig,
+                                    mainConfig))
     {
       return 1;
     }

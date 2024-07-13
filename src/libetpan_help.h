@@ -16,7 +16,7 @@ extern "C" {
 
 struct _mailstream;
 typedef struct _mailstream mailstream;
-void mailstream_cancel(mailstream * s);
+void mailstream_cancel(mailstream* s);
 
 struct mailimap;
 typedef struct mailimap mailimap;

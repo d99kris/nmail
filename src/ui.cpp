@@ -6987,7 +6987,9 @@ bool Ui::HandleComposeKey(int p_Key)
     const std::string spellCmd = Util::GetSpellCmd();
     if (!spellCmd.empty())
     {
-      size_t quoteStartPos = !m_ComposeQuotedStart.empty() ? m_ComposeMessageStr.find(Util::ToWString(m_ComposeQuotedStart)) : std::string::npos;
+      size_t quoteStartPos =
+        !m_ComposeQuotedStart.empty() ? m_ComposeMessageStr.find(Util::ToWString(m_ComposeQuotedStart))
+                                      : std::string::npos;
       if (quoteStartPos == std::string::npos)
       {
         ExtEditor(spellCmd, m_ComposeMessageStr, m_ComposeMessagePos);

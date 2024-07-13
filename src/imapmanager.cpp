@@ -27,7 +27,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                                                   const ImapManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler,
                          const std::function<void(const SearchQuery&,
-                         const SearchResult&)>& p_SearchHandler,
+                                                  const SearchResult&)>& p_SearchHandler,
                          const bool p_IdleInbox,
                          const std::string& p_Inbox)
   : m_Imap(p_User, p_Pass, p_Host, p_Port, p_Timeout,

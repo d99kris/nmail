@@ -2164,7 +2164,7 @@ void Util::JumpToPrevMatch(std::wstring& p_Str, int& p_Pos, int p_Offs, std::wst
 
 void Util::RemoveNonAlphaNumSpace(std::string& p_Str)
 {
-  auto it = std::remove_if(p_Str.begin(), p_Str.end(), [](char const &c) {
+  auto it = std::remove_if(p_Str.begin(), p_Str.end(), [](char const& c) {
     return !std::isalnum(c) && (c != ' ');
   });
 

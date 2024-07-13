@@ -122,7 +122,7 @@ public:
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler,
               const std::function<void(const ImapManager::SearchQuery&,
-              const ImapManager::SearchResult&)>& p_SearchHandler,
+                                       const ImapManager::SearchResult&)>& p_SearchHandler,
               const bool p_IdleInbox,
               const std::string& p_Inbox);
   virtual ~ImapManager();
