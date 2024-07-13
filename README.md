@@ -19,7 +19,7 @@ Features
 - Viewing HTML emails (converted to text in terminal, or in external browser)
 - Opening/viewing attachments in external program
 - Simple setup wizard for Gmail, iCloud and Outlook/Hotmail
-- Familiar UI for alpine / pine users
+- UI similar to Alpine / Pine
 - Compose message using external editor ($EDITOR)
 - View message using external viewer ($PAGER)
 - Saving and continuing draft messages
