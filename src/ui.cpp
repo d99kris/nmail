@@ -7075,47 +7075,44 @@ void Ui::AutoMoveSelectFolder()
   Util::NormalizeName(selfSender);
   const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
 
-  static const std::string s_QueryCommonBase = [&]()
-  {
-    std::string queryCommonBase;
-    if (!m_SentFolder.empty())
-    {
-      queryCommonBase += " AND NOT folder:\"" + m_SentFolder + "\"";
-    }
+  const std::string queryNotCurrent = (!folder.empty() ? " AND NOT folder:\"" + folder + "\"" : "");
+  static const std::string queryNotSent = (!m_SentFolder.empty()) ? " AND NOT folder:\"" + m_SentFolder + "\"" : "";
+  static const std::string queryNotTrash = (!m_TrashFolder.empty()) ? " AND NOT folder:\"" + m_TrashFolder + "\"" : "";
 
-    if (!m_TrashFolder.empty())
-    {
-      queryCommonBase += " AND NOT folder:\"" + m_TrashFolder + "\"";
-    }
-
-    return queryCommonBase;
-  }();
-
-  const std::string queryCommon = s_QueryCommonBase + (!folder.empty() ? " AND NOT folder:\"" + folder + "\"" : "");
+  const std::string queryCommon = queryNotCurrent + queryNotSent + queryNotTrash;
+  const std::string queryCommonAllowTrash = queryNotCurrent + queryNotSent;
 
   std::vector<std::string> queryStrs;
   if (!subject.empty())
   {
     // full subject
-    queryStrs.push_back("subject:\"" + subject + "\"" + queryCommon);
+    const std::string querySpecific = "subject:\"" + subject + "\"";
+    queryStrs.push_back(querySpecific + queryCommon);
+    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!subjectPrefix.empty() && !sender.empty())
   {
     // subject prefix and sender name
-    queryStrs.push_back("subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"" + queryCommon);
+    const std::string querySpecific = "subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"";
+    queryStrs.push_back(querySpecific + queryCommon);
+    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!subjectPrefix.empty())
   {
     // subject prefix
-    queryStrs.push_back("subject:\"" + subjectPrefix + "*\"" + queryCommon);
+    const std::string querySpecific = "subject:\"" + subjectPrefix + "*\"";
+    queryStrs.push_back(querySpecific + queryCommon);
+    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!sender.empty())
   {
     // sender name
-    queryStrs.push_back("from:\"" + sender + "\"" + queryCommon);
+    const std::string querySpecific = "from:\"" + sender + "\"";
+    queryStrs.push_back(querySpecific + queryCommon);
+    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!queryStrs.empty())
