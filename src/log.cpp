@@ -24,6 +24,7 @@ std::string Log::m_Path;
 int Log::m_VerboseLevel = 0;
 std::mutex Log::m_Mutex;
 int Log::m_LogFd = -1;
+bool Log::m_HadWarnErr = false;
 
 void Log::SetPath(const std::string& p_Path)
 {
@@ -35,11 +36,21 @@ void Log::SetPath(const std::string& p_Path)
   m_LogFd = open(m_Path.c_str(), O_WRONLY | O_APPEND);
 }
 
-void Log::Cleanup()
+void Log::Cleanup(bool p_IsLogdumpEnabled)
 {
   if (m_LogFd != -1)
   {
     close(m_LogFd);
+  }
+
+  if (p_IsLogdumpEnabled && m_HadWarnErr)
+  {
+    const std::string cmd = "grep -e '| ERROR |' -e '| WARN  |' " + m_Path;
+    const int rv = system(cmd.c_str());
+    if (rv != 0)
+    {
+      printf("log dump command failed: %s\n", cmd.c_str());
+    }
   }
 }
 
@@ -84,6 +95,7 @@ void Log::Warning(const char* p_Filename, int p_LineNo, const char* p_Format, ..
   va_start(vaList, p_Format);
   Write(p_Filename, p_LineNo, "WARN ", p_Format, vaList);
   va_end(vaList);
+  m_HadWarnErr = true;
 }
 
 void Log::Error(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
@@ -92,6 +104,7 @@ void Log::Error(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
   va_start(vaList, p_Format);
   Write(p_Filename, p_LineNo, "ERROR", p_Format, vaList);
   va_end(vaList);
+  m_HadWarnErr = true;
 }
 
 void Log::Dump(const char* p_Str)

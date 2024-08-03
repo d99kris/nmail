@@ -18,7 +18,7 @@ public:
   static const int TRACE_LEVEL = 2;
 
   static void SetPath(const std::string& p_Path);
-  static void Cleanup();
+  static void Cleanup(bool p_IsLogdumpEnabled);
   static void SetVerboseLevel(int p_Level);
   static inline int GetVerboseLevel() { return m_VerboseLevel; }
   static inline bool GetTraceEnabled() { return m_VerboseLevel >= TRACE_LEVEL; }
@@ -41,4 +41,5 @@ private:
   static int m_VerboseLevel;
   static std::mutex m_Mutex;
   static int m_LogFd;
+  static bool m_HadWarnErr;
 };

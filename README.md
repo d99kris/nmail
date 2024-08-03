@@ -268,6 +268,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     imap_host=imap.example.com
     imap_port=993
     inbox=Inbox
+    logdump_enabled=0
     msg_viewer_cmd=
     name=Firstname Lastname
     network_timeout=30
@@ -422,6 +423,10 @@ IMAP port. Required for fetching emails.
 ### inbox
 
 IMAP inbox folder name. Required for nmail to open the proper default folder.
+
+### logdump_enabled
+
+Specifies whether to dump warning and error log messages to stdout upon exit.
 
 ### msg_viewer_cmd
 

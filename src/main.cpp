@@ -203,6 +203,7 @@ int main(int argc, char* argv[])
     { "downloads_dir", "" },
     { "idle_timeout", "29" },
     { "sni_enabled", "1" },
+    { "logdump_enabled", "0" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -286,6 +287,7 @@ int main(int argc, char* argv[])
   Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
   const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
   const bool sniEnabled = (mainConfig->Get("sni_enabled") == "1");
+  const bool isLogdumpEnabled = (mainConfig->Get("logdump_enabled") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -390,7 +392,7 @@ int main(int argc, char* argv[])
 
   Auth::Init(auth, authEncrypt, pass, isSetup);
 
-  Ui ui(inbox, address, name, prefetchLevel, prefetchAllHeaders);
+  std::shared_ptr<Ui> ui = std::make_shared<Ui>(inbox, address, name, prefetchLevel, prefetchAllHeaders);
 
   std::shared_ptr<ImapManager> imapManager =
     std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
@@ -399,37 +401,37 @@ int main(int argc, char* argv[])
                                   idleTimeout,
                                   foldersExclude,
                                   sniEnabled,
-                                  std::bind(&Ui::ResponseHandler, std::ref(ui), std::placeholders::_1,
+                                  std::bind(&Ui::ResponseHandler, ui.get(), std::placeholders::_1,
                                             std::placeholders::_2),
-                                  std::bind(&Ui::ResultHandler, std::ref(ui), std::placeholders::_1,
+                                  std::bind(&Ui::ResultHandler, ui.get(), std::placeholders::_1,
                                             std::placeholders::_2),
-                                  std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1),
-                                  std::bind(&Ui::SearchHandler, std::ref(ui), std::placeholders::_1,
+                                  std::bind(&Ui::StatusHandler, ui.get(), std::placeholders::_1),
+                                  std::bind(&Ui::SearchHandler, ui.get(), std::placeholders::_1,
                                             std::placeholders::_2),
                                   idleInbox, inbox);
 
   std::shared_ptr<SmtpManager> smtpManager =
     std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
                                   networkTimeout,
-                                  std::bind(&Ui::SmtpResultHandler, std::ref(ui), std::placeholders::_1),
-                                  std::bind(&Ui::StatusHandler, std::ref(ui), std::placeholders::_1));
+                                  std::bind(&Ui::SmtpResultHandler, ui.get(), std::placeholders::_1),
+                                  std::bind(&Ui::StatusHandler, ui.get(), std::placeholders::_1));
 
   OfflineQueue::Init(queueEncrypt, pass);
 
-  ui.SetImapManager(imapManager);
-  ui.SetTrashFolder(trash);
-  ui.SetDraftsFolder(drafts);
-  ui.SetSentFolder(sent);
-  ui.SetClientStoreSent(clientStoreSent);
-  ui.SetSmtpManager(smtpManager);
+  ui->SetImapManager(imapManager);
+  ui->SetTrashFolder(trash);
+  ui->SetDraftsFolder(drafts);
+  ui->SetSentFolder(sent);
+  ui->SetClientStoreSent(clientStoreSent);
+  ui->SetSmtpManager(smtpManager);
 
   imapManager->Start();
   smtpManager->Start();
 
-  ui.Run();
+  ui->Run();
 
-  ui.ResetSmtpManager();
-  ui.ResetImapManager();
+  ui->ResetSmtpManager();
+  ui->ResetImapManager();
 
   smtpManager.reset();
   imapManager.reset();
@@ -448,9 +450,10 @@ int main(int argc, char* argv[])
 
   Util::CleanupStdErrRedirect();
 
+  ui.reset();
   LOG_INFO("exit");
 
-  Log::Cleanup();
+  Log::Cleanup(isLogdumpEnabled);
 
   return 0;
 }
