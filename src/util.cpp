@@ -1958,6 +1958,24 @@ std::string Util::ZeroPad(uint32_t p_Num, int32_t p_Len)
   return str;
 }
 
+bool Util::GetQuotePrefix(const std::string& p_String, std::string& p_Prefix, std::string& p_Line)
+{
+  std::smatch sm;
+  std::regex re("^(( *> *)+)");
+  if (std::regex_search(p_String, sm, re))
+  {
+    p_Prefix = sm.str();
+    p_Line = sm.suffix();
+    return true;
+  }
+  else
+  {
+    p_Prefix.clear();
+    p_Line = p_String;
+    return false;
+  }
+}
+
 bool Util::GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line)
 {
   std::wsmatch sm;
@@ -2316,4 +2334,65 @@ std::string Util::GetDefaultApplicationDir()
   // Typically: ~/.config/nmail
   static const std::string applicationDir = configHomeDir + "/nmail";
   return applicationDir;
+}
+
+std::string Util::UnwrapQuotedLines(const std::string& p_Msg, int p_LineLen)
+{
+  const std::vector<std::string> lines = Split(Strip(p_Msg, '\r'), '\n');
+  const int lineCnt = lines.size();
+  std::vector<std::string> outlines;
+  std::string outline;
+  std::string outprefix;
+  std::string curline;
+  std::string curprefix;
+  for (int i = 0; i < lineCnt; ++i)
+  {
+    GetQuotePrefix(lines[i], curprefix, curline);
+    const std::string curtrimline = Trim(curline);
+    const int curfirstwordlen = curtrimline.empty() ? 0 : Split(curtrimline, ' ').at(0).size();
+    const int prevlinesize = (i > 0) ? lines[i - 1].size() : 0;
+    if ((outprefix == curprefix) && !curtrimline.empty() && ((prevlinesize + curfirstwordlen + 1) >= p_LineLen))
+    {
+      // Same prefix and previous line plus current lines first word exceed wrap width -> unwrap and append to outline
+      if (!outline.empty())
+      {
+        outline += " ";
+      }
+
+      outline += curline;
+    }
+    else
+    {
+      if (!outline.empty())
+      {
+        // Terminate non-empty outline and start new
+        outlines.push_back(outprefix + outline);
+        outline = "";
+      }
+
+      if (curtrimline.empty())
+      {
+        // Append blank line for empty input line
+        outlines.push_back(curprefix + curtrimline);
+        outline = "";
+      }
+      else
+      {
+        // Set outline to current line
+        outline = curtrimline;
+      }
+
+      // Update outprefix
+      outprefix = curprefix;
+    }
+  }
+
+  if (!outline.empty())
+  {
+    // Append any remaining buffered outline
+    outlines.push_back(outprefix + outline);
+  }
+
+  // Return joined string
+  return Join(outlines, "\n");
 }

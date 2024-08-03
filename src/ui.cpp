@@ -158,6 +158,7 @@ void Ui::Init()
     { "signature", "0" },
     { "terminal_title", "" },
     { "top_bar_show_version", "0" },
+    { "unwrap_quoted_lines", "1" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -358,6 +359,7 @@ void Ui::Init()
   Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
   m_Signature = m_Config.Get("signature") == "1";
   m_TopBarShowVersion = m_Config.Get("top_bar_show_version") == "1";
+  m_UnwrapQuotedLines = m_Config.Get("unwrap_quoted_lines") == "1";
 
   try
   {
@@ -3541,6 +3543,13 @@ void Ui::SetState(Ui::State p_State)
       }
 
       std::string indentBodyText = Util::AddIndent(bodyText, "> ");
+      const int quotedMaxLen = 78;
+
+      if (m_UnwrapQuotedLines)
+      {
+        indentBodyText = Util::UnwrapQuotedLines(indentBodyText, quotedMaxLen);
+      }
+
       std::string indentBody;
       if (m_ComposeLineWrap == LineWrapFormatFlowed)
       {
@@ -3553,7 +3562,7 @@ void Ui::SetState(Ui::State p_State)
         const bool quoteWrap = m_RewrapQuotedLines;
         const int expandTabSize = m_TabSize; // enabled
         std::vector<std::wstring> indentBodyLines =
-          Util::WordWrap(Util::ToWString(indentBodyText), 72, processFlowed, outputFlowed, quoteWrap, expandTabSize);
+          Util::WordWrap(Util::ToWString(indentBodyText), quotedMaxLen, processFlowed, outputFlowed, quoteWrap, expandTabSize);
         indentBody = Util::ToString(Util::Join(indentBodyLines));
       }
 

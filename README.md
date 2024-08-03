@@ -814,6 +814,7 @@ file (platform-dependent defaults are left empty below):
     terminal_title=
     top_bar_show_version=0
     unread_indicator=N
+    unwrap_quoted_lines=1
 
 ### attachment_indicator
 
@@ -1026,6 +1027,11 @@ Specifies custom terminal title, ex: `terminal_title=nmail - d99kris@email.com`.
 
 Controls which character to indicate that an email is unread (default: `N`).
 For a more graphical interface, an emoji such as `✉` can be used.
+
+### unwrap_quoted_lines
+
+Specifies whether nmail shall unwrap quoted lines before wrapping them when
+composing a message reply.
 
 
 ~/.config/nmail/colors.conf

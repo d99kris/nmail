@@ -431,6 +431,7 @@ private:
   bool m_SearchShowFolder = false;
   bool m_Signature = false;
   bool m_TopBarShowVersion = false;
+  bool m_UnwrapQuotedLines = false;
 
   std::string m_TerminalTitle;
 

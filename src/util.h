@@ -267,6 +267,7 @@ public:
   static void NormalizeSubject(std::string& p_String, bool p_ToLower);
   static void SetLocalizedSubjectPrefixes(const std::string& p_Prefixes);
   static std::string ZeroPad(uint32_t p_Num, int32_t p_Len);
+  static bool GetQuotePrefix(const std::string& p_String, std::string& p_Prefix, std::string& p_Line);
   static bool GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line);
   static std::string ToHex(const std::string& p_String);
   static std::string FromHex(const std::string& p_String);
@@ -296,6 +297,7 @@ public:
   static std::string ExtractString(const std::string& p_Str, const std::string& p_Prefix, const std::string& p_Suffix);
   static bool IsIpAddress(const std::string& p_Str);
   static std::string GetDefaultApplicationDir();
+  static std::string UnwrapQuotedLines(const std::string& p_Msg, int p_LineLen);
 
   template<typename T>
   static inline void Unused(const T& p_Arg)
