@@ -309,37 +309,47 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
     scriptPath + " " + ((p_AuthAction == Generate) ? "-g" : "-r") + " > " + outPath + " 2>&1";
 
   int status = system(command.c_str());
+  const std::string output = Util::ReadFile(outPath);
   if (WIFEXITED(status) && (WEXITSTATUS(status) == 0))
   {
     LOG_DEBUG((p_AuthAction == Generate) ? "oauth2 generate ok" : "oauth2 refresh ok");
     UpdateExpiryTime();
+    if (!output.empty())
+    {
+      LOG_DEBUG("%s", output.c_str());
+    }
   }
   else if (WIFEXITED(status))
   {
     LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate failed (%d): %s"
                                            : "oauth2 refresh failed (%d): %s",
                 WEXITSTATUS(status), command.c_str());
-    std::string output = Util::ReadFile(outPath);
-
-    // stderr is logged to terminal before ui started, otherwise to log file
-    std::cerr << output << "\n";
+    std::cerr << output;
+    if (WEXITSTATUS(status) == 7)
+    {
+      std::string msg = "try setup: nmail -d " + Util::GetApplicationDir() + " -s " + m_Auth;
+      LOG_WARNING("%s", msg.c_str());
+    }
   }
   else if (WIFSIGNALED(status))
   {
     LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate killed %d"
                                            : "oauth2 refresh killed %d",
                 WTERMSIG(status));
+    std::cerr << output;
   }
   else if (WIFSTOPPED(status))
   {
     LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate stopped %d"
                                            : "oauth2 refresh stopped %d",
                 WSTOPSIG(status));
+    std::cerr << output;
   }
   else if (WIFCONTINUED(status))
   {
     LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate continued"
                                            : "oauth2 refresh continued");
+    std::cerr << output;
   }
 
   Util::DeleteFile(outPath);

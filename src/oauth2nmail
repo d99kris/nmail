@@ -67,6 +67,7 @@ def show_help():
     print("   4                 http request network error")
     print("   5                 http request returned non-200")
     print("   6                 access token not available")
+    print("   7                 refresh token not available")
     print("   130               keyboard interrupt (ctrl-c)")
     print("")
     print("Examples:")
@@ -340,7 +341,7 @@ def refresh(provider, client_id, client_secret, token_store):
         refresh_token = tokens["refresh_token"]
     else:
         sys.stderr.write("refresh_token not set in " + token_store + "\n")
-        return 1
+        return 7
 
     # use refresh code to request new access token
     refrParams = {}
