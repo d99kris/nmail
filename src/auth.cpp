@@ -1,6 +1,6 @@
 // auth.cpp
 //
-// Copyright (c) 2021-2023 Kristofer Berggren
+// Copyright (c) 2021-2024 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,7 @@
 #include "auth.h"
 
 #include <cstdlib>
+#include <iostream>
 #include <string>
 
 #include <sys/time.h>
@@ -319,7 +320,9 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
                                            : "oauth2 refresh failed (%d): %s",
                 WEXITSTATUS(status), command.c_str());
     std::string output = Util::ReadFile(outPath);
-    LOG_DUMP(output.c_str());
+
+    // stderr is logged to terminal before ui started, otherwise to log file
+    std::cerr << output << "\n";
   }
   else if (WIFSIGNALED(status))
   {

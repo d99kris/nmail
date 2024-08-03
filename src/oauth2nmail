@@ -2,16 +2,16 @@
 
 # oauth2nmail
 #
-# Copyright (c) 2021-2023 Kristofer Berggren
+# Copyright (c) 2021-2024 Kristofer Berggren
 # All rights reserved.
 #
 # nmail is distributed under the MIT license, see LICENSE for details.
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
+import http.client
 import json
 import os
-import requests
 import stat
 import sys
 import threading
@@ -19,7 +19,7 @@ import time
 import urllib.parse
 import webbrowser
 
-version = "1.02"
+version = "1.03"
 pathServed = ""
 providers = {
     "gmail-oauth2": {
@@ -83,11 +83,78 @@ def show_help():
 def show_version():
     print("oauth2nmail v" + version)
     print("")
-    print("Copyright (c) 2021-2023 Kristofer Berggren")
+    print("Copyright (c) 2021-2024 Kristofer Berggren")
     print("")
     print("oauth2nmail is distributed under the MIT license.")
     print("")
     print("Written by Kristofer Berggren.")
+
+
+# HttpResponse, get() and post() below constitutes a poor man's 'requests' replacement
+class HttpResponse:
+    def __init__(self, status_code, headers, text):
+        self.status_code = status_code
+        self.headers = headers
+        self.text = text
+
+
+def get(url, headers=None):
+    if headers is None:
+        headers = {}
+
+    # Parse the URL
+    parsed_url = urllib.parse.urlparse(url)
+    connection = http.client.HTTPSConnection(parsed_url.netloc) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc)
+
+    # Construct the path with query parameters if any
+    path = parsed_url.path
+    if parsed_url.query:
+        path += '?' + parsed_url.query
+
+    # Send the GET request
+    connection.request("GET", path, headers=headers)
+
+    # Get the response
+    response = connection.getresponse()
+    response_data = response.read().decode()
+
+    # Close the connection
+    connection.close()
+
+    return HttpResponse(response.status, response.getheaders(), response_data)
+
+
+def post(url, data, headers=None):
+    if headers is None:
+        headers = {"Content-Type": "application/json"}
+
+    # Parse the URL
+    parsed_url = urllib.parse.urlparse(url)
+    connection = http.client.HTTPSConnection(parsed_url.netloc) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc)
+
+    # Encode the data
+    if headers.get("Content-Type") == "application/x-www-form-urlencoded":
+        if isinstance(data, dict):
+            data = urllib.parse.urlencode(data)
+        data = data.encode('utf-8')
+    elif headers.get("Content-Type") == "application/json":
+        if isinstance(data, dict):
+            data = json.dumps(data)
+        data = data.encode('utf-8')
+    else:
+        raise ValueError("Unsupported Content-Type")
+
+    # Send the POST request
+    connection.request("POST", parsed_url.path, body=data, headers=headers)
+
+    # Get the response
+    response = connection.getresponse()
+    response_data = response.read().decode()
+
+    # Close the connection
+    connection.close()
+
+    return HttpResponse(response.status, response.getheaders(), response_data)
 
 
 def url_params(params):
@@ -164,7 +231,7 @@ def generate(provider, client_id, client_secret, token_store):
     if "code" not in queryDict:
         sys.stderr.write("user did not grant permission\n")
         return 3
-    
+
     code = queryDict["code"]
 
     # exchange auth code for mail access and refresh token
@@ -180,7 +247,7 @@ def generate(provider, client_id, client_secret, token_store):
     convUrl = providers[provider]["conv_url"]
     convHdr = {'Content-Type': 'application/x-www-form-urlencoded'}
     try:
-        convResponse = requests.post(convUrl, data=convParams, headers=convHdr)
+        convResponse = post(convUrl, data=convParams, headers=convHdr)
     except Exception as e:
         sys.stderr.write("token request http post failed " + str(e) + "\n")
         return 4
@@ -212,8 +279,9 @@ def generate(provider, client_id, client_secret, token_store):
         convParams["scope"] = providers[provider]["user_scope"]
         convParams["requested_token_use"] = "on_behalf_of"
         convUrl = providers[provider]["conv_url"]
+        convHdr = {'Content-Type': 'application/x-www-form-urlencoded'}
         try:
-            convResponse = requests.post(convUrl, data=convParams)
+            convResponse = post(convUrl, data=convParams, headers=convHdr)
         except Exception as e:
             sys.stderr.write("user token request http post failed " + str(e) + "\n")
             return 4
@@ -238,7 +306,7 @@ def generate(provider, client_id, client_secret, token_store):
     infoUrl = providers[provider]["info_url"]
     infoHeaders = {'Authorization': 'Bearer ' + access_token}
     try:
-        infoResponse = requests.get(infoUrl, headers=infoHeaders)
+        infoResponse = get(infoUrl, headers=infoHeaders)
     except Exception as e:
         sys.stderr.write("email address get request failed " + str(e) + "\n")
         return 4
@@ -273,7 +341,7 @@ def refresh(provider, client_id, client_secret, token_store):
     else:
         sys.stderr.write("refresh_token not set in " + token_store + "\n")
         return 1
-    
+
     # use refresh code to request new access token
     refrParams = {}
     refrParams["client_id"] = client_id
@@ -284,8 +352,9 @@ def refresh(provider, client_id, client_secret, token_store):
         refrParams["client_secret"] = client_secret
 
     refrUrl = providers[provider]["refr_url"]
+    refrHdr = {'Content-Type': 'application/x-www-form-urlencoded'}
     try:
-        refrResponse = requests.post(refrUrl, refrParams)
+        refrResponse = post(refrUrl, data=refrParams, headers=refrHdr)
     except Exception as e:
         sys.stderr.write("token refresh http post failed " + str(e) + "\n")
         return 4

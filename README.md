@@ -180,10 +180,6 @@ Gentoo
 
     sudo make install
 
-**Optional (for OAuth 2.0 support):**
-
-    pip3 install -U requests
-
 Getting Started
 ===============
 
@@ -206,11 +202,6 @@ Gmail OAuth 2.0 Setup
 Use the setup wizard to set up nmail for the account. Example:
 
     $ nmail -s gmail-oauth2
-    Cache Encryption Password (optional):
-    Save password (y/n): y
-
-Cache encryption password is optional, if not specified all local cache
-encryption will be disabled.
 
 Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
 IMAP access and obtaining OAuth 2.0 access.
@@ -225,6 +216,12 @@ example@hotmail.com with your actual outlook / hotmail address):
     Name: Firstname Lastname
     Password:
     Save password (y/n): y
+
+Outlook OAuth 2.0 Setup
+-----------------------
+Use the setup wizard to set up nmail for the account. Example:
+
+    $ nmail -s outlook-oauth2
 
 Other Email Providers
 ---------------------
@@ -1211,7 +1208,7 @@ Code Formatting
 ---------------
 Uncrustify is used to maintain consistent source code formatting, example:
 
-    uncrustify -c etc/uncrustify.cfg --replace --no-backup src/*.cpp src/*.h
+    ./make.sh src
 
 
 License
