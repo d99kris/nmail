@@ -2605,12 +2605,28 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   else if (p_Key == m_KeyExtHtmlViewer)
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    ExtHtmlViewer();
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      ExtHtmlViewer();
+    }
+    else
+    {
+      SetDialogMessage("No message to view");
+    }
   }
   else if (p_Key == m_KeyExtMsgViewer)
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
-    ExtMsgViewer();
+    const int uid = m_CurrentFolderUid.second;
+    if (uid != -1)
+    {
+      ExtMsgViewer();
+    }
+    else
+    {
+      SetDialogMessage("No message to view");
+    }
   }
   else if ((p_Key == m_KeyFilterSortReset) && !m_MessageListSearch)
   {
@@ -5999,13 +6015,13 @@ void Ui::StartSync()
 {
   if (m_SyncState != SyncStateIdle)
   {
-    SetDialogMessage("Sync already in progress", true /* p_Warn */);
+    SetDialogMessage("Sync already in progress");
     return;
   }
 
   if (!IsConnected())
   {
-    SetDialogMessage("Cannot sync while offline", true /* p_Warn */);
+    SetDialogMessage("Cannot sync while offline");
     return;
   }
 
