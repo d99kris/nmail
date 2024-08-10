@@ -3577,7 +3577,8 @@ void Ui::SetState(Ui::State p_State)
         const bool quoteWrap = m_RewrapQuotedLines;
         const int expandTabSize = m_TabSize; // enabled
         std::vector<std::wstring> indentBodyLines =
-          Util::WordWrap(Util::ToWString(indentBodyText), quotedMaxLen, processFlowed, outputFlowed, quoteWrap, expandTabSize);
+          Util::WordWrap(Util::ToWString(indentBodyText), quotedMaxLen, processFlowed,
+                         outputFlowed, quoteWrap, expandTabSize);
         indentBody = Util::ToString(Util::Join(indentBodyLines));
       }
 
