@@ -94,6 +94,13 @@ public:
     LineWrapHardWrap = 2,
   };
 
+  enum SyncState
+  {
+    SyncStateIdle = 0,
+    SyncStateStarted = 1,
+    SyncStateInProgress = 2,
+  };
+
   Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name,
      uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders);
   virtual ~Ui();
@@ -280,10 +287,10 @@ private:
   std::map<std::string, std::map<SortFilter, uint64_t>> m_DisplayUidsVersion;
   std::map<std::string, uint64_t> m_HeaderUidsVersion;
 
+  SyncState m_SyncState = SyncStateIdle;
   bool m_HasRequestedFolders = false;
   bool m_HasPrefetchRequestedFolders = false;
   std::map<std::string, bool> m_HasRequestedUids;
-  std::map<std::string, bool> m_HasPrefetchRequestedUids;
   std::map<std::string, std::set<uint32_t>> m_PrefetchedHeaders;
   std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
 

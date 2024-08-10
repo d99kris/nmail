@@ -621,10 +621,14 @@ void ImapManager::Process()
           }
         }
 
+        const bool isRequestsEmpty = m_Requests.empty();
         m_QueueMutex.unlock();
-        ClearStatus(Status::FlagFetching);
-        m_QueueMutex.lock();
+        if (isRequestsEmpty)
+        {
+          ClearStatus(Status::FlagFetching);
+        }
 
+        m_QueueMutex.lock();
         progress = 0;
         while (m_Actions.empty() && m_Requests.empty() && !m_PrefetchRequests.empty() &&
                m_Running && isConnected && !authRefreshNeeded)
@@ -682,8 +686,12 @@ void ImapManager::Process()
           }
         }
 
+        const bool isPrefetchRequestsEmpty = m_PrefetchRequests.empty();
         m_QueueMutex.unlock();
-        ClearStatus(Status::FlagPrefetching);
+        if (isPrefetchRequestsEmpty)
+        {
+          ClearStatus(Status::FlagPrefetching);
+        }
 
         if (!isConnected)
         {

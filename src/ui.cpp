@@ -3978,14 +3978,13 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
           break;
         }
 
-        if (!m_HasPrefetchRequestedUids[folder])
+        // Allow re-fetching folder uids, to enable full sync more than once per session
         {
           ImapManager::Request request;
           request.m_PrefetchLevel = PrefetchLevelFullSync;
           request.m_Folder = folder;
           request.m_GetUids = true;
           LOG_DEBUG_VAR("prefetch req uids =", folder);
-          m_HasPrefetchRequestedUids[folder] = true;
           m_ImapManager->PrefetchRequest(request);
         }
       }
@@ -4356,9 +4355,33 @@ void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Status.Update(p_StatusUpdate);
 
+  // Update sync state
+  if (m_SyncState != SyncStateIdle)
+  {
+    if (m_SyncState == SyncStateStarted)
+    {
+      if (m_Status.IsSet(Status::FlagPrefetching))
+      {
+        m_SyncState = SyncStateInProgress;
+      }
+    }
+    else if (m_SyncState == SyncStateInProgress)
+    {
+      if (!m_Status.IsSet(Status::FlagPrefetching))
+      {
+        LOG_DEBUG("sync completed");
+        m_SyncState = SyncStateIdle;
+      }
+    }
+  }
+
+  // Auto-start full sync on connected, if configured for full sync
   if (!m_HasRequestedFolders && !m_HasPrefetchRequestedFolders && (m_PrefetchLevel >= PrefetchLevelFullSync) &&
       (p_StatusUpdate.SetFlags & Status::FlagConnected))
   {
+    LOG_DEBUG("sync started (auto)");
+    m_SyncState = SyncStateStarted;
+
     ImapManager::Request request;
     request.m_PrefetchLevel = PrefetchLevelFullSync;
     request.m_GetFolders = true;
@@ -5974,29 +5997,27 @@ int Ui::GetCurrentHeaderField()
 
 void Ui::StartSync()
 {
-  if (IsConnected())
+  if (m_SyncState != SyncStateIdle)
   {
-    if (m_PrefetchLevel < PrefetchLevelFullSync)
-    {
-      LOG_DEBUG("manual full sync started");
-      m_PrefetchLevel = PrefetchLevelFullSync;
-
-      ImapManager::Request request;
-      request.m_PrefetchLevel = PrefetchLevelFullSync;
-      request.m_GetFolders = true;
-      LOG_DEBUG("prefetch req folders");
-      m_HasPrefetchRequestedFolders = true;
-      m_ImapManager->PrefetchRequest(request);
-    }
-    else
-    {
-      SetDialogMessage("Sync already enabled", true /* p_Warn */);
-    }
+    SetDialogMessage("Sync already in progress", true /* p_Warn */);
+    return;
   }
-  else
+
+  if (!IsConnected())
   {
     SetDialogMessage("Cannot sync while offline", true /* p_Warn */);
+    return;
   }
+
+  LOG_DEBUG("sync started (manual)");
+  m_SyncState = SyncStateStarted;
+
+  ImapManager::Request request;
+  request.m_PrefetchLevel = PrefetchLevelFullSync;
+  request.m_GetFolders = true;
+  LOG_DEBUG("prefetch req folders");
+  m_HasPrefetchRequestedFolders = true;
+  m_ImapManager->PrefetchRequest(request);
 }
 
 std::string Ui::MakeHtmlPart(const std::string& p_Text)

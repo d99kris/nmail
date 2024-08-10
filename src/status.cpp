@@ -62,17 +62,9 @@ std::string Status::ToString()
   {
     str = "Checking";
   }
-  else if (m_Flags & FlagFetching)
-  {
-    str = "Fetching" + GetProgressString();
-  }
   else if (m_Flags & FlagSending)
   {
     str = "Sending";
-  }
-  else if (m_Flags & FlagPrefetching)
-  {
-    str = "Pre-fetching" + GetProgressString();
   }
   else if (m_Flags & FlagMoving)
   {
@@ -89,6 +81,14 @@ std::string Status::ToString()
   else if (m_Flags & FlagSaving)
   {
     str = "Saving";
+  }
+  else if (m_Flags & FlagFetching)
+  {
+    str = "Fetching" + GetProgressString();
+  }
+  else if (m_Flags & FlagPrefetching)
+  {
+    str = "Pre-fetching" + GetProgressString();
   }
   else if (m_Flags & FlagIndexing)
   {
