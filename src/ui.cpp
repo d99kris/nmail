@@ -32,7 +32,7 @@ Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, const std::stri
   , m_PrefetchLevel(p_PrefetchLevel)
   , m_PrefetchAllHeaders(p_PrefetchAllHeaders)
 {
-  m_CurrentFolder = p_Inbox;
+  SetCurrentFolder(p_Inbox);
   Init();
   InitWindows();
 }
@@ -2153,8 +2153,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
     {
       if (m_State == StateGotoFolder)
       {
-        m_CurrentFolder = m_FolderListCurrentFolder;
-        m_ImapManager->SetCurrentFolder(m_CurrentFolder);
+        SetCurrentFolder(m_FolderListCurrentFolder);
         SetState(StateViewMessageList);
         UpdateIndexFromUid();
       }
@@ -2383,7 +2382,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
-      m_CurrentFolder = m_PreviousFolder;
+      SetCurrentFolder(m_PreviousFolder);
       m_PreviousFolder = "";
       UpdateIndexFromUid();
     }
@@ -2407,7 +2406,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
 
     if (m_CurrentFolder != m_Inbox)
     {
-      m_CurrentFolder = m_Inbox;
+      SetCurrentFolder(m_Inbox);
     }
     else
     {
@@ -2680,7 +2679,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
-      m_CurrentFolder = m_CurrentFolderUid.first;
+      SetCurrentFolder(m_CurrentFolderUid.first);
       const uint32_t uid = m_CurrentFolderUid.second;
 
       if (!m_HasRequestedUids[m_CurrentFolder])
@@ -2834,7 +2833,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
       m_PreviousFolder = "";
     }
 
-    m_CurrentFolder = m_Inbox;
+    SetCurrentFolder(m_Inbox);
     SetState(StateViewMessageList);
   }
   else if ((p_Key == m_KeyMove) || (p_Key == m_KeyAutoMove))
@@ -3343,7 +3342,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       m_PreviousFolder = "";
     }
 
-    m_CurrentFolder = m_Inbox;
+    SetCurrentFolder(m_Inbox);
     SetState(StateViewMessageList);
   }
   else if (HandleListKey(p_Key, m_PartListCurrentIndex))
@@ -5767,7 +5766,7 @@ void Ui::SearchMessage(const std::string& p_Query /*= std::string()*/)
       if (m_CurrentFolder != "")
       {
         m_PreviousFolder = m_CurrentFolder;
-        m_CurrentFolder = "";
+        SetCurrentFolder("");
       }
 
       m_MessageListCurrentIndex[m_CurrentFolder] = 0;
@@ -5798,7 +5797,7 @@ void Ui::SearchMessage(const std::string& p_Query /*= std::string()*/)
       ClearSelection();
       if (m_PreviousFolder != "")
       {
-        m_CurrentFolder = m_PreviousFolder;
+        SetCurrentFolder(m_PreviousFolder);
         m_PreviousFolder = "";
       }
 
@@ -7180,4 +7179,13 @@ void Ui::AutoMoveSelectFolder()
   m_FolderListFilterStr.clear();
   m_FolderListCurrentFolder = !foundFolder.empty() ? foundFolder : folder;
   m_FolderListCurrentIndex = INT_MAX;
+}
+
+void Ui::SetCurrentFolder(const std::string& p_Folder)
+{
+  m_CurrentFolder = p_Folder;
+  if (m_ImapManager && !m_CurrentFolder.empty())
+  {
+    m_ImapManager->SetCurrentFolder(m_CurrentFolder);
+  }
 }

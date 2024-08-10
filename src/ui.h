@@ -257,6 +257,7 @@ private:
 
   void OnWakeUp();
   void AutoMoveSelectFolder();
+  void SetCurrentFolder(const std::string& p_Folder);
 
 private:
   std::shared_ptr<ImapManager> m_ImapManager;

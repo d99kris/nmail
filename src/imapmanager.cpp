@@ -226,7 +226,7 @@ bool ImapManager::ProcessIdle()
   bool rv = true;
   static bool firstIdle = true;
   std::set<uint32_t> uids;
-  Imap::FolderInfo lastFolderInfo = m_Imap.GetFolderInfo(m_CurrentFolder);
+  Imap::FolderInfo lastFolderInfo = m_Imap.GetFolderInfo(idleFolder);
   if (!lastFolderInfo.IsValid())
   {
     LOG_WARNING("idle folder info failed");
