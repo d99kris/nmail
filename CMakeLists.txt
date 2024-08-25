@@ -104,6 +104,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/opt/ncurses)
   list(APPEND OPENSSL_ROOT_DIR /usr/local/opt/openssl)
   list(APPEND OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+  add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
 endif()
 
 # Headers
@@ -220,6 +222,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       target_link_libraries(nmail PUBLIC "${CFNETWORK_LIBRARY}")
     endif()
   endif()
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+  find_library(WORDEXP_LIBRARY android-wordexp)
+  target_link_libraries(nmail PUBLIC ${WORDEXP_LIBRARY})
 endif()
 
 # Includes

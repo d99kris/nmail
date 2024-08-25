@@ -367,7 +367,7 @@ target_compile_options(${LIBNAME} PRIVATE -w -Wall $<$<CONFIG:Debug>:-DDEBUG>)
 # Linking
 target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${ZLIB_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${CYRUS_SASL_LIBRARY})
 
-# Linking (macOS)
+# Linking platform specifics
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   find_library(ICONV_LIBRARY iconv REQUIRED)
   find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
@@ -378,6 +378,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     find_library(CFNETWORK_LIBRARY CFNetwork REQUIRED)
     target_link_libraries(${LIBNAME} PUBLIC "${CFNETWORK_LIBRARY}")
   endif()
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+  find_library(ICONV_LIBRARY iconv REQUIRED)
+  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}")
 endif()
 
 # Install
