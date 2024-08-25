@@ -363,11 +363,15 @@ def refresh(provider, client_id, client_secret, token_store):
     # parse response
     jsonRefrResponse = json.loads(refrResponse.text)
 
-    if (refrResponse.status_code == 400) and (jsonRefrResponse["error"] == "invalid_grant") and (jsonRefrResponse["error_description"] == "Token has been expired or revoked."):
-        sys.stderr.write("token expired " + str(refrResponse) + "\n")
-        sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
-        sys.stderr.write("attempt to reauthenticate\n")
-        return generate(provider, client_id, client_secret, token_store)
+    if (refrResponse.status_code == 400):
+        isInvalidGrant = (jsonRefrResponse["error"] == "invalid_grant")
+        isDescGmailExpired = (jsonRefrResponse["error_description"] == "Token has been expired or revoked.")
+        isDescOutlookExpired = ("The user could not be authenticated as the grant is expired. The user must sign in again." in jsonRefrResponse["error_description"])
+        if isInvalidGrant and (isDescGmailExpired or isDescOutlookExpired):
+            sys.stderr.write("token expired " + str(refrResponse) + "\n")
+            sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
+            sys.stderr.write("attempt to reauthenticate\n")
+            return generate(provider, client_id, client_secret, token_store)
 
     if refrResponse.status_code != 200:
         sys.stderr.write("token refresh failed " + str(refrResponse) + "\n")
