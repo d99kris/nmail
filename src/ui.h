@@ -440,6 +440,7 @@ private:
   bool m_Signature = false;
   bool m_TopBarShowVersion = false;
   bool m_UnwrapQuotedLines = false;
+  bool m_AutomoveTrashAllow = false;
 
   std::string m_TerminalTitle;
 

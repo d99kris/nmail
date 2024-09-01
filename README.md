@@ -713,6 +713,7 @@ This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
     attachment_indicator=📎
+    automove_trash_allow=1
     bottom_reply=0
     cancel_without_confirm=0
     colors_enabled=1
@@ -820,6 +821,10 @@ file (platform-dependent defaults are left empty below):
 
 Controls which character to indicate that an email has attachments
 (default: `📎`). For a more plain layout one can use an ascii character: `+`.
+
+### automove_trash_allow
+
+Specifies whether trash folder may be selected as automove target folder.
 
 ### bottom_reply
 

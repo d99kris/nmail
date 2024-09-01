@@ -159,6 +159,7 @@ void Ui::Init()
     { "terminal_title", "" },
     { "top_bar_show_version", "0" },
     { "unwrap_quoted_lines", "1" },
+    { "automove_trash_allow", "1" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -360,6 +361,7 @@ void Ui::Init()
   m_Signature = m_Config.Get("signature") == "1";
   m_TopBarShowVersion = m_Config.Get("top_bar_show_version") == "1";
   m_UnwrapQuotedLines = m_Config.Get("unwrap_quoted_lines") == "1";
+  m_AutomoveTrashAllow = m_Config.Get("automove_trash_allow") == "1";
 
   try
   {
@@ -7120,12 +7122,13 @@ void Ui::AutoMoveSelectFolder()
   const std::string queryCommonAllowTrash = queryNotCurrent + queryNotSent;
 
   std::vector<std::string> queryStrs;
+  std::vector<std::string> queryStrsAllowTrash;
   if (!subject.empty())
   {
     // full subject
     const std::string querySpecific = "subject:\"" + subject + "\"";
     queryStrs.push_back(querySpecific + queryCommon);
-    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
+    queryStrsAllowTrash.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!subjectPrefix.empty() && !sender.empty())
@@ -7133,7 +7136,7 @@ void Ui::AutoMoveSelectFolder()
     // subject prefix and sender name
     const std::string querySpecific = "subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"";
     queryStrs.push_back(querySpecific + queryCommon);
-    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
+    queryStrsAllowTrash.push_back(querySpecific + queryCommonAllowTrash);
   }
 
   if (!subjectPrefix.empty())
@@ -7141,7 +7144,12 @@ void Ui::AutoMoveSelectFolder()
     // subject prefix
     const std::string querySpecific = "subject:\"" + subjectPrefix + "*\"";
     queryStrs.push_back(querySpecific + queryCommon);
-    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
+    queryStrsAllowTrash.push_back(querySpecific + queryCommonAllowTrash);
+  }
+
+  if (m_AutomoveTrashAllow)
+  {
+    queryStrs.insert(queryStrs.end(), queryStrsAllowTrash.begin(), queryStrsAllowTrash.end());
   }
 
   if (!sender.empty())
@@ -7149,7 +7157,10 @@ void Ui::AutoMoveSelectFolder()
     // sender name
     const std::string querySpecific = "from:\"" + sender + "\"";
     queryStrs.push_back(querySpecific + queryCommon);
-    queryStrs.push_back(querySpecific + queryCommonAllowTrash);
+    if (m_AutomoveTrashAllow)
+    {
+      queryStrs.push_back(querySpecific + queryCommonAllowTrash);
+    }
   }
 
   if (!queryStrs.empty())
