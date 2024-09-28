@@ -85,7 +85,15 @@ std::string Body::GetHtml() const
   }
   else
   {
-    return "<pre>" + m_TextPlain + "</pre>";
+    const std::string htmlFromText = Util::ConvertTextToHtml(m_TextPlain);
+    if (!htmlFromText.empty())
+    {
+      return htmlFromText;
+    }
+    else
+    {
+      return "<pre>" + m_TextPlain + "</pre>";
+    }
   }
 }
 
