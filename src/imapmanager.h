@@ -74,6 +74,7 @@ public:
     bool m_UploadMessage = false;
     bool m_DeleteMessages = false;
     bool m_UpdateCache = false;
+    std::string m_CopyDestination;
     std::string m_MoveDestination;
     std::string m_Msg;
     std::map<uint32_t, Body> m_SetBodysCache;

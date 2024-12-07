@@ -70,6 +70,10 @@ std::string Status::ToString()
   {
     str = "Moving";
   }
+  else if (m_Flags & FlagCopying)
+  {
+    str = "Copying";
+  }
   else if (m_Flags & FlagDeleting)
   {
     str = "Deleting";

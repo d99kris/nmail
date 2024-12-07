@@ -254,6 +254,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     cache_encrypt=0
     cache_index_encrypt=0
     client_store_sent=0
+    copy_to_trash=
     coredump_enabled=0
     downloads_dir=
     drafts=Drafts
@@ -328,6 +329,14 @@ This field should generally be left `0`. It indicates whether nmail shall upload
 sent emails to configured `sent` folder. Many email service providers
 (gmail, outlook, etc) do this on server side, so this should only be enabled if
 emails sent using nmail do not automatically gets stored in the sent folder.
+
+### copy_to_trash
+
+Specifies whether to delete messages by copying them to trash and then deleting
+from current folder, instead of using the IMAP move command. This is disabled
+by default, except for GMail IMAP where it is enabled to work around a
+server-side issue, for details see
+[Issue #172](https://github.com/d99kris/nmail/issues/172).
 
 ### coredump_enabled
 

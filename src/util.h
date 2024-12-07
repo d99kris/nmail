@@ -299,6 +299,9 @@ public:
   static std::string GetDefaultApplicationDir();
   static std::string UnwrapQuotedLines(const std::string& p_Msg, int p_LineLen);
 
+  static void SetCopyToTrash(const std::string& p_Value, const std::string& p_ImapHost);
+  static bool GetCopyToTrash();
+
   template<typename T>
   static inline void Unused(const T& p_Arg)
   {
@@ -324,4 +327,5 @@ private:
   static bool m_AddressBookEncrypt;
   static bool m_SendIp;
   static std::string m_LocalizedSubjectPrefixes;
+  static bool m_GetCopyToTrash;
 };

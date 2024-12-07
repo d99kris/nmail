@@ -71,6 +71,8 @@ public:
                       bool p_Value);
   bool MoveMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                     const std::string& p_DestFolder);
+  bool CopyMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                    const std::string& p_DestFolder);
   bool DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
   bool CheckConnection();
 

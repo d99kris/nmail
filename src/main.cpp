@@ -204,6 +204,7 @@ int main(int argc, char* argv[])
     { "idle_timeout", "29" },
     { "sni_enabled", "1" },
     { "logdump_enabled", "0" },
+    { "copy_to_trash", "" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -288,6 +289,8 @@ int main(int argc, char* argv[])
   const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
   const bool sniEnabled = (mainConfig->Get("sni_enabled") == "1");
   const bool isLogdumpEnabled = (mainConfig->Get("logdump_enabled") == "1");
+  Util::SetCopyToTrash(mainConfig->Get("copy_to_trash"), mainConfig->Get("imap_host"));
+  mainConfig->Set("copy_to_trash", std::to_string(Util::GetCopyToTrash()));
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)

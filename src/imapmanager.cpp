@@ -936,42 +936,51 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
 {
   bool rv = true;
 
-  if (!p_Action.m_MoveDestination.empty())
+  if (!p_Action.m_CopyDestination.empty() && p_Action.m_DeleteMessages)
+  {
+    // special handling for combined copy/delete action to use status moving
+    SetStatus(Status::FlagMoving);
+    rv &= m_Imap.CopyMessages(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_CopyDestination);
+    rv &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
+    ClearStatus(Status::FlagMoving);
+  }
+  else if (!p_Action.m_CopyDestination.empty())
+  {
+    SetStatus(Status::FlagCopying);
+    rv &= m_Imap.CopyMessages(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_CopyDestination);
+    ClearStatus(Status::FlagCopying);
+  }
+  else if (!p_Action.m_MoveDestination.empty())
   {
     SetStatus(Status::FlagMoving);
     rv &= m_Imap.MoveMessages(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_MoveDestination);
     ClearStatus(Status::FlagMoving);
   }
-
-  if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
+  else if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
   {
     SetStatus(Status::FlagUpdatingFlags);
     rv &= m_Imap.SetFlagSeen(p_Action.m_Folder, p_Action.m_Uids, p_Action.m_SetSeen);
     ClearStatus(Status::FlagUpdatingFlags);
   }
-
-  if (p_Action.m_UploadDraft)
+  else if (p_Action.m_UploadDraft)
   {
     SetStatus(Status::FlagSaving);
     rv &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, true);
     ClearStatus(Status::FlagSaving);
   }
-
-  if (p_Action.m_UploadMessage)
+  else if (p_Action.m_UploadMessage)
   {
     SetStatus(Status::FlagSaving);
     rv &= m_Imap.UploadMessage(p_Action.m_Folder, p_Action.m_Msg, false);
     ClearStatus(Status::FlagSaving);
   }
-
-  if (p_Action.m_DeleteMessages)
+  else if (p_Action.m_DeleteMessages)
   {
     SetStatus(Status::FlagDeleting);
     rv &= m_Imap.DeleteMessages(p_Action.m_Folder, p_Action.m_Uids);
     ClearStatus(Status::FlagDeleting);
   }
-
-  if (p_Action.m_UpdateCache && !p_Action.m_SetBodysCache.empty())
+  else if (p_Action.m_UpdateCache && !p_Action.m_SetBodysCache.empty())
   {
     rv &= m_Imap.SetBodysCache(p_Action.m_Folder, p_Action.m_SetBodysCache);
   }

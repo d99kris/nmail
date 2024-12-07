@@ -71,6 +71,7 @@ std::string Util::m_FilePickerCmd;
 bool Util::m_AddressBookEncrypt = false;
 bool Util::m_SendIp = true;
 std::string Util::m_LocalizedSubjectPrefixes;
+bool Util::m_GetCopyToTrash = false;
 
 static std::map<std::string, int> s_KeyCodes =
 {
@@ -2395,4 +2396,21 @@ std::string Util::UnwrapQuotedLines(const std::string& p_Msg, int p_LineLen)
 
   // Return joined string
   return Join(outlines, "\n");
+}
+
+void Util::SetCopyToTrash(const std::string& p_Value, const std::string& p_ImapHost)
+{
+  if (p_Value.empty())
+  {
+    m_GetCopyToTrash = (p_ImapHost == "imap.gmail.com");
+  }
+  else
+  {
+    m_GetCopyToTrash = (p_Value == "1");
+  }
+}
+
+bool Util::GetCopyToTrash()
+{
+  return m_GetCopyToTrash;
 }

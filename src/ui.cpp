@@ -4862,7 +4862,18 @@ void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Fro
   ImapManager::Action action;
   action.m_Folder = p_From;
   action.m_Uids = p_Uids;
-  action.m_MoveDestination = p_To;
+
+  static bool copyToTrash = Util::GetCopyToTrash();
+  if (copyToTrash && (p_To == m_TrashFolder))
+  {
+    action.m_CopyDestination = p_To;
+    action.m_DeleteMessages = true;
+  }
+  else
+  {
+    action.m_MoveDestination = p_To;
+  }
+
   m_ImapManager->AsyncAction(action);
 
   const std::string& folder = p_From;

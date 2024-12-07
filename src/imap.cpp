@@ -807,6 +807,32 @@ bool Imap::MoveMessages(const std::string& p_Folder, const std::set<uint32_t>& p
   return (rv == MAILIMAP_NO_ERROR);
 }
 
+bool Imap::CopyMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
+                        const std::string& p_DestFolder)
+{
+  LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_DestFolder));
+
+  std::lock_guard<std::mutex> imapLock(m_ImapMutex);
+
+  if (!SelectFolder(p_Folder))
+  {
+    return false;
+  }
+
+  struct mailimap_set* set = mailimap_set_new_empty();
+  for (auto& uid : p_Uids)
+  {
+    mailimap_set_add_single(set, uid);
+  }
+
+  const std::string encDestFolder = EncodeFolderName(p_DestFolder);
+  int rv = LOG_IF_IMAP_ERR(mailimap_uid_copy(m_Imap, set, encDestFolder.c_str()));
+
+  mailimap_set_free(set);
+
+  return (rv == MAILIMAP_NO_ERROR);
+}
+
 bool Imap::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
