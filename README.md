@@ -123,7 +123,12 @@ Linux
 -----
 **Arch**
 
-    yay -S nmail
+PKGBUILD files are available in the [AUR](https://aur.archlinux.org/) for both the [stable/tagged release](https://aur.archlinux.org/packages/nmail) as well as to build from [git](https://aur.archlinux.org/packages/nmail-git).
+
+    wget https://aur.archlinux.org/cgit/aur.git/snapshot/nmail.tar.gz
+    tar xzf nmail.tar.gz
+    cd nmail
+    makepkg -srciA
 
 **Guix**
 
