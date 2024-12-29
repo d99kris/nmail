@@ -123,6 +123,18 @@ Linux
 -----
 **Arch**
 
+There are two AUR packages available -
+[nmail](https://aur.archlinux.org/packages/nmail) (stable release) and
+[nmail-git](https://aur.archlinux.org/packages/nmail-git) (latest git) - that
+can be installed using `makepkg` or using an AUR helper such as `yay`.
+
+Using makepkg
+
+    git clone https://aur.archlinux.org/nmail.git && cd nmail
+    makepkg -srciA
+
+Using yay
+
     yay -S nmail
 
 **Guix**
