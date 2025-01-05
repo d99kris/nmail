@@ -99,11 +99,16 @@ install(TARGETS nmail DESTINATION bin)
 
 # Platform specifics
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
-  list(APPEND CMAKE_PREFIX_PATH /usr/local/opt/ncurses)
-  list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/opt/ncurses)
-  list(APPEND OPENSSL_ROOT_DIR /usr/local/opt/openssl)
-  list(APPEND OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl)
+  add_definitions(-D_XOPEN_SOURCE_EXTENDED)
+  execute_process(COMMAND sh "-c"
+                  "command -v brew &> /dev/null && brew --prefix ncurses 2> /dev/null | tr -d '\n'"
+                  OUTPUT_VARIABLE CMAKE_PREFIX_PATH)
+  if (EXISTS "${CMAKE_PREFIX_PATH}")
+    message(STATUS "Ncurses cmake prefix '${CMAKE_PREFIX_PATH}' (detected).")
+  else()
+    set(CMAKE_PREFIX_PATH /opt/local)
+    message(STATUS "Ncurses cmake prefix '${CMAKE_PREFIX_PATH}' (default).")
+  endif()
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
   add_compile_definitions(_XOPEN_SOURCE_EXTENDED)
 endif()
@@ -135,12 +140,10 @@ endif()
 set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
 find_package(Curses REQUIRED)
-include_directories(${CURSES_INCLUDE_DIR})
 target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 
 # Dependency openssl
 find_package(OpenSSL REQUIRED)
-include_directories(${OPENSSL_INCLUDE_DIR})
 
 # Dependency xapian
 find_package(Xapian REQUIRED)
@@ -229,13 +232,13 @@ endif()
 
 # Includes
 target_include_directories(nmail PRIVATE ${LIBETPAN_INCLUDE_DIR} ${XAPIAN_INCLUDE_DIR}
-                           ${MAGIC_HEADERS} ${CYRUS_SASL_INCLUDE_DIR}
+                           ${MAGIC_HEADERS} ${CYRUS_SASL_INCLUDE_DIR} ${CURSES_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}
                            "ext/sqlite_modern_cpp/hdr" "ext/cereal/include" ${LIBUUID_HEADERS}
                            "ext/cyrus-imap/lib")
 
 # Linking
 target_link_libraries(nmail PUBLIC
-                      ${CURSES_LIBRARIES} OpenSSL::SSL SQLite::SQLite3
+                      ${CURSES_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${SQLite3_LIBRARIES}
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
                       ${MAGIC_LIBRARY} ${LIBUUID_LIBRARIES}
                       pthread ${CMAKE_DL_LIBS})
