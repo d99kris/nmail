@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
     { "smtp_host", "" },
     { "smtp_port", "587" },
     { "smtp_user", "" },
-    { "save_pass", "0" },
+    { "save_pass", "1" },
     { "idle_inbox", "1" },
     { "inbox", "INBOX" },
     { "trash", "" },
@@ -735,8 +735,6 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
       p_MainConfig->Set("addressbook_encrypt", "0");
       p_MainConfig->Set("queue_encrypt", "0");
       p_MainConfig->Set("auth_encrypt", "0");
-
-      p_MainConfig->Set("save_pass", "0");
     }
     else
     {
