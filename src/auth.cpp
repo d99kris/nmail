@@ -1,6 +1,6 @@
 // auth.cpp
 //
-// Copyright (c) 2021-2024 Kristofer Berggren
+// Copyright (c) 2021-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -261,10 +261,15 @@ std::map<std::string, std::string> Auth::GetDefaultTokens()
 {
   static const std::map<std::string, std::string> defaultTokens =
   {
-    { "name", "" },
-    { "email", "" },
     { "access_token", "" },
+    { "email", "" },
     { "expires_in", "0" },
+    { "ext_expires_in", "0" },
+    { "id_token", "" },
+    { "name", "" },
+    { "refresh_token", "" },
+    { "scope", "" },
+    { "token_type", "" },
   };
   return defaultTokens;
 }

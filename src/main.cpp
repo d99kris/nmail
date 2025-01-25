@@ -24,6 +24,8 @@
 #include "sethelp.h"
 #include "smtpmanager.h"
 #include "ui.h"
+#include "uikeyconfig.h"
+#include "uikeyinput.h"
 #include "util.h"
 #include "version.h"
 
@@ -64,6 +66,7 @@ int main(int argc, char* argv[])
   Log::SetVerboseLevel(Log::INFO_LEVEL);
   bool online = true;
   bool changePass = false;
+  bool keyDump = false;
   bool setupAllowCacheEncrypt = false;
   std::string setup;
   std::string exportDir;
@@ -96,8 +99,7 @@ int main(int argc, char* argv[])
     }
     else if ((*it == "-k") || (*it == "--keydump"))
     {
-      KeyDump();
-      return 0;
+      keyDump = true;
     }
     else if ((*it == "-o") || (*it == "--offline"))
     {
@@ -210,6 +212,12 @@ int main(int argc, char* argv[])
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
 
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
+
+  if (keyDump)
+  {
+    KeyDump();
+    return 0;
+  }
 
   const bool isSetup = !setup.empty();
   if (isSetup)
@@ -495,6 +503,7 @@ static void ShowHelp()
     "\n"
     "Files:\n"
     "   ~/.config/nmail/auth.conf  configures custom oauth2 client id and secret\n"
+    "   ~/.config/nmail/key.conf   configures user interface key bindings\n"
     "   ~/.config/nmail/main.conf  configures mail account and general settings,\n"
     "                              for full functionality the following fields\n"
     "                              shall be configured:\n"
@@ -509,7 +518,7 @@ static void ShowHelp()
     "                              smtp_port (ex: 465 or 587),\n"
     "                              trash (folder name, ex: Trash),\n"
     "                              user (ex: example@example.com or example).\n"
-    "   ~/.config/nmail/ui.conf    customizes UI settings\n"
+    "   ~/.config/nmail/ui.conf    customizes user interface settings\n"
     "\n"
     "Report bugs at https://github.com/d99kris/nmail\n"
     "\n";
@@ -965,6 +974,8 @@ static void KeyDump()
   printw("key code dump mode - press ctrl-c or 'q' to exit\n");
   refresh();
 
+  UiKeyConfig::Init(false);
+
   bool running = true;
   while (running)
   {
@@ -991,7 +1002,7 @@ static void KeyDump()
       int count = 0;
       wint_t key = 0;
       wint_t keyOk = 0;
-      while (get_wch(&key) != ERR)
+      while (UiKeyInput::GetWch(&key) != ERR)
       {
         keyOk = key;
         ++count;
@@ -1006,7 +1017,7 @@ static void KeyDump()
 
       if ((keyOk != 0) && (count == 1))
       {
-        std::string keyName = Util::GetKeyName(keyOk);
+        std::string keyName = UiKeyConfig::GetKeyName(keyOk);
         if (!keyName.empty())
         {
           printw(" %s", keyName.c_str());
@@ -1018,6 +1029,7 @@ static void KeyDump()
     }
   }
 
+  UiKeyConfig::Cleanup();
   wclear(stdscr);
   endwin();
 }

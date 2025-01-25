@@ -1,6 +1,6 @@
 // config.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -21,7 +21,8 @@ Config::Config()
 {
 }
 
-Config::Config(const std::string& p_Path, const std::map<std::string, std::string>& p_Default)
+Config::Config(const std::string& p_Path,
+               const std::map<std::string, std::string>& p_Default)
   : m_Map(p_Default)
 {
   Load(p_Path);
@@ -44,6 +45,7 @@ void Config::Load(const std::string& p_Path)
     return;
   }
 
+  const bool hasDefaultMap = !m_Map.empty();
   std::string line;
   while (std::getline(stream, line))
   {
@@ -57,8 +59,16 @@ void Config::Load(const std::string& p_Path)
 
     std::string value;
     std::getline(linestream, value);
+    param = Util::Trim(param);
 
-    m_Map[Util::Trim(param)] = Util::Trim(value);
+    if (hasDefaultMap && (m_Map.count(param) == 0))
+    {
+      // drop params not present in default map
+      LOG_WARNING("unknown param \"%s\"", param.c_str());
+      continue;
+    }
+
+    m_Map[param] = Util::Trim(value);
   }
 }
 
@@ -100,6 +110,11 @@ void Config::Delete(const std::string& p_Param)
 bool Config::Exist(const std::string& p_Param)
 {
   return (m_Map.find(p_Param) != m_Map.end());
+}
+
+std::map<std::string, std::string> Config::GetMap() const
+{
+  return m_Map;
 }
 
 void Config::LogParams() const

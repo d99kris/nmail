@@ -85,11 +85,14 @@ Configuration files:
     ~/.config/nmail/auth.conf
         configures custom oauth2 client id and secret
 
+    ~/.config/nmail/key.conf
+        configures user interface key bindings
+
     ~/.config/nmail/main.conf
         configures mail account and general settings
 
     ~/.config/nmail/ui.conf
-        customizes UI settings
+        customizes user interface settings
 
 Examples:
 
@@ -737,74 +740,6 @@ file (platform-dependent defaults are left empty below):
     full_header_include_local=0
     help_enabled=1
     invalid_input_notify=1
-    key_back=,
-    key_backward_kill_word=
-    key_backward_word=
-    key_begin_line=KEY_CTRLA
-    key_cancel=KEY_CTRLC
-    key_compose=c
-    key_compose_copy=C
-    key_delete=d
-    key_delete_line_after_cursor=KEY_CTRLK
-    key_delete_line_before_cursor=KEY_CTRLU
-    key_end_line=KEY_CTRLE
-    key_export=x
-    key_ext_editor=KEY_CTRLW
-    key_ext_html_preview=KEY_CTRLV
-    key_ext_html_viewer=v
-    key_ext_msg_viewer=w
-    key_ext_pager=e
-    key_filter_show_current_date=3
-    key_filter_show_current_name=4
-    key_filter_show_current_subject=5
-    key_filter_show_has_attachments=2
-    key_filter_show_unread=1
-    key_filter_sort_reset=`
-    key_find=/
-    key_find_next=?
-    key_forward=f
-    key_forward_attached=F
-    key_forward_word=
-    key_goto_folder=g
-    key_goto_inbox=i
-    key_import=z
-    key_jump_to=j
-    key_kill_word=
-    key_move=m
-    key_next_msg=n
-    key_next_page=KEY_NPAGE
-    key_next_page_compose=KEY_NPAGE
-    key_open=.
-    key_othercmd_help=o
-    key_postpone=KEY_CTRLO
-    key_prev_msg=p
-    key_prev_page=KEY_PPAGE
-    key_prev_page_compose=KEY_PPAGE
-    key_quit=q
-    key_refresh=l
-    key_reply_all=r
-    key_reply_sender=R
-    key_rich_header=KEY_CTRLR
-    key_save_file=s
-    key_search=/
-    key_search_current_name=-
-    key_search_current_subject==
-    key_search_show_folder=\
-    key_select_all=a
-    key_select_item=KEY_SPACE
-    key_send=KEY_CTRLX
-    key_sort_date=#
-    key_sort_has_attachments=@
-    key_sort_name=$
-    key_sort_subject=%
-    key_sort_unread=!
-    key_spell=KEY_CTRLS
-    key_sync=s
-    key_to_select=KEY_CTRLT
-    key_toggle_full_header=h
-    key_toggle_markdown_compose=KEY_CTRLN
-    key_toggle_text_html=t
-    key_toggle_unread=u
     localized_subject_prefixes=
     markdown_html_compose=0
     new_msg_bell=1
@@ -886,20 +821,6 @@ Show supported keyboard shortcuts at bottom of screen (default enabled).
 ### invalid_input_notify
 
 Notify user when unsupported keyboard shortcuts are input (default enabled).
-
-### key_
-
-Keyboard bindings for various functions (default see above). The keyboard
-bindings may be specified in the following formats:
-- Ncurses macro (ex: `KEY_CTRLK`)
-- Hex key code (ex: `0x22e`)
-- Octal key code sequence (ex: `\033\177`)
-- Plain-text lower-case ASCII (ex: `r`)
-- Disable key binding (`KEY_NONE`)
-
-To determine the key code sequence for a key, one can run nmail in key code
-dump mode `nmail -k` which will output the octal code, and ncurses macro name
-(if present).
 
 ### localized_subject_prefixes
 
@@ -1051,6 +972,107 @@ For a more graphical interface, an emoji such as `✉` can be used.
 
 Specifies whether nmail shall unwrap quoted lines before wrapping them when
 composing a message reply.
+
+
+~/.config/nmail/key.conf
+------------------------
+This configuration file holds user interface key bindings. Default content:
+
+    key_auto_move=m
+    key_back=,
+    key_backspace=KEY_BACKSPACE
+    key_backspace_alt=KEY_BACKSPACE_ALT
+    key_backward_kill_word=
+    key_backward_word=
+    key_begin_line=KEY_CTRLA
+    key_cancel=KEY_CTRLC
+    key_compose=c
+    key_compose_copy=C
+    key_delete=d
+    key_delete_char=KEY_DC
+    key_delete_char_after_cursor=KEY_CTRLD
+    key_delete_line_after_cursor=KEY_CTRLK
+    key_delete_line_before_cursor=KEY_CTRLU
+    key_down=KEY_DOWN
+    key_end=KEY_END
+    key_end_line=KEY_CTRLE
+    key_enter=KEY_ENTER
+    key_export=x
+    key_ext_editor=KEY_CTRLW
+    key_ext_html_preview=KEY_CTRLV
+    key_ext_html_viewer=v
+    key_ext_msg_viewer=w
+    key_ext_pager=e
+    key_filter_show_current_date=3
+    key_filter_show_current_name=4
+    key_filter_show_current_subject=5
+    key_filter_show_has_attachments=2
+    key_filter_show_unread=1
+    key_filter_sort_reset=`
+    key_find=/
+    key_find_next=?
+    key_forward=f
+    key_forward_attached=F
+    key_forward_word=
+    key_goto_folder=g
+    key_goto_inbox=i
+    key_home=KEY_HOME
+    key_import=z
+    key_jump_to=j
+    key_kill_word=
+    key_left=KEY_LEFT
+    key_move=M
+    key_next_msg=n
+    key_next_page=KEY_NPAGE
+    key_next_page_compose=KEY_NPAGE
+    key_open=.
+    key_othercmd_help=o
+    key_postpone=KEY_CTRLO
+    key_prev_msg=p
+    key_prev_page=KEY_PPAGE
+    key_prev_page_compose=KEY_PPAGE
+    key_quit=q
+    key_refresh=l
+    key_reply_all=r
+    key_reply_sender=R
+    key_return=KEY_RETURN
+    key_rich_header=KEY_CTRLR
+    key_right=KEY_RIGHT
+    key_save_file=s
+    key_search=/
+    key_search_current_name=-
+    key_search_current_subject==
+    key_search_show_folder=
+    key_select_all=a
+    key_select_item=KEY_SPACE
+    key_send=KEY_CTRLX
+    key_sort_date=#
+    key_sort_has_attachments=@
+    key_sort_name=$
+    key_sort_subject=%
+    key_sort_unread=!
+    key_space=KEY_SPACE
+    key_spell=KEY_CTRLS
+    key_sync=s
+    key_tab=KEY_TAB
+    key_terminal_resize=KEY_RESIZE
+    key_to_select=KEY_CTRLT
+    key_toggle_full_header=h
+    key_toggle_markdown_compose=KEY_CTRLN
+    key_toggle_text_html=t
+    key_toggle_unread=u
+    key_up=KEY_UP
+
+The key bindings may be specified in the following formats:
+- Ncurses macro (ex: `KEY_CTRLK`)
+- Hex key code (ex: `0x22e`)
+- Octal key code sequence (ex: `\033\177`)
+- Plain-text lower-case ASCII (ex: `r`)
+- Disable key binding (`KEY_NONE`)
+
+To determine the key code sequence for a key, one can run nmail in key code
+dump mode `nmail -k` which will output the octal code, and ncurses macro name
+(if present).
 
 
 ~/.config/nmail/colors.conf

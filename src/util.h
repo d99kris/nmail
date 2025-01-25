@@ -1,6 +1,6 @@
 // util.h
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -13,12 +13,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
-#define KEY_NONE -1
-#define KEY_TAB 9
-#define KEY_RETURN 10
-#define KEY_SPACE 32
-#define KEY_DELETE 127
 
 #define THREAD_REGISTER() ThreadRegister threadRegister(__PRETTY_FUNCTION__)
 #define UNUSED(x) Util::Unused(x)
@@ -202,9 +196,6 @@ public:
   static std::vector<std::string> SplitQuoted(const std::string& p_Str, bool p_Unquote);
   static std::string Trim(const std::string& p_Str);
   static std::vector<std::string> Trim(const std::vector<std::string>& p_Strs);
-  static int ReserveVirtualKeyCode();
-  static int GetKeyCode(const std::string& p_KeyName);
-  static std::string GetKeyName(int p_KeyCode);
 
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                             bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
@@ -219,7 +210,7 @@ public:
                           const std::string& p_Delim = "\n");
 
   static std::string ToHexString(int p_Val);
-  static std::string FromOctString(const std::string& p_Str);
+  static std::string StrFromOct(const std::string& p_Str);
   static void HexToRGB(const std::string p_Str, uint32_t& p_R, uint32_t& p_G, uint32_t& p_B);
 
   static void InitAppSignalHandlers();
@@ -261,6 +252,7 @@ public:
   static int GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr);
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
+  static void CopyFile(const std::string& p_SrcPath, const std::string& p_DstPath);
   static void CopyFiles(const std::string& p_SrcDir, const std::string& p_DstDir);
   static void BitInvertString(std::string& p_String);
   static void NormalizeName(std::string& p_String);

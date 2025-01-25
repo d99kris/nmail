@@ -1,6 +1,6 @@
 // ui.h
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -424,6 +424,21 @@ private:
   int m_KeySearchCurrentSubject = 0;
   int m_KeySearchCurrentName = 0;
   int m_KeySpell = 0;
+  int m_KeyReturn = 0;
+  int m_KeyEnter = 0;
+  int m_KeyLeft = 0;
+  int m_KeyRight = 0;
+
+  int m_KeyDown = 0;
+  int m_KeyUp = 0;
+  int m_KeyEnd = 0;
+  int m_KeyHome = 0;
+  int m_KeyBackspace = 0;
+  int m_KeyBackspaceAlt = 0;
+  int m_KeyDeleteChar = 0;
+  int m_KeySpace = 0;
+  int m_KeyTab = 0;
+  int m_KeyTerminalResize = 0;
 
   int m_ShowProgress = 1;
   bool m_NewMsgBell = false;

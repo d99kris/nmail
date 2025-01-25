@@ -1,6 +1,6 @@
 // config.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -25,6 +25,7 @@ public:
   void Set(const std::string& p_Param, const std::string& p_Value);
   void Delete(const std::string& p_Param);
   bool Exist(const std::string& p_Param);
+  std::map<std::string, std::string> GetMap() const;
 
   void LogParams() const;
   void LogParamsExcept(const std::set<std::string>& p_Exclude) const;

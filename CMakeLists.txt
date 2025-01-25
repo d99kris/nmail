@@ -90,6 +90,10 @@ add_executable(nmail
   src/status.h
   src/ui.cpp
   src/ui.h
+  src/uikeyconfig.cpp
+  src/uikeyconfig.h
+  src/uikeyinput.cpp
+  src/uikeyinput.h
   src/util.cpp
   src/util.h
   src/version.cpp

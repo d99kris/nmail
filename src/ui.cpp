@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -20,6 +20,8 @@
 #include "sethelp.h"
 #include "sleepdetect.h"
 #include "status.h"
+#include "uikeyconfig.h"
+#include "uikeyinput.h"
 #include "version.h"
 
 bool Ui::s_Running = false;
@@ -66,83 +68,6 @@ void Ui::Init()
     { "show_embedded_images", "1" },
     { "show_rich_header", "0" },
     { "markdown_html_compose", "0" },
-    { "key_prev_msg", "p" },
-    { "key_next_msg", "n" },
-    { "key_reply_all", "r" },
-    { "key_reply_sender", "R" },
-    { "key_forward", "f" },
-    { "key_forward_attached", "F" },
-    { "key_delete", "d" },
-    { "key_compose", "c" },
-    { "key_compose_copy", "C" },
-    { "key_toggle_unread", "u" },
-    { "key_move", "M" },
-    { "key_auto_move", "m" },
-    { "key_refresh", "l" },
-    { "key_quit", "q" },
-    { "key_toggle_text_html", "t" },
-    { "key_cancel", "KEY_CTRLC" },
-    { "key_send", "KEY_CTRLX" },
-    { "key_delete_char_after_cursor", "KEY_CTRLD" },
-    { "key_delete_line_after_cursor", "KEY_CTRLK" },
-    { "key_delete_line_before_cursor", "KEY_CTRLU" },
-    { "key_open", "." },
-    { "key_back", "," },
-    { "key_goto_folder", "g" },
-    { "key_goto_inbox", "i" },
-    { "key_to_select", "KEY_CTRLT" },
-    { "key_save_file", "s" },
-    { "key_ext_editor", "KEY_CTRLW" },
-    { "key_ext_pager", "e" },
-    { "key_postpone", "KEY_CTRLO" },
-    { "key_othercmd_help", "o" },
-    { "key_export", "x" },
-    { "key_import", "z" },
-    { "key_rich_header", "KEY_CTRLR" },
-    { "key_ext_html_viewer", "v" },
-    { "key_ext_html_preview", "KEY_CTRLV" },
-    { "key_ext_msg_viewer", "w" },
-    { "key_search", "/" },
-    { "key_search_current_subject", "=" },
-    { "key_search_current_name", "-" },
-    { "key_find", "/" },
-    { "key_find_next", "?" },
-    { "key_sync", "s" },
-    { "key_toggle_markdown_compose", "KEY_CTRLN" },
-#if defined(__APPLE__)
-    { "key_backward_word", "\\033\\142" }, // opt-left
-    { "key_forward_word", "\\033\\146" }, // opt-right
-    { "key_backward_kill_word", "\\033\\177" }, // opt-backspace
-    { "key_kill_word", "\\033\\010" }, // opt-delete
-#else // defined(__linux__)
-    { "key_backward_word", "\\1040" }, // alt-left
-    { "key_forward_word", "\\1057" }, // alt-right
-    { "key_backward_kill_word", "\\033\\177" }, // alt-backspace
-    { "key_kill_word", "\\1006" }, // alt-delete
-#endif
-    { "key_begin_line", "KEY_CTRLA" },
-    { "key_end_line", "KEY_CTRLE" },
-    { "key_prev_page", "KEY_PPAGE" },
-    { "key_next_page", "KEY_NPAGE" },
-    { "key_prev_page_compose", "KEY_PPAGE" },
-    { "key_next_page_compose", "KEY_NPAGE" },
-    { "key_filter_sort_reset", "`" },
-    { "key_filter_show_unread", "1" },
-    { "key_filter_show_has_attachments", "2" },
-    { "key_filter_show_current_date", "3" },
-    { "key_filter_show_current_name", "4" },
-    { "key_filter_show_current_subject", "5" },
-    { "key_sort_unread", "!" },
-    { "key_sort_has_attachments", "@" },
-    { "key_sort_date", "#" },
-    { "key_sort_name", "$" },
-    { "key_sort_subject", "%" },
-    { "key_jump_to", "j" },
-    { "key_toggle_full_header", "h" },
-    { "key_select_item", "KEY_SPACE" },
-    { "key_select_all", "a" },
-    { "key_search_show_folder", "\\" },
-    { "key_spell", "KEY_CTRLS" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
@@ -180,6 +105,8 @@ void Ui::Init()
   curs_set(0);
   timeout(0);
 
+  UiKeyConfig::Init(true);
+
   m_ComposeLineWrap = Util::ToInteger(m_Config.Get("compose_line_wrap"));
   m_RespectFormatFlowed = m_Config.Get("respect_format_flowed") == "1";
   m_RewrapQuotedLines = m_Config.Get("rewrap_quoted_lines") == "1";
@@ -190,75 +117,89 @@ void Ui::Init()
   m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
-  m_KeyPrevMsg = Util::GetKeyCode(m_Config.Get("key_prev_msg"));
-  m_KeyNextMsg = Util::GetKeyCode(m_Config.Get("key_next_msg"));
-  m_KeyReplyAll = Util::GetKeyCode(m_Config.Get("key_reply_all"));
-  m_KeyReplySender = Util::GetKeyCode(m_Config.Get("key_reply_sender"));
-  m_KeyForward = Util::GetKeyCode(m_Config.Get("key_forward"));
-  m_KeyForwardAttached = Util::GetKeyCode(m_Config.Get("key_forward_attached"));
-  m_KeyDelete = Util::GetKeyCode(m_Config.Get("key_delete"));
-  m_KeyCompose = Util::GetKeyCode(m_Config.Get("key_compose"));
-  m_KeyComposeCopy = Util::GetKeyCode(m_Config.Get("key_compose_copy"));
-  m_KeyToggleUnread = Util::GetKeyCode(m_Config.Get("key_toggle_unread"));
-  m_KeyMove = Util::GetKeyCode(m_Config.Get("key_move"));
-  m_KeyAutoMove = Util::GetKeyCode(m_Config.Get("key_auto_move"));
-  m_KeyRefresh = Util::GetKeyCode(m_Config.Get("key_refresh"));
-  m_KeyQuit = Util::GetKeyCode(m_Config.Get("key_quit"));
-  m_KeyToggleTextHtml = Util::GetKeyCode(m_Config.Get("key_toggle_text_html"));
-  m_KeyCancel = Util::GetKeyCode(m_Config.Get("key_cancel"));
-  m_KeySend = Util::GetKeyCode(m_Config.Get("key_send"));
-  m_KeyDeleteCharAfterCursor = Util::GetKeyCode(m_Config.Get("key_delete_char_after_cursor"));
-  m_KeyDeleteLineAfterCursor = Util::GetKeyCode(m_Config.Get("key_delete_line_after_cursor"));
-  m_KeyDeleteLineBeforeCursor = Util::GetKeyCode(m_Config.Get("key_delete_line_before_cursor"));
-  m_KeyOpen = Util::GetKeyCode(m_Config.Get("key_open"));
-  m_KeyBack = Util::GetKeyCode(m_Config.Get("key_back"));
-  m_KeyGotoFolder = Util::GetKeyCode(m_Config.Get("key_goto_folder"));
-  m_KeyGotoInbox = Util::GetKeyCode(m_Config.Get("key_goto_inbox"));
-  m_KeyToSelect = Util::GetKeyCode(m_Config.Get("key_to_select"));
-  m_KeySaveFile = Util::GetKeyCode(m_Config.Get("key_save_file"));
-  m_KeyExtEditor = Util::GetKeyCode(m_Config.Get("key_ext_editor"));
-  m_KeyExtPager = Util::GetKeyCode(m_Config.Get("key_ext_pager"));
-  m_KeyPostpone = Util::GetKeyCode(m_Config.Get("key_postpone"));
-  m_KeyOtherCmdHelp = Util::GetKeyCode(m_Config.Get("key_othercmd_help"));
-  m_KeyExport = Util::GetKeyCode(m_Config.Get("key_export"));
-  m_KeyImport = Util::GetKeyCode(m_Config.Get("key_import"));
-  m_KeyRichHeader = Util::GetKeyCode(m_Config.Get("key_rich_header"));
-  m_KeyExtHtmlViewer = Util::GetKeyCode(m_Config.Get("key_ext_html_viewer"));
-  m_KeyExtHtmlPreview = Util::GetKeyCode(m_Config.Get("key_ext_html_preview"));
-  m_KeyExtMsgViewer = Util::GetKeyCode(m_Config.Get("key_ext_msg_viewer"));
-  m_KeySearch = Util::GetKeyCode(m_Config.Get("key_search"));
-  m_KeyFind = Util::GetKeyCode(m_Config.Get("key_find"));
-  m_KeyFindNext = Util::GetKeyCode(m_Config.Get("key_find_next"));
-  m_KeySync = Util::GetKeyCode(m_Config.Get("key_sync"));
-  m_KeyToggleMarkdownCompose = Util::GetKeyCode(m_Config.Get("key_toggle_markdown_compose"));
+  m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
+  m_KeyNextMsg = UiKeyConfig::GetKey("key_next_msg");
+  m_KeyReplyAll = UiKeyConfig::GetKey("key_reply_all");
+  m_KeyReplySender = UiKeyConfig::GetKey("key_reply_sender");
+  m_KeyForward = UiKeyConfig::GetKey("key_forward");
+  m_KeyForwardAttached = UiKeyConfig::GetKey("key_forward_attached");
+  m_KeyDelete = UiKeyConfig::GetKey("key_delete");
+  m_KeyCompose = UiKeyConfig::GetKey("key_compose");
+  m_KeyComposeCopy = UiKeyConfig::GetKey("key_compose_copy");
+  m_KeyToggleUnread = UiKeyConfig::GetKey("key_toggle_unread");
+  m_KeyMove = UiKeyConfig::GetKey("key_move");
+  m_KeyAutoMove = UiKeyConfig::GetKey("key_auto_move");
+  m_KeyRefresh = UiKeyConfig::GetKey("key_refresh");
+  m_KeyQuit = UiKeyConfig::GetKey("key_quit");
+  m_KeyToggleTextHtml = UiKeyConfig::GetKey("key_toggle_text_html");
+  m_KeyCancel = UiKeyConfig::GetKey("key_cancel");
+  m_KeySend = UiKeyConfig::GetKey("key_send");
+  m_KeyDeleteCharAfterCursor = UiKeyConfig::GetKey("key_delete_char_after_cursor");
+  m_KeyDeleteLineAfterCursor = UiKeyConfig::GetKey("key_delete_line_after_cursor");
+  m_KeyDeleteLineBeforeCursor = UiKeyConfig::GetKey("key_delete_line_before_cursor");
+  m_KeyOpen = UiKeyConfig::GetKey("key_open");
+  m_KeyBack = UiKeyConfig::GetKey("key_back");
+  m_KeyGotoFolder = UiKeyConfig::GetKey("key_goto_folder");
+  m_KeyGotoInbox = UiKeyConfig::GetKey("key_goto_inbox");
+  m_KeyToSelect = UiKeyConfig::GetKey("key_to_select");
+  m_KeySaveFile = UiKeyConfig::GetKey("key_save_file");
+  m_KeyExtEditor = UiKeyConfig::GetKey("key_ext_editor");
+  m_KeyExtPager = UiKeyConfig::GetKey("key_ext_pager");
+  m_KeyPostpone = UiKeyConfig::GetKey("key_postpone");
+  m_KeyOtherCmdHelp = UiKeyConfig::GetKey("key_othercmd_help");
+  m_KeyExport = UiKeyConfig::GetKey("key_export");
+  m_KeyImport = UiKeyConfig::GetKey("key_import");
+  m_KeyRichHeader = UiKeyConfig::GetKey("key_rich_header");
+  m_KeyExtHtmlViewer = UiKeyConfig::GetKey("key_ext_html_viewer");
+  m_KeyExtHtmlPreview = UiKeyConfig::GetKey("key_ext_html_preview");
+  m_KeyExtMsgViewer = UiKeyConfig::GetKey("key_ext_msg_viewer");
+  m_KeySearch = UiKeyConfig::GetKey("key_search");
+  m_KeyFind = UiKeyConfig::GetKey("key_find");
+  m_KeyFindNext = UiKeyConfig::GetKey("key_find_next");
+  m_KeySync = UiKeyConfig::GetKey("key_sync");
+  m_KeyToggleMarkdownCompose = UiKeyConfig::GetKey("key_toggle_markdown_compose");
 
-  m_KeyBackwardWord = Util::GetKeyCode(m_Config.Get("key_backward_word"));
-  m_KeyForwardWord = Util::GetKeyCode(m_Config.Get("key_forward_word"));
-  m_KeyBackwardKillWord = Util::GetKeyCode(m_Config.Get("key_backward_kill_word"));
-  m_KeyKillWord = Util::GetKeyCode(m_Config.Get("key_kill_word"));
+  m_KeyBackwardWord = UiKeyConfig::GetKey("key_backward_word");
+  m_KeyForwardWord = UiKeyConfig::GetKey("key_forward_word");
+  m_KeyBackwardKillWord = UiKeyConfig::GetKey("key_backward_kill_word");
+  m_KeyKillWord = UiKeyConfig::GetKey("key_kill_word");
 
-  m_KeyBeginLine = Util::GetKeyCode(m_Config.Get("key_begin_line"));
-  m_KeyEndLine = Util::GetKeyCode(m_Config.Get("key_end_line"));
-  m_KeyPrevPage = Util::GetKeyCode(m_Config.Get("key_prev_page"));
-  m_KeyNextPage = Util::GetKeyCode(m_Config.Get("key_next_page"));
-  m_KeyPrevPageCompose = Util::GetKeyCode(m_Config.Get("key_prev_page_compose"));
-  m_KeyNextPageCompose = Util::GetKeyCode(m_Config.Get("key_next_page_compose"));
-  m_KeyFilterSortReset = Util::GetKeyCode(m_Config.Get("key_filter_sort_reset"));
-  m_KeyFilterShowUnread = Util::GetKeyCode(m_Config.Get("key_filter_show_unread"));
-  m_KeyFilterShowHasAttachments = Util::GetKeyCode(m_Config.Get("key_filter_show_has_attachments"));
-  m_KeyFilterShowCurrentDate = Util::GetKeyCode(m_Config.Get("key_filter_show_current_date"));
-  m_KeyFilterShowCurrentName = Util::GetKeyCode(m_Config.Get("key_filter_show_current_name"));
-  m_KeyFilterShowCurrentSubject = Util::GetKeyCode(m_Config.Get("key_filter_show_current_subject"));
-  m_KeySortUnread = Util::GetKeyCode(m_Config.Get("key_sort_unread"));
-  m_KeySortHasAttachments = Util::GetKeyCode(m_Config.Get("key_sort_has_attachments"));
-  m_KeySortDate = Util::GetKeyCode(m_Config.Get("key_sort_date"));
-  m_KeySortName = Util::GetKeyCode(m_Config.Get("key_sort_name"));
-  m_KeySortSubject = Util::GetKeyCode(m_Config.Get("key_sort_subject"));
-  m_KeyJumpTo = Util::GetKeyCode(m_Config.Get("key_jump_to"));
-  m_KeySearchShowFolder = Util::GetKeyCode(m_Config.Get("key_search_show_folder"));
-  m_KeySearchCurrentSubject = Util::GetKeyCode(m_Config.Get("key_search_current_subject"));
-  m_KeySearchCurrentName = Util::GetKeyCode(m_Config.Get("key_search_current_name"));
-  m_KeySpell = Util::GetKeyCode(m_Config.Get("key_spell"));
+  m_KeyBeginLine = UiKeyConfig::GetKey("key_begin_line");
+  m_KeyEndLine = UiKeyConfig::GetKey("key_end_line");
+  m_KeyPrevPage = UiKeyConfig::GetKey("key_prev_page");
+  m_KeyNextPage = UiKeyConfig::GetKey("key_next_page");
+  m_KeyPrevPageCompose = UiKeyConfig::GetKey("key_prev_page_compose");
+  m_KeyNextPageCompose = UiKeyConfig::GetKey("key_next_page_compose");
+  m_KeyFilterSortReset = UiKeyConfig::GetKey("key_filter_sort_reset");
+  m_KeyFilterShowUnread = UiKeyConfig::GetKey("key_filter_show_unread");
+  m_KeyFilterShowHasAttachments = UiKeyConfig::GetKey("key_filter_show_has_attachments");
+  m_KeyFilterShowCurrentDate = UiKeyConfig::GetKey("key_filter_show_current_date");
+  m_KeyFilterShowCurrentName = UiKeyConfig::GetKey("key_filter_show_current_name");
+  m_KeyFilterShowCurrentSubject = UiKeyConfig::GetKey("key_filter_show_current_subject");
+  m_KeySortUnread = UiKeyConfig::GetKey("key_sort_unread");
+  m_KeySortHasAttachments = UiKeyConfig::GetKey("key_sort_has_attachments");
+  m_KeySortDate = UiKeyConfig::GetKey("key_sort_date");
+  m_KeySortName = UiKeyConfig::GetKey("key_sort_name");
+  m_KeySortSubject = UiKeyConfig::GetKey("key_sort_subject");
+  m_KeyJumpTo = UiKeyConfig::GetKey("key_jump_to");
+  m_KeySearchShowFolder = UiKeyConfig::GetKey("key_search_show_folder");
+  m_KeySearchCurrentSubject = UiKeyConfig::GetKey("key_search_current_subject");
+  m_KeySearchCurrentName = UiKeyConfig::GetKey("key_search_current_name");
+  m_KeySpell = UiKeyConfig::GetKey("key_spell");
+  m_KeyReturn = UiKeyConfig::GetKey("key_return");
+  m_KeyEnter = UiKeyConfig::GetKey("key_enter");
+  m_KeyLeft = UiKeyConfig::GetKey("key_left");
+  m_KeyRight = UiKeyConfig::GetKey("key_right");
+  m_KeyDown = UiKeyConfig::GetKey("key_down");
+  m_KeyUp = UiKeyConfig::GetKey("key_up");
+  m_KeyEnd = UiKeyConfig::GetKey("key_end");
+  m_KeyHome = UiKeyConfig::GetKey("key_home");
+  m_KeyBackspace = UiKeyConfig::GetKey("key_backspace");
+  m_KeyBackspaceAlt = UiKeyConfig::GetKey("key_backspace_alt");
+  m_KeyDeleteChar = UiKeyConfig::GetKey("key_delete_char");
+  m_KeySpace = UiKeyConfig::GetKey("key_space");
+  m_KeyTab = UiKeyConfig::GetKey("key_tab");
+  m_KeyTerminalResize = UiKeyConfig::GetKey("key_terminal_resize");
 
   m_ShowProgress = Util::ToInteger(m_Config.Get("show_progress"));
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
@@ -351,11 +292,11 @@ void Ui::Init()
   m_PersistSelectionOnSortFilterChange = m_Config.Get("persist_selection_on_sortfilter_change") == "1";
   m_UnreadIndicator = m_Config.Get("unread_indicator");
   m_InvalidInputNotify = m_Config.Get("invalid_input_notify") == "1";
-  m_KeyToggleFullHeader = Util::GetKeyCode(m_Config.Get("key_toggle_full_header"));
+  m_KeyToggleFullHeader = UiKeyConfig::GetKey("key_toggle_full_header");
   m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
   m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
-  m_KeySelectItem = Util::GetKeyCode(m_Config.Get("key_select_item"));
-  m_KeySelectAll = Util::GetKeyCode(m_Config.Get("key_select_all"));
+  m_KeySelectItem = UiKeyConfig::GetKey("key_select_item");
+  m_KeySelectAll = UiKeyConfig::GetKey("key_select_all");
   m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
   Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
   m_Signature = m_Config.Get("signature") == "1";
@@ -386,6 +327,9 @@ void Ui::Cleanup()
   m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
   m_Config.Set("search_show_folder", m_SearchShowFolder ? "1" : "0");
   m_Config.Save();
+
+  UiKeyConfig::Cleanup();
+
   close(m_Pipe[0]);
   close(m_Pipe[1]);
   wclear(stdscr);
@@ -765,7 +709,7 @@ void Ui::DrawHelp()
   static std::vector<std::vector<std::string>> viewFoldersHelp =
   {
     {
-      GetKeyDisplay(KEY_RETURN), "Select",
+      GetKeyDisplay(m_KeyReturn), "Select",
     },
     {
       GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -2060,9 +2004,9 @@ void Ui::Run()
     if (FD_ISSET(STDIN_FILENO, &fds))
     {
       wint_t key = 0;
-      get_wch(&key);
+      UiKeyInput::GetWch(&key);
 
-      if (key == KEY_RESIZE)
+      if (static_cast<int>(key) == m_KeyTerminalResize)
       {
         CleanupWindows();
         InitWindows();
@@ -2148,8 +2092,8 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   {
     SetState(StateViewMessageList);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
-           ((p_Key == KEY_RIGHT) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
+           ((p_Key == m_KeyRight) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
   {
     if (m_FolderListCurrentFolder != "")
     {
@@ -2208,8 +2152,8 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   {
     SetState(m_LastMessageState);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
-           ((p_Key == KEY_RIGHT) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
+           ((p_Key == m_KeyRight) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
     if (m_State == StateAddressList)
     {
@@ -2243,8 +2187,8 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   {
     SetState(m_LastMessageState);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) ||
-           ((p_Key == KEY_RIGHT) && (m_FileListFilterPos == (int)m_FileListFilterStr.size())))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
+           ((p_Key == m_KeyRight) && (m_FileListFilterPos == (int)m_FileListFilterStr.size())))
   {
     if (m_FileListCurrentFile.IsDir())
     {
@@ -2262,7 +2206,7 @@ void Ui::ViewFileListKeyHandler(int p_Key)
       SetState(m_LastMessageState);
     }
   }
-  else if ((m_FileListFilterPos == 0) && (p_Key == KEY_LEFT))
+  else if ((m_FileListFilterPos == 0) && (p_Key == m_KeyLeft))
   {
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
@@ -2285,7 +2229,7 @@ void Ui::ViewFileListKeyHandler(int p_Key)
       m_FileListCurrentFile.m_Name = "";
     }
   }
-  else if ((m_FileListFilterPos == 0) && ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE)))
+  else if ((m_FileListFilterPos == 0) && ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt)))
   {
     // backspace with empty filter goes up one directory level
     m_FileListFilterPos = 0;
@@ -2328,12 +2272,12 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("Cannot refresh while offline");
     }
   }
-  else if ((p_Key == KEY_UP) || (p_Key == m_KeyPrevMsg))
+  else if ((p_Key == m_KeyUp) || (p_Key == m_KeyPrevMsg))
   {
     --m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == KEY_DOWN) || (p_Key == m_KeyNextMsg))
+  else if ((p_Key == m_KeyDown) || (p_Key == m_KeyNextMsg))
   {
     ++m_MessageListCurrentIndex[m_CurrentFolder];
     UpdateUidFromIndex(true /* p_UserTriggered */);
@@ -2350,17 +2294,17 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       m_MessageListCurrentIndex[m_CurrentFolder] + m_MainWinHeight;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if (p_Key == KEY_HOME)
+  else if (p_Key == m_KeyHome)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] = 0;
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if (p_Key == KEY_END)
+  else if (p_Key == m_KeyEnd)
   {
     m_MessageListCurrentIndex[m_CurrentFolder] = std::numeric_limits<int>::max();
     UpdateUidFromIndex(true /* p_UserTriggered */);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight))
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
     const int uid = m_CurrentFolderUid.second;
@@ -2379,7 +2323,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetState(StateViewMessage);
     }
   }
-  else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
+  else if ((p_Key == m_KeyGotoFolder) || (p_Key == m_KeyBack) || (p_Key == m_KeyLeft))
   {
     if (m_MessageListSearch)
     {
@@ -2523,7 +2467,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
       SetDialogMessage("No message to forward");
     }
   }
-  else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
+  else if ((p_Key == m_KeyDelete) || (p_Key == m_KeyDeleteChar))
   {
     if (IsConnected())
     {
@@ -2811,15 +2755,15 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     // none
   }
-  else if (p_Key == KEY_SPACE) // alternative next page key
+  else if (p_Key == m_KeySpace) // alternative next page key
   {
     m_MessageViewLineOffset = m_MessageViewLineOffset + m_MainWinHeight;
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
+  else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt) || (p_Key == m_KeyBack) || (p_Key == m_KeyLeft))
   {
     SetState(StateViewMessageList);
   }
-  else if ((p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
+  else if ((p_Key == m_KeyOpen) || (p_Key == m_KeyRight))
   {
     SetState(StateViewPartList);
   }
@@ -2905,7 +2849,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     m_MessageViewLineOffset = 0;
     m_MessageFindMatchLine = -1;
   }
-  else if ((p_Key == m_KeyDelete) || (p_Key == KEY_DC))
+  else if ((p_Key == m_KeyDelete) || (p_Key == m_KeyDeleteChar))
   {
     if (IsConnected())
     {
@@ -2989,7 +2933,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   // process state-specific key handling first
   if (m_IsComposeHeader)
   {
-    if (p_Key == KEY_UP)
+    if (p_Key == m_KeyUp)
     {
       --m_ComposeHeaderLine;
       if (m_ComposeHeaderLine < 0)
@@ -3002,7 +2946,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                        (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
     }
-    else if ((p_Key == KEY_DOWN) || (p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == KEY_TAB))
+    else if ((p_Key == m_KeyDown) || (p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyTab))
     {
       if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
       {
@@ -3041,7 +2985,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         FilePickerOrStateFileList();
       }
     }
-    else if ((p_Key == KEY_LEFT) && (m_ComposeHeaderPos == 0))
+    else if ((p_Key == m_KeyLeft) && (m_ComposeHeaderPos == 0))
     {
       --m_ComposeHeaderLine;
       if (m_ComposeHeaderLine < 0)
@@ -3058,7 +3002,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
                                        (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
     }
-    else if ((p_Key == KEY_RIGHT) && (m_ComposeHeaderPos == (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size()))
+    else if ((p_Key == m_KeyRight) && (m_ComposeHeaderPos == (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size()))
     {
       m_ComposeHeaderPos = 0;
 
@@ -3094,11 +3038,11 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
   }
   else // compose body
   {
-    if (p_Key == KEY_UP)
+    if (p_Key == m_KeyUp)
     {
       ComposeMessagePrevLine();
     }
-    else if (p_Key == KEY_DOWN)
+    else if (p_Key == m_KeyDown)
     {
       ComposeMessageNextLine();
     }
@@ -3132,13 +3076,13 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
                                                m_ComposeMessageWrapPos);
       }
     }
-    else if ((p_Key == KEY_LEFT) && (m_ComposeMessagePos == 0))
+    else if ((p_Key == m_KeyLeft) && (m_ComposeMessagePos == 0))
     {
       // switch to header
       m_IsComposeHeader = true;
       m_ComposeHeaderPos = (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size();
     }
-    else if (p_Key == KEY_TAB)
+    else if (p_Key == m_KeyTab)
     {
       DrawAll(); // redraw to update current column position (m_ComposeMessageWrapPos)
       int tabSpaces = (m_TabSize - (m_ComposeMessageWrapPos % m_TabSize));
@@ -3205,14 +3149,14 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   {
     Quit();
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE) || (p_Key == m_KeyBack) || (p_Key == KEY_LEFT))
+  else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt) || (p_Key == m_KeyBack) || (p_Key == m_KeyLeft))
   {
     const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
     LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
     Util::CleanupAttachmentsTempDir();
     SetState(StateViewMessage);
   }
-  else if ((p_Key == KEY_RETURN) || (p_Key == KEY_ENTER) || (p_Key == m_KeyOpen) || (p_Key == KEY_RIGHT))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight))
   {
     std::string ext;
     std::string err;
@@ -4513,11 +4457,11 @@ std::string Ui::GetKeyDisplay(int p_Key)
   {
     return ">";
   }
-  else if (p_Key == KEY_LEFT)
+  else if (p_Key == m_KeyLeft)
   {
     return "←";
   }
-  else if (p_Key == KEY_RIGHT)
+  else if (p_Key == m_KeyRight)
   {
     return "→";
   }
@@ -5230,7 +5174,7 @@ int Ui::ReadKeyBlocking()
     if (FD_ISSET(STDIN_FILENO, &fds))
     {
       wint_t key = 0;
-      get_wch(&key);
+      UiKeyInput::GetWch(&key);
 
       return key;
     }
@@ -5263,7 +5207,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
     static std::vector<std::vector<std::string>> savePartHelp =
     {
       {
-        GetKeyDisplay(KEY_RETURN), p_Action,
+        GetKeyDisplay(m_KeyReturn), p_Action,
       },
       {
         GetKeyDisplay(m_KeyCancel), "Cancel",
@@ -5299,15 +5243,15 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
       rv = false;
       break;
     }
-    else if ((key == KEY_RETURN) || (key == KEY_ENTER))
+    else if ((key == m_KeyReturn) || (key == m_KeyEnter))
     {
       p_Entry = Util::ToString(m_FilenameEntryString);
       rv = true;
       break;
     }
-    else if ((key == KEY_UP) || (key == KEY_DOWN) ||
+    else if ((key == m_KeyUp) || (key == m_KeyDown) ||
              (key == m_KeyPrevPageCompose) || (key == m_KeyNextPageCompose) ||
-             (key == KEY_HOME) || (key == KEY_END))
+             (key == m_KeyHome) || (key == m_KeyEnd))
     {
       // ignore
     }
@@ -5370,7 +5314,7 @@ void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessag
   refresh();
 
   wint_t key = 0;
-  while (get_wch(&key) != ERR)
+  while (UiKeyInput::GetWch(&key) != ERR)
   {
     // Discard any remaining input
   }
@@ -5400,7 +5344,7 @@ void Ui::ExtPager()
   refresh();
 
   wint_t key = 0;
-  while (get_wch(&key) != ERR)
+  while (UiKeyInput::GetWch(&key) != ERR)
   {
     // Discard any remaining input
   }
@@ -5436,7 +5380,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
     refresh();
 
     wint_t key = 0;
-    while (get_wch(&key) != ERR)
+    while (UiKeyInput::GetWch(&key) != ERR)
     {
       // Discard any remaining input
     }
@@ -5505,7 +5449,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
     refresh();
 
     wint_t key = 0;
-    while (get_wch(&key) != ERR)
+    while (UiKeyInput::GetWch(&key) != ERR)
     {
       // Discard any remaining input
     }
@@ -5541,7 +5485,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
     refresh();
 
     wint_t key = 0;
-    while (get_wch(&key) != ERR)
+    while (UiKeyInput::GetWch(&key) != ERR)
     {
       // Discard any remaining input
     }
@@ -5610,7 +5554,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
     refresh();
 
     wint_t key = 0;
-    while (get_wch(&key) != ERR)
+    while (UiKeyInput::GetWch(&key) != ERR)
     {
       // Discard any remaining input
     }
@@ -6710,7 +6654,7 @@ void Ui::FilePickerOrStateFileList()
 
     refresh();
     wint_t key = 0;
-    while (get_wch(&key) != ERR)
+    while (UiKeyInput::GetWch(&key) != ERR)
     {
       // Discard any remaining input
     }
@@ -6818,11 +6762,11 @@ std::wstring Ui::GetSignatureStr(bool p_NoPrefix /*= false*/)
 
 bool Ui::HandleListKey(int p_Key, int& p_Index)
 {
-  if (p_Key == KEY_UP)
+  if (p_Key == m_KeyUp)
   {
     --p_Index;
   }
-  else if (p_Key == KEY_DOWN)
+  else if (p_Key == m_KeyDown)
   {
     ++p_Index;
   }
@@ -6834,11 +6778,11 @@ bool Ui::HandleListKey(int p_Key, int& p_Index)
   {
     p_Index = p_Index + m_MainWinHeight;
   }
-  else if (p_Key == KEY_HOME)
+  else if (p_Key == m_KeyHome)
   {
     p_Index = 0;
   }
-  else if (p_Key == KEY_END)
+  else if (p_Key == m_KeyEnd)
   {
     p_Index = std::numeric_limits<int>::max() - 1;
   }
@@ -6852,22 +6796,22 @@ bool Ui::HandleListKey(int p_Key, int& p_Index)
 
 bool Ui::HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos)
 {
-  if (p_Key == KEY_LEFT)
+  if (p_Key == m_KeyLeft)
   {
     p_Pos = Util::Bound(0, p_Pos - 1, (int)p_Str.size());
   }
-  else if (p_Key == KEY_RIGHT)
+  else if (p_Key == m_KeyRight)
   {
     p_Pos = Util::Bound(0, p_Pos + 1, (int)p_Str.size());
   }
-  else if ((p_Key == KEY_BACKSPACE) || (p_Key == KEY_DELETE))
+  else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt))
   {
     if (p_Pos > 0)
     {
       p_Str.erase(--p_Pos, 1);
     }
   }
-  else if ((p_Key == KEY_DC) || (p_Key == m_KeyDeleteCharAfterCursor))
+  else if ((p_Key == m_KeyDeleteChar) || (p_Key == m_KeyDeleteCharAfterCursor))
   {
     if (p_Pos < (int)p_Str.size())
     {
@@ -6930,11 +6874,11 @@ bool Ui::HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos)
 
 bool Ui::HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos)
 {
-  if (p_Key == KEY_HOME)
+  if (p_Key == m_KeyHome)
   {
     p_Pos = 0;
   }
-  else if (p_Key == KEY_END)
+  else if (p_Key == m_KeyEnd)
   {
     p_Pos = p_Str.size();
   }
