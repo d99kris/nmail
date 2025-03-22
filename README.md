@@ -166,7 +166,7 @@ macOS
 
 Arch
 
-    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file pandoc
+    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file
 
 Debian-based (Ubuntu, Raspbian, etc)
 
@@ -174,7 +174,7 @@ Debian-based (Ubuntu, Raspbian, etc)
 
 Fedora
 
-    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang pandoc
+    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang
 
 Gentoo
 
@@ -187,6 +187,20 @@ Gentoo
 **Install**
 
     sudo make install
+
+Optional Run-time Dependencies
+------------------------------
+External programs will be utilized by default if installed on the system, in
+particular for handling HTML-formatted emails. For best user experience the
+following packages are recommended to be installed.
+
+macOS
+
+    brew install pandoc w3m poppler lesspipe
+
+Debian-based (Ubuntu, Raspbian, etc)
+
+    sudo apt install pandoc w3m poppler-utils less
 
 Getting Started
 ===============
