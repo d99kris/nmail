@@ -744,6 +744,7 @@ void Ui::DrawHelp()
     {
       GetKeyDisplay(m_KeyOpen), "ViewPart",
       GetKeyDisplay(m_KeyNextMsg), "NextPart",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
   };
@@ -3156,7 +3157,8 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     Util::CleanupAttachmentsTempDir();
     SetState(StateViewMessage);
   }
-  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight))
+  else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight) ||
+           (p_Key == m_KeyExtHtmlViewer))
   {
     std::string ext;
     std::string err;
@@ -3228,11 +3230,20 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       }
     }
 
-    LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
-
     SetDialogMessage("Waiting for external viewer to exit");
     DrawDialog();
-    int rv = ExtPartsViewer(tempFilePath);
+    int rv = 0;
+    if (p_Key == m_KeyExtHtmlViewer)
+    {
+      LOG_DEBUG("opening \"%s\" in external html viewer", tempFilePath.c_str());
+      rv = ExtHtmlViewer(tempFilePath);
+    }
+    else
+    {
+      LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
+      rv = ExtPartsViewer(tempFilePath);
+    }
+
     if (rv != 0)
     {
       SetDialogMessage("External viewer error code " + std::to_string(rv), true /* p_Warn */);
