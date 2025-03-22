@@ -157,7 +157,8 @@ public:
   static std::string GetHtmlViewerCmd();
   static void SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd);
   static std::string GetDefaultHtmlViewerCmd();
-  static bool IsDefaultHtmlViewerCmd();
+  static std::string GetSystemOpenCmd();
+  static bool IsHtmlViewerSystemOpenCmd();
   static std::string GetHtmlPreviewCmd();
   static void SetHtmlPreviewCmd(const std::string& p_HtmlPreviewCmd);
   static std::string GetDefaultHtmlPreviewCmd();

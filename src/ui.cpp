@@ -5424,7 +5424,7 @@ void Ui::ExtHtmlViewer()
 
 int Ui::ExtHtmlViewer(const std::string& p_Path)
 {
-  const bool isDefaultHtmlViewerCmd = Util::IsDefaultHtmlViewerCmd();
+  const bool isDefaultHtmlViewerCmd = Util::IsHtmlViewerSystemOpenCmd();
   if (!isDefaultHtmlViewerCmd)
   {
     endwin();

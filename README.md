@@ -415,9 +415,13 @@ spec'ed system, consider using any of the other conversion utilities instead.
 ### html_viewer_cmd
 
 This field allows overriding the external viewer used when viewing message
-html using `V`. The viewer may be a terminal-based program, e.g.
-`w3m -o confirm_qq=false`. By default nmail uses `open` on macOS and
-`xdg-open >/dev/null 2>&1` on Linux.
+html using `V`. If not specified, nmail checks if `w3m`, `lynx`, `elinks`
+is available on the system (in that order), with fallback to
+`xdg-open` (Linux) and `open` (macOS). The exact default commands used:
+- `w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1`
+- `lynx`
+- `elinks`
+- `xdg-open >/dev/null 2>&1` or `open`
 
 ### idle_inbox
 

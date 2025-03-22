@@ -529,18 +529,55 @@ void Util::SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd)
 
 std::string Util::GetDefaultHtmlViewerCmd()
 {
+  std::string result;
+  const std::string& commandOutPath = Util::GetTempFilename(".txt");
+  const std::string& command = std::string("which w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
+  if (system(command.c_str()) == 0)
+  {
+    std::string output = Util::ReadFile(commandOutPath);
+    output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
+    if (!output.empty())
+    {
+      if (output.find("/w3m") != std::string::npos)
+      {
+        result = "w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1";
+      }
+      else if (output.find("/lynx") != std::string::npos)
+      {
+        result = "lynx";
+      }
+      else if (output.find("/elinks") != std::string::npos)
+      {
+        result = "elinks";
+      }
+    }
+  }
+
+  Util::DeleteFile(commandOutPath);
+
+  if (result.empty())
+  {
+    result = GetSystemOpenCmd();
+  }
+
+  return result;
+}
+
+std::string Util::GetSystemOpenCmd()
+{
 #if defined(__APPLE__)
   return "open";
 #elif defined(__linux__)
   return "xdg-open >/dev/null 2>&1";
 #else
-  return "";
+  return "xdg-open >/dev/null 2>&1";
 #endif
 }
 
-bool Util::IsDefaultHtmlViewerCmd()
+bool Util::IsHtmlViewerSystemOpenCmd()
 {
-  return m_HtmlViewerCmd.empty();
+  static bool isHtmlViewerSystemOpenCmd = (GetHtmlViewerCmd() == GetSystemOpenCmd());
+  return isHtmlViewerSystemOpenCmd;
 }
 
 std::string Util::GetHtmlPreviewCmd()
