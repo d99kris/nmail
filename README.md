@@ -432,7 +432,7 @@ This field allows overriding the external viewer used when viewing message
 html using `V`. If not specified, nmail checks if `w3m`, `lynx`, `elinks`
 is available on the system (in that order), with fallback to
 `xdg-open` (Linux) and `open` (macOS). The exact default commands used:
-- `w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1`
+- `LESSOPEN="|$(which lesspipe.sh lesspipe | head -1) %s" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1`
 - `lynx`
 - `elinks`
 - `xdg-open >/dev/null 2>&1` or `open`
