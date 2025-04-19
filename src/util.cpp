@@ -540,7 +540,8 @@ std::string Util::GetDefaultHtmlViewerCmd()
     {
       if (output.find("/w3m") != std::string::npos)
       {
-        result = "LESSOPEN=\"|$(which lesspipe.sh lesspipe | head -1) %s\" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1";
+        result =
+          "LESSOPEN=\"|$(which lesspipe.sh lesspipe | head -1) %s\" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1";
       }
       else if (output.find("/lynx") != std::string::npos)
       {

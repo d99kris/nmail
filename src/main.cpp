@@ -983,7 +983,7 @@ static void KeyDump()
     FD_ZERO(&fds);
     FD_SET(0, &fds);
     int maxfd = STDIN_FILENO;
-    struct timeval tv = {1, 0};
+    struct timeval tv = { 1, 0 };
     select(maxfd + 1, &fds, NULL, NULL, &tv);
     if (FD_ISSET(STDIN_FILENO, &fds))
     {

@@ -940,9 +940,9 @@ bool Imap::SearchLocal(const std::string& p_QueryStr, const unsigned p_Offset, c
   return true;
 }
 
-bool Imap::SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset, const unsigned p_Max,
-                        std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
-                        bool& p_HasMore)
+bool Imap::SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset,
+                        const unsigned p_Max, std::vector<Header>& p_Headers,
+                        std::vector<std::pair<std::string, uint32_t>>& p_FolderUids, bool& p_HasMore)
 {
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
@@ -1185,11 +1185,11 @@ std::set<std::string>& Imap::GetCapabilities()
     {
       for (clistiter* it = clist_begin(capData->cap_list); it != nullptr; it = clist_next(it))
       {
-        struct mailimap_capability* cap  = (struct mailimap_capability*)clist_content(it);
+        struct mailimap_capability* cap = (struct mailimap_capability*)clist_content(it);
         if (cap->cap_type == MAILIMAP_CAPABILITY_NAME)
         {
-            std::string name(cap->cap_data.cap_name);
-            m_Capabilities->insert(name);
+          std::string name(cap->cap_data.cap_name);
+          m_Capabilities->insert(name);
         }
       }
     }

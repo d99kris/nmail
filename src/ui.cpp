@@ -1988,7 +1988,7 @@ void Ui::Run()
     FD_SET(STDIN_FILENO, &fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = std::max(STDIN_FILENO, m_Pipe[0]);
-    struct timeval tv = {1, 0}; // uiIdleTime logic below is dependent on timeout value
+    struct timeval tv = { 1, 0 }; // uiIdleTime logic below is dependent on timeout value
     int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
     if (rv == 0)
@@ -5191,7 +5191,7 @@ int Ui::ReadKeyBlocking()
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
     int maxfd = STDIN_FILENO;
-    struct timeval tv = {1, 0};
+    struct timeval tv = { 1, 0 };
     int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
     if (rv == 0) continue;

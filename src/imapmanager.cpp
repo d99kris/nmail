@@ -229,8 +229,9 @@ bool ImapManager::SyncSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery, S
   }
   else
   {
-    return m_Imap.SearchServer(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Folder, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
-                               p_SearchResult.m_Headers, p_SearchResult.m_FolderUids, p_SearchResult.m_HasMore);
+    return m_Imap.SearchServer(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Folder, p_SearchQuery.m_Offset,
+                               p_SearchQuery.m_Max, p_SearchResult.m_Headers, p_SearchResult.m_FolderUids,
+                               p_SearchResult.m_HasMore);
   }
 }
 
@@ -335,7 +336,7 @@ bool ImapManager::ProcessIdle()
     FD_SET(m_Pipe[0], &fds);
     FD_SET(idlefd, &fds);
     int maxfd = std::max(m_Pipe[0], idlefd);
-    struct timeval idletv = {GetIdleDurationSec(), 0};
+    struct timeval idletv = { GetIdleDurationSec(), 0 };
     int selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
 
     bool idleRv = m_Imap.IdleDone();
@@ -469,7 +470,7 @@ void ImapManager::ProcessIdleOffline()
     FD_ZERO(&fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
-    struct timeval idletv = {idleDuration, 0};
+    struct timeval idletv = { idleDuration, 0 };
     selrv = select(maxfd + 1, &fds, NULL, NULL, &idletv);
   }
 
@@ -512,11 +513,12 @@ void ImapManager::Process()
     FD_ZERO(&fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
-    struct timeval tv = {15, 0};
+    struct timeval tv = { 15, 0 };
 
     int selrv = 1;
     m_QueueMutex.lock();
-    bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty() && m_SearchRequests.empty();
+    bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty() &&
+      m_SearchRequests.empty();
     m_QueueMutex.unlock();
 
     if (isQueueEmpty || !m_OnceConnected)
@@ -849,7 +851,7 @@ void ImapManager::CacheProcess()
     FD_ZERO(&fds);
     FD_SET(m_CachePipe[0], &fds);
     int maxfd = m_CachePipe[0];
-    struct timeval tv = {60, 0};
+    struct timeval tv = { 60, 0 };
     int selrv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
     if ((selrv != 0) && FD_ISSET(m_CachePipe[0], &fds))

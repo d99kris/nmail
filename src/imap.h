@@ -84,9 +84,9 @@ public:
   bool SearchLocal(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
                    std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
                    bool& p_HasMore);
-  bool SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset, const unsigned p_Max,
-                    std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
-                    bool& p_HasMore);
+  bool SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset,
+                    const unsigned p_Max, std::vector<Header>& p_Headers,
+                    std::vector<std::pair<std::string, uint32_t>>& p_FolderUids, bool& p_HasMore);
 
   void SetAborting(bool p_Aborting);
   void IndexNotifyIdle(bool p_IsIdle);

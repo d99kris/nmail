@@ -277,7 +277,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
     std::string toaddr = to.GetAddress();
     struct mailimf_mailbox* mbto = mailimf_mailbox_new(toname.empty()
                                                        ? NULL : strdup(tonamemime.c_str()),
-                                                         strdup(toaddr.c_str()));
+                                                       strdup(toaddr.c_str()));
     struct mailimf_address* addrto = mailimf_address_new(MAILIMF_ADDRESS_MAILBOX, mbto, NULL);
     clist_append(tolist, addrto);
   }
@@ -295,7 +295,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
       std::string ccaddr = cc.GetAddress();
       struct mailimf_mailbox* mbcc = mailimf_mailbox_new(ccname.empty()
                                                          ? NULL : strdup(ccnamemime.c_str()),
-                                                           strdup(ccaddr.c_str()));
+                                                         strdup(ccaddr.c_str()));
       struct mailimf_address* addrcc = mailimf_address_new(MAILIMF_ADDRESS_MAILBOX, mbcc, NULL);
       clist_append(cclist, addrcc);
     }
@@ -557,7 +557,7 @@ mailmime* Smtp::GetMimePart(mailmime_content* p_Content, mailmime_fields* p_Mime
       case MAILMIME_TYPE_COMPOSITE_TYPE:
         switch (p_Content->ct_type->tp_data.tp_composite_type->ct_type)
         {
-          case MAILMIME_COMPOSITE_TYPE_MULTIPART :
+          case MAILMIME_COMPOSITE_TYPE_MULTIPART:
             mime_type = MAILMIME_MULTIPLE;
             break;
 

@@ -108,7 +108,7 @@ void SmtpManager::Process()
     FD_ZERO(&fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
-    struct timeval tv = {60, 0};
+    struct timeval tv = { 60, 0 };
     int rv = select(maxfd + 1, &fds, NULL, NULL, &tv);
 
     if (rv == 0) continue;
