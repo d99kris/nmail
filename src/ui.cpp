@@ -622,9 +622,25 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyExtMsgViewer), "ExtVMsg",
       GetKeyDisplay(m_KeySelectAll), "SelectAll",
+      GetKeyDisplay(m_KeySearchServer), "SearchSrv",
+      GetKeyDisplay(m_KeySearchCurrentName), "SearchNam",
+      GetKeyDisplay(m_KeySearchCurrentSubject), "SearchSub",
+    },
+    {
       GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
-      GetKeyDisplay(m_KeySearchCurrentSubject), "SearcSubj",
-      GetKeyDisplay(m_KeySearchCurrentName), "SearcName",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
+    },
+    {
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
     },
   };
 
