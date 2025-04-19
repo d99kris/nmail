@@ -1,6 +1,6 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -932,11 +932,111 @@ bool Imap::UploadMessage(const std::string& p_Folder, const std::string& p_Msg, 
   return rv;
 }
 
-void Imap::Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
-                  std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
-                  bool& p_HasMore)
+bool Imap::SearchLocal(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
+                       std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
+                       bool& p_HasMore)
 {
-  return m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
+  m_ImapIndex->Search(p_QueryStr, p_Offset, p_Max, p_Headers, p_FolderUids, p_HasMore);
+  return true;
+}
+
+bool Imap::SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset, const unsigned p_Max,
+                        std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
+                        bool& p_HasMore)
+{
+  std::lock_guard<std::mutex> imapLock(m_ImapMutex);
+
+  if (!SelectFolder(p_Folder))
+  {
+    return false;
+  }
+
+  if ((p_QueryStr == m_LastSearchQueryStr) && (p_Folder == m_LastSearchFolder) && (p_Offset != 0))
+  {
+    // Use cached search results
+  }
+  else
+  {
+    // Fetch new search results
+    m_LastSearchUids.clear();
+
+    std::vector<struct mailimap_search_key*> queryKeys = SearchKeysFromQuery(p_QueryStr);
+    clist* queryKeyList = clist_new();
+    for (const auto& queryKey : queryKeys)
+    {
+      clist_append(queryKeyList, queryKey);
+    }
+
+    clist* resultList = nullptr;
+    const char* charset = "utf-8";
+    struct mailimap_search_key* searchKey = mailimap_search_key_new_multiple(queryKeyList);
+    int rv = MAILIMAP_NO_ERROR;
+    if (HasCapability("LITERAL+") || HasCapability("LITERAL-"))
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_uid_search_literalplus(m_Imap, charset, searchKey, &resultList));
+    }
+    else
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_uid_search(m_Imap, charset, searchKey, &resultList));
+    }
+
+    if (rv == MAILIMAP_NO_ERROR)
+    {
+      for (clistiter* cur = clist_begin(resultList); cur != nullptr; cur = clist_next(cur))
+      {
+        uint32_t* pUid = (uint32_t*)clist_content(cur);
+        m_LastSearchUids.push_back(*pUid);
+      }
+
+      mailimap_search_result_free(resultList);
+      std::reverse(m_LastSearchUids.begin(), m_LastSearchUids.end());
+      m_LastSearchQueryStr = p_QueryStr;
+      m_LastSearchFolder = p_Folder;
+    }
+
+    mailimap_search_key_free(searchKey);
+
+    if (rv != MAILIMAP_NO_ERROR)
+    {
+      m_LastSearchQueryStr = "";
+      m_LastSearchFolder = "";
+      return false;
+    }
+  }
+
+  // Restrict results for requested offset and max count
+  std::set<uint32_t> uids;
+  unsigned lastSearchUidsSize = m_LastSearchUids.size();
+  for (unsigned i = p_Offset; (i < (p_Offset + p_Max)) && (i < lastSearchUidsSize); ++i)
+  {
+    uint32_t uid = m_LastSearchUids.at(i);
+    uids.insert(uid);
+    p_FolderUids.push_back(std::make_pair(p_Folder, uid));
+  }
+
+  // Indicate if more matches exists
+  p_HasMore = (lastSearchUidsSize) > (p_Offset + p_Max);
+
+  // Fetch headers for matches
+  if (!uids.empty())
+  {
+    std::map<uint32_t, Header> headers;
+    bool rv = GetHeaders(p_Folder, uids, false /*p_Cached*/, false /*p_Prefetch*/, headers);
+    if (rv)
+    {
+      for (const auto& folderUid : p_FolderUids)
+      {
+        p_Headers.push_back(headers[folderUid.second]);
+      }
+    }
+    else
+    {
+      LOG_WARNING("fetching headers failed");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void Imap::SetAborting(bool p_Aborting)
@@ -1060,6 +1160,55 @@ uint32_t Imap::GetUidValidity()
   return m_Imap->imap_selection_info->sel_uidvalidity;
 }
 
+std::set<std::string>& Imap::GetCapabilities()
+{
+  if (!m_Capabilities)
+  {
+    m_Capabilities = std::make_shared<std::set<std::string>>();
+
+    mailimap_capability_data* capData = nullptr;
+    mailimap_capability_data* tmpCapData = nullptr;
+    if (m_Imap->imap_connection_info->imap_capability != nullptr)
+    {
+      capData = m_Imap->imap_connection_info->imap_capability;
+    }
+    else
+    {
+      int rv = LOG_IF_IMAP_ERR(mailimap_capability(m_Imap, &tmpCapData));
+      if (rv == MAILIMAP_NO_ERROR)
+      {
+        capData = tmpCapData;
+      }
+    }
+
+    if (capData != nullptr)
+    {
+      for (clistiter* it = clist_begin(capData->cap_list); it != nullptr; it = clist_next(it))
+      {
+        struct mailimap_capability* cap  = (struct mailimap_capability*)clist_content(it);
+        if (cap->cap_type == MAILIMAP_CAPABILITY_NAME)
+        {
+            std::string name(cap->cap_data.cap_name);
+            m_Capabilities->insert(name);
+        }
+      }
+    }
+
+    if (tmpCapData != nullptr)
+    {
+      mailimap_capability_data_free(capData);
+    }
+  }
+
+  return *m_Capabilities;
+}
+
+bool Imap::HasCapability(const std::string& p_Name)
+{
+  const std::set<std::string>& capabilities = GetCapabilities();
+  return (capabilities.count(p_Name) > 0);
+}
+
 std::string Imap::DecodeFolderName(const std::string& p_Folder)
 {
   static std::map<std::string, std::string> cacheMap;
@@ -1088,6 +1237,58 @@ std::string Imap::EncodeFolderName(const std::string& p_Folder)
   cacheMap[p_Folder] = encFolder;
 
   return encFolder;
+}
+
+std::vector<std::string> Imap::SplitQuery(const std::string& p_QueryStr)
+{
+  // @todo: handle quoted text
+  return Util::Split(p_QueryStr, ' ');
+}
+
+std::vector<struct mailimap_search_key*> Imap::SearchKeysFromQuery(const std::string& p_QueryStr)
+{
+  std::vector<struct mailimap_search_key*> queryKeys;
+  std::vector<std::string> queryTerms = SplitQuery(p_QueryStr);
+  for (const auto& queryTerm : queryTerms)
+  {
+    static const std::string bodyPrefix = "body:";
+    static const std::string subjectPrefix = "subject:";
+    static const std::string fromPrefix = "from:";
+    static const std::string toPrefix = "to:";
+
+    const std::string queryTermLower = Util::ToLower(queryTerm);
+    if (Util::StartsWith(queryTermLower, bodyPrefix))
+    {
+      const std::string queryTermValue = queryTerm.substr(bodyPrefix.size());
+      struct mailimap_search_key* queryKey = mailimap_search_key_new_body(strdup(queryTermValue.c_str()));
+      queryKeys.push_back(queryKey);
+    }
+    else if (Util::StartsWith(queryTermLower, subjectPrefix))
+    {
+      const std::string queryTermValue = queryTerm.substr(subjectPrefix.size());
+      struct mailimap_search_key* queryKey = mailimap_search_key_new_subject(strdup(queryTermValue.c_str()));
+      queryKeys.push_back(queryKey);
+    }
+    else if (Util::StartsWith(queryTermLower, fromPrefix))
+    {
+      const std::string queryTermValue = queryTerm.substr(fromPrefix.size());
+      struct mailimap_search_key* queryKey = mailimap_search_key_new_from(strdup(queryTermValue.c_str()));
+      queryKeys.push_back(queryKey);
+    }
+    else if (Util::StartsWith(queryTermLower, toPrefix))
+    {
+      const std::string queryTermValue = queryTerm.substr(toPrefix.size());
+      struct mailimap_search_key* queryKey = mailimap_search_key_new_to(strdup(queryTermValue.c_str()));
+      queryKeys.push_back(queryKey);
+    }
+    else
+    {
+      struct mailimap_search_key* queryKey = mailimap_search_key_new_body(strdup(queryTerm.c_str()));
+      queryKeys.push_back(queryKey);
+    }
+  }
+
+  return queryKeys;
 }
 
 void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData)

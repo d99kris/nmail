@@ -1,6 +1,6 @@
 // imapmanager.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -61,6 +61,7 @@ ImapManager::~ImapManager()
       m_Requests.clear();
       m_PrefetchRequests.clear();
       m_Actions.clear();
+      m_SearchRequests.clear();
       m_QueueMutex.unlock();
       LOG_DEBUG("queues cleared");
     }
@@ -196,17 +197,41 @@ void ImapManager::AsyncAction(const ImapManager::Action& p_Action)
   }
 }
 
-void ImapManager::AsyncSearch(const SearchQuery& p_SearchQuery)
+void ImapManager::AsyncSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery)
 {
-  std::unique_lock<std::mutex> lock(m_SearchMutex);
-  m_SearchQueue.push_front(p_SearchQuery);
-  m_SearchCond.notify_one();
+  if (p_IsLocal)
+  {
+    std::unique_lock<std::mutex> lock(m_SearchMutex);
+    m_SearchQueue.push_front(p_SearchQuery);
+    m_SearchCond.notify_one();
+  }
+  else
+  {
+    if (m_Connecting || m_OnceConnected)
+    {
+      std::lock_guard<std::mutex> lock(m_QueueMutex);
+      m_SearchRequests.push_front(p_SearchQuery);
+      PipeWriteOne(m_Pipe);
+    }
+    else
+    {
+      LOG_WARNING("async server search not permitted while offline");
+    }
+  }
 }
 
-void ImapManager::SyncSearch(const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult)
+bool ImapManager::SyncSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult)
 {
-  m_Imap.Search(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
-                p_SearchResult.m_Headers, p_SearchResult.m_FolderUids, p_SearchResult.m_HasMore);
+  if (p_IsLocal)
+  {
+    return m_Imap.SearchLocal(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
+                              p_SearchResult.m_Headers, p_SearchResult.m_FolderUids, p_SearchResult.m_HasMore);
+  }
+  else
+  {
+    return m_Imap.SearchServer(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Folder, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
+                               p_SearchResult.m_Headers, p_SearchResult.m_FolderUids, p_SearchResult.m_HasMore);
+  }
 }
 
 void ImapManager::SetCurrentFolder(const std::string& p_Folder)
@@ -491,7 +516,7 @@ void ImapManager::Process()
 
     int selrv = 1;
     m_QueueMutex.lock();
-    bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty();
+    bool isQueueEmpty = m_Requests.empty() && m_PrefetchRequests.empty() && m_Actions.empty() && m_SearchRequests.empty();
     m_QueueMutex.unlock();
 
     if (isQueueEmpty || !m_OnceConnected)
@@ -524,10 +549,21 @@ void ImapManager::Process()
 
       while (m_Running && !authRefreshNeeded &&
              m_OnceConnected &&
-             (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty()))
+             (!m_Requests.empty() || !m_PrefetchRequests.empty() || !m_Actions.empty() || !m_SearchRequests.empty()))
       {
         bool isConnected = true;
         float progress = 0;
+
+        while (!m_SearchRequests.empty() && m_Running && isConnected && !authRefreshNeeded)
+        {
+          SearchQuery searchQuery = m_SearchRequests.front();
+          m_SearchRequests.pop_front();
+          m_QueueMutex.unlock();
+
+          PerformSearch(false /*p_IsLocal*/, searchQuery);
+
+          m_QueueMutex.lock();
+        }
 
         while (!m_Actions.empty() && m_Running && isConnected && !authRefreshNeeded)
         {
@@ -874,7 +910,7 @@ void ImapManager::SearchProcess()
       m_SearchQueue.pop_front();
     }
 
-    PerformSearch(searchQuery);
+    PerformSearch(true /*p_IsLocal*/, searchQuery);
   }
 
   LOG_DEBUG("exiting loop");
@@ -988,16 +1024,18 @@ bool ImapManager::PerformAction(const ImapManager::Action& p_Action)
   return rv;
 }
 
-void ImapManager::PerformSearch(const SearchQuery& p_SearchQuery)
+bool ImapManager::PerformSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery)
 {
   SearchResult searchResult;
-  m_Imap.Search(p_SearchQuery.m_QueryStr, p_SearchQuery.m_Offset, p_SearchQuery.m_Max,
-                searchResult.m_Headers, searchResult.m_FolderUids, searchResult.m_HasMore);
-
+  SetStatus(Status::FlagSearching);
+  bool rv = SyncSearch(p_IsLocal, p_SearchQuery, searchResult);
+  ClearStatus(Status::FlagSearching);
   if (m_SearchHandler)
   {
     m_SearchHandler(p_SearchQuery, searchResult);
   }
+
+  return rv;
 }
 
 void ImapManager::SendRequestResponse(const Request& p_Request, const Response& p_Response)

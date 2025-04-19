@@ -2239,3 +2239,8 @@ bool Util::GetCopyToTrash()
 {
   return m_GetCopyToTrash;
 }
+
+bool Util::StartsWith(const std::string& p_String, const std::string& p_Prefix)
+{
+  return (p_String.rfind(p_Prefix, 0) == 0);
+}

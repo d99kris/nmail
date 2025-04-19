@@ -207,7 +207,7 @@ private:
   void ExportMessage();
   void ImportMessage();
   void SearchMessageBasedOnCurrent(bool p_Subject);
-  void SearchMessage(const std::string& p_Query = std::string());
+  void SearchMessage(bool p_IsLocal, const std::string& p_Query = std::string());
   void MessageFind();
   void MessageFindNext();
   void Quit();
@@ -424,6 +424,8 @@ private:
   int m_KeySearchCurrentSubject = 0;
   int m_KeySearchCurrentName = 0;
   int m_KeySpell = 0;
+  int m_KeySearchServer = 0;
+
   int m_KeyReturn = 0;
   int m_KeyEnter = 0;
   int m_KeyLeft = 0;
@@ -560,6 +562,8 @@ private:
   bool m_AllSelected = false;
 
   std::unique_ptr<SleepDetect> m_SleepDetect;
+
+  bool m_IsLocalSearch = true;
 
 private:
   static bool s_Running;

@@ -1,6 +1,6 @@
 // imapmanager.h
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -89,6 +89,7 @@ public:
   struct SearchQuery
   {
     std::string m_QueryStr;
+    std::string m_Folder;
     unsigned m_Offset = 0;
     unsigned m_Max = 0;
 
@@ -96,8 +97,9 @@ public:
     {
     }
 
-    SearchQuery(const std::string& p_QueryStr, unsigned p_Offset, unsigned p_Max)
+    SearchQuery(const std::string& p_QueryStr, const std::string& p_Folder, unsigned p_Offset, unsigned p_Max)
       : m_QueryStr(p_QueryStr)
+      , m_Folder(p_Folder)
       , m_Offset(p_Offset)
       , m_Max(p_Max)
     {
@@ -108,7 +110,7 @@ public:
   {
     std::vector<Header> m_Headers;
     std::vector<std::pair<std::string, uint32_t>> m_FolderUids;
-    bool m_HasMore;
+    bool m_HasMore = false;
   };
 
 public:
@@ -133,8 +135,8 @@ public:
   void AsyncRequest(const Request& p_Request);
   void PrefetchRequest(const Request& p_Request);
   void AsyncAction(const Action& p_Action);
-  void AsyncSearch(const SearchQuery& p_SearchQuery);
-  void SyncSearch(const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult);
+  void AsyncSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery);
+  bool SyncSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery, SearchResult& p_SearchResult);
 
   void SetCurrentFolder(const std::string& p_Folder);
 
@@ -160,7 +162,7 @@ private:
   void SearchProcess();
   bool PerformRequest(const Request& p_Request, bool p_Cached, bool p_Prefetch, Response& p_Response);
   bool PerformAction(const Action& p_Action);
-  void PerformSearch(const SearchQuery& p_SearchQuery);
+  bool PerformSearch(bool p_IsLocal, const SearchQuery& p_SearchQuery);
   void SendRequestResponse(const Request& p_Request, const Response& p_Response);
   void SendActionResult(const Action& p_Action, bool p_Result);
   void SetStatus(uint32_t p_Flags, float p_Progress = -1);
@@ -194,6 +196,7 @@ private:
   std::deque<Request> m_CacheRequests;
   std::map<uint32_t, std::deque<Request>> m_PrefetchRequests;
   std::deque<Action> m_Actions;
+  std::deque<SearchQuery> m_SearchRequests;
   ProgressCount m_FetchProgressCount;
   ProgressCount m_PrefetchProgressCount;
   std::mutex m_QueueMutex;

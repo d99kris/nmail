@@ -1,6 +1,6 @@
 // status.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -39,6 +39,7 @@ public:
     FlagOffline = (1 << 13),
     FlagIdle = (1 << 14),
     FlagIndexing = (1 << 15),
+    FlagSearching = (1 << 16),
     FlagMax = FlagIndexing,
   };
 

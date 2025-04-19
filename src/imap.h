@@ -1,6 +1,6 @@
 // imap.h
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -81,9 +81,12 @@ public:
   bool IdleDone();
   bool UploadMessage(const std::string& p_Folder, const std::string& p_Msg, bool p_IsDraft);
 
-  void Search(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
-              std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
-              bool& p_HasMore);
+  bool SearchLocal(const std::string& p_QueryStr, const unsigned p_Offset, const unsigned p_Max,
+                   std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
+                   bool& p_HasMore);
+  bool SearchServer(const std::string& p_QueryStr, const std::string& p_Folder, const unsigned p_Offset, const unsigned p_Max,
+                    std::vector<Header>& p_Headers, std::vector<std::pair<std::string, uint32_t>>& p_FolderUids,
+                    bool& p_HasMore);
 
   void SetAborting(bool p_Aborting);
   void IndexNotifyIdle(bool p_IsIdle);
@@ -99,8 +102,15 @@ private:
   void InitImap();
   void CleanupImap();
 
+  std::set<std::string>& GetCapabilities();
+  bool HasCapability(const std::string& p_Name);
+
   static std::string DecodeFolderName(const std::string& p_Folder);
   static std::string EncodeFolderName(const std::string& p_Folder);
+
+  static std::vector<std::string> SplitQuery(const std::string& p_QueryStr);
+  static std::vector<struct mailimap_search_key*> SearchKeysFromQuery(const std::string& p_QueryStr);
+
   static void Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData);
 
 private:
@@ -123,6 +133,12 @@ private:
   std::mutex m_ConnectedMutex;
   bool m_Connected = false;
   bool m_Aborting = false;
+
+  std::string m_LastSearchQueryStr;
+  std::string m_LastSearchFolder;
+  std::vector<uint32_t> m_LastSearchUids;
+
+  std::shared_ptr<std::set<std::string>> m_Capabilities;
 
   std::shared_ptr<ImapCache> m_ImapCache;
   std::unique_ptr<ImapIndex> m_ImapIndex;

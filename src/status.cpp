@@ -1,6 +1,6 @@
 // status.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -93,6 +93,10 @@ std::string Status::ToString()
   else if (m_Flags & FlagPrefetching)
   {
     str = "Pre-fetching" + GetProgressString();
+  }
+  else if (m_Flags & FlagSearching)
+  {
+    str = "Searching";
   }
   else if (m_Flags & FlagIndexing)
   {

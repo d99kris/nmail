@@ -186,6 +186,8 @@ void Ui::Init()
   m_KeySearchCurrentSubject = UiKeyConfig::GetKey("key_search_current_subject");
   m_KeySearchCurrentName = UiKeyConfig::GetKey("key_search_current_name");
   m_KeySpell = UiKeyConfig::GetKey("key_spell");
+  m_KeySearchServer = UiKeyConfig::GetKey("key_search_server");
+
   m_KeyReturn = UiKeyConfig::GetKey("key_return");
   m_KeyEnter = UiKeyConfig::GetKey("key_enter");
   m_KeyLeft = UiKeyConfig::GetKey("key_left");
@@ -2542,7 +2544,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeySearch)
   {
-    SearchMessage();
+    SearchMessage(true /* p_IsLocal */);
   }
   else if (p_Key == m_KeySync)
   {
@@ -2709,6 +2711,17 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     UpdateUidFromIndex(true /* p_UserTriggered */);
     SearchMessageBasedOnCurrent(false /* p_Subject */);
+  }
+  else if (p_Key == m_KeySearchServer)
+  {
+    if (IsConnected())
+    {
+      SearchMessage(false /* p_IsLocal */);
+    }
+    else
+    {
+      SetDialogMessage("Cannot search server while offline");
+    }
   }
   else if (m_InvalidInputNotify)
   {
@@ -5038,12 +5051,13 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
 
       ImapManager::SearchQuery searchQuery;
       searchQuery.m_QueryStr = m_MessageListSearchQuery;
+      searchQuery.m_Folder = m_PreviousFolder;
       searchQuery.m_Offset = m_MessageListSearchOffset;
       searchQuery.m_Max = m_MessageListSearchMax;
 
       LOG_DEBUG("search str = \"%s\" offset = %d max = %d",
                 searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
-      m_ImapManager->AsyncSearch(searchQuery);
+      m_ImapManager->AsyncSearch(m_IsLocalSearch, searchQuery);
     }
 
     return;
@@ -5714,7 +5728,7 @@ void Ui::SearchMessageBasedOnCurrent(bool p_Subject)
     }
     std::string query = p_Subject ? ("subject:\"" + current + "\"")
                                   : ("from:\"" + current + "\"");
-    SearchMessage(query);
+    SearchMessage(true /* p_IsLocal */, query);
   }
   else
   {
@@ -5722,13 +5736,14 @@ void Ui::SearchMessageBasedOnCurrent(bool p_Subject)
   }
 }
 
-void Ui::SearchMessage(const std::string& p_Query /*= std::string()*/)
+void Ui::SearchMessage(bool p_IsLocal, const std::string& p_Query /*= std::string()*/)
 {
   std::string query = !p_Query.empty()
     ? p_Query
     : ((m_MessageListSearch && m_PersistSearchQuery) ? m_MessageListSearchQuery : "");
   if (!p_Query.empty() || PromptString("Search Emails: ", "Search", query))
   {
+    m_IsLocalSearch = p_IsLocal;
     if (!query.empty())
     {
       m_MessageListSearch = true;
@@ -5753,12 +5768,13 @@ void Ui::SearchMessage(const std::string& p_Query /*= std::string()*/)
 
       ImapManager::SearchQuery searchQuery;
       searchQuery.m_QueryStr = query;
+      searchQuery.m_Folder = m_PreviousFolder;
       searchQuery.m_Offset = 0;
       searchQuery.m_Max = 2 * m_MainWinHeight;
 
       LOG_DEBUG("search str=\"%s\" offset=%d max=%d",
                 searchQuery.m_QueryStr.c_str(), searchQuery.m_Offset, searchQuery.m_Max);
-      m_ImapManager->AsyncSearch(searchQuery);
+      m_ImapManager->AsyncSearch(m_IsLocalSearch, searchQuery);
     }
     else
     {
@@ -7133,9 +7149,9 @@ void Ui::AutoMoveSelectFolder()
   {
     for (const auto& queryStr : queryStrs)
     {
-      ImapManager::SearchQuery searchQuery(queryStr, 0, maxSearchCount);
+      ImapManager::SearchQuery searchQuery(queryStr, "", 0, maxSearchCount);
       ImapManager::SearchResult searchResult;
-      m_ImapManager->SyncSearch(searchQuery, searchResult);
+      m_ImapManager->SyncSearch(true /*p_IsLocal*/, searchQuery, searchResult);
       if (searchResult.m_FolderUids.empty())
       {
         LOG_DEBUG("no matches for query %s", queryStr.c_str());

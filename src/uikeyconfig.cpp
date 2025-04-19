@@ -263,6 +263,7 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_select_all", "a" },
     { "key_search_show_folder", "\\" },
     { "key_spell", "KEY_CTRLS" },
+    { "key_search_server", "'" },
     { "key_return", "KEY_RETURN" },
     { "key_enter", "KEY_ENTER" },
     { "key_left", "KEY_LEFT" },

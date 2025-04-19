@@ -534,7 +534,7 @@ SMTP handshaking when sending outgoing emails (default enabled).
 ### sent
 
 IMAP sent folder name. Used by nmail if `client_store_sent` is enabled to store
-copies of outgoing emails. 
+copies of outgoing emails.
 
 ### server_timestamps
 
@@ -635,6 +635,7 @@ The email navigator / viewer supports the following commands:
     i              import
     a              select all
     /              search
+    '              search server
     <space>        select
     s              start full sync
     =              search messages with same subject
@@ -693,6 +694,8 @@ Attachment paths may be local (just filename) or absolute (full path).
 Email Search
 ============
 
+Local Search
+------------
 Press `/` in the message list view to search the local cache for an email. The
 local cache can be fully syncronized with server by pressing `s`. The search
 engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
@@ -702,6 +705,16 @@ Search terms may be prefixed by `body:`, `subject:`, `from:`, `to:` or
 `folder:` to search only specified fields. By default search query terms are
 combined with `AND` unless specified. Results are sorted by email timestamp.
 
+Server Search
+-------------
+Press `'` in the message list view to search the server for emails in the
+current active folder. The server search supports space-separated terms which
+may be prefixed by `body:`, `subject:`, `from:` or `to:`. The search query
+terms are implicitly combined with logical "and". Results are sorted by email
+timestamp.
+
+Exit Search
+-----------
 Press `<` or `Left` to exit search results and go back to current folder
 message list.
 
@@ -1060,6 +1073,7 @@ This configuration file holds user interface key bindings. Default content:
     key_search=/
     key_search_current_name=-
     key_search_current_subject==
+    key_search_server='
     key_search_show_folder=
     key_select_all=a
     key_select_item=KEY_SPACE
@@ -1209,7 +1223,7 @@ Gmail Prerequisites
 Gmail prevents IMAP access by default.
 
 In order to enable IMAP access go to the Gmail web interface - typically
-[mail.google.com](https://mail.google.com) - and navigate to 
+[mail.google.com](https://mail.google.com) - and navigate to
 `Settings -> Forwarding and POP/IMAP -> IMAP access` and select: `Enable IMAP`
 
 ### Password Authentication

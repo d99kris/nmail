@@ -295,6 +295,8 @@ public:
   static void SetCopyToTrash(const std::string& p_Value, const std::string& p_ImapHost);
   static bool GetCopyToTrash();
 
+  static bool StartsWith(const std::string& p_String, const std::string& p_Prefix);
+
   template<typename T>
   static inline void Unused(const T& p_Arg)
   {
