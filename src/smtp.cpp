@@ -262,7 +262,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
                             const std::vector<Contact>& p_Cc, const std::vector<Contact>& p_Bcc,
                             const std::string& p_RefMsgId, const Contact& p_From)
 {
-  std::string fromname = MimeEncodeStr(p_From.GetName());
+  std::string fromname = MimeEncodeWrap(p_From.GetName());
   std::string fromaddress = p_From.GetAddress();
   struct mailimf_mailbox* mbfrom = mailimf_mailbox_new(strdup(fromname.c_str()),
                                                        strdup(fromaddress.c_str()));
@@ -273,7 +273,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
   for (auto& to : p_To)
   {
     std::string toname = to.GetName();
-    std::string tonamemime = MimeEncodeStr(toname);
+    std::string tonamemime = MimeEncodeWrap(toname);
     std::string toaddr = to.GetAddress();
     struct mailimf_mailbox* mbto = mailimf_mailbox_new(toname.empty()
                                                        ? NULL : strdup(tonamemime.c_str()),
@@ -291,7 +291,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
     for (auto& cc : p_Cc)
     {
       std::string ccname = cc.GetName();
-      std::string ccnamemime = MimeEncodeStr(ccname);
+      std::string ccnamemime = MimeEncodeWrap(ccname);
       std::string ccaddr = cc.GetAddress();
       struct mailimf_mailbox* mbcc = mailimf_mailbox_new(ccname.empty()
                                                          ? NULL : strdup(ccnamemime.c_str()),
@@ -309,7 +309,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
     clist* bcclist = clist_new();
     for (auto& bcc : p_Bcc)
     {
-      std::string bccname = MimeEncodeStr(bcc.GetName());
+      std::string bccname = MimeEncodeWrap(bcc.GetName());
       std::string bccaddr = bcc.GetAddress();
       struct mailimf_mailbox* mbbcc = mailimf_mailbox_new(strdup(bccname.c_str()),
                                                           strdup(bccaddr.c_str()));
