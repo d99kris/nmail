@@ -1,6 +1,6 @@
 // smtp.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -323,7 +323,7 @@ std::string Smtp::GetHeader(const std::string& p_Subject, const std::vector<Cont
 
   struct mailimf_address_list* addrlistreplyto = NULL;
 
-  std::string subjectstr = MimeEncodeStr(p_Subject);
+  std::string subjectstr = MimeEncodeWrap(p_Subject);
   char* subjectcstr = strdup(subjectstr.c_str());
 
   time_t now = time(NULL);
@@ -665,6 +665,62 @@ std::string Smtp::MimeEncodeStr(const std::string& p_In)
   Util::ReplaceString(enc, "=\r\n", "");
   mmap_string_free(mmstr);
   return std::string("=?UTF-8?Q?") + enc + std::string("?=");
+}
+
+std::vector<std::string> Smtp::LineWrap(const std::string& p_Str, size_t p_Len)
+{
+  std::vector<std::string> lines;
+  std::string remaining = p_Str;
+  while (!remaining.empty())
+  {
+    if (remaining.size() <= p_Len)
+    {
+      lines.push_back(remaining);
+      break;
+    }
+
+    const std::size_t slice = std::min(p_Len, remaining.size());
+    std::size_t breakPos = remaining.rfind(' ', slice);
+    if ((breakPos == std::string::npos) || (breakPos == 0))
+    {
+      // No space inside the slice, look for first space after.
+      breakPos = remaining.find(' ', slice);
+    }
+
+    // If no space at all, take all
+    if (breakPos == std::string::npos)
+    {
+      breakPos = remaining.size();
+    }
+
+    lines.push_back(remaining.substr(0, breakPos));
+    remaining = remaining.substr(breakPos);
+
+    // Drop extra spaces
+    while (!remaining.empty() && remaining.front() == ' ')
+    {
+      remaining = remaining.substr(1);
+    }
+  }
+
+  return lines;
+}
+
+std::string Smtp::MimeEncodeWrap(const std::string& p_In)
+{
+  if (std::all_of(p_In.cbegin(), p_In.cend(), [](char c) { return isprint(c); }))
+  {
+    return Util::Join(LineWrap(p_In, 76), "\r\n ");
+  }
+
+  int col = 9; // needed for Subject:
+  MMAPString* mmstr = mmap_string_new(NULL);
+  mailmime_base64_write_mem(mmstr, &col, p_In.c_str(), p_In.size());
+  std::string enc = std::string(mmstr->str, mmstr->len);
+  enc = enc.substr(0, enc.size() - 2);
+  Util::ReplaceString(enc, "\r\n", "?=\r\n =?UTF-8?B?");
+  mmap_string_free(mmstr);
+  return std::string("=?UTF-8?B?") + enc + std::string("?=");
 }
 
 std::string Smtp::RemoveBccHeader(const std::string& p_Data)

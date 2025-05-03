@@ -1,6 +1,6 @@
 // smtp.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -62,7 +62,9 @@ private:
   struct mailmime* GetMimePart(struct mailmime_content* p_Content,
                                struct mailmime_fields* p_MimeFields,
                                bool p_ForceSingle);
-  std::string MimeEncodeStr(const std::string& p_In);
+  static std::string MimeEncodeStr(const std::string& p_In);
+  static std::vector<std::string> LineWrap(const std::string& p_Str, size_t p_Len);
+  static std::string MimeEncodeWrap(const std::string& p_In);
   std::string RemoveBccHeader(const std::string& p_Data);
 
   std::string GenerateMessageId() const;
