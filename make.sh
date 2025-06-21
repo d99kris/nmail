@@ -89,27 +89,27 @@ if [[ "${DEPS}" == "1" ]]; then
     unset NAME
     eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
     if [[ "${NAME}" == "Ubuntu" ]] || [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]] || [[ "${NAME}" == "Pop!_OS" ]]; then
-      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (${NAME}), exiting."
+      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Fedora" ]] || [[ "${NAME}" == "Fedora Linux" ]] || [[ "${NAME}" == "Rocky Linux" ]]; then
-      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (${NAME}), exiting."
+      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Arch Linux" ]] || [[ "${NAME}" == "Arch Linux ARM" ]]; then
-      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file || exiterr "deps failed (${NAME}), exiting."
+      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Gentoo" ]]; then
-      sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file || exiterr "deps failed (${NAME}), exiting."
+      sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Alpine Linux" ]]; then
-      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers || exiterr "deps failed (${NAME}), exiting."
+      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "openSUSE Tumbleweed" ]]; then
-      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel || exiterr "deps failed (${NAME}), exiting."
+      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Void" ]]; then
-      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel  || exiterr "deps failed (${NAME}), exiting."
+      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel w3m || exiterr "deps failed (${NAME}), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
     if command -v brew &> /dev/null; then
-      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid || exiterr "deps failed (${OS} brew), exiting."
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid w3m || exiterr "deps failed (${OS} brew), exiting."
     elif command -v port &> /dev/null; then
-      sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid || exiterr "deps failed (${OS} port), exiting."
+      sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid w3m || exiterr "deps failed (${OS} port), exiting."
     else
       exiterr "deps failed (${OS} missing brew and port), exiting."
     fi

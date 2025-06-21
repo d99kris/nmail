@@ -106,8 +106,9 @@ Supported Platforms
 nmail is developed and tested on Linux and macOS. Current version has been
 tested on:
 
-- macOS Sonoma 14.0
-- Ubuntu 22.04 LTS
+- macOS Sequoia 15.5
+- Ubuntu 24.04 LTS
+
 
 Install using Package Manager
 =============================
@@ -137,6 +138,7 @@ There are two AUR packages available -
 
     guix install nmail
 
+
 Build from Source
 =================
 **Get Source**
@@ -162,23 +164,23 @@ Manually
 
 macOS
 
-    brew install openssl ncurses xapian sqlite libmagic ossp-uuid
+    brew install openssl ncurses xapian sqlite libmagic ossp-uuid w3m
 
 Arch
 
-    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file
+    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m
 
 Debian-based (Ubuntu, Raspbian, etc)
 
-    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev
+    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m
 
 Fedora
 
-    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang
+    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m
 
 Gentoo
 
-    sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file
+    sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m
 
 **Build**
 
@@ -190,17 +192,18 @@ Gentoo
 
 Optional Run-time Dependencies
 ------------------------------
-External programs will be utilized by default if installed on the system, in
-particular for handling HTML-formatted emails. For best user experience the
-following packages are recommended to be installed.
+Certain external programs will be utilized by default if installed on the
+system, primarily to improve handling of HTML-formatted emails. For best user
+experience the following packages are recommended to be installed.
 
 macOS
 
-    brew install pandoc w3m poppler lesspipe
+    brew install pandoc poppler lesspipe
 
 Debian-based (Ubuntu, Raspbian, etc)
 
-    sudo apt install pandoc w3m poppler-utils less
+    sudo apt install pandoc poppler-utils less
+
 
 Getting Started
 ===============
