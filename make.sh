@@ -95,7 +95,7 @@ if [[ "${DEPS}" == "1" ]]; then
     elif [[ "${NAME}" == "Arch Linux" ]] || [[ "${NAME}" == "Arch Linux ARM" ]]; then
       sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Gentoo" ]]; then
-      sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${NAME}), exiting."
+      sudo emerge -n dev-build/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "Alpine Linux" ]]; then
       sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers w3m || exiterr "deps failed (${NAME}), exiting."
     elif [[ "${NAME}" == "openSUSE Tumbleweed" ]]; then
