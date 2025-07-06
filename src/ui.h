@@ -380,6 +380,7 @@ private:
   int m_KeyGotoInbox = 0;
   int m_KeyToSelect = 0;
   int m_KeySaveFile = 0;
+  int m_KeySaveAllFiles = 0;
   int m_KeyExtEditor = 0;
   int m_KeyExtPager = 0;
   int m_KeyPostpone = 0;

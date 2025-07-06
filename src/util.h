@@ -296,6 +296,7 @@ public:
   static bool GetCopyToTrash();
 
   static bool StartsWith(const std::string& p_String, const std::string& p_Prefix);
+  static std::string GetNonExistentPath(const std::string& p_Path);
 
   template<typename T>
   static inline void Unused(const T& p_Arg)

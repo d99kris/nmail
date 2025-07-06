@@ -213,6 +213,7 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_goto_inbox", "i" },
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
+    { "key_save_all_files", "a" },
     { "key_ext_editor", "KEY_CTRLW" },
     { "key_ext_pager", "e" },
     { "key_postpone", "KEY_CTRLO" },
@@ -437,6 +438,7 @@ void UiKeyConfig::DetectConflicts()
     "key_next_page_compose",
     "key_prev_page_compose",
     "key_save_file",
+    "key_save_all_files",
     "key_search",
     "key_space",
   };

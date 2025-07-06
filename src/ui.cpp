@@ -143,6 +143,7 @@ void Ui::Init()
   m_KeyGotoInbox = UiKeyConfig::GetKey("key_goto_inbox");
   m_KeyToSelect = UiKeyConfig::GetKey("key_to_select");
   m_KeySaveFile = UiKeyConfig::GetKey("key_save_file");
+  m_KeySaveAllFiles = UiKeyConfig::GetKey("key_save_all_files");
   m_KeyExtEditor = UiKeyConfig::GetKey("key_ext_editor");
   m_KeyExtPager = UiKeyConfig::GetKey("key_ext_pager");
   m_KeyPostpone = UiKeyConfig::GetKey("key_postpone");
@@ -757,12 +758,13 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyBack), "ViewMsg",
       GetKeyDisplay(m_KeyPrevMsg), "PrevPart",
       GetKeyDisplay(m_KeySaveFile), "Save",
+      GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
       GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
     },
     {
       GetKeyDisplay(m_KeyOpen), "ViewPart",
       GetKeyDisplay(m_KeyNextMsg), "NextPart",
-      GetKeyDisplay(m_KeyExtHtmlViewer), "ExtVHtml",
+      GetKeyDisplay(m_KeySaveAllFiles), "SaveAll",
       GetKeyDisplay(m_KeyQuit), "Quit",
     },
   };
@@ -3318,6 +3320,67 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     else
     {
       SetDialogMessage("Save cancelled");
+    }
+  }
+  else if (p_Key == m_KeySaveAllFiles)
+  {
+    std::string directory = Util::GetDownloadsDir();
+    if (PromptString("Save Directory: ", "Save", directory))
+    {
+      directory = Util::ExpandPath(directory);
+      directory = directory.empty() ? "." : directory;
+
+      if (Util::IsDir(directory))
+      {
+        bool savedOne = false;
+
+        {
+          std::lock_guard<std::mutex> lock(m_Mutex);
+          const std::string& folder = m_CurrentFolderUid.first;
+          const int uid = m_CurrentFolderUid.second;
+          std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+          std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+          if (bodyIt != bodys.end())
+          {
+            Body& body = bodyIt->second;
+            const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
+            for (auto& part : body.GetPartInfos())
+            {
+              if (!part.second.m_Filename.empty())
+              {
+                std::string filename = Util::GetNonExistentPath(directory + "/" + part.second.m_Filename);
+                if (!filename.empty())
+                {
+                  savedOne = true;
+                  std::string partData = partDatas.at(part.first);
+                  Util::WriteFile(filename, partData);
+                }
+                else
+                {
+                  LOG_WARNING("failed generating a unique non-existent path for \"%s\"", part.second.m_Filename.c_str());
+                }
+              }
+            }
+          }
+        }
+
+        if (savedOne)
+        {
+          SetDialogMessage("All files saved");
+        }
+        else
+        {
+          SetDialogMessage("Save cancelled (no named parts)");
+        }
+      }
+      else
+      {
+        SetDialogMessage("Save cancelled (invalid dir)");
+      }
+    }
+    else
+    {
+      SetDialogMessage("Save all cancelled");
     }
   }
   else if (p_Key == m_KeyGotoInbox)

@@ -2245,3 +2245,16 @@ bool Util::StartsWith(const std::string& p_String, const std::string& p_Prefix)
 {
   return (p_String.rfind(p_Prefix, 0) == 0);
 }
+
+std::string Util::GetNonExistentPath(const std::string& p_Path)
+{
+  int suffixIdx = 1;
+  std::string path = p_Path;
+  while (Exists(path))
+  {
+    path = p_Path + "." + std::to_string(suffixIdx++);
+    if (suffixIdx >= 1000000) return "";
+  }
+
+  return path;
+}

@@ -630,12 +630,13 @@ The email navigator / viewer supports the following commands:
     C              compose copy of message
     l              refresh current folder
     m              move with auto-selection of folder
-    M              move without auto-selection of folder
+    M              move with manual selection of folder
     t              toggle unread
     v              view html part in external viewer
     x              export
+    z              import
     w              view message in external viewer
-    i              import
+    i              goto inbox
     a              select all
     /              search
     '              search server
@@ -658,6 +659,22 @@ The email navigator / viewer supports the following commands:
     5              filter by current message subject
 
     `              filter reset
+
+
+Attachments Viewer
+==================
+
+The attachments / parts viewer supports the following commands:
+
+    <              view message
+    >              view part
+    p              previous part
+    n              next part
+    s              save selected part
+    a              save all named parts
+    v              view part in external html viewer
+    i              goto inbox
+    q              quit
 
 
 Compose Editor
