@@ -1315,6 +1315,12 @@ Uncrustify is used to maintain consistent source code formatting, example:
     ./make.sh src
 
 
+Privacy
+=======
+
+Refer to the [Privacy Policy](/doc/PRIVACY.md) for details.
+
+
 License
 =======
 
