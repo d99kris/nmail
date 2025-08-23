@@ -473,6 +473,8 @@ void Ui::DrawAll()
       wrefresh(m_MainWin);
       break;
   }
+
+  LOG_LATENCY_END(LatencyKeyPress);
 }
 
 void Ui::DrawTop()
@@ -2026,6 +2028,8 @@ void Ui::Run()
     {
       wint_t key = 0;
       UiKeyInput::GetWch(&key);
+
+      LOG_LATENCY_START(LatencyKeyPress);
 
       if (static_cast<int>(key) == m_KeyTerminalResize)
       {

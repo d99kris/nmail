@@ -1,6 +1,6 @@
 // loghelp.h
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstring>
+#include <map>
 #include <sstream>
 
 #include "cxx-prettyprint/prettyprint.hpp"
@@ -50,6 +51,9 @@
 #define LOG_IF_SMTP_ERR(EXPR) LogHelp::LogSmtp(EXPR, #EXPR, __FILENAME__, __LINE__)
 
 #define LOG_DURATION() LogDuration logDuration(__FUNCTION__, __FILENAME__, __LINE__)
+
+#define LOG_LATENCY_START(METRIC) LogLatency::Start(METRIC)
+#define LOG_LATENCY_END(METRIC) LogLatency::End(__FILENAME__, __LINE__, METRIC)
 
 class LogHelp
 {
@@ -150,4 +154,56 @@ private:
   const char* m_Func = nullptr;
   const char* m_File = nullptr;
   int m_Line = 0;
+};
+
+enum LatencyMetric
+{
+  LatencyKeyPress = 0,
+};
+
+class LogLatency
+{
+public:
+  static void Start(LatencyMetric p_LatencyMetric)
+  {
+    if (Log::GetTraceEnabled())
+    {
+      std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      m_StartTimes[p_LatencyMetric] = startTime;
+    }
+  }
+
+  static void End(const char* p_File, int p_Line, LatencyMetric p_LatencyMetric)
+  {
+    if (Log::GetTraceEnabled())
+    {
+      std::chrono::high_resolution_clock::time_point endTime = std::chrono::high_resolution_clock::now();
+      std::unique_lock<std::mutex> lock(m_Mutex);
+      auto it = m_StartTimes.find(p_LatencyMetric);
+      if (it != m_StartTimes.end())
+      {
+        std::chrono::high_resolution_clock::time_point startTime = it->second;
+        // uncomment to allow single measurement: m_StartTimes.erase(it);
+        lock.unlock();
+
+        const std::chrono::duration<double> duration =
+          std::chrono::duration_cast<std::chrono::duration<double>>(endTime - startTime);
+        const long long durationMs = static_cast<long long>(round(duration.count() * 1000.0));
+
+        static std::map<LatencyMetric, std::string> s_MetricDescriptions =
+        {
+          { LatencyKeyPress, "key to ui draw" },
+        };
+
+        const std::string description = s_MetricDescriptions[p_LatencyMetric];
+
+        Log::Trace(p_File, p_Line, "latency %s %lld ms", description.c_str(), durationMs);
+      }
+    }
+  }
+
+private:
+  static std::mutex m_Mutex;
+  static std::map<LatencyMetric, std::chrono::high_resolution_clock::time_point> m_StartTimes;
 };

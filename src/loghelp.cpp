@@ -1,6 +1,6 @@
 // loghelp.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -18,6 +18,9 @@
 #define STRINGIFY(name) STRINGIFY_HELPER(name)
 #define STRINGIFY_HELPER(name) #name
 #define VALSTR(val) { val, STRINGIFY(val) }
+
+std::mutex LogLatency::m_Mutex;
+std::map<LatencyMetric, std::chrono::high_resolution_clock::time_point> LogLatency::m_StartTimes;
 
 void LogHelp::PrettyPrintArgsHelper(std::stringstream& /*p_Sstream*/)
 {
