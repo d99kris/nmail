@@ -38,8 +38,8 @@ struct ImapCache::DbConnection
   void OpenDb()
   {
     m_Database.reset(new sqlite::database(m_DbPath));
-    *m_Database << "PRAGMA synchronous = OFF";
-    *m_Database << "PRAGMA journal_mode = MEMORY";
+    *m_Database << "PRAGMA synchronous = FULL";
+    *m_Database << "PRAGMA journal_mode = DELETE";
   }
 
   std::shared_ptr<sqlite::database> m_Database;
