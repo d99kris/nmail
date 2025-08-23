@@ -2072,7 +2072,8 @@ std::string Util::GetCompiler()
   std::string libc;
 #endif
 
-  return compiler + (!libc.empty() ? " " + libc : "");
+  std::string compilerLibc = compiler + (!libc.empty() ? " " + libc : "");
+  return Util::ToLower(compilerLibc);
 }
 
 std::string Util::GetOsArch()
@@ -2109,7 +2110,7 @@ std::string Util::GetOsArch()
   }();
 
   static const std::string osArch = os + " " + arch;
-  return osArch;
+  return Util::ToLower(osArch);
 }
 
 std::string Util::ExtractString(const std::string& p_Str, const std::string& p_Prefix, const std::string& p_Suffix)
