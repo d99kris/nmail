@@ -3361,7 +3361,8 @@ void Ui::ViewPartListKeyHandler(int p_Key)
                 }
                 else
                 {
-                  LOG_WARNING("failed generating a unique non-existent path for \"%s\"", part.second.m_Filename.c_str());
+                  LOG_WARNING("failed generating a unique non-existent path for \"%s\"",
+                              part.second.m_Filename.c_str());
                 }
               }
             }
