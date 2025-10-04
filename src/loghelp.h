@@ -44,6 +44,7 @@
 #define LOG_IF_BADFD(EXPR) LogHelp::LogIfEqual(EXPR, -1, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_NULL(EXPR) LogHelp::LogIfEqual(EXPR, NULL, #EXPR, __FILENAME__, __LINE__)
 #define LOG_IF_NOT_EQUAL(EXPR, EXPECT) LogHelp::LogIfNotEqual(EXPR, EXPECT, #EXPR, __FILENAME__, __LINE__)
+#define LOG_IF_FALSE(EXPR) LogHelp::LogIfEqual(EXPR, false, #EXPR, __FILENAME__, __LINE__)
 
 // logs error on failure, logs debug on success
 #define LOG_IF_IMAP_ERR(EXPR) LogHelp::LogImap(EXPR, #EXPR, __FILENAME__, __LINE__)

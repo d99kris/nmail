@@ -72,6 +72,8 @@ bool Util::m_AddressBookEncrypt = false;
 bool Util::m_SendIp = true;
 std::string Util::m_LocalizedSubjectPrefixes;
 bool Util::m_GetCopyToTrash = false;
+bool Util::m_ReadOnly = false;
+bool Util::m_AssertAbort = false;
 
 bool Util::Exists(const std::string& p_Path)
 {
@@ -231,7 +233,10 @@ std::string Util::AbsolutePath(const std::string& p_Path)
 
 void Util::MkDir(const std::string& p_Path)
 {
-  apathy::Path::makedirs(p_Path);
+  if (!apathy::Path::makedirs(p_Path))
+  {
+    LOG_WARNING("mkdir failed: %s", p_Path.c_str());
+  }
 }
 
 void Util::RmDir(const std::string& p_Path)
@@ -244,7 +249,10 @@ void Util::RmDir(const std::string& p_Path)
 
 void Util::Move(const std::string& p_From, const std::string& p_To)
 {
-  apathy::Path::move(p_From, p_To);
+  if (!apathy::Path::move(p_From, p_To))
+  {
+    LOG_WARNING("move failed: %s -> %s", p_From.c_str(), p_To.c_str());
+  }
 }
 
 std::string Util::GetApplicationDir()
@@ -259,7 +267,9 @@ void Util::SetApplicationDir(const std::string& p_Path)
 
 std::string Util::GetTempDir()
 {
-  return GetApplicationDir() + std::string("temp/");
+  static std::string tempDir =
+    "temp" + (GetReadOnly() ? ("." + std::to_string(getpid())) : "") + "/";
+  return GetApplicationDir() + tempDir;
 }
 
 void Util::InitTempDir()
@@ -2258,4 +2268,51 @@ std::string Util::GetNonExistentPath(const std::string& p_Path)
   }
 
   return path;
+}
+
+void Util::SetReadOnly(bool p_ReadOnly)
+{
+  m_ReadOnly = p_ReadOnly;
+}
+
+bool Util::GetReadOnly()
+{
+  return m_ReadOnly;
+}
+
+void Util::SetAssertAbort(bool p_AssertAbort)
+{
+  m_AssertAbort = p_AssertAbort;
+}
+
+void Util::AssertionFailed()
+{
+  if (m_AssertAbort)
+  {
+    abort();
+  }
+  else
+  {
+    char logMsg[64];
+    snprintf(logMsg, sizeof(logMsg), "callstack:\n");
+    void* callstack[64] = { 0 };
+#ifdef HAVE_EXECINFO_H
+    const int size = backtrace(callstack, sizeof(callstack));
+#else
+    const int size = 0;
+#endif
+    Log::Callstack(callstack, size, logMsg);
+  }
+}
+
+bool Util::IsProcessRunning(pid_t p_Pid)
+{
+  const bool noSuchProcess = (kill(p_Pid, 0) != 0) && (errno == ESRCH);
+  return !noSuchProcess;
+}
+
+bool Util::IsSelfProcess(pid_t p_Pid)
+{
+  static pid_t selfPid = getpid();
+  return (p_Pid == selfPid);
 }

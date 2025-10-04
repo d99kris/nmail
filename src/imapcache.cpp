@@ -1,6 +1,6 @@
 // imapcache.cpp
 //
-// Copyright (c) 2020-2022 Kristofer Berggren
+// Copyright (c) 2020-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -37,7 +37,17 @@ struct ImapCache::DbConnection
 
   void OpenDb()
   {
-    m_Database.reset(new sqlite::database(m_DbPath));
+    if (Util::GetReadOnly())
+    {
+      sqlite::sqlite_config config;
+      config.flags = sqlite::OpenFlags::READONLY;
+      m_Database.reset(new sqlite::database(m_DbPath, config));
+    }
+    else
+    {
+      m_Database.reset(new sqlite::database(m_DbPath));
+    }
+
     *m_Database << "PRAGMA synchronous = FULL";
     *m_Database << "PRAGMA journal_mode = DELETE";
   }
@@ -154,6 +164,8 @@ void ImapCache::SetFolders(const std::set<std::string>& p_Folders)
   LOG_DURATION();
   if (p_Folders.empty()) return; // sanity check
 
+  if (Util::GetReadOnly()) return;
+
   std::set<std::string> deletedFolders;
   {
     std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
@@ -198,6 +210,8 @@ std::set<uint32_t> ImapCache::GetUids(const std::string& p_Folder)
 void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DURATION();
+
+  if (Util::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
 
@@ -343,6 +357,8 @@ void ImapCache::SetHeaders(const std::string& p_Folder, const std::map<uint32_t,
   LOG_DURATION();
   if (p_Headers.empty()) return;
 
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -401,6 +417,9 @@ std::map<uint32_t, uint32_t> ImapCache::GetFlags(const std::string& p_Folder, co
 void ImapCache::SetFlags(const std::string& p_Folder, const std::map<uint32_t, uint32_t>& p_Flags)
 {
   LOG_DURATION();
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -484,6 +503,8 @@ void ImapCache::SetBodys(const std::string& p_Folder, const std::map<uint32_t, B
 {
   LOG_DURATION();
   if (p_Bodys.empty()) return;
+
+  if (Util::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
@@ -600,6 +621,8 @@ void ImapCache::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Value));
 
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -623,6 +646,9 @@ void ImapCache::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t
 void ImapCache::ClearFolder(const std::string& p_Folder)
 {
   LOG_DEBUG_FUNC(STR(p_Folder));
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
 
   try
@@ -673,6 +699,9 @@ void ImapCache::DeleteMessages(const std::string& p_Folder, const std::set<uint3
 void ImapCache::DeleteUids(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -707,6 +736,9 @@ void ImapCache::DeleteUids(const std::string& p_Folder, const std::set<uint32_t>
 void ImapCache::DeleteFlags(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -730,6 +762,9 @@ void ImapCache::DeleteFlags(const std::string& p_Folder, const std::set<uint32_t
 void ImapCache::DeleteHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;
@@ -753,6 +788,9 @@ void ImapCache::DeleteHeaders(const std::string& p_Folder, const std::set<uint32
 void ImapCache::DeleteBodys(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
+
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
   std::shared_ptr<sqlite::database> db = dbCon->m_Database;

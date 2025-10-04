@@ -70,6 +70,9 @@ Command-line Options:
     -p, --pass
         change password
 
+    -ro, --read-only
+        run shadow instance with read-only cache access
+
     -s, --setup <SERV>
         setup wizard for specified service, supported services: gmail,
         gmail-oauth2, icloud, outlook, outlook-oauth2
@@ -274,6 +277,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
 
     address=example@example.com
     addressbook_encrypt=0
+    assert_abort=0
     auth=pass
     auth_encrypt=1
     cache_encrypt=0
@@ -325,6 +329,11 @@ The from-address to use. Required for sending emails.
 Indicates whether nmail shall encrypt local address book cache or not. Enabling
 it has some performance impact when starting and exiting nmail (default
 disabled).
+
+### assert_abort
+
+Specifies whether to abort execution (crash) if assertions fail.
+Primarily intended for debugging.
 
 ### auth
 

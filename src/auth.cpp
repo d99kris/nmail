@@ -69,6 +69,8 @@ void Auth::Cleanup()
 {
   LOG_DEBUG_FUNC(STR());
 
+  if (!m_OAuthEnabled) return;
+
   std::lock_guard<std::mutex> lock(m_Mutex);
   SaveCache();
   Util::RmDir(GetAuthTempDir());
@@ -198,6 +200,8 @@ void Auth::LoadCache()
 
 void Auth::SaveCache()
 {
+  if (Util::GetReadOnly()) return;
+
   if (m_AuthEncrypt)
   {
     CacheUtil::EncryptCacheDir(m_Pass, GetAuthTempDir(), GetAuthCacheDir());

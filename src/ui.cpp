@@ -2288,7 +2288,9 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyRefresh)
   {
-    if (IsConnected())
+    // Refresh is allowed online, and also in shadow read-only sessions
+    // catering for getting main instance cache updates.
+    if (IsConnected() || Util::GetReadOnly())
     {
       InvalidateUiCache(m_CurrentFolder);
     }
@@ -6093,6 +6095,12 @@ void Ui::StartSync()
     return;
   }
 
+  if (Util::GetReadOnly())
+  {
+    SetDialogMessage("Cannot sync in read-only mode");
+    return;
+  }
+
   LOG_DEBUG("sync started (manual)");
   m_SyncState = SyncStateStarted;
 
@@ -6166,7 +6174,7 @@ void Ui::SetRunning(bool p_Running)
 
 void Ui::HandleConnected()
 {
-  if (IsConnected())
+  if (IsConnected() && !Util::GetReadOnly())
   {
     std::vector<std::string> draftMsgs = OfflineQueue::PopDraftMessages();
     for (const auto& draftMsg : draftMsgs)

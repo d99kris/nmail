@@ -1,6 +1,6 @@
 // searchengine.cpp
 //
-// Copyright (c) 2020-2024 Kristofer Berggren
+// Copyright (c) 2020-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,11 +8,16 @@
 #include "searchengine.h"
 
 #include "loghelp.h"
+#include "util.h"
 
 SearchEngine::SearchEngine(const std::string& p_DbPath)
   : m_DbPath(p_DbPath)
 {
-  m_WritableDatabase.reset(new Xapian::WritableDatabase(m_DbPath, Xapian::DB_CREATE_OR_OPEN));
+  if (!Util::GetReadOnly())
+  {
+    m_WritableDatabase.reset(new Xapian::WritableDatabase(m_DbPath, Xapian::DB_CREATE_OR_OPEN));
+  }
+
   m_Database.reset(new Xapian::Database(m_DbPath, Xapian::DB_CREATE_OR_OPEN));
 }
 
@@ -24,6 +29,8 @@ void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const
                          const std::string& p_Subject, const std::string& p_From, const std::string& p_To,
                          const std::string& p_Folder)
 {
+  if (Util::GetReadOnly()) return;
+
   Xapian::TermGenerator termGenerator;
   termGenerator.set_stemmer(Xapian::Stem("none")); // @todo: add natural language detection
 
@@ -51,12 +58,16 @@ void SearchEngine::Index(const std::string& p_DocId, const int64_t p_Time, const
 
 void SearchEngine::Remove(const std::string& p_DocId)
 {
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> writableDatabaseLock(m_WritableDatabaseMutex);
   m_WritableDatabase->delete_document(p_DocId);
 }
 
 void SearchEngine::Commit()
 {
+  if (Util::GetReadOnly()) return;
+
   std::lock_guard<std::mutex> writableDatabaseLock(m_WritableDatabaseMutex);
   m_WritableDatabase->commit();
 }

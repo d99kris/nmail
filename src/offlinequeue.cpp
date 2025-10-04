@@ -1,6 +1,6 @@
 // offlinequeue.cpp
 //
-// Copyright (c) 2021 Kristofer Berggren
+// Copyright (c) 2021-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,8 @@
 #include "offlinequeue.h"
 
 #include <string>
+
+#include <unistd.h>
 
 #include "cacheutil.h"
 #include "crypto.h"
@@ -28,10 +30,13 @@ void OfflineQueue::Init(const bool p_Encrypt, const std::string& p_Pass)
   InitOutboxQueueDir();
   InitComposeQueueDir();
 
-  std::vector<std::string> composeMsgs = PopComposeMessages();
-  for (const auto& composeMsg : composeMsgs)
+  if (!Util::GetReadOnly())
   {
-    PushDraftMessage(composeMsg);
+    std::vector<std::string> composeMsgs = PopComposeMessages();
+    for (const auto& composeMsg : composeMsgs)
+    {
+      PushDraftMessage(composeMsg);
+    }
   }
 }
 
@@ -50,17 +55,48 @@ bool OfflineQueue::ChangePass(const bool p_CacheEncrypt,
   return true;
 }
 
+std::string OfflineQueue::GetQueueFileName(int p_Index)
+{
+  static std::string pidStr = std::to_string(getpid());
+  return pidStr + "." + std::to_string(p_Index) + ".eml"; // <pid>.<idx>.eml
+}
+
+bool OfflineQueue::CanProcessFileName(const std::string& p_FileName)
+{
+  const std::string fileExt = Util::GetFileExt(p_FileName);
+  if (fileExt != ".eml") return false;
+
+  const std::string baseName = Util::RemoveFileExt(Util::BaseName(p_FileName));
+  const std::vector<std::string> parts = Util::Split(baseName, '.');
+  const std::string pidStr = !parts.empty() ? parts.at(0) : "";
+  if (!Util::IsInteger(pidStr))
+  {
+    LOG_DEBUG("unsupported filename %s", p_FileName.c_str());
+    return false;
+  }
+
+  const pid_t pid = Util::ToInteger(pidStr);
+  if (!Util::IsSelfProcess(pid) && Util::IsProcessRunning(pid))
+  {
+    LOG_DEBUG("skip other active instance file %s", p_FileName.c_str());
+    return false;
+  }
+
+  LOG_DEBUG("do process %s", p_FileName.c_str());
+  return true;
+}
+
 void OfflineQueue::PushDraftMessage(const std::string& p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   int i = 0;
-  while (Util::Exists(GetDraftQueueDir() + std::to_string(i) + ".eml"))
+  while (Util::Exists(GetDraftQueueDir() + GetQueueFileName(i)))
   {
     ++i;
   }
 
-  std::string msgPath = GetDraftQueueDir() + std::to_string(i) + ".eml";
+  std::string msgPath = GetDraftQueueDir() + GetQueueFileName(i);
   WriteCacheFile(msgPath, p_Str);
 }
 
@@ -69,12 +105,12 @@ void OfflineQueue::PushOutboxMessage(const std::string& p_Str)
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   int i = 0;
-  while (Util::Exists(GetOutboxQueueDir() + std::to_string(i) + ".eml"))
+  while (Util::Exists(GetOutboxQueueDir() + GetQueueFileName(i)))
   {
     ++i;
   }
 
-  std::string msgPath = GetOutboxQueueDir() + std::to_string(i) + ".eml";
+  std::string msgPath = GetOutboxQueueDir() + GetQueueFileName(i);
   WriteCacheFile(msgPath, p_Str);
 }
 
@@ -85,8 +121,8 @@ void OfflineQueue::PushComposeMessage(const std::string& p_Str)
   std::string tmpPath = Util::GetTempDir() + "compose.eml";
   WriteCacheFile(tmpPath, p_Str);
 
-  int i = 0;
-  std::string msgPath = GetComposeQueueDir() + std::to_string(i) + ".eml";
+  int i = 0; // should only exist one active compose per process instance
+  std::string msgPath = GetComposeQueueDir() + GetQueueFileName(i);
   Util::Move(tmpPath, msgPath);
 }
 
@@ -98,14 +134,12 @@ std::vector<std::string> OfflineQueue::PopDraftMessages()
   const std::vector<std::string>& fileNames = Util::ListDir(GetDraftQueueDir());
   for (auto& fileName : fileNames)
   {
-    const std::string& baseName = Util::RemoveFileExt(Util::BaseName(fileName));
-    if (Util::IsInteger(baseName))
-    {
-      std::string filePath = GetDraftQueueDir() + fileName;
-      std::string msg = ReadCacheFile(filePath);
-      msgs.push_back(msg);
-      Util::DeleteFile(filePath);
-    }
+    if (!CanProcessFileName(fileName)) continue;
+
+    std::string filePath = GetDraftQueueDir() + fileName;
+    std::string msg = ReadCacheFile(filePath);
+    msgs.push_back(msg);
+    Util::DeleteFile(filePath);
   }
 
   return msgs;
@@ -119,14 +153,12 @@ std::vector<std::string> OfflineQueue::PopOutboxMessages()
   const std::vector<std::string>& fileNames = Util::ListDir(GetOutboxQueueDir());
   for (auto& fileName : fileNames)
   {
-    const std::string& baseName = Util::RemoveFileExt(Util::BaseName(fileName));
-    if (Util::IsInteger(baseName))
-    {
-      std::string filePath = GetOutboxQueueDir() + fileName;
-      std::string msg = ReadCacheFile(filePath);
-      msgs.push_back(msg);
-      Util::DeleteFile(filePath);
-    }
+    if (!CanProcessFileName(fileName)) continue;
+
+    std::string filePath = GetOutboxQueueDir() + fileName;
+    std::string msg = ReadCacheFile(filePath);
+    msgs.push_back(msg);
+    Util::DeleteFile(filePath);
   }
 
   return msgs;
@@ -140,14 +172,12 @@ std::vector<std::string> OfflineQueue::PopComposeMessages()
   const std::vector<std::string>& fileNames = Util::ListDir(GetComposeQueueDir());
   for (auto& fileName : fileNames)
   {
-    const std::string& baseName = Util::RemoveFileExt(Util::BaseName(fileName));
-    if (Util::IsInteger(baseName))
-    {
-      std::string filePath = GetComposeQueueDir() + fileName;
-      std::string msg = ReadCacheFile(filePath);
-      msgs.push_back(msg);
-      Util::DeleteFile(filePath);
-    }
+    if (!CanProcessFileName(fileName)) continue;
+
+    std::string filePath = GetComposeQueueDir() + fileName;
+    std::string msg = ReadCacheFile(filePath);
+    msgs.push_back(msg);
+    Util::DeleteFile(filePath);
   }
 
   return msgs;

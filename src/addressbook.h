@@ -1,6 +1,6 @@
 // addressbook.h
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -25,6 +25,8 @@ class AddressBook
 public:
   static void Init(const bool p_AddressBookEncrypt, const std::string& p_Pass);
   static void Cleanup();
+  static void OpenDb();
+  static void CloseDb();
 
   static bool ChangePass(const bool p_CacheEncrypt,
                          const std::string& p_OldPass, const std::string& p_NewPass);
@@ -42,6 +44,7 @@ private:
 
 private:
   static std::mutex m_Mutex;
+  static std::string m_DbPath;
   static bool m_AddressBookEncrypt;
   static std::string m_Pass;
   static std::unique_ptr<sqlite::database> m_Db;

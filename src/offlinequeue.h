@@ -1,6 +1,6 @@
 // offlinequeue.h
 //
-// Copyright (c) 2021 Kristofer Berggren
+// Copyright (c) 2021-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -28,6 +28,9 @@ public:
   static std::vector<std::string> PopComposeMessages();
 
 private:
+  static std::string GetQueueFileName(int p_Index);
+  static bool CanProcessFileName(const std::string& p_FileName);
+
   static std::string GetQueueDir();
   static void InitQueueDir();
 

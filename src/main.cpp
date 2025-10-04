@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
   bool online = true;
   bool changePass = false;
   bool keyDump = false;
+  bool readOnly = false;
   bool setupAllowCacheEncrypt = false;
   std::string setup;
   std::string exportDir;
@@ -109,6 +110,10 @@ int main(int argc, char* argv[])
     {
       changePass = true;
     }
+    else if ((*it == "-ro") || (*it == "--read-only"))
+    {
+      readOnly = true;
+    }
     else if (((*it == "-s") || (*it == "--setup")) && (std::distance(it + 1, args.end()) > 0))
     {
       ++it;
@@ -131,19 +136,32 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (!apathy::Path(Util::GetApplicationDir()).exists())
+  std::shared_ptr<ScopedDirLock> dirLock;
+  if (!readOnly)
   {
-    apathy::Path::makedirs(Util::GetApplicationDir());
+    if (!apathy::Path(Util::GetApplicationDir()).exists())
+    {
+      apathy::Path::makedirs(Util::GetApplicationDir());
+    }
+
+    dirLock.reset(new ScopedDirLock(Util::GetApplicationDir()));
+    if (!dirLock->IsLocked())
+    {
+      const std::string& roArgPath = Util::GetApplicationDir() + std::string("auto-ro.flag");
+      if (!apathy::Path(roArgPath).exists())
+      {
+        std::cerr <<
+          "error: unable to acquire lock for " << Util::GetApplicationDir() << "\n" <<
+          "       run 'nmail -ro' to start a shadow instance with read-only cache access.\n" <<
+          "       or  'touch " << roArgPath << "' to auto-enable it.\n";
+        return 1;
+      }
+
+      readOnly = true;
+    }
   }
 
-  ScopedDirLock dirLock(Util::GetApplicationDir());
-  if (!dirLock.IsLocked())
-  {
-    std::cerr <<
-      "error: unable to acquire lock for " << Util::GetApplicationDir() << "\n" <<
-      "       only one nmail session per account/confdir is supported.\n";
-    return 1;
-  }
+  Util::SetReadOnly(readOnly);
 
   const std::string& logPath = Util::GetApplicationDir() + std::string("log.txt");
   Log::SetPath(logPath);
@@ -157,6 +175,11 @@ int main(int argc, char* argv[])
   LOG_INFO("%s", osArch.c_str());
   std::string compiler = Util::GetCompiler();
   LOG_INFO("%s", compiler.c_str());
+
+  if (readOnly)
+  {
+    LOG_INFO("read-only mode");
+  }
 
   Util::InitTempDir();
   CacheUtil::InitCacheDir();
@@ -207,6 +230,7 @@ int main(int argc, char* argv[])
     { "sni_enabled", "1" },
     { "logdump_enabled", "0" },
     { "copy_to_trash", "" },
+    { "assert_abort", "0" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -220,7 +244,7 @@ int main(int argc, char* argv[])
   }
 
   const bool isSetup = !setup.empty();
-  if (isSetup)
+  if (isSetup && !readOnly)
   {
     if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook") &&
         (setup != "outlook-oauth2"))
@@ -299,6 +323,7 @@ int main(int argc, char* argv[])
   const bool isLogdumpEnabled = (mainConfig->Get("logdump_enabled") == "1");
   Util::SetCopyToTrash(mainConfig->Get("copy_to_trash"), mainConfig->Get("imap_host"));
   mainConfig->Set("copy_to_trash", std::to_string(Util::GetCopyToTrash()));
+  Util::SetAssertAbort(mainConfig->Get("assert_abort") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -478,19 +503,20 @@ static void ShowHelp()
     "Usage: nmail [OPTION]\n"
     "\n"
     "Options:\n"
-    "   -c, --cache-encrypt        prompt for cache encryption during oauth2 setup\n"
-    "   -d, --confdir <DIR>        use a different directory than ~/.config/nmail\n"
-    "   -e, --verbose              enable verbose logging\n"
+    "   -c,  --cache-encrypt       prompt for cache encryption during oauth2 setup\n"
+    "   -d,  --confdir <DIR>       use a different directory than ~/.config/nmail\n"
+    "   -e,  --verbose             enable verbose logging\n"
     "   -ee, --extra-verbose       enable extra verbose logging\n"
-    "   -h, --help                 display this help and exit\n"
-    "   -k, --keydump              key code dump mode\n"
-    "   -o, --offline              run in offline mode\n"
-    "   -p, --pass                 change password\n"
-    "   -s, --setup <SERVICE>      setup wizard for specified service, supported\n"
+    "   -h,  --help                display this help and exit\n"
+    "   -k,  --keydump             key code dump mode\n"
+    "   -o,  --offline             run in offline mode\n"
+    "   -p,  --pass                change password\n"
+    "   -ro, --read-only           run shadow instance with read-only cache access\n"
+    "   -s,  --setup <SERVICE>     setup wizard for specified service, supported\n"
     "                              services: gmail, gmail-oauth2, icloud, outlook,\n"
     "                              outlook-oauth2\n"
-    "   -v, --version              output version information and exit\n"
-    "   -x, --export <DIR>         export cache to specified dir in Maildir format\n"
+    "   -v,  --version             output version information and exit\n"
+    "   -x,  --export <DIR>        export cache to specified dir in Maildir format\n"
     "\n"
     "Examples:\n"
     "   nmail -s gmail             setup nmail for a gmail account\n"

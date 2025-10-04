@@ -1,6 +1,6 @@
 // log.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -28,10 +28,18 @@ bool Log::m_HadWarnErr = false;
 
 void Log::SetPath(const std::string& p_Path)
 {
-  m_Path = p_Path;
-  const std::string archivePath = m_Path + ".1";
-  remove(archivePath.c_str());
-  rename(m_Path.c_str(), archivePath.c_str());
+  if (Util::GetReadOnly())
+  {
+    m_Path = p_Path + "." + std::to_string(getpid());
+  }
+  else
+  {
+    m_Path = p_Path;
+    const std::string archivePath = m_Path + ".1";
+    remove(archivePath.c_str());
+    rename(m_Path.c_str(), archivePath.c_str());
+  }
+
   Dump("");
   m_LogFd = open(m_Path.c_str(), O_WRONLY | O_APPEND);
 }
@@ -51,6 +59,13 @@ void Log::Cleanup(bool p_IsLogdumpEnabled)
     {
       printf("log dump command failed: %s\n", cmd.c_str());
     }
+  }
+
+  if (Util::GetReadOnly())
+  {
+    const std::string archivePath = Util::RemoveFileExt(m_Path) + ".1";
+    remove(archivePath.c_str());
+    rename(m_Path.c_str(), archivePath.c_str());
   }
 }
 

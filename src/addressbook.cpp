@@ -1,6 +1,6 @@
 // addressbook.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2025 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -22,6 +22,7 @@
 #include "util.h"
 
 std::mutex AddressBook::m_Mutex;
+std::string AddressBook::m_DbPath;
 bool AddressBook::m_AddressBookEncrypt = true;
 std::string AddressBook::m_Pass;
 std::unique_ptr<sqlite::database> AddressBook::m_Db;
@@ -40,14 +41,14 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
     Util::RmDir(GetAddressBookTempDbDir());
     Util::MkDir(GetAddressBookTempDbDir());
     CacheUtil::DecryptCacheDir(m_Pass, GetAddressBookCacheDbDir(), GetAddressBookTempDbDir());
-    const std::string& dbPath = GetAddressBookTempDbDir() + "addresses.sqlite";
-    m_Db.reset(new sqlite::database(dbPath));
+    m_DbPath = GetAddressBookTempDbDir() + "addresses.sqlite";
   }
   else
   {
-    const std::string& dbPath = GetAddressBookCacheDbDir() + "addresses.sqlite";
-    m_Db.reset(new sqlite::database(dbPath));
+    m_DbPath = GetAddressBookCacheDbDir() + "addresses.sqlite";
   }
+
+  OpenDb();
 
   if (!m_Db) return;
 
@@ -69,14 +70,41 @@ void AddressBook::Cleanup()
 
   if (!m_Db) return;
 
-  m_Db.reset();
+  CloseDb();
+
   if (m_AddressBookEncrypt && m_Dirty)
   {
-    Util::RmDir(GetAddressBookCacheDbDir());
-    Util::MkDir(GetAddressBookCacheDbDir());
-    CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir());
-    m_Dirty = false;
+    if (!Util::GetReadOnly())
+    {
+      Util::RmDir(GetAddressBookCacheDbDir());
+      Util::MkDir(GetAddressBookCacheDbDir());
+      CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir());
+      m_Dirty = false;
+    }
+    else
+    {
+      LOG_WARNING("attempted to write addressbook in read-only mode");
+    }
   }
+}
+
+void AddressBook::OpenDb()
+{
+  if (Util::GetReadOnly())
+  {
+    sqlite::sqlite_config config;
+    config.flags = sqlite::OpenFlags::READONLY;
+    m_Db.reset(new sqlite::database(m_DbPath, config));
+  }
+  else
+  {
+    m_Db.reset(new sqlite::database(m_DbPath));
+  }
+}
+
+void AddressBook::CloseDb()
+{
+  m_Db.reset();
 }
 
 bool AddressBook::ChangePass(const bool p_CacheEncrypt,
@@ -99,7 +127,7 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  if (!m_Db) return;
+  if (!m_Db || Util::GetReadOnly()) return;
 
   try
   {
@@ -147,7 +175,7 @@ void AddressBook::AddFrom(const std::string& p_Address)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  if (!m_Db) return;
+  if (!m_Db || Util::GetReadOnly()) return;
 
   try
   {

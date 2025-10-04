@@ -130,6 +130,9 @@ std::string Status::ToString()
     lastStr = str;
   }
 
+  static std::string readOnlySuffix = Util::GetReadOnly() ? " ~" : "";
+  str += readOnlySuffix;
+
   return str;
 }
 

@@ -16,6 +16,9 @@
 
 #define THREAD_REGISTER() ThreadRegister threadRegister(__PRETTY_FUNCTION__)
 #define UNUSED(x) Util::Unused(x)
+#define nm_assert(cond) \
+        do { if (!(cond)) { LOG_ERROR("Assertion failed: %s", #cond); \
+                            Util::AssertionFailed(); } } while (0)
 
 struct mailimap_date_time;
 
@@ -304,6 +307,14 @@ public:
     (void)p_Arg;
   }
 
+  static void SetReadOnly(bool p_ReadOnly);
+  static bool GetReadOnly();
+
+  static void SetAssertAbort(bool p_AssertAbort);
+  static void AssertionFailed();
+  static bool IsProcessRunning(pid_t p_Pid);
+  static bool IsSelfProcess(pid_t p_Pid);
+
 private:
   static std::string m_HtmlToTextConvertCmd;
   static std::string m_TextToHtmlConvertCmd;
@@ -324,4 +335,6 @@ private:
   static bool m_SendIp;
   static std::string m_LocalizedSubjectPrefixes;
   static bool m_GetCopyToTrash;
+  static bool m_ReadOnly;
+  static bool m_AssertAbort;
 };
