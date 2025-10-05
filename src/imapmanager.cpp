@@ -933,7 +933,8 @@ bool ImapManager::PerformRequest(const Request& p_Request, bool p_Cached, bool p
 
   if (p_Request.m_GetUids)
   {
-    const bool rv = m_Imap.GetUids(p_Request.m_Folder, p_Cached, p_Response.m_Uids);
+    const bool rv = m_Imap.GetUids(p_Request.m_Folder, p_Cached, p_Response.m_Uids,
+                                   p_Response.m_UidInvalid);
     p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetUidsFailed;
   }
 

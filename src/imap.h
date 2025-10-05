@@ -57,7 +57,8 @@ public:
   bool AuthRefresh();
 
   bool GetFolders(const bool p_Cached, std::set<std::string>& p_Folders);
-  bool GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids);
+  bool GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids,
+               bool& p_UidInvalid);
   bool GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
                   const bool p_Cached, const bool p_Prefetch,
                   std::map<uint32_t, Header>& p_Headers);
@@ -122,6 +123,7 @@ private:
   bool m_CacheEncrypt = false;
   bool m_CacheIndexEncrypt = false;
   std::set<std::string> m_FoldersExclude;
+  std::set<std::string> m_UidInvalidFolders;
   bool m_SniEnabled = false;
 
   std::mutex m_ImapMutex;

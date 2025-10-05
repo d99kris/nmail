@@ -575,29 +575,34 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_Uid)
 
     if (isLegacy || (p_Uid != storedUid))
     {
-      LOG_DEBUG("folder %s uidvalidity %d", p_Folder.c_str(), p_Uid);
-
-      std::shared_ptr<DbConnection> dbCon = GetDb(ValidityDb, commonFolder,
-                                                  true /* p_Writable */);
-      std::shared_ptr<sqlite::database> db = dbCon->m_Database;
-
-      *db << "INSERT OR REPLACE INTO validity (folder, uid) VALUES (?, ?);"
-          << dbFolder << p_Uid;
-
-      if (storedUid != -1)
+      if (Util::GetReadOnly())
       {
-        if (p_Uid == storedUid) // isLegacy
-        {
-          LOG_INFO("folder %s uidvalidity migrated", p_Folder.c_str());
-        }
-        else
-        {
-          LOG_INFO("folder %s uidvalidity updated", p_Folder.c_str());
-        }
+        LOG_INFO("folder %s skip uidvalidity update %d", p_Folder.c_str(), p_Uid);
       }
       else
       {
-        LOG_DEBUG("folder %s uidvalidity created", p_Folder.c_str());
+        std::shared_ptr<DbConnection> dbCon = GetDb(ValidityDb, commonFolder,
+                                                    true /* p_Writable */);
+        std::shared_ptr<sqlite::database> db = dbCon->m_Database;
+
+        *db << "INSERT OR REPLACE INTO validity (folder, uid) VALUES (?, ?);"
+            << dbFolder << p_Uid;
+
+        if (storedUid != -1)
+        {
+          if (p_Uid == storedUid) // isLegacy
+          {
+            LOG_INFO("folder %s uidvalidity migrated (%d)", p_Folder.c_str(), p_Uid);
+          }
+          else
+          {
+            LOG_INFO("folder %s uidvalidity updated (%d)", p_Folder.c_str(), p_Uid);
+          }
+        }
+        else
+        {
+          LOG_INFO("folder %s uidvalidity created (%d)", p_Folder.c_str(), p_Uid);
+        }
       }
     }
 

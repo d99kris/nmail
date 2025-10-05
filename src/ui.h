@@ -196,6 +196,7 @@ private:
                     std::string& p_Entry);
   bool CurrentMessageBodyHeaderAvailable();
   void InvalidateUiCache(const std::string& p_Folder);
+  void InvalidateUidCache(const std::string& p_Folder);
   void ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
   void ExtPager();
   int ExtPartsViewer(const std::string& p_Path);

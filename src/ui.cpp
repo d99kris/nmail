@@ -3900,6 +3900,12 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
 
+      if (p_Response.m_UidInvalid)
+      {
+        LOG_INFO("folder %s uid invalid", p_Response.m_Folder.c_str());
+        InvalidateUidCache(p_Response.m_Folder);
+      }
+
       const std::set<uint32_t> newUids = p_Response.m_Uids - m_Uids[p_Response.m_Folder];
       if (!p_Response.m_Cached && (p_Response.m_Folder == m_Inbox) && !newUids.empty())
       {
@@ -4075,6 +4081,12 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
 
       {
         std::lock_guard<std::mutex> lock(m_Mutex);
+
+        if (p_Response.m_UidInvalid)
+        {
+          LOG_INFO("folder %s uid invalid", p_Response.m_Folder.c_str());
+          InvalidateUidCache(p_Response.m_Folder);
+        }
 
         std::map<uint32_t, Header>& headers = m_Headers[folder];
         std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[folder];
@@ -5408,6 +5420,20 @@ void Ui::InvalidateUiCache(const std::string& p_Folder)
   m_HasRequestedUids[p_Folder] = false;
   m_Flags[p_Folder].clear();
   m_RequestedFlags[p_Folder].clear();
+}
+
+void Ui::InvalidateUidCache(const std::string& p_Folder)
+{
+  // called with lock held
+  m_Uids.erase(p_Folder);
+  m_Headers.erase(p_Folder);
+  m_Flags.erase(p_Folder);
+  m_Bodys.erase(p_Folder);
+  m_HeaderUids.erase(p_Folder);
+  m_DisplayUids.erase(p_Folder);
+  m_RequestedHeaders.erase(p_Folder);
+  m_RequestedFlags.erase(p_Folder);
+  m_RequestedBodys.erase(p_Folder);
 }
 
 void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)

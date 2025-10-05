@@ -271,7 +271,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   return false;
 }
 
-bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids)
+bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids, bool& p_UidInvalid)
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Cached, p_Uids));
 
@@ -286,6 +286,13 @@ bool Imap::GetUids(const std::string& p_Folder, const bool p_Cached, std::set<ui
   if (!SelectFolder(p_Folder, true))
   {
     return false;
+  }
+
+  if (m_UidInvalidFolders.count(p_Folder))
+  {
+    LOG_INFO("folder %s uidvalidity false", p_Folder.c_str());
+    p_UidInvalid = true;
+    m_UidInvalidFolders.erase(p_Folder);
   }
 
   if (SelectedFolderIsEmpty())
@@ -1134,8 +1141,11 @@ bool Imap::SelectFolder(const std::string& p_Folder, bool p_Force)
         std::set<std::string> folders = m_ImapCache->GetFolders();
         std::set<std::string> tmpFolders = folders;
         tmpFolders.erase(p_Folder);
+        m_ImapCache->SetFolders(tmpFolders);
         m_ImapIndex->SetFolders(tmpFolders);
+        m_ImapCache->SetFolders(folders);
         m_ImapIndex->SetFolders(folders);
+        m_UidInvalidFolders.insert(p_Folder);
       }
 
       LOG_DEBUG("folder %s = %d", p_Folder.c_str(),
@@ -1157,6 +1167,7 @@ bool Imap::SelectedFolderIsEmpty()
 
 uint32_t Imap::GetUidValidity()
 {
+  // test uid invalidation by offsetting below value
   return m_Imap->imap_selection_info->sel_uidvalidity;
 }
 
