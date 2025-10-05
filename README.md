@@ -280,6 +280,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     assert_abort=0
     auth=pass
     auth_encrypt=1
+    browser_cmd=
     cache_encrypt=0
     cache_index_encrypt=0
     client_store_sent=0
@@ -345,6 +346,11 @@ OAuth 2.0 authentication (`gmail-oauth2`).
 
 Indicates whether nmail shall encrypt local OAuth 2.0 access token store
 (default enabled).
+
+### browser_cmd
+
+Allows overriding environment variable `$BROWSER` which controls the default
+web browser to use, for example for OAuth log in.
 
 ### cache_encrypt
 

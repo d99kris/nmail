@@ -1457,6 +1457,13 @@ std::string Util::GetPagerCmd()
   return std::string(getenv("PAGER") ? getenv("PAGER") : "less");
 }
 
+void Util::SetBrowserCmd(const std::string& p_BrowserCmd)
+{
+  if (p_BrowserCmd.empty()) return;
+
+  setenv("BROWSER", p_BrowserCmd.c_str(), 1);
+}
+
 void Util::StripCR(std::wstring& p_Str)
 {
   p_Str.erase(std::remove(p_Str.begin(), p_Str.end(), L'\r'), p_Str.end());

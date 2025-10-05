@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
     { "pager_cmd", "" },
     { "editor_cmd", "" },
     { "spell_cmd", "" },
+    { "browser_cmd", "" },
     { "folders_exclude", "" },
     { "server_timestamps", "0" },
     { "network_timeout", "30" },
@@ -250,6 +251,9 @@ int main(int argc, char* argv[])
   {
     LOG_INFO("last version %s", versionUsed.c_str());
   }
+
+  // Read params needed for setup
+  Util::SetBrowserCmd(mainConfig->Get("browser_cmd"));
 
   const bool isSetup = !setup.empty();
   if (isSetup && !readOnly)
