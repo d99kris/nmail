@@ -822,6 +822,7 @@ file (platform-dependent defaults are left empty below):
     signature=0
     tab_size=8
     terminal_title=
+    top_bar_show_message_count=0
     top_bar_show_version=0
     unread_indicator=N
     unwrap_quoted_lines=1
@@ -1022,6 +1023,14 @@ space between tab stops (default 8).
 ### terminal_title
 
 Specifies custom terminal title, ex: `terminal_title=nmail - d99kris@email.com`.
+
+### top_bar_show_message_count
+
+Specifies whether to display current folder message count in the top bar.
+
+### top_bar_show_version
+
+Specifies whether nmail shall display version number in the top bar.
 
 ### unread_indicator
 

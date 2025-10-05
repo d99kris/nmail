@@ -168,6 +168,7 @@ private:
   std::string GetKeyDisplay(int p_Key);
   std::string GetStatusStr();
   std::string GetStateStr();
+  std::string GetCountStateStr();
   std::string GetFilterStateStr();
   bool IsValidTextKey(int p_Key);
 
@@ -459,6 +460,7 @@ private:
   bool m_TopBarShowVersion = false;
   bool m_UnwrapQuotedLines = false;
   bool m_AutomoveTrashAllow = false;
+  bool m_TopBarShowMessageCount = false;
 
   std::string m_TerminalTitle;
 

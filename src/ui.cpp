@@ -85,6 +85,7 @@ void Ui::Init()
     { "top_bar_show_version", "0" },
     { "unwrap_quoted_lines", "1" },
     { "automove_trash_allow", "1" },
+    { "top_bar_show_message_count", "0" },
   };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig);
@@ -306,6 +307,7 @@ void Ui::Init()
   m_TopBarShowVersion = m_Config.Get("top_bar_show_version") == "1";
   m_UnwrapQuotedLines = m_Config.Get("unwrap_quoted_lines") == "1";
   m_AutomoveTrashAllow = m_Config.Get("automove_trash_allow") == "1";
+  m_TopBarShowMessageCount = m_Config.Get("top_bar_show_message_count") == "1";
 
   try
   {
@@ -4606,11 +4608,11 @@ std::string Ui::GetStateStr()
       }
       else if (m_SortFilter[m_CurrentFolder] != SortDefault)
       {
-        return "Folder: " + m_CurrentFolder + GetFilterStateStr();
+        return "Folder: " + m_CurrentFolder + GetCountStateStr() + GetFilterStateStr();
       }
       else
       {
-        return "Folder: " + m_CurrentFolder;
+        return "Folder: " + m_CurrentFolder + GetCountStateStr();
       }
     case StateViewMessage:
       {
@@ -4652,6 +4654,14 @@ std::string Ui::GetStateStr()
       return "Message Parts";
     default: return "Unknown State";
   }
+}
+
+std::string Ui::GetCountStateStr()
+{
+  if (!m_TopBarShowMessageCount) return "";
+
+  const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
+  return " (" + std::to_string(displayUids.size()) + ")";
 }
 
 std::string Ui::GetFilterStateStr()
