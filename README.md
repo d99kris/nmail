@@ -319,6 +319,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     trash=Trash
     user=example@example.com
     verbose_logging=0
+    version_used=
 
 ### address
 
@@ -606,6 +607,11 @@ Allows forcing nmail to enable specified logging level:
     0 = info, warnings, errors (default)
     1 = debug (same as `-e`, `--verbose` - enable verbose logging)
     2 = trace (same as `-ee`, `--extra-verbose` - enable extra verbose logging)
+
+### version_used
+
+For internal use only. Stores version used for last successful execution. May
+be used for debugging startup crash / hang regressions.
 
 
 Multiple Email Accounts

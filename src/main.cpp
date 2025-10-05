@@ -231,6 +231,7 @@ int main(int argc, char* argv[])
     { "logdump_enabled", "0" },
     { "copy_to_trash", "" },
     { "assert_abort", "0" },
+    { "version_used", "" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -241,6 +242,13 @@ int main(int argc, char* argv[])
   {
     KeyDump();
     return 0;
+  }
+
+  // Log last version
+  const std::string versionUsed = mainConfig->Get("version_used");
+  if (!versionUsed.empty() && (versionUsed != Version::GetAppVersion()))
+  {
+    LOG_INFO("last version %s", versionUsed.c_str());
   }
 
   const bool isSetup = !setup.empty();
@@ -473,6 +481,9 @@ int main(int argc, char* argv[])
   imapManager.reset();
 
   Auth::Cleanup();
+
+  // Save last version
+  mainConfig->Set("version_used", Version::GetAppVersion());
 
   mainConfig->Save();
   mainConfig.reset();
