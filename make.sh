@@ -82,28 +82,57 @@ case "${1%/}" in
     ;;
 esac
 
+# detect os / distro
+OS="$(uname)"
+if [ "${OS}" == "Linux" ]; then
+  unset NAME
+  eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
+  if [[ "${NAME}" != "" ]]; then
+    DISTRO="${NAME}"
+  else
+    if [[ "${TERMUX_VERSION}" != "" ]]; then
+      DISTRO="Termux"
+    fi
+  fi
+fi
+
+# set make / cmake args
+if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
+  MAKEARGS=""
+  CMAKEARGS=""
+  if [ "${OS}" == "Linux" ]; then
+    MAKEARGS="-j$(nproc) ${MAKEARGS}"
+    if [[ "${DISTRO}" == "Termux" ]]; then
+      CMAKEARGS="-DCMAKE_INSTALL_PREFIX=${PREFIX} ${CMAKEARGS}"
+      export CC="clang"
+      export CXX="clang++"
+    fi
+  elif [ "${OS}" == "Darwin" ]; then
+    MAKEARGS="-j$(sysctl -n hw.ncpu) ${MAKEARGS}"
+  fi
+fi
+
 # deps
 if [[ "${DEPS}" == "1" ]]; then
-  OS="$(uname)"
   if [ "${OS}" == "Linux" ]; then
-    unset NAME
-    eval $(grep "^NAME=" /etc/os-release 2> /dev/null)
-    if [[ "${NAME}" == "Ubuntu" ]] || [[ "${NAME}" == "Raspbian GNU/Linux" ]] || [[ "${NAME}" == "Debian GNU/Linux" ]] || [[ "${NAME}" == "Pop!_OS" ]] || [[ "${NAME}" == "Linux Mint" ]]; then
-      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "Fedora" ]] || [[ "${NAME}" == "Fedora Linux" ]] || [[ "${NAME}" == "Rocky Linux" ]]; then
-      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "Arch Linux" ]] || [[ "${NAME}" == "Arch Linux ARM" ]]; then
-      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "Gentoo" ]]; then
-      sudo emerge -n dev-build/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "Alpine Linux" ]]; then
-      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "openSUSE Tumbleweed" ]]; then
-      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel w3m || exiterr "deps failed (${NAME}), exiting."
-    elif [[ "${NAME}" == "Void" ]]; then
-      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel w3m || exiterr "deps failed (${NAME}), exiting."
+    if [[ "${DISTRO}" == "Ubuntu" ]] || [[ "${DISTRO}" == "Raspbian GNU/Linux" ]] || [[ "${DISTRO}" == "Debian GNU/Linux" ]] || [[ "${DISTRO}" == "Pop!_OS" ]] || [[ "${DISTRO}" == "Linux Mint" ]]; then
+      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Fedora" ]] || [[ "${DISTRO}" == "Fedora Linux" ]] || [[ "${DISTRO}" == "Rocky Linux" ]]; then
+      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Arch Linux" ]] || [[ "${DISTRO}" == "Arch Linux ARM" ]]; then
+      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Gentoo" ]]; then
+      sudo emerge -n dev-build/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Alpine Linux" ]]; then
+      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "openSUSE Tumbleweed" ]]; then
+      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Void" ]]; then
+      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel w3m || exiterr "deps failed (${DISTRO}), exiting."
+    elif [[ "${DISTRO}" == "Termux" ]]; then
+      pkg install git cmake clang ccache libxapian libsqlite libsasl file libandroid-wordexp libandroid-glob w3m || exiterr "deps failed (${DISTRO}), exiting."
     else
-      exiterr "deps failed (unsupported linux distro ${NAME}), exiting."
+      exiterr "deps failed (unsupported linux distro ${DISTRO}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
     if command -v brew &> /dev/null; then
@@ -157,28 +186,17 @@ fi
 
 # build
 if [[ "${BUILD}" == "1" ]]; then
-  OS="$(uname)"
-  MAKEARGS=""
-  if [ "${OS}" == "Linux" ]; then
-    MAKEARGS="-j$(nproc)"
-  elif [ "${OS}" == "Darwin" ]; then
-    MAKEARGS="-j$(sysctl -n hw.ncpu)"
-  fi
-  echo "-- Using ${MAKEARGS}"
-  mkdir -p build && cd build && cmake .. && make ${MAKEARGS} && cd .. || exiterr "build failed, exiting."
+  echo "-- Using cmake ${CMAKEARGS}"
+  echo "-- Using make ${MAKEARGS}"
+  mkdir -p build && cd build && cmake ${CMAKEARGS} .. && make ${MAKEARGS} && cd .. || exiterr "build failed, exiting."
 fi
 
 # debug
 if [[ "${DEBUG}" == "1" ]]; then
-  OS="$(uname)"
-  MAKEARGS=""
-  if [ "${OS}" == "Linux" ]; then
-    MAKEARGS="-j$(nproc)"
-  elif [ "${OS}" == "Darwin" ]; then
-    MAKEARGS="-j$(sysctl -n hw.ncpu)"
-  fi
-  echo "-- Using ${MAKEARGS}"
-  mkdir -p dbgbuild && cd dbgbuild && cmake -DCMAKE_BUILD_TYPE=Debug .. && make ${MAKEARGS} && cd .. || exiterr "debug build failed, exiting."
+  CMAKEARGS="-DCMAKE_BUILD_TYPE=Debug ${CMAKEARGS}"
+  echo "-- Using cmake ${CMAKEARGS}"
+  echo "-- Using make ${MAKEARGS}"
+  mkdir -p dbgbuild && cd dbgbuild && cmake ${CMAKEARGS} .. && make ${MAKEARGS} && cd .. || exiterr "debug build failed, exiting."
 fi
 
 # tests
@@ -200,18 +218,20 @@ fi
 
 # install
 if [[ "${INSTALL}" == "1" ]]; then
-  OS="$(uname)"
-  if [ "${OS}" == "Linux" ]; then
-    cd build && sudo make install && cd .. || exiterr "install failed (linux), exiting."
-  elif [ "${OS}" == "Darwin" ]; then
-    GHSUDO=""
-    if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
-      GHSUDO="sudo"
+  if [[ -z ${INSTALL_CMD+x} ]]; then
+    if [[ "${OS}" == "Linux" ]]; then
+      if [[ "${DISTRO}" != "Termux" ]]; then
+        INSTALL_CMD="$(basename $(which sudo doas | head -1))"
+      fi
+    elif [[ "${OS}" == "Darwin" ]]; then
+      if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
+        INSTALL_CMD="sudo"
+      fi
     fi
-    cd build && ${GHSUDO} make install && cd .. || exiterr "install failed (mac), exiting."
-  else
-    exiterr "install failed (unsupported os ${OS}), exiting."
   fi
+
+  echo "-- Using ${INSTALL_CMD:+$INSTALL_CMD }make install"
+  cd build && ${INSTALL_CMD} make install && cd .. || exiterr "install failed (${OS}), exiting."
 fi
 
 # exit
