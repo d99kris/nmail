@@ -315,6 +315,7 @@ public:
   static void AssertionFailed();
   static bool IsProcessRunning(pid_t p_Pid);
   static bool IsSelfProcess(pid_t p_Pid);
+  static int System(const std::string& p_Cmd);
 
 private:
   static std::string m_HtmlToTextConvertCmd;

@@ -54,7 +54,7 @@ void Log::Cleanup(bool p_IsLogdumpEnabled)
   if (p_IsLogdumpEnabled && m_HadWarnErr)
   {
     const std::string cmd = "grep -e '| ERROR |' -e '| WARN  |' " + m_Path;
-    const int rv = system(cmd.c_str());
+    const int rv = Util::System(cmd);
     if (rv != 0)
     {
       printf("log dump command failed: %s\n", cmd.c_str());

@@ -5443,7 +5443,7 @@ void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessag
   Util::WriteWFile(tempPath, p_ComposeMessageStr);
   const std::string& cmd = p_EditorCmd + " " + tempPath;
   LOG_DEBUG("launching external editor: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external editor exited successfully");
@@ -5475,7 +5475,7 @@ void Ui::ExtPager()
   const std::string& pager = Util::GetPagerCmd();
   const std::string& cmd = pager + " " + tempPath;
   LOG_DEBUG("launching external pager: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external pager exited successfully");
@@ -5511,7 +5511,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
   Util::ReplaceString(escapedPath, "\"", "\\\"");
   const std::string& cmd = viewer + " \"" + escapedPath + "\"";
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external viewer exited successfully");
@@ -5580,7 +5580,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   const std::string& viewer = Util::GetHtmlViewerCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("html viewer exited successfully");
@@ -5616,7 +5616,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   const std::string& viewer = Util::GetHtmlPreviewCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("html viewer exited successfully");
@@ -5685,7 +5685,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
   const std::string& viewer = Util::GetMsgViewerCmd();
   const std::string& cmd = viewer + " \"" + p_Path + "\"";
   LOG_DEBUG("launching message viewer: %s", cmd.c_str());
-  int rv = system(cmd.c_str());
+  int rv = Util::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("message viewer exited successfully");
@@ -6788,7 +6788,7 @@ void Ui::FilePickerOrStateFileList()
 
     std::string outPath = Util::GetTempFilename(".txt");
     std::string command = filePickerCmd + " > " + outPath;
-    if (system(command.c_str()) == 0)
+    if (Util::System(command) == 0)
     {
       std::string filesStr = Util::ReadFile(outPath);
       if (!filesStr.empty())

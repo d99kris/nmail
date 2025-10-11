@@ -317,7 +317,7 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   std::string command =
     scriptPath + " " + ((p_AuthAction == Generate) ? "-g" : "-r") + " > " + outPath + " 2>&1";
 
-  int status = system(command.c_str());
+  int status = Util::System(command);
   const std::string output = Util::ReadFile(outPath);
   if (WIFEXITED(status) && (WEXITSTATUS(status) == 0))
   {

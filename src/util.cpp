@@ -30,6 +30,7 @@
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #ifdef __APPLE__
 #include <libproc.h>
@@ -403,7 +404,7 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command =
     std::string("which html2nmail pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
-  if (system(command.c_str()) == 0)
+  if (Util::System(command) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
@@ -457,7 +458,7 @@ std::string Util::GetDefaultTextToHtmlConvertCmd()
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command =
     std::string("which pandoc markdown 2> /dev/null | head -1 > ") + commandOutPath;
-  if (system(command.c_str()) == 0)
+  if (Util::System(command) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
@@ -481,11 +482,13 @@ std::string Util::GetDefaultTextToHtmlConvertCmd()
 
 std::string Util::ConvertTextToHtml(const std::string& p_Text)
 {
+  const std::string& textToHtmlCmd = GetTextToHtmlConvertCmd();
+  if (textToHtmlCmd.empty()) return "";
+
   std::string text = p_Text;
   ReplaceString(text, "\n", "  \n"); // prepend line-breaks with double spaces to enforce them
   const std::string& tempPath = GetTempFilename(".md");
   Util::WriteFile(tempPath, text);
-  const std::string& textToHtmlCmd = GetTextToHtmlConvertCmd();
   const std::string& cmd = textToHtmlCmd + " " + tempPath;
   const std::string& htmlText = RunCommand(cmd);
   Util::DeleteFile(tempPath);
@@ -542,7 +545,7 @@ std::string Util::GetDefaultHtmlViewerCmd()
   std::string result;
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command = std::string("which w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
-  if (system(command.c_str()) == 0)
+  if (Util::System(command) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
@@ -1308,7 +1311,7 @@ void Util::SignalCrashHandler(int p_Signal)
 
   // non-signal safe code section
   CleanupStdErrRedirect();
-  UNUSED(system("reset"));
+  UNUSED(Util::System("reset"));
   UNUSED(write(STDERR_FILENO, logMsg, strlen(logMsg)));
 
 #ifdef HAVE_EXECINFO_H
@@ -1419,7 +1422,7 @@ std::string Util::GetSpellCmd()
       const std::string& whichCommand =
         std::string("which aspell ispell 2> /dev/null | head -1 > ") + commandOutPath;
 
-      if (system(whichCommand.c_str()) == 0)
+      if (Util::System(whichCommand) == 0)
       {
         std::string output = Util::ReadFile(commandOutPath);
         output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
@@ -1495,7 +1498,7 @@ std::string Util::RunCommand(const std::string& p_Cmd)
   std::string output;
   std::string outPath = Util::GetTempFilename(".txt");
   std::string command = p_Cmd + " 2> /dev/null > " + outPath;
-  if (system(command.c_str()) == 0)
+  if (Util::System(command) == 0)
   {
     output = Util::ReadFile(outPath);
   }
@@ -1514,7 +1517,7 @@ void Util::DetectCommandNotPresent(const std::string& p_Cmd)
   std::vector<std::string> cmdVec = Split(p_Cmd, ' ');
   const std::string programName = (cmdVec.size() > 0) ? cmdVec.at(0) : "";
   const std::string whichCmd = "which " + programName + " > /dev/null 2>&1";
-  if (system(whichCmd.c_str()) != 0)
+  if (Util::System(whichCmd) != 0)
   {
     LOG_WARNING("program not found, please ensure '%s' is installed", programName.c_str());
   }
@@ -2322,4 +2325,25 @@ bool Util::IsSelfProcess(pid_t p_Pid)
 {
   static pid_t selfPid = getpid();
   return (p_Pid == selfPid);
+}
+
+int Util::System(const std::string& p_Cmd)
+{
+#if defined(HAVE_TERMUX)
+  static const std::string shPath = "/data/data/com.termux/files/usr/bin/sh";
+#else
+  static const std::string shPath = "/bin/sh";
+#endif
+
+  pid_t pid = fork();
+  if (pid == 0)
+  {
+    execl(shPath.c_str(), "sh", "-c", p_Cmd.c_str(), (char*)nullptr);
+    _exit(127);
+  }
+
+  if (pid < 0) return -1;
+
+  int status = 0;
+  return (waitpid(pid, &status, 0) < 0) ? -1 : status;
 }
