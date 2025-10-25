@@ -454,13 +454,14 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
           continue;
         }
 
-        header.SetHeaderData(hdrData, strData, time);
-
-        if (header.GetData().empty())
+        if (hdrData.empty())
         {
-          LOG_WARNING("skip header = \"\"");
+          LOG_WARNING("skip header uid = %d hdrLen = %d strLen = %d",
+                      uid, hdrData.size(), strData.size());
           continue;
         }
+
+        header.SetHeaderData(hdrData, strData, time);
 
         if (!p_Prefetch)
         {
