@@ -15,6 +15,7 @@
 #include "cacheutil.h"
 #include "config.h"
 #include "crypto.h"
+#include "debuginfo.h"
 #include "imapmanager.h"
 #include "lockfile.h"
 #include "log.h"
@@ -232,7 +233,6 @@ int main(int argc, char* argv[])
     { "logdump_enabled", "0" },
     { "copy_to_trash", "" },
     { "assert_abort", "0" },
-    { "version_used", "" },
   };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
@@ -245,8 +245,9 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  // Log last version
-  const std::string versionUsed = mainConfig->Get("version_used");
+  // Init debug info, log last version
+  DebugInfo::Init();
+  const std::string versionUsed = DebugInfo::GetStr("version_used");
   if (!versionUsed.empty() && (versionUsed != Version::GetAppVersion()))
   {
     LOG_INFO("last version %s", versionUsed.c_str());
@@ -486,9 +487,6 @@ int main(int argc, char* argv[])
 
   Auth::Cleanup();
 
-  // Save last version
-  mainConfig->Set("version_used", Version::GetAppVersion());
-
   mainConfig->Save();
   mainConfig.reset();
 
@@ -503,6 +501,10 @@ int main(int argc, char* argv[])
 
   ui.reset();
   LOG_INFO("exit");
+
+  // Save last version
+  DebugInfo::SetStr("version_used", Version::GetAppVersion());
+  DebugInfo::Cleanup();
 
   Log::Cleanup(isLogdumpEnabled);
 

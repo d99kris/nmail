@@ -50,6 +50,8 @@ add_executable(nmail
   src/contact.h
   src/crypto.cpp
   src/crypto.h
+  src/debuginfo.cpp
+  src/debuginfo.h
   src/encoding.cpp
   src/encoding.h
   src/flag.cpp
