@@ -6,7 +6,7 @@ nmail
 | [![Linux](https://github.com/d99kris/nmail/workflows/Linux/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3ALinux) | [![macOS](https://github.com/d99kris/nmail/workflows/macOS/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3AmacOS) |
 
 nmail is a terminal-based email client for Linux and macOS with a user interface
-similar to alpine / pine.
+similar to alpine.
 
 ![screenshot nmail](/doc/screenshot-nmail.png)
 
