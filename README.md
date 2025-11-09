@@ -1166,17 +1166,6 @@ configuration to take effect, `colors_enabled=1` must be set in
 Example color config files are provided in `/usr/local/share/nmail/themes`
 and can be used by overwriting `~/.config/nmail/colors.conf`.
 
-### Htop style theme
-
-This color theme is similar to htop's default, see screenshot below with
-nmail and htop.
-
-![screenshot nmail htop style theme](/doc/screenshot-nmail-htop-theme.png)
-
-To use this config:
-
-    cp /usr/local/share/nmail/themes/htop-style.conf ~/.config/nmail/colors.conf
-
 ### Manual configuration
 
 Alternatively one may manually edit `colors.conf`. Colors may
