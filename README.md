@@ -1164,7 +1164,20 @@ configuration to take effect, `colors_enabled=1` must be set in
 `~/.config/nmail/ui.conf`.
 
 Example color config files are provided in `/usr/local/share/nmail/themes`
-and can be used by overwriting `~/.config/nmail/colors.conf`.
+and can be used by overwriting `~/.config/nmail/colors.conf` when nmail is not
+running.
+
+### Default
+
+    cp /usr/local/share/nmail/themes/default.conf ~/.config/nmail/colors.conf
+
+![screenshot nmail default theme](/doc/screenshot-nmail.png)
+
+### Catppuccin Macchiato
+
+    cp /usr/local/share/nmail/themes/catppuccin-macchiato.conf ~/.config/nmail/colors.conf
+
+![screenshot nmail catppuccin macchiato theme](/doc/screenshot-nmail-catppuccin-macchiato.png)
 
 ### Manual configuration
 

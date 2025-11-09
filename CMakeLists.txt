@@ -272,6 +272,7 @@ macro(add_theme themename)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/share/nmail/themes/${themename} DESTINATION share/nmail/themes)
 endmacro()
 add_theme("default.conf")
+add_theme("catppuccin-macchiato.conf")
 
 # Uninstall
 add_custom_target(uninstall
