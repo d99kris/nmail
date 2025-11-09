@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+
+# Config
+CFG_PATHS="${HOME}/.nmail/main.conf ${HOME}/.config/nmail/main.conf"
+IMAP_HOST=$(grep "^imap_host=" ${CFG_PATHS} 2> /dev/null | head -1 | cut -d'=' -f2)
+IMAP_USER=$(grep "^user=" ${CFG_PATHS} 2> /dev/null | head -1 | cut -d'=' -f2)
+IMAP_FOLDER="${IMAP_FOLDER:-Office}"
+
+if [[ "${IMAP_HOST}" == "" ]] || [[ "${IMAP_USER}" == "" ]]; then
+  echo "IMAP host/user not found in nmail main.conf, exiting."
+  exit 1
+fi
+
+if [[ "${IMAP_PASS}" == "" ]]; then
+  read -s -p "IMAP password: " IMAP_PASS ; echo
+  if [[ "${IMAP_PASS}" == "" ]]; then
+    echo "IMAP password no specified, exiting."
+    exit 1
+  fi
+fi
+
+echo "WARNING: This script will access user \"${IMAP_USER}\" folder \"${IMAP_FOLDER}\""
+echo "erasing its content and replacing it with a set of demo emails."
+read -p "Proceed (y/n)? "
+if [[ "${REPLY}" != "y" ]]; then
+  exit 1
+fi
+
+# Work dir
+WORKDIR="/tmp/mkdemo"
+rm -rf "${WORKDIR}"
+mkdir -p "${WORKDIR}"
+
+# Make emails list
+make_emails_list()
+{
+  cat <<EOF > "${WORKDIR}/emails.txt"
+   2007-04-26 10:15  Dwight Schrute      Identity theft is not a joke, Michael!
+   2007-04-26 10:13  Jim Halpert         Bears. Beets. Battlestar Galactica.
+📎 2007-01-04 09:25  Darryl Philbin      Fwd: Sandals Jamaica
+   2006-11-30 16:47  Angelo Grotti       Everybody needs peace of mind
+   2006-01-05 16:41  Captain Jack        Booze cruise lifetime ban
+   2005-11-08 10:11  Jan Levinson        We need to talk
+EOF
+}
+
+# Generate emls
+generate_eml_files()
+{
+  INPUT="${WORKDIR}/emails.txt"
+  COUNTER=1
+  BOUNDARY='69076460_327b23c6_148dc'
+
+  rm -f "${WORKDIR}"/*.eml
+
+  while IFS= read -r RAW; do
+    [[ -z "${RAW// }" ]] && continue
+
+    ATTACHMENT=0
+    if [[ "${RAW}" =~ ^[[:space:]]*📎 ]]; then
+      ATTACHMENT=1
+    fi
+
+    CLEAN_LINE=$(echo "${RAW}" \
+      | sed -E 's/^[[:space:]]*📎[[:space:]]*//' \
+      | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+
+    # Split into three logical fields: datetime | from_name | subject
+    IFS=$'\t' read -r DT FROM_NAME SUBJECT < \
+      <(awk -v FS='[[:space:]]{2,}' '{print $1 "\t" $2 "\t" $3}' <<< "${CLEAN_LINE}")
+
+    read -r DATE_PART TIME_PART <<< "${DT}"
+
+    # Format to RFC-2822 style, e.g. "Fri, 27 Mar 2009 10:13:00 +0800"
+    FORMATTED_DATE=$(date -d "${DATE_PART} ${TIME_PART}" '+%a, %d %b %Y %H:%M:%S +0800' 2>/dev/null \
+                     || gdate -d "${DATE_PART} ${TIME_PART}" '+%a, %d %b %Y %H:%M:%S +0800')
+
+    UUID=$(uuidgen)
+    MSGID="<${UUID}@gmail.com>"
+    EMLFILE="${WORKDIR}/${COUNTER}.eml"
+
+    {
+      printf 'Return-Path: <${IMAP_USER}>\r\n'
+      printf 'Date: %s\r\n' "${FORMATTED_DATE}"
+      printf 'From: %s <${IMAP_USER}>\r\n' "${FROM_NAME}"
+      printf 'To: Michael Scott <${IMAP_USER}>\r\n'
+      printf 'Message-ID: %s\r\n' "${MSGID}"
+      printf 'Subject: %s\r\n' "${SUBJECT}"
+
+      if [[ ${ATTACHMENT} -eq 1 ]]; then
+        printf 'Content-Type: multipart/mixed; boundary="%s"\r\n' "${BOUNDARY}"
+        printf '\r\n'
+        printf -- '--%s\r\n' "${BOUNDARY}"
+        printf 'Content-Type: text/plain; charset="utf-8"\r\n'
+        printf 'Content-Transfer-Encoding: quoted-printable\r\n'
+        printf 'Content-Disposition: inline\r\n'
+        printf '\r\n'
+        printf '..\r\n'
+        printf '\r\n'
+        printf -- '--%s\r\n' "${BOUNDARY}"
+        printf 'Content-Type: application/octet-stream\r\n'
+        printf 'Content-Transfer-Encoding: base64\r\n'
+        printf 'Content-Disposition: attachment; filename="att.txt"\r\n'
+        printf '\r\n'
+        printf 'RHVtbXkgYXR0YWNobWVudAo=\r\n'
+        printf '\r\n'
+        printf -- '--%s--\r\n' "${BOUNDARY}"
+      else
+        printf 'Content-Type: text/plain; charset="utf-8"\r\n'
+        printf 'Content-Transfer-Encoding: quoted-printable\r\n'
+        printf 'Content-Disposition: inline\r\n'
+        printf '\r\n'
+      fi
+    } > "${EMLFILE}"
+
+    printf 'Created %s\n' "${EMLFILE}"
+    ((COUNTER++))
+  done < "${INPUT}"
+}
+
+# Upload emls
+imap_upload_eml_files()
+{
+  BASE="imaps://${IMAP_HOST}:993"
+
+  echo "Authenticating and selecting folder..."
+  curl -sS -u "${IMAP_USER}:${IMAP_PASS}" \
+    --url "${BASE}/${IMAP_FOLDER}" \
+    --request "SELECT ${IMAP_FOLDER}"
+
+  echo "Clearing existing messages..."
+  curl -sS -u "${IMAP_USER}:${IMAP_PASS}" \
+    --url "${BASE}/${IMAP_FOLDER}" \
+    --request "STORE 1:* +FLAGS (\Deleted)" || true
+  curl -sS -u "${IMAP_USER}:${IMAP_PASS}" \
+    --url "${BASE}/${IMAP_FOLDER}" \
+    --request "EXPUNGE" || true
+
+  echo "Uploading /tmp/*.eml..."
+  shopt -s nullglob
+  for f in $(ls -1 /tmp/*.eml | sort -V); do
+    echo "  -> $(BASEname "$f")"
+    curl -sS -u "${IMAP_USER}:${IMAP_PASS}" \
+      --url "${BASE}/${IMAP_FOLDER}" \
+      --append -T "$f"
+  done
+}
+
+# Call routines
+make_emails_list
+generate_eml_files
+imap_upload_eml_files
+
+# Cleanup
+rm -rf "${TMP_DIR}"
+echo "Done"
