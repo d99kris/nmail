@@ -130,7 +130,7 @@ if [[ "${DEPS}" == "1" ]]; then
     elif [[ "${DISTRO}" == "Void" ]]; then
       sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel w3m || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Termux" ]]; then
-      pkg install git cmake clang ccache libxapian libsqlite libsasl file libandroid-wordexp libandroid-glob w3m || exiterr "deps failed (${DISTRO}), exiting."
+      pkg install git cmake clang ccache libxapian libsqlite libsasl file libandroid-wordexp libandroid-glob libandroid-posix-semaphore w3m || exiterr "deps failed (${DISTRO}), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${DISTRO}), exiting."
     fi
