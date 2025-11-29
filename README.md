@@ -6,7 +6,7 @@ nmail
 | [![Linux](https://github.com/d99kris/nmail/workflows/Linux/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3ALinux) | [![macOS](https://github.com/d99kris/nmail/workflows/macOS/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3AmacOS) |
 
 nmail is a terminal-based email client for Linux and macOS with a user interface
-similar to alpine.
+similar to Alpine.
 
 ![screenshot nmail](/doc/screenshot-nmail.png)
 
@@ -19,7 +19,7 @@ Features
 - Viewing HTML emails (converted to text in terminal, or in external browser)
 - Opening/viewing attachments in external program
 - Simple setup wizard for Gmail, iCloud and Outlook/Hotmail
-- UI similar to Alpine / Pine
+- UI similar to Alpine
 - Compose message using external editor ($EDITOR)
 - View message using external viewer ($PAGER)
 - Saving and continuing draft messages
