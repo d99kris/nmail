@@ -234,6 +234,17 @@ Use the setup wizard to set up nmail for the account. Example:
 Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
 IMAP access and obtaining OAuth 2.0 access.
 
+iCloud Setup
+-----------------------
+Use the setup wizard to set up nmail for the account. Example:
+
+    $ nmail -s icloud
+
+Note: iCloud requires setting up an app-specific password under
+[Apple Account](https://account.apple.com). Select `App-Specific Passwords`
+and then click `+` and set a name, e.g. `IMAP` and click `Create`.
+Use the generated password with nmail.
+
 Outlook (and Hotmail) Setup
 ---------------------------
 Use the setup wizard to set up nmail for the account. Example (replace
