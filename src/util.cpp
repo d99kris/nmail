@@ -1,6 +1,6 @@
 // util.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -2245,11 +2245,12 @@ std::string Util::UnwrapQuotedLines(const std::string& p_Msg, int p_LineLen)
   return Join(outlines, "\n");
 }
 
-void Util::SetCopyToTrash(const std::string& p_Value, const std::string& p_ImapHost)
+void Util::SetCopyToTrash(const std::string& p_Value, const std::string& /*p_ImapHost*/)
 {
   if (p_Value.empty())
   {
-    m_GetCopyToTrash = (p_ImapHost == "imap.gmail.com");
+    // Default disabled
+    m_GetCopyToTrash = false;
   }
   else
   {
