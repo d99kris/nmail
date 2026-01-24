@@ -1,6 +1,6 @@
 // smtp.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -515,7 +515,9 @@ mailmime* Smtp::GetMimeFilePart(const std::string& p_Path, const std::string& p_
 {
   const std::string& filename = Util::BaseName(p_Path);
   char* dispositionname = strdup(filename.c_str());
-  int encodingtype = MAILMIME_MECHANISM_BASE64;
+  bool isMessage = (p_MimeType == "message/rfc822");
+  // Per RFC 2046, 5.2.1, message/rfc822 need to use 8-bit, 7-bit or binary.
+  int encodingtype = isMessage ? MAILMIME_MECHANISM_8BIT : MAILMIME_MECHANISM_BASE64;
   struct mailmime_disposition* disposition =
     mailmime_disposition_new_with_data(MAILMIME_DISPOSITION_TYPE_ATTACHMENT,
                                        dispositionname, NULL, NULL, NULL, (size_t)-1);
