@@ -2,7 +2,7 @@
 
 # make.sh
 #
-# Copyright (C) 2020-2025 Kristofer Berggren
+# Copyright (C) 2020-2026 Kristofer Berggren
 # All rights reserved.
 #
 # See LICENSE for redistribution information.
@@ -118,7 +118,7 @@ if [[ "${DEPS}" == "1" ]]; then
     if [[ "${DISTRO}" == "Ubuntu" ]] || [[ "${DISTRO}" == "Raspbian GNU/Linux" ]] || [[ "${DISTRO}" == "Debian GNU/Linux" ]] || [[ "${DISTRO}" == "Pop!_OS" ]] || [[ "${DISTRO}" == "Linux Mint" ]]; then
       sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Fedora" ]] || [[ "${DISTRO}" == "Fedora Linux" ]] || [[ "${DISTRO}" == "Rocky Linux" ]]; then
-      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Arch Linux" ]] || [[ "${DISTRO}" == "Arch Linux ARM" ]]; then
       sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Gentoo" ]]; then
