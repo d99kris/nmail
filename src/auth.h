@@ -1,6 +1,6 @@
 // auth.h
 //
-// Copyright (c) 2021 Kristofer Berggren
+// Copyright (c) 2021-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -14,6 +14,7 @@
 class Auth
 {
 public:
+  static bool InitConfig();
   static void Init(const std::string& p_Auth, const bool p_AuthEncrypt,
                    const std::string& p_Pass, const bool p_IsSetup);
   static void Cleanup();

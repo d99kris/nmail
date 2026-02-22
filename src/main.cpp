@@ -275,6 +275,7 @@ int main(int argc, char* argv[])
     }
     else if (setup == "gmail-oauth2")
     {
+      Auth::InitConfig();
       SetupGmailOAuth2(mainConfig);
     }
     else if (setup == "icloud")
@@ -287,6 +288,7 @@ int main(int argc, char* argv[])
     }
     else if (setup == "outlook-oauth2")
     {
+      Auth::InitConfig();
       SetupOutlookOAuth2(mainConfig);
     }
 

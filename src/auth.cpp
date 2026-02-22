@@ -1,6 +1,6 @@
 // auth.cpp
 //
-// Copyright (c) 2021-2025 Kristofer Berggren
+// Copyright (c) 2021-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -28,10 +28,34 @@ int64_t Auth::m_ExpiryTime = 0;
 std::string Auth::m_CustomClientId;
 std::string Auth::m_CustomClientSecret;
 
+bool Auth::InitConfig()
+{
+  static bool inited = [&]()
+  {
+    LOG_DEBUG_FUNC(STR());
+    const std::map<std::string, std::string> defaultConfig =
+    {
+      { "oauth2_client_id", "" },
+      { "oauth2_client_secret", "" },
+    };
+    const std::string configPath(Util::GetApplicationDir() + std::string("auth.conf"));
+    Config config(configPath, defaultConfig);
+    config.LogParams();
+
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_CustomClientId = config.Get("oauth2_client_id");
+    m_CustomClientSecret = config.Get("oauth2_client_secret");
+    return true;
+  }();
+  return inited;
+}
+
 void Auth::Init(const std::string& p_Auth, const bool p_AuthEncrypt,
                 const std::string& p_Pass, const bool p_IsSetup)
 {
   LOG_DEBUG_FUNC(STR(p_Auth, p_AuthEncrypt, "***", p_IsSetup));
+
+  InitConfig();
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Auth = p_Auth;
@@ -42,18 +66,6 @@ void Auth::Init(const std::string& p_Auth, const bool p_AuthEncrypt,
   if (!m_OAuthEnabled) return;
 
   InitCacheDir();
-
-  // read custom auth config
-  const std::map<std::string, std::string> defaultConfig =
-  {
-    { "oauth2_client_id", "" },
-    { "oauth2_client_secret", "" },
-  };
-  const std::string configPath(Util::GetApplicationDir() + std::string("auth.conf"));
-  Config config(configPath, defaultConfig);
-  config.LogParams();
-  m_CustomClientId = config.Get("oauth2_client_id");
-  m_CustomClientSecret = config.Get("oauth2_client_secret");
 
   if (!p_IsSetup)
   {
