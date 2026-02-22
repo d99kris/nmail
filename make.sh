@@ -136,7 +136,7 @@ if [[ "${DEPS}" == "1" ]]; then
     fi
   elif [ "${OS}" == "Darwin" ]; then
     if command -v brew &> /dev/null; then
-      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid w3m || exiterr "deps failed (${OS} brew), exiting."
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid w3m 2> >(grep -vE "already installed|To reinstall|brew reinstall" >&2) || exiterr "deps failed (${OS} brew), exiting."
     elif command -v port &> /dev/null; then
       sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid w3m || exiterr "deps failed (${OS} port), exiting."
     else
@@ -184,6 +184,13 @@ if [[ "${BUMP}" == "1" ]]; then
   fi
 fi
 
+# ccache zero stats
+if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
+  if command -v ccache &> /dev/null; then
+    ccache -z > /dev/null
+  fi
+fi
+
 # build
 if [[ "${BUILD}" == "1" ]]; then
   echo "-- Using cmake ${CMAKEARGS}"
@@ -197,6 +204,19 @@ if [[ "${DEBUG}" == "1" ]]; then
   echo "-- Using cmake ${CMAKEARGS}"
   echo "-- Using make ${MAKEARGS}"
   mkdir -p dbgbuild && cd dbgbuild && cmake ${CMAKEARGS} .. && make ${MAKEARGS} && cd .. || exiterr "debug build failed, exiting."
+fi
+
+# ccache stats
+if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
+  if command -v ccache &> /dev/null; then
+    CCACHE_STATS="$(ccache -s)"
+    HITS="$(echo "${CCACHE_STATS}" | grep "Hits:" | head -1 | awk '{print $2}')"
+    MISSES="$(echo "${CCACHE_STATS}" | grep "Misses:" | head -1 | awk '{print $2}')"
+    TOTAL="$(echo "${CCACHE_STATS}" | grep "Hits:" | head -1 | awk '{print $4}')"
+    if [ -n "${HITS}" ]; then
+      echo "-- Ccache stats: ${HITS} hits, ${MISSES} misses, ${TOTAL} total."
+    fi
+  fi
 fi
 
 # tests
