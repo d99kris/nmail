@@ -106,14 +106,31 @@ install(TARGETS nmail DESTINATION bin)
 # Platform specifics
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions(-D_XOPEN_SOURCE_EXTENDED)
+
+# ncurses
   execute_process(COMMAND sh "-c"
                   "command -v brew &> /dev/null && brew --prefix ncurses 2> /dev/null | tr -d '\n'"
-                  OUTPUT_VARIABLE CMAKE_PREFIX_PATH)
-  if (EXISTS "${CMAKE_PREFIX_PATH}")
-    message(STATUS "Ncurses cmake prefix '${CMAKE_PREFIX_PATH}' (detected).")
-  else()
-    set(CMAKE_PREFIX_PATH /opt/local)
-    message(STATUS "Ncurses cmake prefix '${CMAKE_PREFIX_PATH}' (default).")
+                  OUTPUT_VARIABLE NCURSES_ROOT_DIR)
+  if (EXISTS "${NCURSES_ROOT_DIR}")
+    message(STATUS "Ncurses cmake prefix '${NCURSES_ROOT_DIR}' (homebrew).")
+    list(APPEND CMAKE_PREFIX_PATH ${NCURSES_ROOT_DIR})
+  elseif (EXISTS "/opt/local/bin/port")
+    set(NCURSES_ROOT_DIR /opt/local)
+    message(STATUS "Ncurses cmake prefix '${NCURSES_ROOT_DIR}' (macports).")
+    list(APPEND CMAKE_PREFIX_PATH ${NCURSES_ROOT_DIR})
+  endif()
+
+  # sqlite
+  execute_process(COMMAND sh "-c"
+                  "command -v brew &> /dev/null && brew --prefix sqlite 2> /dev/null | tr -d '\n'"
+                  OUTPUT_VARIABLE SQLITE_ROOT_DIR)
+  if (EXISTS "${SQLITE_ROOT_DIR}")
+    message(STATUS "SQLite cmake prefix '${SQLITE_ROOT_DIR}' (homebrew).")
+    list(APPEND CMAKE_PREFIX_PATH ${SQLITE_ROOT_DIR})
+  elseif (EXISTS "/opt/local/bin/port")
+    set(SQLITE_ROOT_DIR /opt/local)
+    message(STATUS "SQLite cmake prefix '${SQLITE_ROOT_DIR}' (macports).")
+    list(APPEND CMAKE_PREFIX_PATH ${SQLITE_ROOT_DIR})
   endif()
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
   add_compile_definitions(_XOPEN_SOURCE_EXTENDED)

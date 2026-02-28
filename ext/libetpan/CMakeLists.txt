@@ -345,8 +345,17 @@ target_include_directories(${LIBNAME} PRIVATE ${EXPAT_INCLUDE_DIRS})
 
 # Find Dependencies - OpenSSL
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  list(APPEND OPENSSL_ROOT_DIR /usr/local/opt/openssl)
-  list(APPEND OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl)
+  execute_process(COMMAND sh "-c"
+                  "command -v brew &> /dev/null && brew --prefix openssl 2> /dev/null | tr -d '\n'"
+                  OUTPUT_VARIABLE OPENSSL_ROOT_DIR)
+  if (EXISTS "${OPENSSL_ROOT_DIR}")
+    message(STATUS "OpenSSL cmake prefix '${OPENSSL_ROOT_DIR}' (homebrew).")
+    list(APPEND CMAKE_PREFIX_PATH ${OPENSSL_ROOT_DIR})
+  elseif (EXISTS "/opt/local/bin/port")
+    set(OPENSSL_ROOT_DIR /opt/local)
+    message(STATUS "OpenSSL cmake prefix '${OPENSSL_ROOT_DIR}' (macports).")
+    list(APPEND CMAKE_PREFIX_PATH ${OPENSSL_ROOT_DIR})
+  endif()
 endif()
 find_package(OpenSSL REQUIRED)
 target_include_directories(${LIBNAME} PRIVATE ${OPENSSL_INCLUDE_DIR})
