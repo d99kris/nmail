@@ -133,6 +133,8 @@ private:
 
   void InitWindows();
   void CleanupWindows();
+  void TerminalControlPause();
+  void TerminalControlResume();
 
   void DrawAll();
   void DrawTop();
@@ -315,6 +317,8 @@ private:
 
   int m_ScreenWidth = 0;
   int m_ScreenHeight = 0;
+  int m_TermLines = 0;
+  int m_TermCols = 0;
   int m_MainWinHeight = 0;
 
   std::string m_DialogMessage;

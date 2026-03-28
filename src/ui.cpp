@@ -12,6 +12,9 @@
 #include <cstdint>
 #include <sstream>
 
+#include <sys/ioctl.h>
+#include <unistd.h>
+
 #include "addressbook.h"
 #include "flag.h"
 #include "loghelp.h"
@@ -399,6 +402,36 @@ void Ui::CleanupWindows()
   {
     delwin(m_HelpWin);
     m_HelpWin = NULL;
+  }
+}
+
+void Ui::TerminalControlPause()
+{
+  m_TermLines = LINES;
+  m_TermCols = COLS;
+  endwin();
+}
+
+void Ui::TerminalControlResume()
+{
+  refresh();
+  wint_t key = 0;
+  while (UiKeyInput::GetWch(&key) != ERR)
+  {
+    // Discard any remaining input
+  }
+
+  // check if terminal was resized while controlled by external program
+  struct winsize ws;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0)
+  {
+    if (ws.ws_row != m_TermLines || ws.ws_col != m_TermCols)
+    {
+      resizeterm(ws.ws_row, ws.ws_col);
+      CleanupWindows();
+      InitWindows();
+      DrawAll();
+    }
   }
 }
 
@@ -5438,7 +5471,7 @@ void Ui::InvalidateUidCache(const std::string& p_Folder)
 
 void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
 {
-  endwin();
+  TerminalControlPause();
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteWFile(tempPath, p_ComposeMessageStr);
   const std::string& cmd = p_EditorCmd + " " + tempPath;
@@ -5457,19 +5490,12 @@ void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessag
   }
 
   Util::DeleteFile(tempPath);
-
-  refresh();
-
-  wint_t key = 0;
-  while (UiKeyInput::GetWch(&key) != ERR)
-  {
-    // Discard any remaining input
-  }
+  TerminalControlResume();
 }
 
 void Ui::ExtPager()
 {
-  endwin();
+  TerminalControlPause();
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteFile(tempPath, m_CurrentMessageViewText);
   const std::string& pager = Util::GetPagerCmd();
@@ -5487,14 +5513,7 @@ void Ui::ExtPager()
   }
 
   Util::DeleteFile(tempPath);
-
-  refresh();
-
-  wint_t key = 0;
-  while (UiKeyInput::GetWch(&key) != ERR)
-  {
-    // Discard any remaining input
-  }
+  TerminalControlResume();
 }
 
 int Ui::ExtPartsViewer(const std::string& p_Path)
@@ -5502,7 +5521,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
   const bool isDefaultPartsViewerCmd = Util::IsDefaultPartsViewerCmd();
   if (!isDefaultPartsViewerCmd)
   {
-    endwin();
+    TerminalControlPause();
   }
 
   const std::string& viewer = Util::GetPartsViewerCmd();
@@ -5524,13 +5543,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
 
   if (!isDefaultPartsViewerCmd)
   {
-    refresh();
-
-    wint_t key = 0;
-    while (UiKeyInput::GetWch(&key) != ERR)
-    {
-      // Discard any remaining input
-    }
+    TerminalControlResume();
   }
 
   return rv;
@@ -5574,7 +5587,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   const bool isDefaultHtmlViewerCmd = Util::IsHtmlViewerSystemOpenCmd();
   if (!isDefaultHtmlViewerCmd)
   {
-    endwin();
+    TerminalControlPause();
   }
 
   const std::string& viewer = Util::GetHtmlViewerCmd();
@@ -5593,13 +5606,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
 
   if (!isDefaultHtmlViewerCmd)
   {
-    refresh();
-
-    wint_t key = 0;
-    while (UiKeyInput::GetWch(&key) != ERR)
-    {
-      // Discard any remaining input
-    }
+    TerminalControlResume();
   }
 
   return rv;
@@ -5610,7 +5617,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   const bool isDefaultHtmlPreviewCmd = Util::IsDefaultHtmlPreviewCmd();
   if (!isDefaultHtmlPreviewCmd)
   {
-    endwin();
+    TerminalControlPause();
   }
 
   const std::string& viewer = Util::GetHtmlPreviewCmd();
@@ -5629,13 +5636,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
 
   if (!isDefaultHtmlPreviewCmd)
   {
-    refresh();
-
-    wint_t key = 0;
-    while (UiKeyInput::GetWch(&key) != ERR)
-    {
-      // Discard any remaining input
-    }
+    TerminalControlResume();
   }
 
   return rv;
@@ -5679,7 +5680,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
   const bool isDefaultMsgViewerCmd = Util::IsDefaultMsgViewerCmd();
   if (!isDefaultMsgViewerCmd)
   {
-    endwin();
+    TerminalControlPause();
   }
 
   const std::string& viewer = Util::GetMsgViewerCmd();
@@ -5698,13 +5699,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
 
   if (!isDefaultMsgViewerCmd)
   {
-    refresh();
-
-    wint_t key = 0;
-    while (UiKeyInput::GetWch(&key) != ERR)
-    {
-      // Discard any remaining input
-    }
+    TerminalControlResume();
   }
 
   return rv;
@@ -6784,7 +6779,7 @@ void Ui::FilePickerOrStateFileList()
   }
   else
   {
-    endwin();
+    TerminalControlPause();
 
     std::string outPath = Util::GetTempFilename(".txt");
     std::string command = filePickerCmd + " > " + outPath;
@@ -6806,13 +6801,7 @@ void Ui::FilePickerOrStateFileList()
     }
 
     Util::DeleteFile(outPath);
-
-    refresh();
-    wint_t key = 0;
-    while (UiKeyInput::GetWch(&key) != ERR)
-    {
-      // Discard any remaining input
-    }
+    TerminalControlResume();
   }
 }
 
