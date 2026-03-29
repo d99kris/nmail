@@ -1170,25 +1170,36 @@ dump mode `nmail -k` which will output the octal code, and ncurses macro name
 
 ~/.config/nmail/colors.conf
 ---------------------------
-This configuration file controls the configurable colors of nmail. For this
+This configuration file controls the color theme of nmail. For this
 configuration to take effect, `colors_enabled=1` must be set in
 `~/.config/nmail/ui.conf`.
 
-Example color config files are provided in `/usr/local/share/nmail/themes`
-and can be used by overwriting `~/.config/nmail/colors.conf` when nmail is not
-running.
+Color theme examples are available in the source package under the themes
+directory and can be used by copying to `~/.config/nmail/colors.conf` when
+nmail is not running.
 
-### Default
+Available themes:
 
-    cp /usr/local/share/nmail/themes/default.conf ~/.config/nmail/colors.conf
+    catppuccin-macchiato
+    default
 
-![screenshot nmail default theme](/doc/screenshot-nmail.png)
+See the [Themes wiki-page](https://github.com/d99kris/nmail/wiki/Themes) for
+example screenshots.
 
-### Catppuccin Macchiato
+### Installing theme from source
 
-    cp /usr/local/share/nmail/themes/catppuccin-macchiato.conf ~/.config/nmail/colors.conf
+With a source code copy, copy the theme file to `~/.config/nmail/colors.conf`
+(while nmail is not running). Example installing `catppuccin-macchiato` theme:
 
-![screenshot nmail catppuccin macchiato theme](/doc/screenshot-nmail-catppuccin-macchiato.png)
+    cp themes/catppuccin-macchiato.conf ~/.config/nmail/colors.conf
+
+### Installing theme from web
+
+One can fetch current `master` copy of a theme from the github repository and
+download to the config directory (while nmail is not running). Example
+installing `catppuccin-macchiato` theme:
+
+    THEME="catppuccin-macchiato" ; curl -L "https://raw.githubusercontent.com/d99kris/nmail/refs/heads/master/themes/${THEME}.conf" -o ~/.config/nmail/colors.conf
 
 ### Manual configuration
 

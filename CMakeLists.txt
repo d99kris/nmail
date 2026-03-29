@@ -283,19 +283,10 @@ configure_file(src/html2nmail ${CMAKE_CURRENT_BINARY_DIR}/html2nmail COPYONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail DESTINATION bin)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/html2nmail DESTINATION bin)
 
-# Themes
-macro(add_theme themename)
-  configure_file(themes/${themename} ${CMAKE_CURRENT_BINARY_DIR}/share/nmail/themes/${themename} COPYONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/share/nmail/themes/${themename} DESTINATION share/nmail/themes)
-endmacro()
-add_theme("default.conf")
-add_theme("catppuccin-macchiato.conf")
-
 # Uninstall
 add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/man/man1/nmail.1"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/oauth2nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/html2nmail"
-  COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_INSTALL_PREFIX}/share/nmail"
 )
