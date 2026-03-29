@@ -7233,7 +7233,7 @@ void Ui::AutoMoveSelectFolder()
   if (!subjectPrefix.empty() && !sender.empty())
   {
     // subject prefix and sender name
-    const std::string querySpecific = "subject:\"" + subjectPrefix + "*\" AND from:\"" + sender + "\"";
+    const std::string querySpecific = "subject:\"" + subjectPrefix + "\"* AND from:\"" + sender + "\"";
     queryStrs.push_back(querySpecific + queryCommon);
     queryStrsAllowTrash.push_back(querySpecific + queryCommonAllowTrash);
   }
@@ -7241,7 +7241,7 @@ void Ui::AutoMoveSelectFolder()
   if (!subjectPrefix.empty())
   {
     // subject prefix
-    const std::string querySpecific = "subject:\"" + subjectPrefix + "*\"";
+    const std::string querySpecific = "subject:\"" + subjectPrefix + "\"*";
     queryStrs.push_back(querySpecific + queryCommon);
     queryStrsAllowTrash.push_back(querySpecific + queryCommonAllowTrash);
   }
