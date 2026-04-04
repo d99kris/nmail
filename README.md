@@ -1361,6 +1361,8 @@ following third-party libraries:
   Copyright 2001-2005 Dinh Viet Hoa - [BSD-3 License](/ext/libetpan/COPYRIGHT)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
   Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
+- [utfcpp](https://github.com/nemtrif/utfcpp) -
+  Copyright 2006 Nemanja Trifunovic - [Boost License](/ext/utfcpp/LICENSE)
 
 Code Formatting
 ---------------
