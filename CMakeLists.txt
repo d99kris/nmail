@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.14...3.22 FATAL_ERROR)
 project(nmail LANGUAGES CXX C)
 include(CheckIncludeFile)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 message(STATUS "Using cmake ${CMAKE_VERSION}")
 
 # Modules
