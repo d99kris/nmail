@@ -7,6 +7,8 @@
 
 #include "sqlitehelp.h"
 
+#include <sqlite_modern_cpp.h>
+
 #include "log.h"
 #include "loghelp.h"
 

@@ -121,6 +121,8 @@ namespace utf8
                     while (start != end && utf8::internal::is_trail(*start))
                         ++start;
                     break;
+                default:
+                    break;
             }
         }
         return out;
@@ -163,6 +165,8 @@ namespace utf8
                 throw invalid_utf8(static_cast<utfchar8_t>(*it));
             case internal::INVALID_CODE_POINT :
                 throw invalid_code_point(cp);
+            default:
+                break;
         }
         return cp;
     }

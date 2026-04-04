@@ -46,6 +46,7 @@
 #include <libetpan/mailmime.h>
 #include <ncurses.h>
 #include <sqlite3.h>
+#include <utf8.h>
 
 #include "apathy/path.hpp"
 
@@ -740,15 +741,17 @@ std::string Util::ToString(const std::wstring& p_WStr)
 {
   try
   {
-    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{ }.to_bytes(p_WStr);
+    std::string result;
+    std::u32string u32str(p_WStr.begin(), p_WStr.end());
+    utf8::utf32to8(u32str.begin(), u32str.end(), std::back_inserter(result));
+    return result;
   }
   catch (...)
   {
-    LOG_WARNING("failed to convert from utf-16");
+    LOG_WARNING("error converting to utf-8");
     std::wstring wstr = p_WStr;
     wstr.erase(std::remove_if(wstr.begin(), wstr.end(), [](wchar_t wch) { return !isascii(wch); }), wstr.end());
-    std::string str = std::string(wstr.begin(), wstr.end());
-    return str;
+    return std::string(wstr.begin(), wstr.end());
   }
 }
 
@@ -756,15 +759,22 @@ std::wstring Util::ToWString(const std::string& p_Str)
 {
   try
   {
-    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{ }.from_bytes(p_Str);
+    std::string valid = utf8::replace_invalid(p_Str);
+    if (valid != p_Str)
+    {
+      LOG_WARNING("error converting from utf-8");
+    }
+
+    std::u32string u32str;
+    utf8::utf8to32(valid.begin(), valid.end(), std::back_inserter(u32str));
+    return std::wstring(u32str.begin(), u32str.end());
   }
   catch (...)
   {
-    LOG_WARNING("failed to convert from utf-8");
+    LOG_WARNING("error converting from utf-8");
     std::string str = p_Str;
     str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char ch) { return !isascii(ch); }), str.end());
-    std::wstring wstr = std::wstring(str.begin(), str.end());
-    return wstr;
+    return std::wstring(str.begin(), str.end());
   }
 }
 

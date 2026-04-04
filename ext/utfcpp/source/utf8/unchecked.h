@@ -74,6 +74,8 @@ namespace utf8
                         while (start != end && utf8::internal::is_trail(*start))
                             ++start;
                         break;
+                    default:
+                        break;
                 }
             }
             return out;
@@ -124,6 +126,8 @@ namespace utf8
                     cp = static_cast<utfchar32_t>(cp + ((utf8::internal::mask8(*it) << 6) & 0xfff));
                     ++it;
                     cp = static_cast<utfchar32_t>(cp + ((*it) & 0x3f));
+                    break;
+                default:
                     break;
             }
             ++it;

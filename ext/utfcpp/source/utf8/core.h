@@ -280,6 +280,8 @@ namespace internal
             case 4:
                 err = utf8::internal::get_sequence_4(it, end, cp);
             break;
+            default:
+                break;
         }
 
         if (err == UTF8_OK) {

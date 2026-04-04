@@ -9,7 +9,10 @@
 
 #include <string>
 
-#include <sqlite_modern_cpp.h>
+namespace sqlite
+{
+  class sqlite_exception;
+}
 
 #define HANDLE_SQLITE_EXCEPTION(EX) do { SqliteHelp::HandleSqliteException(__FILENAME__, \
                                                                            __LINE__, \

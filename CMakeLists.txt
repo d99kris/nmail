@@ -258,10 +258,12 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
 endif()
 
 # Includes
-target_include_directories(nmail PRIVATE ${LIBETPAN_INCLUDE_DIR} ${XAPIAN_INCLUDE_DIR}
-                           ${MAGIC_HEADERS} ${CYRUS_SASL_INCLUDE_DIR} ${CURSES_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}
-                           "ext/sqlite_modern_cpp/hdr" "ext/cereal/include" ${LIBUUID_HEADERS}
-                           "ext/cyrus-imap/lib")
+target_include_directories(nmail PRIVATE
+                           ${LIBETPAN_INCLUDE_DIR} ${XAPIAN_INCLUDE_DIR} ${MAGIC_HEADERS}
+                           ${CYRUS_SASL_INCLUDE_DIR} ${CURSES_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}
+                           ${LIBUUID_HEADERS}
+                           "ext/cereal/include" "ext/cyrus-imap/lib" "ext/sqlite_modern_cpp/hdr"
+                           "ext/utfcpp/source")
 
 # Linking
 target_link_libraries(nmail PUBLIC

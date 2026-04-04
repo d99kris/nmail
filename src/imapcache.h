@@ -13,8 +13,6 @@
 #include <set>
 #include <string>
 
-#include <sqlite_modern_cpp.h>
-
 class Body;
 class Header;
 

@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include <locale>
-#include <codecvt>
 
 #ifdef __has_include
 #if __cplusplus > 201402 && __has_include(<optional>)
@@ -42,6 +41,40 @@
 #endif
 
 namespace sqlite {
+	namespace utility {
+		inline std::string utf16_to_utf8(const std::u16string& input) {
+			struct : std::codecvt<char16_t, char, std::mbstate_t> {} codecvt;
+			std::mbstate_t state{};
+			std::string result((std::max)(input.size() * 3 / 2, std::size_t(4)), '\0');
+			const char16_t *remaining_input = input.data();
+			std::size_t produced_output = 0;
+			while(true) {
+				char *used_output;
+				switch(codecvt.out(state, remaining_input, input.data() + input.size(),
+				                   remaining_input, &result[produced_output],
+				                   &result[result.size() - 1] + 1, used_output)) {
+				case std::codecvt_base::ok:
+					result.resize(used_output - result.data());
+					return result;
+				case std::codecvt_base::noconv:
+				case std::codecvt_base::error:
+					throw sqlite_exception("Invalid UTF-16 input", "");
+				case std::codecvt_base::partial:
+					if(used_output == result.data() + produced_output)
+						throw sqlite_exception("Unexpected end of input", "");
+					produced_output = used_output - result.data();
+					result.resize(
+							result.size()
+							+ (std::max)((input.data() + input.size() - remaining_input) * 3 / 2,
+							           std::ptrdiff_t(4)));
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
 	class database;
 	class database_binder;
 
@@ -155,15 +188,9 @@ namespace sqlite {
 			}
 		}
 
-#ifdef _MSC_VER
 		sqlite3_stmt* _prepare(const std::u16string& sql) {
-			return _prepare(std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>().to_bytes(reinterpret_cast<const wchar_t*>(sql.c_str())));
+			return _prepare(utility::utf16_to_utf8(sql));
 		}
-#else
-		sqlite3_stmt* _prepare(const std::u16string& sql) {
-			return _prepare(std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(sql));
-		}
-#endif
 
 		sqlite3_stmt* _prepare(const std::string& sql) {
 			int hresult;
@@ -393,11 +420,7 @@ namespace sqlite {
 		}
 
 		database(const std::u16string &db_name, const sqlite_config &config = {}): _db(nullptr) {
-#ifdef _MSC_VER
-			auto db_name_utf8 = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>().to_bytes(reinterpret_cast<const wchar_t*>(db_name.c_str()));
-#else
-			auto db_name_utf8 = std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(db_name);
-#endif
+			auto db_name_utf8 = utility::utf16_to_utf8(db_name);
 			sqlite3* tmp = nullptr;
 			auto ret = sqlite3_open_v2(db_name_utf8.data(), &tmp, static_cast<int>(config.flags), config.zVfs);
 			_db = std::shared_ptr<sqlite3>(tmp, [=](sqlite3* ptr) { sqlite3_close_v2(ptr); }); // this will close the connection eventually when no longer needed.

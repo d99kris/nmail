@@ -9,6 +9,8 @@
 
 #include "imapcache.h"
 
+#include <sqlite_modern_cpp.h>
+
 #include "body.h"
 #include "cacheutil.h"
 #include "crypto.h"
