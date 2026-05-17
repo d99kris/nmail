@@ -267,7 +267,7 @@ target_include_directories(nmail PRIVATE
 
 # Linking
 target_link_libraries(nmail PUBLIC
-                      ${CURSES_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${SQLite3_LIBRARIES}
+                      ${CURSES_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${SQLite3_LIBRARIES}
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
                       ${MAGIC_LIBRARY} ${LIBUUID_LIBRARIES}
                       pthread ${CMAKE_DL_LIBS})
