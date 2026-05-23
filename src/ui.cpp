@@ -81,7 +81,7 @@ void Ui::Init()
     { "invalid_input_notify", "1" },
     { "full_header_include_local", "0" },
     { "tab_size", "8" },
-    { "search_show_folder", "0" },
+    { "search_show_folder", "1" },
     { "localized_subject_prefixes", "" },
     { "signature", "0" },
     { "terminal_title", "" },

@@ -837,7 +837,7 @@ file (platform-dependent defaults are left empty below):
     quit_without_confirm=1
     respect_format_flowed=1
     rewrap_quoted_lines=1
-    search_show_folder=0
+    search_show_folder=1
     send_without_confirm=0
     show_embedded_images=1
     show_progress=1
@@ -993,7 +993,7 @@ Control whether nmail shall rewrap quoted lines (default enabled).
 
 Determines whether folder name should be shown in search results. This option
 can be re-configured at run-time by pressing `\` when viewing search results
-(default disabled).
+(default enabled).
 
 ### send_without_confirm
 
