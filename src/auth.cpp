@@ -30,9 +30,9 @@ std::string Auth::m_CustomClientSecret;
 
 bool Auth::InitConfig()
 {
+  LOG_DEBUG_FUNC(STR());
   static bool inited = [&]()
   {
-    LOG_DEBUG_FUNC(STR());
     const std::map<std::string, std::string> defaultConfig =
     {
       { "oauth2_client_id", "" },
@@ -40,7 +40,7 @@ bool Auth::InitConfig()
     };
     const std::string configPath(Util::GetApplicationDir() + std::string("auth.conf"));
     Config config(configPath, defaultConfig);
-    config.LogParams();
+    config.LogParamsExcept({ "oauth2_client_id", "oauth2_client_secret" });
 
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_CustomClientId = config.Get("oauth2_client_id");
@@ -125,21 +125,21 @@ bool Auth::GenerateToken(const std::string& p_Auth)
 std::string Auth::GetName()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens());
+  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens(), true);
   return tokens.Get("name");
 }
 
 std::string Auth::GetEmail()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens());
+  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens(), true);
   return tokens.Get("email");
 }
 
 std::string Auth::GetAccessToken()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens());
+  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens(), true);
   return tokens.Get("access_token");
 }
 
@@ -299,7 +299,7 @@ int64_t Auth::GetCurrentTimeSec()
 
 void Auth::UpdateExpiryTime()
 {
-  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens());
+  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens(), true);
   std::string expiresInStr = tokens.Get("expires_in");
   static const int64_t marginTime = 60; // renew slightly before expiry
   int64_t expiresIn = strtoll(expiresInStr.c_str(), NULL, 10) - marginTime;

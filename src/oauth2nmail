@@ -2,7 +2,7 @@
 
 # oauth2nmail
 #
-# Copyright (c) 2021-2024 Kristofer Berggren
+# Copyright (c) 2021-2026 Kristofer Berggren
 # All rights reserved.
 #
 # nmail is distributed under the MIT license, see LICENSE for details.
@@ -19,7 +19,7 @@ import time
 import urllib.parse
 import webbrowser
 
-version = "1.03"
+version = "1.04"
 pathServed = ""
 providers = {
     "gmail-oauth2": {
@@ -97,6 +97,9 @@ class HttpResponse:
         self.status_code = status_code
         self.headers = headers
         self.text = text
+
+    def __repr__(self):
+        return "HttpResponse(status=" + str(self.status_code) + ")"
 
 
 def get(url, headers=None):
@@ -218,19 +221,26 @@ def generate(provider, client_id, client_secret, token_store):
     thread = threading.Thread(target = localServer.serve_forever)
     thread.daemon = True
     thread.start()
+    authTimeoutSec = 90
     secs = 0
-    while not pathServed and secs < 60:
+    while not pathServed and secs < authTimeoutSec:
         time.sleep(1)
         secs = secs + 1
 
     if not pathServed:
-        sys.stderr.write("authentication timeout\n")
+        sys.stderr.write("authentication timeout after " + str(authTimeoutSec)
+                         + " seconds: browser did not reach localhost redirect\n")
         return 2
+
+    sys.stderr.write("oauth2 redirect: " + repr(pathServed) + "\n")
 
     query = urlparse(pathServed).query
     queryDict = dict(qc.split("=") for qc in query.split("&"))
     if "code" not in queryDict:
-        sys.stderr.write("user did not grant permission\n")
+        err = queryDict.get("error", "?")
+        desc = queryDict.get("error_description", "")
+        sys.stderr.write("user did not grant permission (error=" + err
+                         + " desc=" + desc + ")\n")
         return 3
 
     code = queryDict["code"]
@@ -250,12 +260,16 @@ def generate(provider, client_id, client_secret, token_store):
     try:
         convResponse = post(convUrl, data=convParams, headers=convHdr)
     except Exception as e:
-        sys.stderr.write("token request http post failed " + str(e) + "\n")
+        sys.stderr.write("token request http post to " + convUrl
+                         + " failed: " + str(e) + "\n")
         return 4
 
     if convResponse.status_code != 200:
-        sys.stderr.write("token request failed " + str(convResponse) + "\n")
-        sys.stderr.write(str(json.loads(convResponse.text)) + "\n")
+        sys.stderr.write("token request failed " + repr(convResponse) + "\n")
+        sys.stderr.write("response: " + convResponse.text + "\n")
+        sys.stderr.write("submitted code (len=" + str(len(code))
+                         + "): " + repr(code) + "\n")
+        sys.stderr.write("submitted redirect_uri: " + redirectUri + "\n")
         return 5
 
     # save tokens
@@ -267,7 +281,8 @@ def generate(provider, client_id, client_secret, token_store):
     if "access_token" in tokens:
         access_token = tokens["access_token"]
     else:
-        sys.stderr.write("access_token not available\n")
+        sys.stderr.write("access_token not in response, keys="
+                         + str(sorted(tokens.keys())) + "\n")
         return 6
 
     # use special access token for outlook user id
@@ -284,12 +299,13 @@ def generate(provider, client_id, client_secret, token_store):
         try:
             convResponse = post(convUrl, data=convParams, headers=convHdr)
         except Exception as e:
-            sys.stderr.write("user token request http post failed " + str(e) + "\n")
+            sys.stderr.write("user token request http post to " + convUrl
+                             + " failed: " + str(e) + "\n")
             return 4
 
         if convResponse.status_code != 200:
-            sys.stderr.write("user token request failed " + str(convResponse) + "\n")
-            sys.stderr.write(str(json.loads(convResponse.text)) + "\n")
+            sys.stderr.write("user token request failed " + repr(convResponse) + "\n")
+            sys.stderr.write("response: " + convResponse.text + "\n")
             return 5
 
         # ensure access_token is present
@@ -300,7 +316,8 @@ def generate(provider, client_id, client_secret, token_store):
                 access_token = value
 
         if not access_token:
-            sys.stderr.write("user access_token not available\n")
+            sys.stderr.write("user access_token not in response, keys="
+                             + str(sorted(jsonResponse.keys())) + "\n")
             return 6
 
     # request email address
@@ -309,12 +326,13 @@ def generate(provider, client_id, client_secret, token_store):
     try:
         infoResponse = get(infoUrl, headers=infoHeaders)
     except Exception as e:
-        sys.stderr.write("email address get request failed " + str(e) + "\n")
+        sys.stderr.write("info request http get to " + infoUrl
+                         + " failed: " + str(e) + "\n")
         return 4
 
     if infoResponse.status_code != 200:
-        sys.stderr.write("email address request failed " + str(infoResponse) + "\n")
-        sys.stderr.write(str(json.loads(infoResponse.text)) + "\n")
+        sys.stderr.write("info request failed " + repr(infoResponse) + "\n")
+        sys.stderr.write("response: " + infoResponse.text + "\n")
         return 5
 
     # save user info (email, name)
@@ -336,12 +354,14 @@ def refresh(provider, client_id, client_secret, token_store):
     # read token store
     tokens = read_tokens(token_store)
 
-    # ensure refresh_token is present
-    if "refresh_token" in tokens:
-        refresh_token = tokens["refresh_token"]
-    else:
+    # ensure refresh_token is present; fall through to a full reauth if not
+    # (e.g. missing/empty tokens file) — mirrors the token-expired path below
+    if "refresh_token" not in tokens:
         sys.stderr.write("refresh_token not set in " + token_store + "\n")
-        return 7
+        sys.stderr.write("attempt to reauthenticate\n")
+        return generate(provider, client_id, client_secret, token_store)
+
+    refresh_token = tokens["refresh_token"]
 
     # use refresh code to request new access token
     refrParams = {}
@@ -357,7 +377,8 @@ def refresh(provider, client_id, client_secret, token_store):
     try:
         refrResponse = post(refrUrl, data=refrParams, headers=refrHdr)
     except Exception as e:
-        sys.stderr.write("token refresh http post failed " + str(e) + "\n")
+        sys.stderr.write("token refresh http post to " + refrUrl
+                         + " failed: " + str(e) + "\n")
         return 4
 
     # parse response
@@ -368,14 +389,14 @@ def refresh(provider, client_id, client_secret, token_store):
         isDescGmailExpired = (jsonRefrResponse["error_description"] == "Token has been expired or revoked.")
         isDescOutlookExpired = ("The user could not be authenticated as the grant is expired. The user must sign in again." in jsonRefrResponse["error_description"])
         if isInvalidGrant and (isDescGmailExpired or isDescOutlookExpired):
-            sys.stderr.write("token expired " + str(refrResponse) + "\n")
-            sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
+            sys.stderr.write("token expired " + repr(refrResponse) + "\n")
+            sys.stderr.write("response: " + refrResponse.text + "\n")
             sys.stderr.write("attempt to reauthenticate\n")
             return generate(provider, client_id, client_secret, token_store)
 
     if refrResponse.status_code != 200:
-        sys.stderr.write("token refresh failed " + str(refrResponse) + "\n")
-        sys.stderr.write(str(json.loads(refrResponse.text)) + "\n")
+        sys.stderr.write("token refresh failed " + repr(refrResponse) + "\n")
+        sys.stderr.write("response: " + refrResponse.text + "\n")
         return 5
 
     # save received tokens

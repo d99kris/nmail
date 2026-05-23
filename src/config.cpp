@@ -1,6 +1,6 @@
 // config.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -22,8 +22,10 @@ Config::Config()
 }
 
 Config::Config(const std::string& p_Path,
-               const std::map<std::string, std::string>& p_Default)
+               const std::map<std::string, std::string>& p_Default,
+               bool p_AllowUnknown)
   : m_Map(p_Default)
+  , m_AllowUnknown(p_AllowUnknown)
 {
   Load(p_Path);
 }
@@ -61,7 +63,7 @@ void Config::Load(const std::string& p_Path)
     std::getline(linestream, value);
     param = Util::Trim(param);
 
-    if (hasDefaultMap && (m_Map.count(param) == 0))
+    if (hasDefaultMap && (m_Map.count(param) == 0) && !m_AllowUnknown)
     {
       // drop params not present in default map
       LOG_WARNING("unknown param \"%s\"", param.c_str());
