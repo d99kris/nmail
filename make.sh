@@ -99,7 +99,7 @@ fi
 # set make / cmake args
 if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
   MAKEARGS=""
-  CMAKEARGS=""
+  CMAKEARGS="${DEV_CMAKEARGS:-} ${NMAIL_CMAKEARGS:-}"
   if [ "${OS}" == "Linux" ]; then
     MAKEARGS="-j$(nproc) ${MAKEARGS}"
     if [[ "${DISTRO}" == "Termux" ]]; then
