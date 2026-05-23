@@ -4889,11 +4889,23 @@ bool Ui::DeleteMessage()
 {
   if (!m_TrashFolder.empty())
   {
+    static const std::set<std::string> foldersAllowPermanentDelete = [&]()
+    {
+      std::set<std::string> folders = { m_TrashFolder };
+      folders.erase("");
+      return folders;
+    }();
     const std::string& folder = m_CurrentFolderUid.first;
-    bool hasSelection = !m_SelectedUids.empty();
-    bool allSelectedItemsInTrash = hasSelection && (m_SelectedUids.size() == 1) &&
-      (m_SelectedUids.begin()->first == m_TrashFolder);
-    if (allSelectedItemsInTrash || (!hasSelection && (folder == m_TrashFolder)))
+    const bool hasSelection = !m_SelectedUids.empty();
+    const bool permanentDelete = hasSelection
+      ? std::all_of(m_SelectedUids.begin(), m_SelectedUids.end(),
+                    [&](const std::pair<std::string, std::set<uint32_t>>& sel)
+    {
+      return sel.second.empty() ||
+             (foldersAllowPermanentDelete.count(sel.first) > 0);
+    })
+      : (foldersAllowPermanentDelete.count(folder) > 0);
+    if (permanentDelete)
     {
       int count = Ui::GetSelectedCount();
       std::string prompt = (count > 1)
