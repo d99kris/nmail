@@ -4575,6 +4575,11 @@ void Ui::SetTrashFolder(const std::string& p_TrashFolder)
   m_TrashFolder = p_TrashFolder;
 }
 
+void Ui::SetSpamFolder(const std::string& p_SpamFolder)
+{
+  m_SpamFolder = p_SpamFolder;
+}
+
 void Ui::SetDraftsFolder(const std::string& p_DraftsFolder)
 {
   m_DraftsFolder = p_DraftsFolder;
@@ -4891,7 +4896,7 @@ bool Ui::DeleteMessage()
   {
     static const std::set<std::string> foldersAllowPermanentDelete = [&]()
     {
-      std::set<std::string> folders = { m_TrashFolder };
+      std::set<std::string> folders = { m_TrashFolder, m_SpamFolder };
       folders.erase("");
       return folders;
     }();

@@ -281,6 +281,7 @@ editor and fill out the required fields:
     sent=Sent
     smtp_host=smtp.example.com
     smtp_port=587
+    spam=Spam
     trash=Trash
     user=example@example.com
 
@@ -327,6 +328,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     smtp_port=587
     smtp_user=
     sni_enabled=1
+    spam=Spam
     text_to_html_cmd=
     trash=Trash
     user=example@example.com
@@ -590,6 +592,12 @@ used.
 ### sni_enabled
 
 Controls whether to enable Server Name Indication (SNI) during TLS handshaking.
+
+### spam
+
+IMAP spam folder name. Optional. When set, deleting messages from the spam
+folder removes them permanently (same as deleting from `trash`), rather than
+moving them to `trash`.
 
 ### spell_cmd
 

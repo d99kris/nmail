@@ -199,6 +199,7 @@ int main(int argc, char* argv[])
     { "idle_inbox", "1" },
     { "inbox", "INBOX" },
     { "trash", "" },
+    { "spam", "" },
     { "drafts", "" },
     { "sent", "" },
     { "addressbook_encrypt", "0" },
@@ -313,6 +314,7 @@ int main(int argc, char* argv[])
   std::string smtpUser = mainConfig->Get("smtp_user");
   const std::string& inbox = mainConfig->Get("inbox");
   std::string trash = mainConfig->Get("trash");
+  std::string spam = mainConfig->Get("spam");
   std::string drafts = mainConfig->Get("drafts");
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
@@ -471,6 +473,7 @@ int main(int argc, char* argv[])
 
   ui->SetImapManager(imapManager);
   ui->SetTrashFolder(trash);
+  ui->SetSpamFolder(spam);
   ui->SetDraftsFolder(drafts);
   ui->SetSentFolder(sent);
   ui->SetClientStoreSent(clientStoreSent);
@@ -561,6 +564,7 @@ static void ShowHelp()
     "                              sent (folder name, ex: Sent),\n"
     "                              smtp_host (ex: smtp.example.com),\n"
     "                              smtp_port (ex: 465 or 587),\n"
+    "                              spam (folder name, ex: Spam),\n"
     "                              trash (folder name, ex: Trash),\n"
     "                              user (ex: example@example.com or example).\n"
     "   ~/.config/nmail/ui.conf    customizes user interface settings\n"
@@ -610,6 +614,7 @@ static void SetupGmailCommon(std::shared_ptr<Config> p_Config)
   p_Config->Set("smtp_port", "465");
   p_Config->Set("inbox", "INBOX");
   p_Config->Set("trash", "[Gmail]/Trash");
+  p_Config->Set("spam", "[Gmail]/Spam");
   p_Config->Set("drafts", "[Gmail]/Drafts");
   p_Config->Set("sent", "[Gmail]/Sent Mail");
   p_Config->Set("folders_exclude", "\"[Gmail]/All Mail\",\"[Gmail]/Important\",\"[Gmail]/Starred\"");
@@ -642,6 +647,7 @@ static void SetupICloud(std::shared_ptr<Config> p_Config)
   p_Config->Set("smtp_host", "smtp.mail.me.com");
   p_Config->Set("inbox", "INBOX");
   p_Config->Set("trash", "Deleted Messages");
+  p_Config->Set("spam", "Junk");
   p_Config->Set("drafts", "Drafts");
   p_Config->Set("sent", "Sent Messages");
   p_Config->Set("client_store_sent", "1");
@@ -660,6 +666,7 @@ static void SetupOutlookCommon(std::shared_ptr<Config> p_Config)
 {
   p_Config->Set("inbox", "Inbox");
   p_Config->Set("trash", "Deleted");
+  p_Config->Set("spam", "Junk");
   p_Config->Set("drafts", "Drafts");
   p_Config->Set("sent", "Sent");
 }
