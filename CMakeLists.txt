@@ -319,6 +319,16 @@ execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
                 OUTPUT_VARIABLE TARGET_TRIPLE ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 if(TARGET_TRIPLE MATCHES "musl")
   target_compile_definitions(nmail PRIVATE NMAIL_BUILD_MUSL=1)
+  # musl has no execinfo/backtrace() and libgcc's _Unwind_Backtrace cannot step
+  # past musl's signal trampoline, so the crash handler walks the frame-pointer
+  # chain seeded from the signal ucontext (see Util::SignalCrashHandler /
+  # FramePointerBacktrace in src/util.cpp). That walk needs a maintained frame
+  # pointer in nmail's own frames, which -O2 otherwise omits. Scoped to the nmail
+  # target (not the static deps) and to musl only -- the glibc/macOS builds use
+  # backtrace() and are unaffected. Paired with -no-pie on the musl link line
+  # (utils/dist/build-in-container.sh) so the logged addresses are absolute and
+  # resolve directly with `addr2line -e nmail.debug`.
+  target_compile_options(nmail PRIVATE -fno-omit-frame-pointer)
 endif()
 
 # Dependency ncurses

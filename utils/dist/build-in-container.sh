@@ -37,7 +37,14 @@ JOBS="${JOBS:-$(nproc)}"
 EXTRA_CMAKE_ARGS=()
 LINKER_FLAGS=""
 if [[ "${LIBC}" == "musl" ]]; then
-  LINKER_FLAGS="-static"
+  # -static: fully static (musl) binary. -no-pie: link a classic non-PIE
+  # executable so its code sits at fixed link-time addresses. That lets the
+  # musl crash handler's frame-pointer backtrace (src/util.cpp) log absolute
+  # addresses that resolve directly with `addr2line -e nmail.debug <addr>`,
+  # with no ASLR load-base rebasing. Alpine's toolchain defaults to -pie, which
+  # under -static would otherwise yield a static-PIE binary with ASLR-shifted,
+  # unresolvable addresses. Pairs with -fno-omit-frame-pointer (CMakeLists.txt).
+  LINKER_FLAGS="-static -no-pie"
 elif [[ "${LIBC}" == "glibc" ]]; then
   DEPS="/opt/nmail-deps"
   EXTRA_CMAKE_ARGS+=(-DCMAKE_PREFIX_PATH="${DEPS}" -DOPENSSL_ROOT_DIR="${DEPS}")

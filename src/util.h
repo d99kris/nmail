@@ -222,8 +222,9 @@ public:
   static void InitAppSignalHandlers();
   static void InitUiSignalHandlers();
   static void CleanupUiSignalHandlers();
-  static void SignalCrashHandler(int p_Signal);
+  static void SignalCrashHandler(int p_Signal, siginfo_t* p_SigInfo, void* p_Context);
   static void SignalTerminateHandler(int p_Signal);
+  static int GetCallstack(void** p_Callstack, int p_MaxSize, void* p_Context);
 
   static bool IsInteger(const std::string& p_Str);
   static long ToInteger(const std::string& p_Str);
