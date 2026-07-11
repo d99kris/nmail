@@ -265,6 +265,26 @@ set_target_properties(nmail PROPERTIES COMPILE_FLAGS
                        -Wunreachable-code -Wuninitialized -Wcast-align")
 # todo: add -Wundef
 
+# Detached debug symbols (enabled by the dist/release build scripts). Compile
+# nmail's own translation units with -g1 so the DWARF can be split into a
+# detached nmail.debug / .dSYM after the build. Two deliberate choices keep the
+# artifacts small while still symbolicating crash logs:
+#  * -g1 (not the default -g2): emits function descriptions and line tables --
+#    enough to resolve a backtrace to function + file:line -- but omits the
+#    local-variable and full-type DWARF that dominates -g2's size (~4x smaller
+#    here). The trade-off is no rich interactive variable inspection.
+#  * scoped to the nmail target: ext/libetpan is left without debug info, so only
+#    nmail's own frames symbolicate. nmail's C++ TUs -- not libetpan's C -- are
+#    what dominate the DWARF (heavy templated headers: cereal, sqlite_modern_cpp,
+#    the STL), so libetpan is only a small slice anyway.
+# -g1 does not change codegen, so the stripped release binary stays byte-for-byte
+# a plain Release build.
+option(HAS_DEBUG_SYMBOLS "Emit detached debug symbols for nmail" OFF)
+message(STATUS "Debug symbols: ${HAS_DEBUG_SYMBOLS}")
+if(HAS_DEBUG_SYMBOLS)
+  target_compile_options(nmail PRIVATE -g1)
+endif()
+
 # Features
 if(HAS_COREDUMP)
   target_compile_definitions(nmail PRIVATE HAS_COREDUMP="${HAS_COREDUMP}")

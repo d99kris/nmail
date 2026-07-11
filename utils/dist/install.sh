@@ -9,6 +9,14 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/dist/install.sh | bash
 #
+# Options (pass through the pipe with `| bash -s -- <opt>`):
+#   --debug   also fetch the matching debug-symbols tarball and drop the detached
+#             symbols next to the installed binary (nmail.debug beside it on
+#             Linux, nmail.dSYM on macOS), so a debugger auto-loads them:
+#             `gdb nmail` on Linux, `lldb nmail` on macOS (gdb is unsupported on
+#             Apple Silicon). Only nmail's own frames symbolise; the static
+#             third-party libs are built without debug info.
+#
 # Env:
 #   NMAIL_VERSION   install a specific release instead of the latest
 #                   (accepts "5.14.2" or "v5.14.2"); default: latest release
@@ -106,15 +114,15 @@ detect_libc() {
 
 # --- checksum --------------------------------------------------------------
 
-verify_checksum() { # <dir> <file>  (expects an aggregate checksums.txt alongside)
+verify_checksum() { # <dir> <file>  (expects an aggregate sha256sums.txt alongside)
   local dir="$1" file="$2" line
-  # The release ships one checksums.txt covering every target's tarball. Pull
+  # The release ships one sha256sums.txt covering every target's tarball. Pull
   # just this asset's line so verification does not fail over the other
   # targets' tarballs, which we did not download. $NF is the filename field;
   # strip a leading '*' (sha256sum's binary-mode marker) before matching.
   line="$(awk -v a="${file}" '{ n = $NF; sub(/^\*/, "", n); if (n == a) print }' \
-    "${dir}/checksums.txt")"
-  [[ -n "${line}" ]] || die "no checksum entry for ${file} in checksums.txt"
+    "${dir}/sha256sums.txt")"
+  [[ -n "${line}" ]] || die "no checksum entry for ${file} in sha256sums.txt"
   if have sha256sum; then
     ( cd "${dir}" && printf '%s\n' "${line}" | sha256sum -c - >/dev/null )
   elif have shasum; then
@@ -141,7 +149,16 @@ run_priv() {
 # --- main ------------------------------------------------------------------
 
 main() {
-  local os arch libc target version tag
+  local os arch libc target version tag want_debug=0 arg
+  for arg in "$@"; do
+    case "${arg}" in
+      --debug) want_debug=1 ;;
+      -h|--help)
+        info "usage: install.sh [--debug]  (see the header comment for env vars)"
+        return 0 ;;
+      *) die "unknown argument: ${arg} (supported: --debug)" ;;
+    esac
+  done
   os="$(detect_os)" || die "unsupported OS: $(uname -s)"
   arch="$(detect_arch)" || die "unsupported architecture: $(uname -m)"
 
@@ -181,8 +198,8 @@ main() {
   info "downloading ${asset}"
   fetch_file "${base}/${asset}" "${tmp}/${asset}" \
     || die "download failed (no ${asset} in release ${tag}?): ${base}/${asset}"
-  fetch_file "${base}/checksums.txt" "${tmp}/checksums.txt" \
-    || die "download failed: ${base}/checksums.txt"
+  fetch_file "${base}/sha256sums.txt" "${tmp}/sha256sums.txt" \
+    || die "download failed: ${base}/sha256sums.txt"
 
   info "verifying checksum"
   verify_checksum "${tmp}" "${asset}" || die "checksum verification failed for ${asset}"
@@ -229,7 +246,45 @@ main() {
     run_priv xattr -dr com.apple.quarantine "${bindir}/nmail" 2>/dev/null || true
   fi
 
+  # --debug: fetch the matching detached-symbols tarball and drop the symbols
+  # beside the binary. On Linux the stripped binary's .gnu_debuglink points gdb
+  # at nmail.debug; on macOS lldb matches nmail.dSYM by the binary's LC_UUID.
+  if [[ "${want_debug}" == "1" ]]; then
+    local dbgasset dbgdir symname
+    # The release ships one combined symbols tarball covering every target; it
+    # holds a <target>/ subdir per build (nmail.debug on Linux, nmail.dSYM on
+    # macOS). Fetch it and pull out just this target's symbols. It is ~5x the
+    # size of a single target's symbols, but --debug is a rare crash-analysis
+    # step, so the extra download is a fair trade for a single release asset.
+    dbgasset="symbols-${version}.tar.gz"
+    [[ "${os}" == "macos" ]] && symname="nmail.dSYM" || symname="nmail.debug"
+
+    info "downloading ${dbgasset}"
+    fetch_file "${base}/${dbgasset}" "${tmp}/${dbgasset}" \
+      || die "download failed (no ${dbgasset} in release ${tag}?): ${base}/${dbgasset}"
+    info "verifying checksum"
+    verify_checksum "${tmp}" "${dbgasset}" || die "checksum verification failed for ${dbgasset}"
+
+    tar -xzf "${tmp}/${dbgasset}" -C "${tmp}"
+    dbgdir="${tmp}/symbols-${version}/${target}"
+    [[ -e "${dbgdir}/${symname}" ]] \
+      || die "unexpected debug archive layout: ${dbgdir}/${symname} missing"
+
+    info "installing debug symbols to ${bindir}/${symname}"
+    run_priv rm -rf "${bindir}/${symname}"
+    run_priv cp -R "${dbgdir}/${symname}" "${bindir}/${symname}"
+  fi
+
   info "installed nmail ${version} to ${bindir}/nmail"
+  if [[ "${want_debug}" == "1" ]]; then
+    if [[ "${os}" == "macos" ]]; then
+      info "debug symbols installed; symbolise with lldb (gdb is unsupported on Apple Silicon):"
+      info "  lldb ${bindir}/nmail"
+    else
+      info "debug symbols installed; a debugger auto-loads them via .gnu_debuglink:"
+      info "  gdb ${bindir}/nmail"
+    fi
+  fi
   info "note: OAuth2 login (oauth2nmail) needs python3; HTML rendering (html2nmail) needs w3m;"
   info "      core IMAP mail with password authentication needs neither"
 

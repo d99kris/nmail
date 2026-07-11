@@ -115,6 +115,9 @@ with_timeout() {
 resolve_args() {
   local arg base match
   if [[ $# -eq 0 ]]; then
+    # Only the runnable main tarballs (nmail-*). The detached-symbol tarballs are
+    # named symbols-* precisely so this nmail-* glob skips them — they hold no
+    # binary to smoke-test.
     shopt -s nullglob
     for f in "${DIST_DIR}"/nmail-*.tar.gz; do echo "${f}"; done
     shopt -u nullglob

@@ -222,3 +222,24 @@ RUN set -euo pipefail; \
 
 # ccache lives in EPEL; used via the top-level CMakeLists RULE_LAUNCH_COMPILE.
 RUN dnf install -y ccache && dnf clean all
+
+# Strip DWARF from the static dependency archives now that they are all built.
+# Autotools defaults CFLAGS/CXXFLAGS to "-g -O2", so every source-built .a above
+# carries full debug info -- libxapian.a alone is ~150 MB / ~200 TUs -- which the
+# static link folds into nmail and `objcopy --only-keep-debug` would then harvest
+# into nmail.debug, dwarfing nmail's own ~34 TUs (measured: 269 dep CUs vs 34, a
+# 64 MB nmail.debug). `--strip-debug` drops .debug_* but keeps the archive symbol
+# table, so the static link is unaffected.
+#
+# This MUST run here, as root at image-build time. The build container
+# (utils/dist/build-linux.sh) runs as a non-root --user that cannot rewrite these
+# root-owned archives: strip there fails with "could not create temporary file
+# ... Permission denied" and, masked by `|| true`, silently leaves the DWARF in
+# place -- exactly the bug this replaces. As root the strip must succeed, so no
+# error is masked. Also strip the toolchain's static libstdc++/libgcc that
+# -static-libstdc++/-static-libgcc fold into nmail (a no-op while gcc-toolset
+# ships them DWARF-free, but guards a future toolchain that does not).
+RUN set -euo pipefail; \
+    find "${DEPS}" -name '*.a' -exec strip --strip-debug {} +; \
+    strip --strip-debug "$(gcc -print-file-name=libstdc++.a)"; \
+    strip --strip-debug "$(gcc -print-file-name=libgcc.a)"

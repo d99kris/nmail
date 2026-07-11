@@ -185,3 +185,18 @@ RUN set -eu; \
     make -j"$(nproc)"; make install; \
     ar t /usr/lib/libsasl2.a | grep -qE '^plain\.o$' || { echo "libsasl2.a missing baked-in plain plugin" >&2; exit 1; }; \
     cd ..; rm -rf "cyrus-sasl-${CYRUS_SASL_VERSION}"
+
+# Strip DWARF from the static dependency archives (same rationale as
+# Dockerfile.manylinux). The source-built ncurses/xapian/curl/cyrus-sasl above
+# compile at autotools' default "-g -O2" and install into /usr/lib, so their .a
+# carry full debug info that the static link folds into nmail and
+# `objcopy --only-keep-debug` would then harvest into nmail.debug. Done here, as
+# root at image-build time, because the build container (utils/dist/build-linux.sh)
+# runs as a non-root --user that cannot rewrite these root-owned archives -- strip
+# there fails "Permission denied" and, masked by `|| true`, leaves the DWARF in.
+# `--strip-debug` keeps the archive symbol table so the static link is unaffected.
+# Recursive over /usr/lib also covers the toolchain's static libstdc++/libgcc
+# under /usr/lib/gcc that the -static link folds in; Alpine's own *-static
+# packages ship already stripped (no-op). build-base provides GNU binutils strip
+# (not busybox), which understands the ELF .debug_* sections.
+RUN set -eu; find /usr/lib -name '*.a' -exec strip --strip-debug {} +

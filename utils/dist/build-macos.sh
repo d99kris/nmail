@@ -38,6 +38,16 @@ STAGE_DIR="${REPO_DIR}/dist/nmail-${TARGET}"
 
 "${REPO_DIR}/utils/dist/build-deps-macos.sh"
 
+# The static deps are built by autotools with debug info (autotools defaults
+# CFLAGS/CXXFLAGS to "-g -O2"), so their .a archives carry DWARF for hundreds of
+# TUs -- xapian alone is ~200. dsymutil would otherwise harvest all of it into
+# nmail.dSYM via the debug map, dwarfing nmail's own ~34 TUs (measured: ~260 of
+# 294 compile units in the symbols came from deps). strip -S drops the debug
+# map/DWARF but keeps the external symbol table, so the static link is
+# unaffected and only nmail's own frames end up in the detached symbols.
+# Idempotent; runs against the cached prefix each build.
+find "${DEPS}/lib" -name '*.a' -exec strip -S {} + 2>/dev/null || true
+
 JOBS="${JOBS:-$(sysctl -n hw.ncpu)}"
 
 GENERATOR=()
@@ -53,6 +63,7 @@ fi
 rm -rf "${BUILD_DIR}"
 cmake -S "${REPO_DIR}" -B "${BUILD_DIR}" "${GENERATOR[@]}" \
   -DCMAKE_BUILD_TYPE=Release \
+  -DHAS_DEBUG_SYMBOLS=ON \
   -DHAS_STATIC_EXTLIBS=ON \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
   -DCMAKE_PREFIX_PATH="${DEPS}" \
@@ -71,6 +82,15 @@ DESTDIR="${STAGE_DIR}" cmake --install "${BUILD_DIR}"
 rm -rf "${STAGE_DIR:?}/lib"
 
 BIN="${STAGE_DIR}/bin/nmail"
+
+# Collect DWARF into a detached .dSYM bundle before stripping. dsymutil reads the
+# debug map in the binary plus the .o files still present in BUILD_DIR, and the
+# bundle is matched to the binary by LC_UUID (which strip -x preserves). -g does
+# not change codegen, so the stripped binary is what a plain Release build
+# produced. package.sh ships the .dSYM in a separate tarball; install.sh --debug
+# drops it back next to the installed binary (use lldb on macOS — gdb is
+# unsupported on Apple Silicon).
+dsymutil "${BIN}" -o "${BIN}.dSYM"
 
 # Strip local symbols, then re-sign: the CMake install rule ad-hoc signs the
 # binary (core-dump entitlement), and stripping invalidates that signature.
