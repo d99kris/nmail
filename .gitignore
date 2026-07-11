@@ -1,4 +1,4 @@
-build
-dbgbuild
-dist
-build-dist
+/build
+/dbgbuild
+/dist/
+/build-dist/

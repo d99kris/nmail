@@ -1,0 +1,221 @@
+# Dockerfile.manylinux
+#
+# Build environment for mostly-static (glibc >= 2.28) nmail Linux binaries.
+# Based on the manylinux_2_28 images (AlmaLinux 8, gcc-toolset targeting
+# glibc 2.28) which are maintained for years past that distro's EOL. Only
+# libc/libm/libpthread/libdl/librt stay dynamic; every third-party library is
+# built static from source into /opt/nmail-deps below.
+#
+# Arch is selected by the BASEIMAGE arg (native-arch only, no cross):
+#   x86_64 -> quay.io/pypa/manylinux_2_28_x86_64
+#   arm64  -> quay.io/pypa/manylinux_2_28_aarch64
+# See utils/dist/build-linux.sh for usage.
+#
+# nmail is pure C/C++ (no Go/cgo/tdlib/Rust), so this is materially simpler
+# than the nchat counterpart it is lifted from: no Go toolchain, and none of
+# the clipboard stack (libpng, the X11/xcb libraries) that nmail does not use.
+# The nmail-specific additions over nchat are xapian-core, cyrus-sasl,
+# libcurl, expat and libuuid — see utils/dist/ notes / NMAILRELEASES.md.
+#
+# nmail is distributed under the MIT license, see LICENSE for details.
+
+ARG BASEIMAGE=quay.io/pypa/manylinux_2_28_aarch64
+FROM ${BASEIMAGE}
+
+SHELL ["/bin/bash", "-c"]
+
+# Prefix that holds every source-built static dependency.
+ENV DEPS=/opt/nmail-deps
+ENV PATH=${DEPS}/bin:${PATH} \
+    PKG_CONFIG_PATH=${DEPS}/lib/pkgconfig:${DEPS}/lib64/pkgconfig:${DEPS}/share/pkgconfig \
+    ACLOCAL_PATH=${DEPS}/share/aclocal \
+    CPPFLAGS=-I${DEPS}/include \
+    LDFLAGS=-L${DEPS}/lib
+
+# Build tooling not present in the base image (ninja via EPEL; autotools/
+# libtool for the source builds; file for the build script's binary probe).
+# gcc 14 (gcc-toolset) and cmake ship in the base and are already on PATH.
+RUN dnf install -y epel-release && \
+    dnf install -y ninja-build patch diffutils which xz bzip2 file gettext \
+      libtool autoconf automake perl-IPC-Cmd perl-Data-Dumper && \
+    dnf clean all
+
+# --- Static dependency builds (one layer each for docker-cache reuse) ---
+
+# zlib: needed by libmagic, xapian, libcurl.
+ARG ZLIB_VERSION=1.3.1
+RUN set -euo pipefail; \
+    curl -fsSL "https://zlib.net/fossils/zlib-${ZLIB_VERSION}.tar.gz" | tar xz; \
+    cd "zlib-${ZLIB_VERSION}"; \
+    ./configure --prefix="${DEPS}" --static; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "zlib-${ZLIB_VERSION}"
+
+# openssl: nmail crypto, libetpan TLS, libcurl, cyrus-sasl
+# (OPENSSL_USE_STATIC_LIBS). --libdir=lib keeps it out of lib64 so a single
+# -L covers everything.
+ARG OPENSSL_VERSION=3.0.16
+RUN set -euo pipefail; \
+    curl -fsSL "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" | tar xz; \
+    cd "openssl-${OPENSSL_VERSION}"; \
+    ./Configure --prefix="${DEPS}" --libdir=lib no-shared no-tests; \
+    make -j"$(nproc)"; make install_sw; \
+    cd ..; rm -rf "openssl-${OPENSSL_VERSION}"
+
+# bzip2 / xz / zstd: libmagic's decompression backends.
+ARG BZIP2_VERSION=1.0.8
+RUN set -euo pipefail; \
+    curl -fsSL "https://sourceware.org/pub/bzip2/bzip2-${BZIP2_VERSION}.tar.gz" | tar xz; \
+    cd "bzip2-${BZIP2_VERSION}"; \
+    make -j"$(nproc)" libbz2.a; make install PREFIX="${DEPS}"; \
+    cd ..; rm -rf "bzip2-${BZIP2_VERSION}"
+
+ARG XZ_VERSION=5.4.7
+RUN set -euo pipefail; \
+    curl -fsSL "https://github.com/tukaani-project/xz/releases/download/v${XZ_VERSION}/xz-${XZ_VERSION}.tar.gz" | tar xz; \
+    cd "xz-${XZ_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      --disable-xzdec --disable-lzmadec --disable-lzmainfo --disable-scripts --disable-doc; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "xz-${XZ_VERSION}"
+
+ARG ZSTD_VERSION=1.5.6
+RUN set -euo pipefail; \
+    curl -fsSL "https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz" | tar xz; \
+    cd "zstd-${ZSTD_VERSION}"; \
+    make -j"$(nproc)" -C lib install-static install-includes install-pc PREFIX="${DEPS}"; \
+    cd ..; rm -rf "zstd-${ZSTD_VERSION}"
+
+# libmagic (file): attachment mime/type detection in src/. Also ships
+# magic.mgc (loaded at runtime via magic_load(cookie, NULL)).
+ARG FILE_VERSION=5.46
+RUN set -euo pipefail; \
+    curl -fsSL "https://astron.com/pub/file/file-${FILE_VERSION}.tar.gz" | tar xz; \
+    cd "file-${FILE_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static --disable-libseccomp; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "file-${FILE_VERSION}"
+
+# ncursesw (+ tinfow). Compile in terminfo fallbacks and a broad search path
+# so the static binary renders on distros with differing terminfo locations.
+ARG NCURSES_VERSION=6.5
+RUN set -euo pipefail; \
+    curl -fsSL "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" | tar xz; \
+    cd "ncurses-${NCURSES_VERSION}"; \
+    ./configure --prefix="${DEPS}" \
+      --without-shared --without-debug --without-ada --without-tests --without-manpages \
+      --enable-widec --with-termlib --enable-pc-files \
+      --with-pkg-config-libdir="${DEPS}/lib/pkgconfig" \
+      --with-default-terminfo-dir=/usr/share/terminfo \
+      --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo:/usr/lib/terminfo" \
+      --with-fallbacks="xterm,xterm-256color,tmux-256color,screen-256color,linux,vt100"; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "ncurses-${NCURSES_VERSION}"
+
+# sqlite3: local message cache backend in src/.
+ARG SQLITE_URL=https://www.sqlite.org/2024/sqlite-autoconf-3470200.tar.gz
+RUN set -euo pipefail; \
+    curl -fsSL "${SQLITE_URL}" | tar xz; \
+    cd sqlite-autoconf-*; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf sqlite-autoconf-*
+
+# libuuid (from util-linux): id generation in src/. Build only libuuid — the
+# rest of util-linux (programs, other libs) is neither needed nor wanted.
+ARG UTIL_LINUX_VERSION=2.40.2
+ARG UTIL_LINUX_SERIES=v2.40
+RUN set -euo pipefail; \
+    curl -fsSL "https://www.kernel.org/pub/linux/utils/util-linux/${UTIL_LINUX_SERIES}/util-linux-${UTIL_LINUX_VERSION}.tar.xz" | tar xJ; \
+    cd "util-linux-${UTIL_LINUX_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      --disable-all-programs --enable-libuuid \
+      --without-python --without-systemd --without-tinfo --without-ncurses; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "util-linux-${UTIL_LINUX_VERSION}"
+
+# expat: libetpan (HAVE_EXPAT=1) XML parsing.
+ARG EXPAT_VERSION=2.6.4
+ARG EXPAT_TAG=R_2_6_4
+RUN set -euo pipefail; \
+    curl -fsSL "https://github.com/libexpat/libexpat/releases/download/${EXPAT_TAG}/expat-${EXPAT_VERSION}.tar.gz" | tar xz; \
+    cd "expat-${EXPAT_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      --without-docbook --without-examples --without-tests; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "expat-${EXPAT_VERSION}"
+
+# libcurl: libetpan (HAVE_CURL=1). nmail/libetpan only reach curl through the
+# RSS/newsfeed path (http/https), so build a minimal openssl-backed curl and
+# disable every other protocol/feature to keep the static closure small and
+# avoid dragging in ldap/gssapi/ssh/etc.
+ARG CURL_VERSION=8.11.1
+RUN set -euo pipefail; \
+    curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz; \
+    cd "curl-${CURL_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      --with-openssl="${DEPS}" --with-zlib="${DEPS}" \
+      --without-libpsl --without-brotli --without-zstd --without-libidn2 \
+      --without-nghttp2 --without-ngtcp2 --without-libssh2 --without-librtmp \
+      --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet \
+      --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher \
+      --disable-smb --disable-mqtt --disable-ftp --disable-file \
+      --disable-manual --disable-ntlm --disable-unix-sockets; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "curl-${CURL_VERSION}"
+
+# xapian-core: full-text search index (find_package(Xapian)). Installs its
+# CMake package config under ${DEPS}/lib/cmake/xapian so nmail resolves it
+# with CMAKE_PREFIX_PATH=${DEPS}. Static libxapian needs zlib after it on the
+# link line (handled in the top-level CMakeLists HAS_STATIC_EXTLIBS block).
+ARG XAPIAN_VERSION=1.4.27
+RUN set -euo pipefail; \
+    curl -fsSL "https://oligarchy.co.uk/xapian/${XAPIAN_VERSION}/xapian-core-${XAPIAN_VERSION}.tar.xz" | tar xJ; \
+    cd "xapian-core-${XAPIAN_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      --disable-documentation; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "xapian-core-${XAPIAN_VERSION}"
+
+# cyrus-sasl (libsasl2): SMTP password auth goes through libetpan's SASL path;
+# nmail also enumerates the client mechanisms at startup via
+# sasl_global_listmech() (src/sasl.cpp). In a normal build the mechanisms are
+# dlopen'd from /usr/lib*/sasl2/*.so — impossible in a static binary — so with
+# --enable-static --disable-shared cyrus-sasl bakes the mechanism objects
+# straight into libsasl2.a and sasl_client_init() auto-registers them via its
+# internal _sasl_static_plugins[] table (no app-side sasl_client_add_plugin
+# needed; the dlopen path is compiled out). IMAP auth (password + OAuth2) and
+# SMTP OAuth2 do NOT use cyrus-sasl (libetpan drives those directly), so this
+# only gates SMTP password login.
+#
+# We compile in PLAIN + LOGIN + CRAM-MD5 (LOGIN is OFF by default and must be
+# enabled; CRAM-MD5 uses cyrus-sasl's own internal MD5, no libcrypto). We
+# deliberately DISABLE DIGEST-MD5 and SCRAM: they are the only client
+# mechanisms that reference OpenSSL (DES/RC4, digests), which would make
+# libsasl2.a depend on libcrypto appearing AFTER it on the link line — a
+# fragile single-pass-ld ordering constraint we avoid across all three
+# targets. The result is a self-contained libsasl2.a (needs only libc), and
+# PLAIN/LOGIN/CRAM-MD5 cover realistic SMTP password auth (DIGEST-MD5 is
+# obsolete). See NMAILRELEASES.md Phase 3 for the rationale.
+# CFLAGS relaxation: cyrus-sasl 2.1.28 (2021) predates GCC 14's promotion of
+# -Wimplicit-function-declaration / -Wint-conversion from warnings to hard
+# errors, and lib/saslutil.c calls time()/clock() without including <time.h>.
+# The affected call sites are benign (return value discarded or masked to 16
+# bits), so downgrading those two diagnostics lets the mature C compile
+# cleanly on the gcc-toolset-14 base without patching individual sources.
+ARG CYRUS_SASL_VERSION=2.1.28
+RUN set -euo pipefail; \
+    curl -fsSL "https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VERSION}/cyrus-sasl-${CYRUS_SASL_VERSION}.tar.gz" | tar xz; \
+    cd "cyrus-sasl-${CYRUS_SASL_VERSION}"; \
+    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
+      CFLAGS="-O2 -Wno-implicit-function-declaration -Wno-int-conversion" \
+      --with-dblib=none --disable-checkapop --disable-sample \
+      --enable-plain --enable-login --enable-cram \
+      --disable-digest --disable-scram --disable-gssapi --disable-krb4 \
+      --disable-otp --disable-srp --disable-ntlm --disable-anon; \
+    make -j"$(nproc)"; make install; \
+    ar t "${DEPS}/lib/libsasl2.a" | grep -qE '^plain\.o$' || { echo "libsasl2.a missing baked-in plain plugin" >&2; exit 1; }; \
+    cd ..; rm -rf "cyrus-sasl-${CYRUS_SASL_VERSION}"
+
+# ccache lives in EPEL; used via the top-level CMakeLists RULE_LAUNCH_COMPILE.
+RUN dnf install -y ccache && dnf clean all

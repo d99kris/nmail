@@ -29,11 +29,19 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 option(HAS_STATIC_EXTLIBS "Static Ext Libs" OFF)
 message(STATUS "Static Ext Libs: ${HAS_STATIC_EXTLIBS}")
 if(HAS_STATIC_EXTLIBS)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
-  set(OPENSSL_USE_STATIC_LIBS TRUE)
-  if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # Fully-static is impossible on macOS: prefer static (.a) from the deps
+    # prefix but fall back to the system dylibs/stubs (.tbd/.dylib) for the
+    # libraries that only ship dynamically there (curl, expat, iconv). The
+    # deps prefix is on CMAKE_PREFIX_PATH and searched before the SDK, so a
+    # source-built .a wins wherever one exists; build-macos.sh's otool
+    # allowlist enforces that only /usr/lib + frameworks stay dynamic.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .tbd .dylib)
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
     add_link_options(-static-libstdc++ -static-libgcc)
   endif()
+  set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
 
 # Feature - Core dump
@@ -266,11 +274,16 @@ endif()
 # Dependency libuuid
 find_library(LIBUUID_LIBRARIES NAMES uuid)
 find_path(LIBUUID_HEADERS uuid.h PATH_SUFFIXES uuid/)
-if(NOT LIBUUID_LIBRARIES OR NOT LIBUUID_HEADERS)
-  message(FATAL_ERROR "ERROR: Could not find libuuid")
-else()
-  message(STATUS "Found libuuid: ${LIBUUID_LIBRARIES} and ${LIBUUID_HEADERS}")
+if(NOT LIBUUID_HEADERS)
+  message(FATAL_ERROR "ERROR: Could not find libuuid headers")
 endif()
+# On macOS the uuid_generate/uuid_unparse symbols live in libSystem and the
+# <uuid/uuid.h> header ships in the SDK, so no standalone libuuid is required
+# (a static deps build in particular need not ship one); elsewhere it is.
+if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  message(FATAL_ERROR "ERROR: Could not find libuuid")
+endif()
+message(STATUS "Found libuuid: ${LIBUUID_LIBRARIES} and ${LIBUUID_HEADERS}")
 
 # Dependency platform specifics
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

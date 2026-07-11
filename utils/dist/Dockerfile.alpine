@@ -1,0 +1,187 @@
+# Dockerfile.alpine
+#
+# Build environment for fully-static (musl) nmail Linux binaries. Based on
+# Alpine (musl libc): a plain -static link yields one portable executable that
+# runs on any Linux distro regardless of libc (Alpine, old glibc, ...). Unlike
+# nchat, nmail has no cgo/Go runtime, so this is a first-class fully-static,
+# full-featured binary — none of nchat's musl workarounds (the go-patch,
+# -no-pie, c-archive bring-up) apply, and there is no libpng / X11-xcb
+# clipboard stack.
+#
+# Multi-arch: usable on x86_64 and arm64 hosts (native arch only, no cross).
+# See utils/dist/build-linux.sh for usage.
+#
+# Most dependencies come straight from Alpine's own *-static packages. Only the
+# four libraries Alpine cannot static-link cleanly are source-built, using the
+# same versions and configure flags as Dockerfile.manylinux so the musl and
+# glibc builds carry identical dependency versions and auth/protocol behaviour:
+#   - ncurses     : Alpine's ncurses-static has no compiled-in terminfo
+#                   fallbacks, and a bare Alpine image ships no terminfo
+#                   database at all, so a binary linked against it aborts at
+#                   initscr() ("cannot initialize terminal type") on minimal
+#                   images. We build ncurses with the same fallbacks + search
+#                   path as the glibc build so the TUI renders everywhere.
+#   - xapian-core : Alpine ships no static archive for it at all.
+#   - libcurl     : Alpine's curl-static drags c-ares (which has no static
+#                   package) plus a large TLS/HTTP closure; we build a minimal
+#                   openssl-backed curl instead (libetpan only reaches curl via
+#                   its http/https RSS path).
+#   - cyrus-sasl  : Alpine's libsasl2.a bakes in DIGEST-MD5/SCRAM, which pull
+#                   libcrypto — and nmail's single-pass static link line places
+#                   libcrypto *before* libsasl2, so those references would not
+#                   resolve. We build a self-contained libsasl2.a with only
+#                   PLAIN/LOGIN/CRAM-MD5 and no libcrypto dependency.
+#
+# nmail is distributed under the MIT license, see LICENSE for details.
+
+FROM alpine:3.24
+
+SHELL ["/bin/sh", "-c"]
+
+# Build tooling + every leaf dependency Alpine ships a usable static archive
+# for. samurai provides ninja; the *-static subpackages install the .a archives
+# that find_library resolves under CMAKE_FIND_LIBRARY_SUFFIXES=.a; curl is the
+# fetch tool for the source-built deps below; perl is required by curl's
+# configure (docs/manual/CA-embed probe). libmagic's compression backends
+# (z/bz2/lzma/zstd) are appended to the link line by the top-level CMakeLists
+# HAS_STATIC_EXTLIBS block, so their static archives must be present even though
+# Alpine's libmagic.a does not itself reference them. libuuid.a + its headers
+# come from util-linux-{dev,static}. iconv is provided by musl libc, so no
+# separate iconv library is needed. ncurses + ncurses-terminfo are build-time
+# only: the source ncurses below generates its compiled-in terminfo fallbacks
+# with the system tic/infocmp (from ncurses) reading the terminfo database (from
+# ncurses-terminfo); without them ncurses silently drops --with-fallbacks and
+# the static binary cannot start on an image lacking a terminfo db. Neither
+# installs a curses header, so FindCurses still resolves the source build.
+RUN apk add --no-cache \
+      bash build-base ccache cmake samurai pkgconf git curl file linux-headers perl \
+      ncurses ncurses-terminfo \
+      openssl-dev openssl-libs-static \
+      sqlite-dev sqlite-static \
+      zlib-dev zlib-static \
+      expat-dev expat-static \
+      file-dev libmagic-static \
+      util-linux-dev util-linux-static \
+      bzip2-static xz-static zstd-static
+
+# --- Source-built static dependencies ---
+#
+# All install into /usr (the default search path): the musl build uses no
+# deps-prefix (see utils/dist/build-in-container.sh), so CMake/pkg-config must
+# find these without CMAKE_PREFIX_PATH.
+
+# ncursesw (+ tinfow): the TUI. Alpine's ncurses-static carries no compiled-in
+# terminfo fallbacks and a bare Alpine image ships no terminfo database at all,
+# so a binary linked against it aborts at initscr() ("cannot initialize
+# terminal type") on minimal images. Build ncurses from source with the same
+# fallbacks + broad search path as Dockerfile.manylinux so the static musl
+# binary renders on bare Alpine and on any distro regardless of where terminfo
+# lives. --with-termlib splits the terminfo routines into libtinfow.a, which the
+# top-level CMakeLists HAS_STATIC_EXTLIBS block appends to the link line.
+# --without-cxx-binding drops the C++ binding (libncurses++w): nmail uses only
+# the C API, so it is dead weight — and it also sidesteps ncurses 6.5's C++
+# binding failing to build against Alpine 3.24's GCC 15 (the same bool clash the
+# cache vars below address). The glibc build (gcc-toolset-14) keeps it.
+# --disable-overwrite keeps the wide headers under include/ncursesw/ where
+# CMake's FindCurses (wide mode) looks; without it a --prefix=/usr build
+# defaults to overwrite=on and installs a flat include/curses.h that FindCurses
+# does not accept. The glibc build's prefix is /opt/nmail-deps (not /usr), so it
+# gets the ncursesw/ subdir by default.
+#
+# cf_cv_cc_bool_type=0 / cf_cv_builtin_bool=1 pin the curses.h bool guard to the
+# standard `#if defined(__cplusplus)` form. Alpine 3.24's GCC 15 defaults to C23,
+# where `bool` is a C keyword, so ncurses' autodetect concludes the *C* compiler
+# has bool and emits `#define bool NCURSES_BOOL` even for C++ consumers — which
+# then rewrites every `bool` in nmail's own C++ to `unsigned char` and breaks the
+# build. Forcing the two cache vars restores the "C++ uses its native bool"
+# header a normal distro ncursesw-dev ships (the ABI typedef stays unsigned
+# char). GCC 14 on the glibc build (C17) never triggers this.
+ARG NCURSES_VERSION=6.5
+RUN set -eu; \
+    curl -fsSL --retry 3 --retry-delay 2 "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" | tar xz; \
+    cd "ncurses-${NCURSES_VERSION}"; \
+    ./configure --prefix=/usr \
+      --without-shared --without-debug --without-ada --without-tests --without-manpages \
+      --without-cxx-binding --disable-overwrite \
+      --enable-widec --with-termlib --enable-pc-files \
+      --with-pkg-config-libdir=/usr/lib/pkgconfig \
+      --with-default-terminfo-dir=/usr/share/terminfo \
+      --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo:/usr/lib/terminfo" \
+      --with-fallbacks="xterm,xterm-256color,tmux-256color,screen-256color,linux,vt100" \
+      cf_cv_cc_bool_type=0 cf_cv_builtin_bool=1; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "ncurses-${NCURSES_VERSION}"
+
+# xapian-core: full-text search index (find_package(Xapian)). Alpine has no
+# static archive, so build it. Installs its CMake package config under
+# /usr/lib/cmake/xapian so nmail's find_package(Xapian) resolves it; static
+# libxapian needs zlib after it on the link line (handled in the top-level
+# CMakeLists HAS_STATIC_EXTLIBS block).
+ARG XAPIAN_VERSION=1.4.27
+RUN set -eu; \
+    curl -fsSL --retry 3 --retry-delay 2 "https://oligarchy.co.uk/xapian/${XAPIAN_VERSION}/xapian-core-${XAPIAN_VERSION}.tar.xz" | tar xJ; \
+    cd "xapian-core-${XAPIAN_VERSION}"; \
+    ./configure --prefix=/usr --disable-shared --enable-static --disable-documentation; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "xapian-core-${XAPIAN_VERSION}"
+
+# libcurl: libetpan (HAVE_CURL=1) reaches curl only through its RSS/newsfeed
+# http/https path, so build a minimal openssl-backed curl and disable every
+# other protocol/feature to keep the static closure small and avoid dragging in
+# ldap/gssapi/ssh/etc. --with-openssl/--with-zlib use Alpine's own static libs.
+ARG CURL_VERSION=8.11.1
+RUN set -eu; \
+    curl -fsSL --retry 3 --retry-delay 2 "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz; \
+    cd "curl-${CURL_VERSION}"; \
+    ./configure --prefix=/usr --disable-shared --enable-static \
+      --with-openssl --with-zlib \
+      --without-libpsl --without-brotli --without-zstd --without-libidn2 \
+      --without-nghttp2 --without-ngtcp2 --without-libssh2 --without-librtmp \
+      --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet \
+      --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher \
+      --disable-smb --disable-mqtt --disable-ftp --disable-file \
+      --disable-manual --disable-ntlm --disable-unix-sockets; \
+    make -j"$(nproc)"; make install; \
+    cd ..; rm -rf "curl-${CURL_VERSION}"
+
+# cyrus-sasl (libsasl2): SMTP password auth goes through libetpan's SASL path;
+# nmail also enumerates the client mechanisms at startup via
+# sasl_global_listmech() (src/sasl.cpp). In a normal build the mechanisms are
+# dlopen'd from /usr/lib/sasl2/*.so — impossible in a static binary — so with
+# --enable-static --disable-shared cyrus-sasl bakes the mechanism objects
+# straight into libsasl2.a and sasl_client_init() auto-registers them via its
+# internal _sasl_static_plugins[] table (no app-side sasl_client_add_plugin
+# needed; the dlopen path is compiled out). IMAP auth (password + OAuth2) and
+# SMTP OAuth2 do NOT use cyrus-sasl (libetpan drives those directly), so this
+# only gates SMTP password login.
+#
+# We compile in PLAIN + LOGIN + CRAM-MD5 (LOGIN is OFF by default and must be
+# enabled; CRAM-MD5 uses cyrus-sasl's own internal MD5, no libcrypto). We
+# deliberately DISABLE DIGEST-MD5 and SCRAM: they are the only client
+# mechanisms that reference OpenSSL (DES/RC4, digests), which would make
+# libsasl2.a depend on libcrypto appearing AFTER it on the link line — a
+# fragile single-pass-ld ordering constraint we avoid across all three targets
+# (nmail lists libcrypto before libsasl2). The result is a self-contained
+# libsasl2.a (needs only libc), and PLAIN/LOGIN/CRAM-MD5 cover realistic SMTP
+# password auth (DIGEST-MD5 is obsolete).
+#
+# CFLAGS: cyrus-sasl 2.1.28 (2021) predates two later GCC defaults. GCC 14+
+# promotes -Wimplicit-function-declaration / -Wint-conversion from warnings to
+# hard errors, and lib/saslutil.c calls time()/clock() without <time.h>; the
+# call sites are benign (return discarded or masked to 16 bits), so we downgrade
+# those two diagnostics. GCC 15 (Alpine 3.24) additionally defaults to C23,
+# which removed K&R old-style function definitions — common/md5.c (the RFC 1321
+# reference MD5) is written in K&R — so we pin -std=gnu17 to keep compiling it.
+ARG CYRUS_SASL_VERSION=2.1.28
+RUN set -eu; \
+    curl -fsSL --retry 3 --retry-delay 2 "https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VERSION}/cyrus-sasl-${CYRUS_SASL_VERSION}.tar.gz" | tar xz; \
+    cd "cyrus-sasl-${CYRUS_SASL_VERSION}"; \
+    ./configure --prefix=/usr --disable-shared --enable-static \
+      CFLAGS="-O2 -std=gnu17 -Wno-implicit-function-declaration -Wno-int-conversion" \
+      --with-dblib=none --disable-checkapop --disable-sample \
+      --enable-plain --enable-login --enable-cram \
+      --disable-digest --disable-scram --disable-gssapi --disable-krb4 \
+      --disable-otp --disable-srp --disable-ntlm --disable-anon; \
+    make -j"$(nproc)"; make install; \
+    ar t /usr/lib/libsasl2.a | grep -qE '^plain\.o$' || { echo "libsasl2.a missing baked-in plain plugin" >&2; exit 1; }; \
+    cd ..; rm -rf "cyrus-sasl-${CYRUS_SASL_VERSION}"
