@@ -291,6 +291,7 @@ public:
   static void RemoveNonAlphaNumSpace(std::string& p_Str);
   static void InitCoredump();
 
+  static std::string GetBuildInfo();
   static std::string GetCompiler();
   static std::string GetOsArch();
   static std::string ExtractString(const std::string& p_Str, const std::string& p_Prefix, const std::string& p_Suffix);

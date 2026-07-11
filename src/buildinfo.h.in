@@ -1,0 +1,18 @@
+// buildinfo.h - generated from buildinfo.h.in by CMake, do not edit
+//
+// Copyright (c) 2026 Kristofer Berggren
+// All rights reserved.
+//
+// nmail is distributed under the MIT license, see LICENSE for details.
+//
+// Volatile build metadata (git sha/branch change on every commit) is kept in
+// this generated header, included only by the few translation units that need
+// it, rather than passed target-wide via target_compile_definitions(). That
+// stops a git sha/branch change from recompiling the entire src/ tree; CMake's
+// configure_file only rewrites this file when a value actually changes.
+
+#pragma once
+
+#define NMAIL_BUILD_ORIGIN "@NMAIL_BUILD_ORIGIN@"
+#define NMAIL_BUILD_GIT_SHA "@NMAIL_BUILD_GIT_SHA@"
+#define NMAIL_BUILD_GIT_BRANCH "@NMAIL_BUILD_GIT_BRANCH@"

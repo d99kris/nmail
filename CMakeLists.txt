@@ -25,6 +25,58 @@ else()
 endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Build origin (github / local, or packager-provided e.g. debian via
+# -DNMAIL_BUILD_ORIGIN=debian). Auto-detected as "github" under GitHub Actions.
+if(NOT DEFINED NMAIL_BUILD_ORIGIN)
+  if(DEFINED ENV{GITHUB_ACTIONS})
+    set(NMAIL_BUILD_ORIGIN "github")
+  else()
+    set(NMAIL_BUILD_ORIGIN "local")
+  endif()
+endif()
+message(STATUS "Build origin: ${NMAIL_BUILD_ORIGIN}")
+
+# Build git sha/branch, resolved at configure time from the source checkout.
+# Guarded on a top-level .git so source-tarball builds (no repo) resolve to sha
+# "unknown" / empty branch, without picking up an enclosing repo if the tarball
+# is unpacked inside one.
+set(NMAIL_BUILD_GIT_SHA "unknown")
+set(NMAIL_BUILD_GIT_BRANCH "")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+  # Short sha, fixed to 7 chars (git's --short auto-grows the abbreviation to
+  # stay unique, so a plain --short can yield 8+ chars in larger clones such as
+  # GitHub's). Suffixed "+" when tracked files have local changes.
+  execute_process(COMMAND git rev-parse --short=7 HEAD
+                  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                  OUTPUT_VARIABLE GIT_SHA
+                  OUTPUT_STRIP_TRAILING_WHITESPACE
+                  ERROR_QUIET)
+  if(GIT_SHA)
+    execute_process(COMMAND git status --porcelain --untracked-files=no
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    OUTPUT_VARIABLE GIT_DIRTY
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+    if(GIT_DIRTY)
+      set(GIT_SHA "${GIT_SHA}+")
+    endif()
+    set(NMAIL_BUILD_GIT_SHA "${GIT_SHA}")
+  endif()
+
+  # Branch name, left empty for detached HEAD (e.g. release-tag builds) so it is
+  # only appended to the app name for actual working branches.
+  execute_process(COMMAND git rev-parse --abbrev-ref HEAD
+                  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                  OUTPUT_VARIABLE GIT_BRANCH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE
+                  ERROR_QUIET)
+  if(GIT_BRANCH AND NOT GIT_BRANCH STREQUAL "HEAD")
+    set(NMAIL_BUILD_GIT_BRANCH "${GIT_BRANCH}")
+  endif()
+endif()
+message(STATUS "Build git sha: ${NMAIL_BUILD_GIT_SHA}")
+message(STATUS "Build git branch: ${NMAIL_BUILD_GIT_BRANCH}")
+
 # Config - Static linking of external library dependencies
 option(HAS_STATIC_EXTLIBS "Static Ext Libs" OFF)
 message(STATUS "Static Ext Libs: ${HAS_STATIC_EXTLIBS}")
@@ -53,6 +105,17 @@ message(STATUS "Core Dump: ${HAS_COREDUMP}")
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(OAUTH2NMAIL_HEADER "${GENERATED_DIR}/oauth2nmailscript.h")
 set(HTML2NMAIL_HEADER "${GENERATED_DIR}/html2nmailscript.h")
+
+# Volatile build metadata (origin, git sha, git branch) is written to a
+# generated buildinfo.h and included only from the two source files that consume
+# it (src/util.cpp, src/version.cpp), rather than passed target-wide via
+# target_compile_definitions() below. The git sha/branch change on every commit,
+# and a target-wide define would recompile all of src/ each time; configure_file
+# only rewrites the header when a value actually changes, so an unchanged sha
+# is a no-op and a changed one recompiles just those two files.
+set(BUILDINFO_HEADER "${GENERATED_DIR}/buildinfo.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/buildinfo.h.in"
+               "${BUILDINFO_HEADER}" @ONLY)
 add_custom_command(
   OUTPUT "${OAUTH2NMAIL_HEADER}"
   COMMAND "${CMAKE_COMMAND}"
@@ -80,6 +143,7 @@ add_custom_command(
 add_executable(nmail
   ${OAUTH2NMAIL_HEADER}
   ${HTML2NMAIL_HEADER}
+  ${BUILDINFO_HEADER}
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
   ext/cyrus-imap/lib/imapurl.c
@@ -212,6 +276,22 @@ if(HAS_COREDUMP)
       \"${SIGNSCRIPT}\" \"${ENTITLEMENTS}\" \"\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/nmail\"
       )" COMPONENT Runtime)
   endif()
+endif()
+
+# Build info (build type, external linkage), logged at startup via
+# Util::GetBuildInfo(). Build type maps CMAKE_BUILD_TYPE to a single define.
+# The volatile origin/git-sha/git-branch values are supplied instead via the
+# generated buildinfo.h (see configure_file above) so they don't recompile the
+# whole target on every commit.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_definitions(nmail PRIVATE NMAIL_BUILD_DEBUG=1)
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  target_compile_definitions(nmail PRIVATE NMAIL_BUILD_RELWITHDEBINFO=1)
+else()
+  target_compile_definitions(nmail PRIVATE NMAIL_BUILD_RELEASE=1)
+endif()
+if(HAS_STATIC_EXTLIBS)
+  target_compile_definitions(nmail PRIVATE NMAIL_BUILD_STATIC_EXTLIBS=1)
 endif()
 
 # Dependency ncurses

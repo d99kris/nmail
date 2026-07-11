@@ -53,6 +53,7 @@
 #include "html2nmailscript.h"
 #include "loghelp.h"
 #include "ui.h"
+#include "version.h"
 
 std::mutex ThreadRegister::m_Mutex;
 std::map<pthread_t, std::string> ThreadRegister::m_Threads;
@@ -2075,6 +2076,36 @@ void Util::InitCoredump()
     LOG_WARNING("/cores is not writable");
   }
 #endif
+}
+
+std::string Util::GetBuildInfo()
+{
+  // Build origin (github / local, or packager-provided). Sourced from Version so
+  // the volatile buildinfo.h stays out of this heavy translation unit.
+  std::string origin = Version::GetBuildOrigin();
+
+  // Build type
+#if defined(NMAIL_BUILD_RELEASE)
+  std::string type = "release";
+#elif defined(NMAIL_BUILD_DEBUG)
+  std::string type = "debug";
+#elif defined(NMAIL_BUILD_RELWITHDEBINFO)
+  std::string type = "reldbg";
+#else
+  std::string type = "unknown";
+#endif
+
+  // External linkage
+#if defined(NMAIL_BUILD_STATIC_EXTLIBS)
+  std::string linkage = "static";
+#else
+  std::string linkage = "dynamic";
+#endif
+
+  // Build git sha (from Version, see origin note above)
+  std::string sha = Version::GetBuildGitSha();
+
+  return Util::ToLower(origin + " " + type + " " + linkage + " " + sha);
 }
 
 std::string Util::GetCompiler()

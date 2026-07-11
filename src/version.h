@@ -14,6 +14,8 @@ class Version
 public:
   static std::string GetBuildOs();
   static std::string GetCompiler();
-  static std::string GetAppName(bool p_WithVersion);
+  static std::string GetAppName(bool p_WithVersion, bool p_WithBranch = false);
   static std::string GetAppVersion();
+  static std::string GetBuildOrigin();
+  static std::string GetBuildGitSha();
 };

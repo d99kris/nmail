@@ -170,10 +170,12 @@ int main(int argc, char* argv[])
   THREAD_REGISTER();
   Util::InitAppSignalHandlers();
 
-  const std::string appVersion = Version::GetAppName(true /*p_WithVersion*/);
+  const std::string appVersion = Version::GetAppName(true /*p_WithVersion*/, true /*p_WithBranch*/);
   LOG_INFO("%s", appVersion.c_str());
   std::string osArch = Util::GetOsArch();
   LOG_INFO("%s", osArch.c_str());
+  std::string buildInfo = Util::GetBuildInfo();
+  LOG_INFO("%s", buildInfo.c_str());
   std::string compiler = Util::GetCompiler();
   LOG_INFO("%s", compiler.c_str());
 

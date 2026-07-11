@@ -7,7 +7,9 @@
 
 #include "version.h"
 
-#define NMAIL_VERSION "5.14.7"
+#include "buildinfo.h"
+
+#define NMAIL_VERSION "5.14.8"
 
 std::string Version::GetBuildOs()
 {
@@ -39,13 +41,53 @@ std::string Version::GetCompiler()
 #endif
 }
 
-std::string Version::GetAppName(bool p_WithVersion)
+std::string Version::GetAppName(bool p_WithVersion, bool p_WithBranch /*= false*/)
 {
-  return std::string("nmail") + (p_WithVersion ? (" " + GetAppVersion()) : "");
+  std::string name = "nmail";
+  if (p_WithVersion)
+  {
+    name += " " + GetAppVersion();
+  }
+
+#if defined(NMAIL_BUILD_GIT_BRANCH)
+  if (p_WithBranch)
+  {
+    const std::string branch = NMAIL_BUILD_GIT_BRANCH;
+    if (!branch.empty() && (branch != "master"))
+    {
+      name += " " + branch;
+    }
+  }
+#else
+  (void)p_WithBranch;
+#endif
+
+  return name;
 }
 
 std::string Version::GetAppVersion()
 {
   static std::string version = NMAIL_VERSION;
   return version;
+}
+
+// Build origin/sha are read from the generated buildinfo.h here (rather than in
+// util.cpp) so the volatile buildinfo.h only ever recompiles this trivial file,
+// not the heavy util.cpp. See buildinfo.h.in / CMakeLists.txt.
+std::string Version::GetBuildOrigin()
+{
+#if defined(NMAIL_BUILD_ORIGIN)
+  return NMAIL_BUILD_ORIGIN;
+#else
+  return "local";
+#endif
+}
+
+std::string Version::GetBuildGitSha()
+{
+#if defined(NMAIL_BUILD_GIT_SHA)
+  return NMAIL_BUILD_GIT_SHA;
+#else
+  return "unknown";
+#endif
 }
