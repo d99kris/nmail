@@ -25,6 +25,17 @@ else()
 endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Config - Static linking of external library dependencies
+option(HAS_STATIC_EXTLIBS "Static Ext Libs" OFF)
+message(STATUS "Static Ext Libs: ${HAS_STATIC_EXTLIBS}")
+if(HAS_STATIC_EXTLIBS)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  set(OPENSSL_USE_STATIC_LIBS TRUE)
+  if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    add_link_options(-static-libstdc++ -static-libgcc)
+  endif()
+endif()
+
 # Feature - Core dump
 option(HAS_COREDUMP "Core Dump" ON)
 message(STATUS "Core Dump: ${HAS_COREDUMP}")
@@ -160,7 +171,7 @@ if(HAS_COREDUMP)
     set(SIGNSCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/utils/sign")
     set(ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/src/nmail.entitlements")
     install(CODE "execute_process(COMMAND
-      \"${SIGNSCRIPT}\" \"${ENTITLEMENTS}\" \"${CMAKE_INSTALL_PREFIX}/bin/nmail\"
+      \"${SIGNSCRIPT}\" \"${ENTITLEMENTS}\" \"\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/nmail\"
       )" COMPONENT Runtime)
   endif()
 endif()
@@ -169,6 +180,13 @@ endif()
 set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
 find_package(Curses REQUIRED)
+if(HAS_STATIC_EXTLIBS)
+  # static ncursesw does not bundle terminfo routines on some distros
+  find_library(TINFO_LIBRARY NAMES tinfow tinfo)
+  if(TINFO_LIBRARY)
+    list(APPEND CURSES_LIBRARIES ${TINFO_LIBRARY})
+  endif()
+endif()
 target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 
 # Dependency openssl
@@ -176,6 +194,13 @@ find_package(OpenSSL REQUIRED)
 
 # Dependency xapian
 find_package(Xapian REQUIRED)
+if(HAS_STATIC_EXTLIBS)
+  # static libxapian needs zlib after it on the link line
+  find_package(ZLIB)
+  if(ZLIB_FOUND)
+    list(APPEND XAPIAN_LIBRARIES ${ZLIB_LIBRARIES})
+  endif()
+endif()
 
 # Dependency sqlite3
 find_package(SQLite3 REQUIRED)
@@ -227,6 +252,15 @@ if(NOT MAGIC_LIBRARY OR NOT MAGIC_HEADERS)
   message(FATAL_ERROR "ERROR: Could not find libmagic")
 else()
   message(STATUS "Found libmagic: ${MAGIC_LIBRARY} and ${MAGIC_HEADERS}")
+endif()
+if(HAS_STATIC_EXTLIBS)
+  # static libmagic needs its compression backends
+  foreach(MAGIC_DEP z bz2 lzma zstd)
+    find_library(MAGIC_DEP_LIBRARY_${MAGIC_DEP} ${MAGIC_DEP})
+    if(MAGIC_DEP_LIBRARY_${MAGIC_DEP})
+      list(APPEND MAGIC_LIBRARY ${MAGIC_DEP_LIBRARY_${MAGIC_DEP}})
+    endif()
+  endforeach()
 endif()
 
 # Dependency libuuid
