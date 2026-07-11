@@ -66,6 +66,8 @@ add_executable(nmail
   src/imapindex.h
   src/imapmanager.cpp
   src/imapmanager.h
+  src/imaputil.cpp
+  src/imaputil.h
   src/lockfile.cpp
   src/lockfile.h
   src/log.cpp

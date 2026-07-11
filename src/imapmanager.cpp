@@ -1,6 +1,6 @@
 // imapmanager.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -485,13 +485,16 @@ void ImapManager::Process()
 
   if (m_Connect)
   {
+    LOG_INFO("initial login start");
     if (m_Imap.Login())
     {
+      LOG_INFO("initial login ok");
       SetStatus(Status::FlagConnected);
       m_OnceConnected = true;
     }
     else
     {
+      LOG_WARNING("initial login failed, going offline");
       SetStatus(Status::FlagOffline);
       if (m_ResponseHandler)
       {
@@ -794,7 +797,9 @@ bool ImapManager::AuthRefreshNeeded()
 
 bool ImapManager::PerformAuthRefresh()
 {
-  return m_Imap.AuthRefresh();
+  bool rv = m_Imap.AuthRefresh();
+  LOG_DEBUG("periodic auth refresh result %d", (int)rv);
+  return rv;
 }
 
 bool ImapManager::CheckConnectivity()
@@ -817,9 +822,10 @@ void ImapManager::CheckConnectivityAndReconnect(bool p_SkipCheck)
 
     m_Imap.Logout();
     bool connected = false;
+    int reconnectAttempt = 0;
     while (m_Running)
     {
-      LOG_DEBUG("retry connect");
+      LOG_DEBUG("reconnect attempt %d", ++reconnectAttempt);
       connected = m_Imap.Login();
 
       if (connected && m_Running)

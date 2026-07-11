@@ -15,6 +15,7 @@
 
 #include "cacheutil.h"
 #include "config.h"
+#include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
 #include "util.h"
@@ -304,12 +305,36 @@ void Auth::UpdateExpiryTime()
   static const int64_t marginTime = 60; // renew slightly before expiry
   int64_t expiresIn = strtoll(expiresInStr.c_str(), NULL, 10) - marginTime;
   m_ExpiryTime = GetCurrentTimeSec() + expiresIn;
-  LOG_DEBUG("oauth2 expires in %d sec", expiresIn);
+  LOG_DEBUG("oauth2 expires in %lld sec", (long long)expiresIn);
+}
+
+// log non-sensitive token store metadata to help diagnose login failures;
+// fingerprints are short sha256 prefixes for correlating entries, not secrets
+void Auth::LogTokenStoreMetadata()
+{
+  Config tokens(GetTokenStoreTempPath(), GetDefaultTokens(), true);
+  const std::string accessToken = tokens.Get("access_token");
+  const std::string refreshToken = tokens.Get("refresh_token");
+  const std::string accessFp = accessToken.empty() ? "empty" : Crypto::SHA256(accessToken).substr(0, 8);
+  const std::string refreshFp = refreshToken.empty() ? "empty" : Crypto::SHA256(refreshToken).substr(0, 8);
+  LOG_DEBUG("oauth2 store: access_token fp=%s len=%d refresh_token fp=%s len=%d "
+            "token_type=%s expires_in=%s ext_expires_in=%s scope=\"%s\"",
+            accessFp.c_str(), (int)accessToken.size(),
+            refreshFp.c_str(), (int)refreshToken.size(),
+            tokens.Get("token_type").c_str(),
+            tokens.Get("expires_in").c_str(),
+            tokens.Get("ext_expires_in").c_str(),
+            tokens.Get("scope").c_str());
 }
 
 int64_t Auth::GetTimeToExpirySec()
 {
   return (m_ExpiryTime - GetCurrentTimeSec());
+}
+
+bool Auth::HasExpiryTime()
+{
+  return (m_ExpiryTime != 0);
 }
 
 int Auth::PerformAction(const AuthAction p_AuthAction)
@@ -329,12 +354,20 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   std::string command =
     scriptPath + " " + ((p_AuthAction == Generate) ? "-g" : "-r") + " > " + outPath + " 2>&1";
 
+  struct timeval actionStart;
+  gettimeofday(&actionStart, NULL);
   int status = Util::System(command);
+  struct timeval actionEnd;
+  gettimeofday(&actionEnd, NULL);
+  const long long actionDurMs = ((actionEnd.tv_sec - actionStart.tv_sec) * 1000LL) +
+    ((actionEnd.tv_usec - actionStart.tv_usec) / 1000LL);
   const std::string output = Util::ReadFile(outPath);
   if (WIFEXITED(status) && (WEXITSTATUS(status) == 0))
   {
-    LOG_DEBUG((p_AuthAction == Generate) ? "oauth2 generate ok" : "oauth2 refresh ok");
+    LOG_DEBUG((p_AuthAction == Generate) ? "oauth2 generate ok (%lld ms)"
+                                         : "oauth2 refresh ok (%lld ms)", actionDurMs);
     UpdateExpiryTime();
+    LogTokenStoreMetadata();
     if (!output.empty())
     {
       LOG_DEBUG("%s", output.c_str());
@@ -342,10 +375,15 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   }
   else if (WIFEXITED(status))
   {
-    LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate failed (%d): %s"
-                                           : "oauth2 refresh failed (%d): %s",
-                WEXITSTATUS(status), command.c_str());
+    LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate failed (%d, %lld ms): %s"
+                                           : "oauth2 refresh failed (%d, %lld ms): %s",
+                WEXITSTATUS(status), actionDurMs, command.c_str());
     std::cerr << output;
+    if (!output.empty())
+    {
+      LOG_WARNING("%s", output.c_str());
+    }
+
     if (WEXITSTATUS(status) == 7)
     {
       std::string msg = "try setup: nmail -d " + Util::GetApplicationDir() + " -s " + m_Auth;

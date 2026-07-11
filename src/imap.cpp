@@ -1,6 +1,6 @@
 // imap.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -12,13 +12,12 @@
 #include <libetpan/mailimap.h>
 
 #include "auth.h"
-#include "crypto.h"
 #include "encoding.h"
 #include "flag.h"
 #include "imapcache.h"
+#include "imaputil.h"
 #include "log.h"
 #include "loghelp.h"
-#include "lockfile.h"
 #include "maphelp.h"
 #include "sethelp.h"
 #include "util.h"
@@ -101,41 +100,78 @@ static void SslContextCallback(struct mailstream_ssl_context* p_SslContext, void
   }
 }
 
+// connect m_Imap to specified address (hostname or explicit ip) with sni and
+// starttls handling based on configured host/port
+int Imap::ImapConnect(const std::string& p_Address)
+{
+  bool isSSL = (m_Port == 993);
+  bool isStartTLS = (m_Port == 143);
+
+  int rv = 0;
+  if (isSSL)
+  {
+    char* sni = (m_SniEnabled && !Util::IsIpAddress(m_Host)) ? strdup(m_Host.c_str()) : nullptr;
+    rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect_with_callback(m_Imap, p_Address.c_str(), m_Port,
+                                                            SslContextCallback, sni));
+    if (sni != nullptr)
+    {
+      free(sni);
+    }
+  }
+  else if (isStartTLS)
+  {
+    rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, p_Address.c_str(), m_Port));
+    if (rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
+    {
+      rv = LOG_IF_IMAP_ERR(mailimap_socket_starttls(m_Imap));
+    }
+  }
+  else
+  {
+    rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, p_Address.c_str(), m_Port));
+  }
+
+  return rv;
+}
+
 bool Imap::Login()
 {
   LOG_DEBUG_FUNC(STR());
 
   bool connected = false;
-  bool isSSL = (m_Port == 993);
+  bool retried = false;
   bool isStartTLS = (m_Port == 143);
+
+  std::string failStep = "connect";
+  int failRv = 0;
+  std::string serverId;
+  std::string connAddrs;
+  std::string peerIp;
+  const int64_t loginStartMs = ImapUtil::GetTimeMs();
+  m_LastAuthRv = 0;
+  m_LastAuthResponse.clear();
 
   {
     std::lock_guard<std::mutex> imapLock(m_ImapMutex);
     m_SelectedFolder.clear();
 
-    int rv = 0;
-    if (isSSL)
+    LOG_DEBUG("login connect: host=%s port=%d sni=%d dns=[%s]",
+              m_Host.c_str(), (int)m_Port, (int)m_SniEnabled,
+              ImapUtil::GetHostAddresses(m_Host).c_str());
+
+    const int64_t connectStartMs = ImapUtil::GetTimeMs();
+    int rv = ImapConnect(m_Host);
+
+    const std::string greeting = ImapUtil::GetImapResponseStr(m_Imap);
+    serverId = ImapUtil::GetExchangeServerId(greeting);
+    connAddrs = ImapUtil::GetConnectionAddresses(m_Imap);
+    peerIp = ImapUtil::GetPeerIp(m_Imap);
+    LOG_DEBUG("login connect: rv=%d dur=%lld ms conn=[%s] server=[%s]",
+              rv, (long long)(ImapUtil::GetTimeMs() - connectStartMs),
+              connAddrs.c_str(), serverId.c_str());
+    if (!greeting.empty())
     {
-      char* sni = (m_SniEnabled && !Util::IsIpAddress(m_Host))
-        ? strdup(m_Host.c_str())
-        : nullptr;
-      rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect_with_callback(m_Imap, m_Host.c_str(), m_Port, SslContextCallback, sni));
-      if (sni != nullptr)
-      {
-        free(sni);
-      }
-    }
-    else if (isStartTLS)
-    {
-      rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, m_Host.c_str(), m_Port));
-      if (rv == MAILIMAP_NO_ERROR_NON_AUTHENTICATED)
-      {
-        rv = LOG_IF_IMAP_ERR(mailimap_socket_starttls(m_Imap));
-      }
-    }
-    else
-    {
-      rv = LOG_IF_IMAP_ERR(mailimap_socket_connect(m_Imap, m_Host.c_str(), m_Port));
+      LOG_DEBUG("login greeting: %s", greeting.c_str());
     }
 
     if (rv == MAILIMAP_NO_ERROR_AUTHENTICATED)
@@ -146,12 +182,23 @@ bool Imap::Login()
     {
       if (Auth::IsOAuthEnabled())
       {
+        failStep = "oauth2";
         bool authResult = AuthRefresh();
         rv = (authResult ? MAILIMAP_NO_ERROR : MAILIMAP_ERROR_STREAM);
       }
       else
       {
+        failStep = "login";
+        const int64_t authStartMs = ImapUtil::GetTimeMs();
         rv = LOG_IF_IMAP_ERR(mailimap_login(m_Imap, m_User.c_str(), m_Pass.c_str()));
+        m_LastAuthRv = rv;
+        if (rv != MAILIMAP_NO_ERROR)
+        {
+          m_LastAuthResponse = ImapUtil::GetImapResponseStr(m_Imap);
+          LOG_WARNING("login failed: rv=%d dur=%lld ms response=\"%s\"",
+                      rv, (long long)(ImapUtil::GetTimeMs() - authStartMs),
+                      m_LastAuthResponse.c_str());
+        }
       }
 
       connected = (rv == MAILIMAP_NO_ERROR);
@@ -164,6 +211,19 @@ bool Imap::Login()
 
       InitImap();
     }
+
+    failRv = rv;
+
+    // the transient Exchange failure "authenticated but not connected" is tied
+    // to the address (frontend pool) the connection landed on, and a plain
+    // hostname reconnect commonly resolves to the same address again, so retry
+    // login via alternate resolved addresses, skipping the one that failed
+    if (!connected &&
+        (m_LastAuthResponse.find("authenticated but not connected") != std::string::npos))
+    {
+      retried = true;
+      connected = LoginRetryAlternateIp(peerIp, serverId, connAddrs);
+    }
   }
 
   {
@@ -174,6 +234,23 @@ bool Imap::Login()
   if (connected)
   {
     // @todo: clear all cache if cannot use existing (cater for password change)
+    if (retried)
+    {
+      LOG_WARNING("login summary: ok after retry dur=%lld ms server=[%s] conn=[%s]",
+                  (long long)(ImapUtil::GetTimeMs() - loginStartMs), serverId.c_str(), connAddrs.c_str());
+    }
+    else
+    {
+      LOG_DEBUG("login summary: ok dur=%lld ms server=[%s] conn=[%s]",
+                (long long)(ImapUtil::GetTimeMs() - loginStartMs), serverId.c_str(), connAddrs.c_str());
+    }
+  }
+  else
+  {
+    const int summaryRv = (m_LastAuthRv != 0) ? m_LastAuthRv : failRv;
+    LOG_WARNING("login summary: failed step=%s rv=%d dur=%lld ms server=[%s] conn=[%s] response=\"%s\"",
+                failStep.c_str(), summaryRv, (long long)(ImapUtil::GetTimeMs() - loginStartMs),
+                serverId.c_str(), connAddrs.c_str(), m_LastAuthResponse.c_str());
   }
 
   return connected;
@@ -205,16 +282,165 @@ bool Imap::AuthRefresh()
 {
   LOG_DEBUG_FUNC(STR());
 
+  const std::string oldToken = Auth::GetAccessToken();
+  const std::string expiryStr =
+    Auth::HasExpiryTime() ? std::to_string(Auth::GetTimeToExpirySec()) : "n/a";
+  LOG_DEBUG("oauth2 pre-refresh: token fp=%s len=%d expiry in %s sec",
+            ImapUtil::TokenFingerprint(oldToken).c_str(), (int)oldToken.size(), expiryStr.c_str());
+
+  const int64_t refreshStartMs = ImapUtil::GetTimeMs();
   if (!Auth::RefreshToken())
   {
+    m_LastAuthRv = -1;
+    LOG_WARNING("oauth2 refresh failed: dur=%lld ms",
+                (long long)(ImapUtil::GetTimeMs() - refreshStartMs));
     return false;
   }
 
-  int rv = MAILIMAP_NO_ERROR;
-  std::string token = Auth::GetAccessToken();
-  rv = LOG_IF_IMAP_ERR(mailimap_oauth2_authenticate(m_Imap, m_User.c_str(), token.c_str()));
+  const std::string token = Auth::GetAccessToken();
+  LOG_DEBUG("oauth2 refresh ok: dur=%lld ms token fp=%s len=%d changed=%d",
+            (long long)(ImapUtil::GetTimeMs() - refreshStartMs),
+            ImapUtil::TokenFingerprint(token).c_str(), (int)token.size(),
+            (int)(token != oldToken));
+  const int64_t authStartMs = ImapUtil::GetTimeMs();
+  int rv = LOG_IF_IMAP_ERR(mailimap_oauth2_authenticate(m_Imap, m_User.c_str(), token.c_str()));
+  const int64_t authDurMs = ImapUtil::GetTimeMs() - authStartMs;
+  const std::string response = ImapUtil::GetImapResponseStr(m_Imap);
+  m_LastAuthRv = rv;
+  if (rv != MAILIMAP_NO_ERROR)
+  {
+    m_LastAuthResponse = response;
+  }
+  if (rv == MAILIMAP_NO_ERROR)
+  {
+    LOG_DEBUG("oauth2 authenticate ok: dur=%lld ms response=\"%s\"",
+              (long long)authDurMs, response.c_str());
+  }
+  else if (rv == MAILIMAP_ERROR_BAD_STATE)
+  {
+    // expected during periodic token refresh on an already-authenticated session,
+    // the refreshed token is used at next (re)connect
+    LOG_DEBUG("oauth2 authenticate skipped: session already authenticated (state=%d)",
+              ((m_Imap != nullptr) ? m_Imap->imap_state : -1));
+  }
+  else
+  {
+    const std::string serverId = ImapUtil::GetExchangeServerId(response);
+    LOG_WARNING("oauth2 authenticate failed: rv=%d dur=%lld ms state=%d response=\"%s\" server=[%s]",
+                rv, (long long)authDurMs,
+                ((m_Imap != nullptr) ? m_Imap->imap_state : -1),
+                response.c_str(), serverId.c_str());
+  }
 
   return (rv == MAILIMAP_NO_ERROR);
+}
+
+bool Imap::LoginRetryAlternateIp(const std::string& p_FailedPeerIp,
+                                 std::string& p_ServerId, std::string& p_ConnAddrs)
+{
+  static int64_t lastRetryMs = 0;
+  static const int64_t minRetryIntervalMs = (15 * 1000);
+  const int64_t nowMs = ImapUtil::GetTimeMs();
+  if ((lastRetryMs != 0) && ((nowMs - lastRetryMs) < minRetryIntervalMs))
+  {
+    LOG_WARNING("login retry: skipped (rate limited)");
+    return false;
+  }
+
+  lastRetryMs = nowMs;
+
+  static const size_t maxRetries = 3;
+  std::string resolveErr;
+  const std::vector<std::string> candidates = ImapUtil::ResolveHostIps(m_Host, resolveErr);
+
+  const bool failedIsIpv6 = (p_FailedPeerIp.find(':') != std::string::npos);
+  std::vector<std::string> sameFamilyIps;
+  std::vector<std::string> otherFamilyIps;
+  for (const std::string& ip : candidates)
+  {
+    if (ip == p_FailedPeerIp) continue;
+
+    const bool isIpv6 = (ip.find(':') != std::string::npos);
+    (isIpv6 == failedIsIpv6 ? sameFamilyIps : otherFamilyIps).push_back(ip);
+  }
+
+  std::vector<std::string> retryIps = sameFamilyIps;
+  retryIps.insert(retryIps.end(), otherFamilyIps.begin(), otherFamilyIps.end());
+  if (retryIps.size() > maxRetries)
+  {
+    retryIps.resize(maxRetries);
+  }
+
+  LOG_WARNING("login retry: start count=%d failedpeer=[%s] dns=[%s] %s",
+              (int)retryIps.size(), p_FailedPeerIp.c_str(),
+              Util::Join(candidates, ", ").c_str(), resolveErr.c_str());
+
+  bool connected = false;
+  int num = 0;
+  for (const std::string& ip : retryIps)
+  {
+    ++num;
+
+    // fresh session for each attempt; freeing the previous (connected but
+    // unauthenticated) session performs a graceful logout
+    CleanupImap();
+    InitImap();
+
+    const int64_t connectStartMs = ImapUtil::GetTimeMs();
+    int rv = ImapConnect(ip);
+
+    p_ServerId = ImapUtil::GetExchangeServerId(ImapUtil::GetImapResponseStr(m_Imap));
+    p_ConnAddrs = ImapUtil::GetConnectionAddresses(m_Imap);
+    LOG_WARNING("login retry %d/%d: ip=%s connect rv=%d dur=%lld ms conn=[%s] server=[%s]",
+                num, (int)retryIps.size(), ip.c_str(), rv,
+                (long long)(ImapUtil::GetTimeMs() - connectStartMs),
+                p_ConnAddrs.c_str(), p_ServerId.c_str());
+
+    if (rv == MAILIMAP_NO_ERROR_AUTHENTICATED)
+    {
+      connected = true;
+      break;
+    }
+
+    if ((rv != MAILIMAP_NO_ERROR_NON_AUTHENTICATED) && (rv != MAILIMAP_NO_ERROR)) continue;
+
+    const int64_t authStartMs = ImapUtil::GetTimeMs();
+    int authRv = 0;
+    if (Auth::IsOAuthEnabled())
+    {
+      // reuse the token refreshed moments ago by the failed login attempt
+      const std::string token = Auth::GetAccessToken();
+      authRv = LOG_IF_IMAP_ERR(mailimap_oauth2_authenticate(m_Imap, m_User.c_str(), token.c_str()));
+    }
+    else
+    {
+      authRv = LOG_IF_IMAP_ERR(mailimap_login(m_Imap, m_User.c_str(), m_Pass.c_str()));
+    }
+
+    m_LastAuthRv = authRv;
+    m_LastAuthResponse = (authRv != MAILIMAP_NO_ERROR) ? ImapUtil::GetImapResponseStr(m_Imap) : "";
+    LOG_WARNING("login retry %d/%d: ip=%s auth rv=%d dur=%lld ms response=\"%s\"",
+                num, (int)retryIps.size(), ip.c_str(), authRv,
+                (long long)(ImapUtil::GetTimeMs() - authStartMs),
+                ImapUtil::GetImapResponseStr(m_Imap).c_str());
+
+    if (authRv == MAILIMAP_NO_ERROR)
+    {
+      connected = true;
+      break;
+    }
+  }
+
+  if (!connected)
+  {
+    // leave a fresh unconnected session so a subsequent login attempt does not
+    // start from a stale half-connected state
+    CleanupImap();
+    InitImap();
+  }
+
+  LOG_WARNING("login retry: done connected=%d", (int)connected);
+  return connected;
 }
 
 bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
@@ -1305,7 +1531,13 @@ std::vector<struct mailimap_search_key*> Imap::SearchKeysFromQuery(const std::st
 
 void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, size_t p_Size, void* p_UserData)
 {
-  if (p_LogType == MAILSTREAM_LOG_TYPE_DATA_SENT_PRIVATE) return; // dont log private data, like passwords
+  if (p_LogType == MAILSTREAM_LOG_TYPE_DATA_SENT_PRIVATE)
+  {
+    // dont log private data, like passwords / auth tokens, but do log the size
+    // so protocol activity can be followed
+    LOG_TRACE("imap %i: <%d bytes private data not logged>", p_LogType, (int)p_Size);
+    return;
+  }
 
   (void)p_Imap;
   (void)p_UserData;

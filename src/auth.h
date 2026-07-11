@@ -30,6 +30,7 @@ public:
   static bool RefreshNeeded();
   static bool RefreshToken();
   static int64_t GetTimeToExpirySec();
+  static bool HasExpiryTime();
 
 private:
   enum AuthAction { Generate, Refresh };
@@ -45,6 +46,7 @@ private:
   static std::map<std::string, std::string> GetDefaultTokens();
   static int64_t GetCurrentTimeSec();
   static void UpdateExpiryTime();
+  static void LogTokenStoreMetadata();
   static int PerformAction(const AuthAction p_AuthAction);
 
 private:

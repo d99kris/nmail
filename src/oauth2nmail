@@ -405,6 +405,19 @@ def refresh(provider, client_id, client_secret, token_store):
         tokens[key] = value
 
     save_tokens(token_store, tokens.items())
+
+    # report non-sensitive metadata for diagnostics (output is logged by nmail)
+    newAccessToken = str(tokens.get("access_token", ""))
+    newRefreshToken = str(tokens.get("refresh_token", ""))
+    sys.stderr.write("refresh response: status=" + str(refrResponse.status_code)
+                     + " keys=" + str(sorted(jsonRefrResponse.keys()))
+                     + " expires_in=" + str(jsonRefrResponse.get("expires_in", "?"))
+                     + " ext_expires_in=" + str(jsonRefrResponse.get("ext_expires_in", "?"))
+                     + " scope=" + repr(jsonRefrResponse.get("scope", "?"))
+                     + " access_token_len=" + str(len(newAccessToken))
+                     + " refresh_token_len=" + str(len(newRefreshToken))
+                     + " refresh_token_changed=" + str(int(newRefreshToken != refresh_token))
+                     + "\n")
     return 0
 
 

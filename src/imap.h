@@ -1,6 +1,6 @@
 // imap.h
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -102,6 +102,9 @@ private:
   uint32_t GetUidValidity();
   void InitImap();
   void CleanupImap();
+  int ImapConnect(const std::string& p_Address);
+  bool LoginRetryAlternateIp(const std::string& p_FailedPeerIp,
+                             std::string& p_ServerId, std::string& p_ConnAddrs);
 
   std::set<std::string>& GetCapabilities();
   bool HasCapability(const std::string& p_Name);
@@ -135,6 +138,11 @@ private:
   std::mutex m_ConnectedMutex;
   bool m_Connected = false;
   bool m_Aborting = false;
+
+  // outcome of last authentication attempt; used for login failure log summary
+  // and for detecting the transient failure that triggers alternate-ip retry
+  int m_LastAuthRv = 0;
+  std::string m_LastAuthResponse;
 
   std::string m_LastSearchQueryStr;
   std::string m_LastSearchFolder;
