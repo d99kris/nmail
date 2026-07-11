@@ -157,7 +157,7 @@ if(HAS_COREDUMP)
   target_compile_definitions(nmail PRIVATE HAS_COREDUMP="${HAS_COREDUMP}")
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # Core dump entitlements
-    set(SIGNSCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/util/sign")
+    set(SIGNSCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/utils/sign")
     set(ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/src/nmail.entitlements")
     install(CODE "execute_process(COMMAND
       \"${SIGNSCRIPT}\" \"${ENTITLEMENTS}\" \"${CMAKE_INSTALL_PREFIX}/bin/nmail\"
