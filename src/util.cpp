@@ -2078,6 +2078,35 @@ void Util::InitCoredump()
 #endif
 }
 
+namespace
+{
+  // Removes any "(...)" groups, including a single space preceding an opening
+  // parenthesis, e.g. "debian gnu/linux 12 (bookworm) arm64" -> "debian gnu/linux 12 arm64".
+  std::string StripParentheses(const std::string& p_Str)
+  {
+    std::string result = p_Str;
+    size_t open = std::string::npos;
+    while ((open = result.find('(')) != std::string::npos)
+    {
+      const size_t close = result.find(')', open);
+      if (close == std::string::npos)
+      {
+        break;
+      }
+
+      size_t start = open;
+      if ((start > 0) && (result[start - 1] == ' '))
+      {
+        --start;
+      }
+
+      result.erase(start, close - start + 1);
+    }
+
+    return result;
+  }
+}
+
 std::string Util::GetBuildInfo()
 {
   // Build origin (github / local, or packager-provided). Sourced from Version so
@@ -2108,7 +2137,7 @@ std::string Util::GetBuildInfo()
   return Util::ToLower(origin + " " + type + " " + linkage + " " + sha);
 }
 
-std::string Util::GetCompiler()
+std::string Util::GetCompiler(bool p_Verbose)
 {
 #if defined(__VERSION__)
 #if !defined(__clang__) && defined(__GNUC__)
@@ -2125,18 +2154,30 @@ std::string Util::GetCompiler()
   std::stringstream sslibc;
   sslibc << "glibc " << __GLIBC__ << "." << __GLIBC_MINOR__;
   std::string libc = sslibc.str();
+#elif defined(NMAIL_BUILD_MUSL)
+  // musl provides no version macro; NMAIL_BUILD_MUSL is set by CMake from the
+  // compiler target triple (see CMakeLists.txt).
+  std::string libc = "musl";
+#elif defined(__ANDROID__)
+  std::string libc = "bionic";
 #else
-  std::string libc = "non-glibc";
+  std::string libc = "unknown";
 #endif
 #else
+  // macOS libc (part of libSystem) has no conventional short name; leave empty.
   std::string libc;
 #endif
 
   std::string compilerLibc = compiler + (!libc.empty() ? " " + libc : "");
+  if (!p_Verbose)
+  {
+    compilerLibc = StripParentheses(compilerLibc);
+  }
+
   return Util::ToLower(compilerLibc);
 }
 
-std::string Util::GetOsArch()
+std::string Util::GetOsArch(bool p_Verbose)
 {
   static const std::string os = []()
   {
@@ -2169,7 +2210,12 @@ std::string Util::GetOsArch()
 #endif
   }();
 
-  static const std::string osArch = os + " " + arch;
+  std::string osArch = os + " " + arch;
+  if (!p_Verbose)
+  {
+    osArch = StripParentheses(osArch);
+  }
+
   return Util::ToLower(osArch);
 }
 

@@ -293,6 +293,13 @@ endif()
 if(HAS_STATIC_EXTLIBS)
   target_compile_definitions(nmail PRIVATE NMAIL_BUILD_STATIC_EXTLIBS=1)
 endif()
+# musl provides no C preprocessor version macro, so detect it from the compiler
+# target triple at configure time and expose it for startup libc labeling.
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+                OUTPUT_VARIABLE TARGET_TRIPLE ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(TARGET_TRIPLE MATCHES "musl")
+  target_compile_definitions(nmail PRIVATE NMAIL_BUILD_MUSL=1)
+endif()
 
 # Dependency ncurses
 set(CURSES_NEED_NCURSES TRUE)

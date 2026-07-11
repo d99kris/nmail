@@ -172,11 +172,11 @@ int main(int argc, char* argv[])
 
   const std::string appVersion = Version::GetAppName(true /*p_WithVersion*/, true /*p_WithBranch*/);
   LOG_INFO("%s", appVersion.c_str());
-  std::string osArch = Util::GetOsArch();
+  std::string osArch = Util::GetOsArch(false /*p_Verbose*/);
   LOG_INFO("%s", osArch.c_str());
   std::string buildInfo = Util::GetBuildInfo();
   LOG_INFO("%s", buildInfo.c_str());
-  std::string compiler = Util::GetCompiler();
+  std::string compiler = Util::GetCompiler(false /*p_Verbose*/);
   LOG_INFO("%s", compiler.c_str());
 
   if (readOnly)
