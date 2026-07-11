@@ -113,51 +113,6 @@ tested on:
 - Ubuntu 24.04 LTS
 
 
-Download Pre-Built Binary
-=========================
-Portable, (mostly-)statically linked nmail binaries are published on the
-[GitHub Releases](https://github.com/d99kris/nmail/releases) page for Linux
-(x86\_64 and arm64, glibc and musl) and macOS (arm64), so nmail can be run
-without building from source.
-
-Quick Install
--------------
-The installer detects the OS, CPU architecture and (on Linux) libc, downloads
-the matching release, verifies its checksum and installs it under `~/.local`:
-
-    curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/dist/install.sh | bash
-
-Set `PREFIX` to install elsewhere (e.g. `PREFIX=/usr/local`, using `sudo` if the
-prefix is not writable) or `NMAIL_VERSION` to pin a specific release. Ensure the
-install `bin` directory is on `PATH`.
-
-Manual Download
----------------
-Alternatively, download the tarball for the platform from the releases page,
-verify it against `checksums.txt`, and extract it:
-
-    tar xzf nmail-<version>-<target>.tar.gz
-    cd nmail-<version>-<target>
-    cp bin/nmail ~/.local/bin/
-    cp share/man/man1/nmail.1 ~/.local/share/man/man1/
-
-On glibc-based distributions the `glibc` build is recommended; the fully static
-`musl` build runs on any Linux distribution regardless of libc (Alpine, very old
-or unusual distros), with no feature caveat. On macOS, if the archive was
-downloaded via a browser, clear the quarantine attribute with
-`xattr -dr com.apple.quarantine nmail` (a `curl`/`install.sh` download needs no
-such step).
-
-Optional Helper Dependencies
-----------------------------
-nmail bundles two helper scripts, `oauth2nmail` and `html2nmail`, inside the
-binary and extracts them at runtime, so nothing extra needs to be installed.
-They do rely on interpreters/tools that are **not** bundled: `oauth2nmail` needs
-`python3` (only for OAuth2 Gmail / Outlook login) and `html2nmail` needs `w3m`
-(or `pandoc`, `lynx` or `elinks`; only for rich HTML-email rendering). Core IMAP
-mail with password authentication works without any of them.
-
-
 Install using Package Manager
 =============================
 
