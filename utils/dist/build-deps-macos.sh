@@ -74,10 +74,12 @@ fetch() {
   tar xf "${tarball}"
 }
 
-# zlib: needed by libmagic and xapian.
+# zlib: needed by libmagic and xapian. Fetched from the madler/zlib GitHub
+# release (byte-identical to upstream) rather than zlib.net/fossils/, whose host
+# intermittently rejects CI/datacenter requests with HTTP 415.
 ZLIB_VERSION=1.3.1
 if ! built "zlib-${ZLIB_VERSION}"; then
-  fetch "https://zlib.net/fossils/zlib-${ZLIB_VERSION}.tar.gz"
+  fetch "https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz"
   ( cd "zlib-${ZLIB_VERSION}" &&
     ./configure --prefix="${DEPS}" --static &&
     make -j"${JOBS}" && make install )

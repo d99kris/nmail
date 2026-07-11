@@ -283,6 +283,12 @@ endif()
 if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   message(FATAL_ERROR "ERROR: Could not find libuuid")
 endif()
+# When no standalone libuuid exists (the macOS case above), find_library leaves
+# LIBUUID_LIBRARIES as the literal "LIBUUID_LIBRARIES-NOTFOUND"; scrub it to
+# empty so it does not land on the target link line below as a bogus library.
+if(NOT LIBUUID_LIBRARIES)
+  set(LIBUUID_LIBRARIES "")
+endif()
 message(STATUS "Found libuuid: ${LIBUUID_LIBRARIES} and ${LIBUUID_HEADERS}")
 
 # Dependency platform specifics
