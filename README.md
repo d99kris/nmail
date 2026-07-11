@@ -138,7 +138,7 @@ verify it against `checksums.txt`, and extract it:
 
     tar xzf nmail-<version>-<target>.tar.gz
     cd nmail-<version>-<target>
-    cp bin/nmail bin/oauth2nmail bin/html2nmail ~/.local/bin/
+    cp bin/nmail ~/.local/bin/
     cp share/man/man1/nmail.1 ~/.local/share/man/man1/
 
 On glibc-based distributions the `glibc` build is recommended; the fully static
@@ -150,10 +150,12 @@ such step).
 
 Optional Helper Dependencies
 ----------------------------
-Two optional helper scripts ship alongside the binary but rely on interpreters
-that are **not** bundled: `oauth2nmail` needs `python3` (only for OAuth2 Gmail /
-Outlook login) and `html2nmail` needs `w3m` (only for rich HTML-email
-rendering). Core IMAP mail with password authentication works without either.
+nmail bundles two helper scripts, `oauth2nmail` and `html2nmail`, inside the
+binary and extracts them at runtime, so nothing extra needs to be installed.
+They do rely on interpreters/tools that are **not** bundled: `oauth2nmail` needs
+`python3` (only for OAuth2 Gmail / Outlook login) and `html2nmail` needs `w3m`
+(or `pandoc`, `lynx` or `elinks`; only for rich HTML-email rendering). Core IMAP
+mail with password authentication works without any of them.
 
 
 Install using Package Manager
@@ -489,9 +491,10 @@ on macOS and `xdg-open >/dev/null 2>&1` on Linux.
 ### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
-If not specified, nmail uses a helper script `html2nmail` which in turn uses
+If not specified, nmail uses its bundled [html2nmail](/src/html2nmail) helper
+script (extracted to a temporary location at runtime), which in turn uses
 `pandoc` (for html without tables), `w3m`, `lynx` or `elinks` if available
-on the system (in that order). The exact command used is one of:
+on the system (in that order). The exact command used by the helper is one of:
 - `pandoc -f html -t plain+literate_haskell --wrap=preserve`
 - `w3m -T text/html -I utf-8 -dump`
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump`
@@ -499,7 +502,9 @@ on the system (in that order). The exact command used is one of:
 
 Note that while pandoc generally produces a better text-equivalent to an
 html email, it is also slower than the other tools. For usage on a lower
-spec'ed system, consider using any of the other conversion utilities instead.
+spec'ed system, consider using any of the other conversion utilities instead,
+e.g. `html_to_text_cmd=w3m -T text/html -I utf-8 -dump`. The command receives
+the HTML file path as its final argument.
 
 ### html_viewer_cmd
 

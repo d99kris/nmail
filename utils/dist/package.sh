@@ -8,10 +8,9 @@
 #
 #   dist/nmail-<version>-<target>.tar.gz   (top dir: nmail-<version>-<target>/)
 #
-# The tarball carries the whole staged tree: bin/nmail plus the optional
-# helper scripts bin/oauth2nmail (python3, OAuth2 login) and bin/html2nmail
-# (w3m, HTML-email rendering), share/man, and — once Phase 8 lands the CMake
-# install rule — LICENSE + THIRD_PARTY_LICENSES.
+# The tarball carries the whole staged tree: bin/nmail (the oauth2nmail and
+# html2nmail helper scripts are bundled inside the binary, extracted at
+# runtime), share/man, and LICENSE + THIRD_PARTY_LICENSES.
 #
 # With NMAIL_DIST_BARE=1 it additionally emits (not published by default —
 # the tarball is the complete/recommended artifact):
@@ -19,8 +18,8 @@
 #   dist/nmail-<version>-<target>          (the bare stripped bin/nmail)
 #
 # The bare binary is a lower-friction, drop-into-a-bin-dir convenience: it
-# carries no LICENSE, man page, or helper scripts. Every target's binary is
-# full-featured (the musl build has no feature caveat).
+# carries no LICENSE or man page. Every target's binary is full-featured
+# (the musl build has no feature caveat, and bundles the helper scripts).
 #
 # Alongside the artifacts it writes one aggregate checksum file covering
 # everything packaged in the run (rewritten each run, `sha256sum -c` format

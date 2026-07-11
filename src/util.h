@@ -143,6 +143,8 @@ public:
   static void CleanupPreviewTempDir();
   static std::string GetTempFilename(const std::string& p_Suffix);
   static std::string GetTempDirectory();
+  static std::string ExtractEmbeddedScript(const std::string& p_Name,
+                                           const unsigned char* p_Data, size_t p_Size);
   static void DeleteFile(const std::string& p_Path);
   static time_t MailtimeToTimet(struct mailimf_date_time* p_Dt);
   static void MailimapTimeToMailimfTime(mailimap_date_time* p_Src, mailimf_date_time* p_Dst);

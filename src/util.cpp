@@ -50,6 +50,7 @@
 
 #include "apathy/path.hpp"
 
+#include "html2nmailscript.h"
 #include "loghelp.h"
 #include "ui.h"
 
@@ -341,6 +342,17 @@ std::string Util::GetTempDirectory()
   return name;
 }
 
+std::string Util::ExtractEmbeddedScript(const std::string& p_Name,
+                                        const unsigned char* p_Data, size_t p_Size)
+{
+  // Write the embedded helper script to the (transient) temp dir and return its
+  // path. Invoked via its interpreter (python3/bash <path>), so no exec bit is
+  // needed. Re-extracted on each use as the temp dir is managed by nmail.
+  const std::string scriptPath = GetTempDir() + p_Name;
+  WriteFile(scriptPath, std::string(reinterpret_cast<const char*>(p_Data), p_Size));
+  return scriptPath;
+}
+
 void Util::DeleteFile(const std::string& p_Path)
 {
   unlink(p_Path.c_str());
@@ -405,33 +417,19 @@ std::string Util::GetDefaultHtmlToTextConvertCmd()
   std::string result;
   const std::string& commandOutPath = Util::GetTempFilename(".txt");
   const std::string& command =
-    std::string("which html2nmail pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
+    std::string("which pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
   if (Util::System(command) == 0)
   {
     std::string output = Util::ReadFile(commandOutPath);
     output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
     if (!output.empty())
     {
-      if (output.find("/html2nmail") != std::string::npos)
-      {
-        result = "html2nmail";
-      }
-      else if (output.find("/pandoc") != std::string::npos)
-      {
-        result = "pandoc -f html -t plain+literate_haskell --wrap=preserve";
-      }
-      else if (output.find("/w3m") != std::string::npos)
-      {
-        result = "w3m -T text/html -I utf-8 -dump";
-      }
-      else if (output.find("/lynx") != std::string::npos)
-      {
-        result = "lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump";
-      }
-      else if (output.find("/elinks") != std::string::npos)
-      {
-        result = "elinks -dump-charset utf-8 -dump";
-      }
+      // A supported converter is available; use the bundled html2nmail helper,
+      // which dispatches to pandoc/w3m/lynx/elinks per-message (pandoc only for
+      // html without tables).
+      const std::string scriptPath =
+        ExtractEmbeddedScript("html2nmail", Html2nmailScript, sizeof(Html2nmailScript));
+      result = "bash '" + scriptPath + "'";
     }
   }
 

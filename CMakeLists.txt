@@ -48,8 +48,38 @@ endif()
 option(HAS_COREDUMP "Core Dump" ON)
 message(STATUS "Core Dump: ${HAS_COREDUMP}")
 
+# Embedded helper scripts - bundled in the executable and extracted to the temp
+# dir at runtime, so no separate helper scripts need to be installed.
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(OAUTH2NMAIL_HEADER "${GENERATED_DIR}/oauth2nmailscript.h")
+set(HTML2NMAIL_HEADER "${GENERATED_DIR}/html2nmailscript.h")
+add_custom_command(
+  OUTPUT "${OAUTH2NMAIL_HEADER}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/src/oauth2nmail
+          -DOUT_FILE=${OAUTH2NMAIL_HEADER}
+          -DVAR_NAME=Oauth2nmailScript
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedfile.cmake
+  DEPENDS src/oauth2nmail utils/embedfile.cmake
+  COMMENT "Embedding oauth2nmail script"
+  VERBATIM
+)
+add_custom_command(
+  OUTPUT "${HTML2NMAIL_HEADER}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/src/html2nmail
+          -DOUT_FILE=${HTML2NMAIL_HEADER}
+          -DVAR_NAME=Html2nmailScript
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedfile.cmake
+  DEPENDS src/html2nmail utils/embedfile.cmake
+  COMMENT "Embedding html2nmail script"
+  VERBATIM
+)
+
 # Application
 add_executable(nmail
+  ${OAUTH2NMAIL_HEADER}
+  ${HTML2NMAIL_HEADER}
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
   ext/cyrus-imap/lib/imapurl.c
@@ -317,6 +347,7 @@ target_include_directories(nmail PRIVATE
                            ${LIBETPAN_INCLUDE_DIR} ${XAPIAN_INCLUDE_DIR} ${MAGIC_HEADERS}
                            ${CYRUS_SASL_INCLUDE_DIR} ${CURSES_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}
                            ${LIBUUID_HEADERS}
+                           "${GENERATED_DIR}"
                            "ext/cereal/include" "ext/cyrus-imap/lib" "ext/sqlite_modern_cpp/hdr"
                            "ext/utfcpp/source")
 
@@ -356,18 +387,10 @@ if(HAS_STATIC_EXTLIBS)
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION share/doc/nmail)
 endif()
 
-# Utils
-configure_file(src/oauth2nmail ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail COPYONLY)
-configure_file(src/html2nmail ${CMAKE_CURRENT_BINARY_DIR}/html2nmail COPYONLY)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail DESTINATION bin)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/html2nmail DESTINATION bin)
-
 # Uninstall
 add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/man/man1/nmail.1"
-  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/oauth2nmail"
-  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/html2nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/doc/nmail/THIRD_PARTY_LICENSES"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/doc/nmail/LICENSE"
   COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_INSTALL_PREFIX}/share/doc/nmail"

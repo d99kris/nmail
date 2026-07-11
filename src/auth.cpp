@@ -18,6 +18,7 @@
 #include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
+#include "oauth2nmailscript.h"
 #include "util.h"
 
 std::mutex Auth::m_Mutex;
@@ -343,7 +344,11 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   static const std::string clientId = GetClientId();
   static const std::string clientSecret = GetClientSecret();
   static const std::string tokenStore = GetTokenStoreTempPath();
-  static const std::string scriptPath = Util::DirName(Util::GetSelfPath()) + "/oauth2nmail";
+
+  // Use the bundled oauth2nmail helper, extracted to the temp dir and invoked
+  // via python3 (no exec bit needed, portable across Linux/macOS/Termux).
+  const std::string scriptPath =
+    Util::ExtractEmbeddedScript("oauth2nmail", Oauth2nmailScript, sizeof(Oauth2nmailScript));
 
   setenv("OAUTH2_TYPE", type.c_str(), 1);
   setenv("OAUTH2_CLIENT_ID", clientId.c_str(), 1);
@@ -352,7 +357,8 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
 
   std::string outPath = Util::GetTempFilename(".txt");
   std::string command =
-    scriptPath + " " + ((p_AuthAction == Generate) ? "-g" : "-r") + " > " + outPath + " 2>&1";
+    "python3 '" + scriptPath + "' " + ((p_AuthAction == Generate) ? "-g" : "-r") +
+    " > " + outPath + " 2>&1";
 
   struct timeval actionStart;
   gettimeofday(&actionStart, NULL);

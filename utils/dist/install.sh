@@ -20,12 +20,13 @@
 # On glibc Linux the glibc build is selected; on musl Linux the fully static
 # musl build; on macOS the arm64 build. Every target's binary is full-featured
 # (the musl build has no feature caveat). The full tarball is fetched so the
-# man page and helper scripts (oauth2nmail, html2nmail) come along.
+# man page comes along.
 #
-# The two helper scripts have external interpreter dependencies that are NOT
-# bundled: oauth2nmail needs python3 (only for OAuth2 Gmail/Outlook login) and
-# html2nmail needs w3m (only for rich HTML-email rendering). Core IMAP mail
-# with password authentication works with neither.
+# nmail bundles two helper scripts (oauth2nmail, html2nmail) inside the binary,
+# extracting them at runtime; they still rely on external interpreters/tools
+# that are NOT bundled: python3 (only for OAuth2 Gmail/Outlook login) and w3m
+# (only for rich HTML-email rendering). Core IMAP mail with password
+# authentication needs neither.
 #
 # nmail is distributed under the MIT license, see LICENSE for details.
 
@@ -213,16 +214,8 @@ main() {
   run_priv cp "${srcdir}/bin/nmail" "${bindir}/nmail"
   run_priv chmod 0755 "${bindir}/nmail"
 
-  # Optional helper scripts (ship in bin/ alongside nmail). They carry external
-  # interpreter deps that are not bundled: oauth2nmail -> python3 (OAuth2),
-  # html2nmail -> w3m (HTML rendering). Install whichever the tarball provides.
-  local helper
-  for helper in oauth2nmail html2nmail; do
-    if [[ -f "${srcdir}/bin/${helper}" ]]; then
-      run_priv cp "${srcdir}/bin/${helper}" "${bindir}/${helper}"
-      run_priv chmod 0755 "${bindir}/${helper}"
-    fi
-  done
+  # The oauth2nmail and html2nmail helper scripts are bundled inside the nmail
+  # binary (extracted at runtime), so there is nothing to install separately.
 
   if [[ -f "${srcdir}/share/man/man1/nmail.1" ]]; then
     run_priv cp "${srcdir}/share/man/man1/nmail.1" "${mandir}/man1/nmail.1"
