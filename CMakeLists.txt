@@ -334,6 +334,28 @@ endif()
 # Manual
 install(FILES src/nmail.1 DESTINATION share/man/man1)
 
+# Third-party license attribution
+#
+# Static binary distributions (HAS_STATIC_EXTLIBS, the tarballs produced by
+# utils/dist/build-*.sh) embed third-party libraries and vendored ext/ sources
+# directly into the nmail binary. Install their combined license notices next
+# to nmail's own LICENSE under share/doc/nmail so the distributed binary carries
+# the required attribution; package.sh also surfaces both files at the tarball
+# top level. A regular, dynamically linked from-source build redistributes none
+# of these -- the ext/ sources keep their own licenses in the source tree -- and
+# installs neither file. THIRD_PARTY_LICENSES.static is hand-maintained; keep it
+# in sync with the versions pinned in utils/dist/Dockerfile.* and
+# utils/dist/build-deps-macos.sh.
+if(HAS_STATIC_EXTLIBS)
+  set(TPL_STATIC "${CMAKE_CURRENT_SOURCE_DIR}/utils/dist/THIRD_PARTY_LICENSES.static")
+  if(NOT EXISTS "${TPL_STATIC}")
+    message(FATAL_ERROR "Missing third-party license file: ${TPL_STATIC}")
+  endif()
+  install(FILES "${TPL_STATIC}" DESTINATION share/doc/nmail
+          RENAME THIRD_PARTY_LICENSES)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION share/doc/nmail)
+endif()
+
 # Utils
 configure_file(src/oauth2nmail ${CMAKE_CURRENT_BINARY_DIR}/oauth2nmail COPYONLY)
 configure_file(src/html2nmail ${CMAKE_CURRENT_BINARY_DIR}/html2nmail COPYONLY)
@@ -346,4 +368,7 @@ add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/man/man1/nmail.1"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/oauth2nmail"
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/bin/html2nmail"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/doc/nmail/THIRD_PARTY_LICENSES"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/share/doc/nmail/LICENSE"
+  COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_INSTALL_PREFIX}/share/doc/nmail"
 )
