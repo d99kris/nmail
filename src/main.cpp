@@ -582,7 +582,11 @@ static void ShowVersion()
     "\n"
     "Copyright (c) 2019-2026 Kristofer Berggren\n"
     "\n"
-    "nmail is distributed under the MIT license.\n"
+#if defined(NMAIL_BUILD_STATIC_EXTLIBS)
+    "Combined distribution subject to GNU GPL v2 license.\n"
+#else
+    "Combined distribution subject to MIT license.\n"
+#endif
     "\n"
     "Written by Kristofer Berggren.\n";
 }

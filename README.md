@@ -1389,6 +1389,19 @@ following third-party libraries:
 - [utfcpp](https://github.com/nemtrif/utfcpp) -
   Copyright 2006 Nemanja Trifunovic - [Boost License](/ext/utfcpp/LICENSE)
 
+Binary distributions of nmail bundle these vendored sources, and for static
+builds their statically linked system dependencies (OpenSSL, ncurses, zlib,
+Xapian, SQLite, libmagic, ...) directly in the executable. Such distributions
+therefore carry the full license texts in a combined `THIRD_PARTY_LICENSES` file
+installed to `share/doc/nmail/` (and surfaced at the archive top level for
+visibility). The combined-work license is MIT for a regular, dynamically linked
+build, and GNU GPL v2 for the static binary distributions, which statically link
+the GPL-2.0-or-later Xapian library into the executable; `nmail --version`
+reports the same rule, and its preamble states the combined-work license. That
+notice is `utils/dist/THIRD_PARTY_LICENSES.static` (installed verbatim as
+`THIRD_PARTY_LICENSES`), maintained by hand; keep it in sync with the dependency
+versions pinned in `utils/dist/Dockerfile.*` and `utils/dist/build-deps-macos.sh`.
+
 Code Formatting
 ---------------
 Uncrustify is used to maintain consistent source code formatting, example:

@@ -1,20 +1,33 @@
 ================================================================================
-nmail third-party licenses
+nmail -- Third-party license notices
 ================================================================================
 
-nmail is Copyright (c) 2019 Kristofer Berggren and is distributed under the MIT
-license; see the accompanying LICENSE file for its terms.
+This distribution of nmail is a statically linked binary (the tarballs produced
+by utils/dist/build-*.sh, configured with HAS_STATIC_EXTLIBS). It statically
+links the Xapian search library (https://xapian.org/), which is licensed under
+the GNU General Public License, version 2 or (at your option) any later version.
+This binary is therefore a combined work distributed under and subject to the
+GNU GPL v2. nmail's own source code is authored under the MIT license (see the
+accompanying LICENSE file), but the terms below govern this combined
+distribution.
+
+Complete corresponding source code for this binary -- nmail itself, its bundled
+ext/ sources, and the build scripts -- is available from the nmail repository at
+https://github.com/d99kris/nmail (the exact revision is reported by
+"nmail --version"). This notice accompanies the binary as the offer of source
+required by the GNU GPL v2. The full text of the GNU General Public License,
+version 2, is reproduced below as part of the Xapian notice in Part 1.
+
+A regular, dynamically linked build from source links the system Xapian shared
+library rather than embedding it, redistributes none of the components below,
+and does not install this file; in that case nmail's own source remains under
+the MIT license, the same rule "nmail --version" reports.
 
 This file collects the license notices for the third-party components embedded
-in nmail's statically linked binary distributions -- the tarballs produced by
-utils/dist/build-*.sh, configured with HAS_STATIC_EXTLIBS. Those builds compile
-the libraries and vendored sources listed below directly into the nmail
-executable, and this notice satisfies their redistribution requirements. A
-regular, dynamically linked build from source redistributes none of the system
-libraries, and every vendored source keeps its own license under ext/, so a
-from-source build does not install this file.
-
-The notices are in two parts:
+in nmail's statically linked binary distributions. Those builds compile the
+libraries and vendored sources listed below directly into the nmail executable,
+and this notice satisfies their redistribution requirements. The notices are in
+two parts:
 
   1. Statically linked system libraries -- external C/C++ libraries built from
      source and linked into the binary. Versions match utils/dist/Dockerfile.*
@@ -511,7 +524,9 @@ https://xapian.org/
 --------------------------------------------------------------------------------
 
 Xapian is distributed under the GNU General Public License, version 2 or (at
-your option) any later version. The text of version 2 of the license follows.
+your option) any later version. Its static linking is what makes this nmail
+binary a combined work under the GNU GPL v2 (see the combined-work notice at the
+top of this file). The text of version 2 of the license follows.
 
 
                     GNU GENERAL PUBLIC LICENSE
