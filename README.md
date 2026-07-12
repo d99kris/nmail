@@ -142,6 +142,20 @@ There are two AUR packages available -
     guix install nmail
 
 
+Install Pre-built Binary
+========================
+Experimental support for Linux (glibc >= 2.28 or musl) x86_64 and arm64, as
+well as macOS arm64.
+
+Install to `~/.local/{bin,share}` (set NMAIL_PREFIX for custom prefix):
+
+    curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh | bash
+
+Uninstall:
+
+    curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/uninstall.sh | bash
+
+
 Build from Source
 =================
 **Get Source**
