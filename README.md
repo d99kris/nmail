@@ -12,22 +12,22 @@ similar to Alpine.
 
 Features
 --------
-- Support for IMAP and SMTP protocols
-- Local cache using sqlite (optionally AES256-encrypted)
-- Multi-threaded (email fetch and send done in background)
-- Address book auto-generated based on email messages
-- Viewing HTML emails (converted to text in terminal, or in external browser)
-- Opening/viewing attachments in external program
-- Simple setup wizard for Gmail, iCloud and Outlook/Hotmail
-- UI similar to Alpine
-- Compose message using external editor ($EDITOR)
-- View message using external viewer ($PAGER)
-- Saving and continuing draft messages
-- Compose HTML emails using Markdown (see `markdown_html_compose` option)
-- Email search
-- Compose emails while offline
-- Color customization
-- Signature
+- Send and receive email over IMAP and SMTP
+- View HTML emails as text or in external browser
+- Compose HTML emails using Markdown formatting
+- Open and view attachments in external program
+- Search emails in local cache and on server
+- Save and continue editing draft messages
+- Compose and queue emails for sending while offline
+- Setup wizard for Gmail, iCloud and Outlook/Hotmail
+- Auto-generated address book from email messages
+- Local cache using SQLite (optionally encrypted)
+- Multi-threaded email fetch and send in background
+- Compose using built-in or external editor
+- View using built-in or external viewer
+- Append customizable signature to emails
+- Customizable colors and key bindings
+- User interface similar to Alpine
 
 Not Supported / Out of Scope
 ----------------------------
