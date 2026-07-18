@@ -147,13 +147,20 @@ Install Pre-built Binary
 Experimental support for Linux (glibc >= 2.28 or musl) x86_64 and arm64, as
 well as macOS arm64.
 
-Install to `~/.local/{bin,share}` (set NMAIL_PREFIX for custom prefix):
+**Install**
 
     curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh | bash
 
-Uninstall:
+**Uninstall**
 
     curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/uninstall.sh | bash
+
+**Install Location**
+
+Installs to `~/.local/{bin,share}`. Override via the `NMAIL_PREFIX` environment
+variable, e.g.:
+
+    export NMAIL_PREFIX=/usr/local
 
 
 Build from Source
@@ -174,6 +181,14 @@ the `make.sh` script provided.
 **Build / Install**
 
     ./make.sh build && ./make.sh install
+
+**Install Location**
+
+Installs to a system prefix such as `/usr/local`. Override via the
+`NMAIL_PREFIX` environment variable (a user-writable prefix installs without
+sudo/doas), e.g.:
+
+    export NMAIL_PREFIX=~/.local
 
 Manually
 --------
