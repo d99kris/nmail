@@ -582,11 +582,9 @@ static void ShowVersion()
     "\n"
     "Copyright (c) 2019-2026 Kristofer Berggren\n"
     "\n"
-#if defined(NMAIL_BUILD_STATIC_EXTLIBS)
-    "Combined distribution subject to GNU GPL v2 license.\n"
-#else
-    "Combined distribution subject to MIT license.\n"
-#endif
+    "Source is distributed under the MIT license.\n"
+    "\n"
+    "Binaries are distributed under the GNU GPL v2 license.\n"
     "\n"
     "Written by Kristofer Berggren.\n";
 }
