@@ -188,6 +188,8 @@ public:
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, int p_Len);
   static std::wstring TrimPadWString(const std::wstring& p_Str, int p_Len);
+  static std::string RemoveInvisibleChars(const std::string& p_Str);
+  static std::wstring RemoveInvisibleChars(const std::wstring& p_WStr);
   static int WStringWidth(const std::wstring& p_WStr);
 
   template<typename T>

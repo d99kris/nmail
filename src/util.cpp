@@ -11,6 +11,7 @@
 #include <cerrno>
 #include <csignal>
 #include <cstring>
+#include <cwchar>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -797,21 +798,51 @@ std::string Util::TrimPadString(const std::string& p_Str, int p_Len)
 std::wstring Util::TrimPadWString(const std::wstring& p_Str, int p_Len)
 {
   p_Len = std::max(p_Len, 0);
-  std::wstring str = p_Str;
-  if (WStringWidth(str) > p_Len)
+
+  // trim and pad based on display width, which may differ from character count for
+  // strings containing zero-width or double-width characters
+  std::wstring str;
+  int width = 0;
+  for (wchar_t wch : p_Str)
   {
-    str = str.substr(0, p_Len);
-    int subLen = p_Len;
-    while (WStringWidth(str) > p_Len)
-    {
-      str = str.substr(0, --subLen);
-    }
+    const int wchWidth = std::max(wcwidth(wch), 0);
+    if ((width + wchWidth) > p_Len) break;
+
+    str += wch;
+    width += wchWidth;
   }
-  else if (WStringWidth(str) < p_Len)
+
+  if (width < p_Len)
   {
-    str = str + std::wstring(p_Len - WStringWidth(str), ' ');
+    str = str + std::wstring(p_Len - width, ' ');
   }
+
   return str;
+}
+
+std::string Util::RemoveInvisibleChars(const std::string& p_Str)
+{
+  return ToString(RemoveInvisibleChars(ToWString(p_Str)));
+}
+
+std::wstring Util::RemoveInvisibleChars(const std::wstring& p_WStr)
+{
+  // remove format characters which have no visible representation. terminals disagree
+  // whether to allocate a cell for them (apple terminal does, while wcwidth reports
+  // zero width), which misaligns any text following them on the same row.
+  static const auto isInvisible = [](wchar_t p_WCh)
+  {
+    return ((p_WCh == 0x00ad) || // soft hyphen
+            ((p_WCh >= 0x200b) && (p_WCh <= 0x200f)) || // zero-width space .. right-to-left mark
+            ((p_WCh >= 0x202a) && (p_WCh <= 0x202e)) || // bidi embeddings and overrides
+            ((p_WCh >= 0x2060) && (p_WCh <= 0x2064)) || // word joiner and invisible operators
+            ((p_WCh >= 0x2066) && (p_WCh <= 0x2069)) || // bidi isolates
+            (p_WCh == 0xfeff)); // zero-width no-break space
+  };
+
+  std::wstring wstr = p_WStr;
+  wstr.erase(std::remove_if(wstr.begin(), wstr.end(), isInvisible), wstr.end());
+  return wstr;
 }
 
 int Util::WStringWidth(const std::wstring& p_WStr)

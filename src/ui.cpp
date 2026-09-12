@@ -1225,14 +1225,14 @@ void Ui::DrawMessageList()
       {
         Header& header = headers.at(uid);
         shortDate = header.GetDateOrTime(currentDate);
-        subject = header.GetSubject();
+        subject = Util::RemoveInvisibleChars(header.GetSubject());
         if (m_CurrentFolder == m_SentFolder)
         {
-          shortFrom = header.GetShortTo();
+          shortFrom = Util::RemoveInvisibleChars(header.GetShortTo());
         }
         else
         {
-          shortFrom = header.GetShortFrom();
+          shortFrom = Util::RemoveInvisibleChars(header.GetShortFrom());
         }
 
         if (!m_AttachmentIndicator.empty())
@@ -1267,7 +1267,7 @@ void Ui::DrawMessageList()
       }
 
       std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), std::min((int)wheader.size(), m_ScreenWidth));
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), (int)wheader.size());
 
       if (isSelected)
       {
@@ -1463,8 +1463,8 @@ void Ui::DrawMessageListSearch()
       {
         Header& header = headers[i];
         shortDate = header.GetDateOrTime(currentDate);
-        shortFrom = header.GetShortFrom();
-        subject = header.GetSubject();
+        shortFrom = Util::RemoveInvisibleChars(header.GetShortFrom());
+        subject = Util::RemoveInvisibleChars(header.GetSubject());
 
         if (!m_AttachmentIndicator.empty())
         {
@@ -1504,7 +1504,7 @@ void Ui::DrawMessageListSearch()
       }
 
       std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
-      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), std::min((int)wheader.size(), m_ScreenWidth));
+      mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), (int)wheader.size());
 
       if (isSelected)
       {
