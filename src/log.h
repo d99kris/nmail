@@ -7,6 +7,10 @@
 
 #pragma once
 
+#if defined(__OpenBSD__)
+#include <cstdarg>
+#endif
+
 #include <mutex>
 #include <string>
 

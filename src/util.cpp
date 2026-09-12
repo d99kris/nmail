@@ -27,7 +27,13 @@
 #include <netdb.h>
 #include <termios.h>
 #include <unistd.h>
+
+#if defined(__OpenBSD__)
+#include <string>
+#include <sys/glob.h>
+#else
 #include <wordexp.h>
+#endif
 
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -141,6 +147,23 @@ std::string Util::ExpandPath(const std::string& p_Path)
 
   if ((p_Path.at(0) != '~') && ((p_Path.at(0) != '$'))) return p_Path;
 
+#if defined(__OpenBSD__)
+  glob_t gl;
+  std::string rv;
+  if ((glob(p_Path.c_str(), GLOB_TILDE | GLOB_NOCHECK, nullptr, &gl) == 0) && (gl.gl_pathc > 0))
+  {
+    rv = std::string(gl.gl_pathv[0]);
+    for (size_t i = 1; i < gl.gl_pathc; ++i)
+    {
+      rv += " " + std::string(gl.gl_pathv[i]);
+    }
+    globfree(&gl);
+  }
+  else
+  {
+    rv = p_Path;
+  }
+#else
   wordexp_t exp;
   std::string rv;
   if ((wordexp(p_Path.c_str(), &exp, WRDE_NOCMD) == 0) && (exp.we_wordc > 0))
@@ -156,7 +179,7 @@ std::string Util::ExpandPath(const std::string& p_Path)
   {
     rv = p_Path;
   }
-
+#endif
   return rv;
 }
 

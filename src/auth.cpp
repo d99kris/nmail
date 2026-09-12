@@ -13,6 +13,10 @@
 
 #include <sys/time.h>
 
+#if defined(__OpenBSD__)
+#include <sys/wait.h>
+#endif
+
 #include "cacheutil.h"
 #include "config.h"
 #include "crypto.h"
