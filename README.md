@@ -130,9 +130,10 @@ Linux
 -----
 **Arch**
 
-There are two AUR packages available -
-[nmail](https://aur.archlinux.org/packages/nmail) (stable release) and
-[nmail-git](https://aur.archlinux.org/packages/nmail-git) (latest git).
+There are three AUR packages available -
+[nmail](https://aur.archlinux.org/packages/nmail) (stable release),
+[nmail-git](https://aur.archlinux.org/packages/nmail-git) (latest git) and
+[nmail-bin](https://aur.archlinux.org/packages/nmail-bin) (prebuilt binary).
 
     git clone https://aur.archlinux.org/nmail.git && cd nmail
     makepkg -srciA
