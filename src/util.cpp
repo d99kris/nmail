@@ -28,9 +28,11 @@
 #include <termios.h>
 #include <unistd.h>
 
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/utsname.h>
-#else
+#endif
+
+#if !defined(__OpenBSD__)
 #include <wordexp.h>
 #endif
 
@@ -2441,6 +2443,9 @@ std::string Util::GetOsArch(bool p_Verbose)
 #elif defined(__OpenBSD__)
     struct utsname uts;
     return (uname(&uts) == 0) ? (std::string(uts.sysname) + " " + uts.release) : std::string("OpenBSD");
+#elif defined(__FreeBSD__)
+    struct utsname uts;
+    return (uname(&uts) == 0) ? (std::string(uts.sysname) + " " + uts.release) : std::string("FreeBSD");
 #else
     return "Unknown";
 #endif

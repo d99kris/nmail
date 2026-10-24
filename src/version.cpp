@@ -9,7 +9,7 @@
 
 #include "buildinfo.h"
 
-#define NMAIL_VERSION "5.17.2"
+#define NMAIL_VERSION "5.17.3"
 
 std::string Version::GetBuildOs()
 {
@@ -21,6 +21,8 @@ std::string Version::GetBuildOs()
   return "Linux";
 #elif defined(__OpenBSD__)
   return "OpenBSD";
+#elif defined(__FreeBSD__)
+  return "FreeBSD";
 #elif defined(BSD)
   return "BSD";
 #else

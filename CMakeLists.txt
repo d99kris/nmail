@@ -348,6 +348,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
 else()
   set(CURSES_NEED_NCURSES TRUE)
   set(CURSES_NEED_WIDE TRUE)
+  if (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    # FreeBSD base ncurses is wide-char but has no ncursesw/ header dir, which
+    # FindCurses requires with CURSES_NEED_WIDE, so point it at the base headers.
+    # Its ncurses.h only declares the wide-char API with _XOPEN_SOURCE_EXTENDED.
+    find_path(CURSES_INCLUDE_PATH NAMES ncurses.h PATHS /usr/include NO_DEFAULT_PATH)
+    target_compile_definitions(nmail PRIVATE _XOPEN_SOURCE_EXTENDED)
+  endif()
   find_package(Curses REQUIRED)
   target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 endif()
@@ -438,10 +445,10 @@ if(NOT LIBUUID_HEADERS)
 endif()
 # On macOS the uuid_generate/uuid_unparse symbols live in libSystem and the
 # <uuid/uuid.h> header ships in the SDK, so no standalone libuuid is required
-# (a static deps build in particular need not ship one). On OpenBSD the BSD
-# uuid_create/uuid_to_string API lives in libc with <uuid.h>; avoid ossp-uuid
-# due to uuid_create symbol clashes with libc's and breaks Xapian.
-if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|OpenBSD")
+# (a static deps build in particular need not ship one). On OpenBSD and FreeBSD
+# the BSD uuid_create/uuid_to_string API lives in libc with <uuid.h>; avoid
+# ossp-uuid due to uuid_create symbol clashes with libc's and breaks Xapian.
+if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|OpenBSD|FreeBSD")
   message(FATAL_ERROR "ERROR: Could not find libuuid")
 endif()
 # When no standalone libuuid exists (the macOS case above), find_library leaves

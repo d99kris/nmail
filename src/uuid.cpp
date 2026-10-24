@@ -7,7 +7,7 @@
 
 #include "uuid.h"
 
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <cstdlib>
 #include <uuid.h>
 #else
@@ -16,7 +16,7 @@
 
 std::string Uuid::GenerateUuid()
 {
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
   uuid_t uuid;
   uint32_t status = 0;
   uuid_create(&uuid, &status);

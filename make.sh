@@ -120,7 +120,7 @@ if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
       export CC="clang"
       export CXX="clang++"
     fi
-  elif [[ "${OS}" == "Darwin" ]] || [[ "${OS}" == "OpenBSD" ]]; then
+  elif [[ "${OS}" == "Darwin" ]] || [[ "${OS}" == "OpenBSD" ]] || [[ "${OS}" == "FreeBSD" ]]; then
     MAKEARGS="-j$(sysctl -n hw.ncpu) ${MAKEARGS}"
   fi
 
@@ -164,6 +164,8 @@ if [[ "${DEPS}" == "1" ]]; then
     fi
   elif [ "${OS}" == "OpenBSD" ]; then
     doas pkg_add git cmake ccache xapian-core sqlite3 libiconv libmagic cyrus-sasl-- w3m-- || exiterr "deps failed (${OS}), exiting."
+  elif [ "${OS}" == "FreeBSD" ]; then
+    sudo pkg install git cmake ccache xapian-core sqlite3 libiconv cyrus-sasl w3m || exiterr "deps failed (${OS}), exiting."
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
@@ -261,7 +263,7 @@ fi
 # install
 if [[ "${INSTALL}" == "1" ]]; then
   if [[ -z ${INSTALL_CMD+x} ]]; then
-    if [[ "${OS}" == "Linux" ]]; then
+    if [[ "${OS}" == "Linux" ]] || [[ "${OS}" == "FreeBSD" ]]; then
       if [[ "${DISTRO}" != "Termux" ]]; then
         # only elevate when the install prefix is not writable by the current
         # user -- a user-writable prefix (e.g. NMAIL_PREFIX=~/.local) needs no
