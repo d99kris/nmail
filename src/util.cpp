@@ -29,8 +29,7 @@
 #include <unistd.h>
 
 #if defined(__OpenBSD__)
-#include <string>
-#include <sys/glob.h>
+#include <sys/utsname.h>
 #else
 #include <wordexp.h>
 #endif
@@ -148,21 +147,11 @@ std::string Util::ExpandPath(const std::string& p_Path)
   if ((p_Path.at(0) != '~') && ((p_Path.at(0) != '$'))) return p_Path;
 
 #if defined(__OpenBSD__)
-  glob_t gl;
-  std::string rv;
-  if ((glob(p_Path.c_str(), GLOB_TILDE | GLOB_NOCHECK, nullptr, &gl) == 0) && (gl.gl_pathc > 0))
-  {
-    rv = std::string(gl.gl_pathv[0]);
-    for (size_t i = 1; i < gl.gl_pathc; ++i)
-    {
-      rv += " " + std::string(gl.gl_pathv[i]);
-    }
-    globfree(&gl);
-  }
-  else
-  {
-    rv = p_Path;
-  }
+  // OpenBSD lacks wordexp(), so expand leading ~ manually
+  const char* home = getenv("HOME");
+  if ((p_Path.at(0) != '~') || ((p_Path.size() > 1) && (p_Path.at(1) != '/')) || (home == nullptr)) return p_Path;
+
+  std::string rv = std::string(home) + p_Path.substr(1);
 #else
   wordexp_t exp;
   std::string rv;
@@ -2449,6 +2438,9 @@ std::string Util::GetOsArch(bool p_Verbose)
     std::string name = ExtractString(str, "<key>ProductName</key>\n\t<string>", "</string>");
     std::string ver = ExtractString(str, "<key>ProductVersion</key>\n\t<string>", "</string>");
     return name + " " + ver;
+#elif defined(__OpenBSD__)
+    struct utsname uts;
+    return (uname(&uts) == 0) ? (std::string(uts.sysname) + " " + uts.release) : std::string("OpenBSD");
 #else
     return "Unknown";
 #endif

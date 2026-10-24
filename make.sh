@@ -120,7 +120,7 @@ if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
       export CC="clang"
       export CXX="clang++"
     fi
-  elif [ "${OS}" == "Darwin" ]; then
+  elif [[ "${OS}" == "Darwin" ]] || [[ "${OS}" == "OpenBSD" ]]; then
     MAKEARGS="-j$(sysctl -n hw.ncpu) ${MAKEARGS}"
   fi
 
@@ -162,6 +162,8 @@ if [[ "${DEPS}" == "1" ]]; then
     else
       exiterr "deps failed (${OS} missing brew and port), exiting."
     fi
+  elif [ "${OS}" == "OpenBSD" ]; then
+    doas pkg_add git cmake ccache xapian-core sqlite3 libiconv libmagic cyrus-sasl-- w3m-- || exiterr "deps failed (${OS}), exiting."
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi
@@ -273,6 +275,8 @@ if [[ "${INSTALL}" == "1" ]]; then
       if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
         INSTALL_CMD="sudo"
       fi
+    elif [[ "${OS}" == "OpenBSD" ]]; then
+      INSTALL_CMD="doas"
     fi
   fi
 

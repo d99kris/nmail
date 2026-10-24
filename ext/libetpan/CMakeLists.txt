@@ -14,7 +14,7 @@ include(CheckIncludeFiles)
 
 # Functions
 function(check_include_add_define header define loglevel)
-  set(CMAKE_REQUIRED_INCLUDES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})
+  set(CMAKE_REQUIRED_INCLUDES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES} ${LIBETPAN_EXTRA_INCLUDE_DIRS})
   check_include_files(${header} ${define} LANGUAGE C)
   if(${define})
     target_compile_definitions(${LIBNAME} PRIVATE ${define}=1)
@@ -270,6 +270,32 @@ add_dependencies(${LIBNAME} libetpan_headers)
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan)
 
+# Platform specifics
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  find_library(ICONV_LIBRARY iconv REQUIRED)
+  find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+  find_library(SECURITY_LIBRARY Security REQUIRED)
+
+  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}" "${COREFOUNDATION_LIBRARY}" "${SECURITY_LIBRARY}")
+  if(${HAVE_CFNETWORK})
+    find_library(CFNETWORK_LIBRARY CFNetwork REQUIRED)
+    target_link_libraries(${LIBNAME} PUBLIC "${CFNETWORK_LIBRARY}")
+  endif()
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+  find_library(ICONV_LIBRARY iconv REQUIRED)
+  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
+  find_library(ICONV_LIBRARY iconv)
+  if(ICONV_LIBRARY)
+    find_path(ICONV_INCLUDE_DIR iconv.h)
+    if(ICONV_INCLUDE_DIR)
+      target_include_directories(${LIBNAME} PRIVATE ${ICONV_INCLUDE_DIR})
+      list(APPEND LIBETPAN_EXTRA_INCLUDE_DIRS ${ICONV_INCLUDE_DIR})
+    endif()
+    target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}")
+  endif()
+endif()
+
 # Headers - Standard
 check_include_add_define("arpa/inet.h" HAVE_ARPA_INET_H WARNING)
 check_include_add_define("ctype.h" HAVE_CTYPE_H WARNING)
@@ -375,22 +401,6 @@ target_compile_options(${LIBNAME} PRIVATE -w -Wall $<$<CONFIG:Debug>:-DDEBUG>)
 
 # Linking
 target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${ZLIB_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${CYRUS_SASL_LIBRARY})
-
-# Linking platform specifics
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  find_library(ICONV_LIBRARY iconv REQUIRED)
-  find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
-  find_library(SECURITY_LIBRARY Security REQUIRED)
-
-  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}" "${COREFOUNDATION_LIBRARY}" "${SECURITY_LIBRARY}")
-  if(${HAVE_CFNETWORK})
-    find_library(CFNETWORK_LIBRARY CFNetwork REQUIRED)
-    target_link_libraries(${LIBNAME} PUBLIC "${CFNETWORK_LIBRARY}")
-  endif()
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
-  find_library(ICONV_LIBRARY iconv REQUIRED)
-  target_link_libraries(${LIBNAME} PUBLIC "${ICONV_LIBRARY}")
-endif()
 
 # Install
 if(LIBETPAN_NOINSTALL)

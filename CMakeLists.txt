@@ -221,6 +221,8 @@ add_executable(nmail
   src/uikeyinput.h
   src/util.cpp
   src/util.h
+  src/uuid.cpp
+  src/uuid.h
   src/version.cpp
   src/version.h
 )
@@ -340,17 +342,15 @@ if(TARGET_TRIPLE MATCHES "musl")
 endif()
 
 # Dependency ncurses
-set(CURSES_NEED_NCURSES TRUE)
-set(CURSES_NEED_WIDE TRUE)
-find_package(Curses REQUIRED)
-if(HAS_STATIC_EXTLIBS)
-  # static ncursesw does not bundle terminfo routines on some distros
-  find_library(TINFO_LIBRARY NAMES tinfow tinfo)
-  if(TINFO_LIBRARY)
-    list(APPEND CURSES_LIBRARIES ${TINFO_LIBRARY})
-  endif()
+if (${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
+  target_compile_definitions(nmail PRIVATE _XOPEN_SOURCE_EXTENDED)
+  target_link_libraries(nmail PUBLIC ncurses)
+else()
+  set(CURSES_NEED_NCURSES TRUE)
+  set(CURSES_NEED_WIDE TRUE)
+  find_package(Curses REQUIRED)
+  target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 endif()
-target_compile_options(nmail PUBLIC ${NCURSES_CFLAGS})
 
 # Dependency openssl
 find_package(OpenSSL REQUIRED)
@@ -406,6 +406,10 @@ find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SAS
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)
 if(FOUND_EXECINFO)
   target_compile_definitions(nmail PRIVATE HAVE_EXECINFO_H=1)
+  find_library(EXECINFO_LIBRARY execinfo)
+  if(EXECINFO_LIBRARY)
+    target_link_libraries(nmail PUBLIC ${EXECINFO_LIBRARY})
+  endif()
 endif()
 
 # Dependency magic
@@ -434,8 +438,10 @@ if(NOT LIBUUID_HEADERS)
 endif()
 # On macOS the uuid_generate/uuid_unparse symbols live in libSystem and the
 # <uuid/uuid.h> header ships in the SDK, so no standalone libuuid is required
-# (a static deps build in particular need not ship one); elsewhere it is.
-if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+# (a static deps build in particular need not ship one). On OpenBSD the BSD
+# uuid_create/uuid_to_string API lives in libc with <uuid.h>; avoid ossp-uuid
+# due to uuid_create symbol clashes with libc's and breaks Xapian.
+if(NOT LIBUUID_LIBRARIES AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|OpenBSD")
   message(FATAL_ERROR "ERROR: Could not find libuuid")
 endif()
 # When no standalone libuuid exists (the macOS case above), find_library leaves

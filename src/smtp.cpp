@@ -18,12 +18,11 @@
 #include <libetpan/mailimf.h>
 #include <libetpan/mailmime.h>
 #include <libetpan/mailsmtp.h>
-#include <uuid/uuid.h>
-
 #include "auth.h"
 #include "log.h"
 #include "loghelp.h"
 #include "sasl.h"
+#include "uuid.h"
 
 Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
            const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout)
@@ -768,11 +767,7 @@ std::string Smtp::RemoveBccHeader(const std::string& p_Data)
 
 std::string Smtp::GenerateMessageId() const
 {
-  uuid_t uuid;
-  char uuid_str[37];
-  uuid_generate(uuid);
-  uuid_unparse(uuid, uuid_str);
-  return std::string(uuid_str) + "@" + Util::GetDomainName(m_Host);
+  return Uuid::GenerateUuid() + "@" + Util::GetDomainName(m_Host);
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
