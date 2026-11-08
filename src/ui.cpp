@@ -73,6 +73,7 @@ void Ui::Init()
     { "show_rich_header", "0" },
     { "markdown_html_compose", "0" },
     { "markdown_view", "1" },
+    { "align_header_labels", "1" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
@@ -124,6 +125,7 @@ void Ui::Init()
   m_Plaintext = m_Config.Get("plain_text") == "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_MarkdownView = m_Config.Get("markdown_view") == "1";
+  m_AlignHeaderLabels = m_Config.Get("align_header_labels") == "1";
   m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
   m_KeyNextMsg = UiKeyConfig::GetKey("key_next_msg");
   m_KeyReplyAll = UiKeyConfig::GetKey("key_reply_all");
@@ -1702,25 +1704,25 @@ void Ui::DrawMessage()
       }
       else
       {
-        ss << "Date: " << header.GetDateTime() << "\n";
-        ss << "From: " << header.GetFrom() << "\n";
+        ss << GetHeaderLabel("Date") << header.GetDateTime() << "\n";
+        ss << GetHeaderLabel("From") << header.GetFrom() << "\n";
         if (!header.GetReplyTo().empty())
         {
-          ss << "Reply-To: " << header.GetReplyTo() << "\n";
+          ss << GetHeaderLabel("Reply-To") << header.GetReplyTo() << "\n";
         }
 
-        ss << "To: " << header.GetTo() << "\n";
+        ss << GetHeaderLabel("To") << header.GetTo() << "\n";
         if (!header.GetCc().empty())
         {
-          ss << "Cc: " << header.GetCc() << "\n";
+          ss << GetHeaderLabel("Cc") << header.GetCc() << "\n";
         }
 
         if (!header.GetBcc().empty())
         {
-          ss << "Bcc: " << header.GetBcc() << "\n";
+          ss << GetHeaderLabel("Bcc") << header.GetBcc() << "\n";
         }
 
-        ss << "Subject: " << header.GetSubject() << "\n";
+        ss << GetHeaderLabel("Subject") << header.GetSubject() << "\n";
       }
 
       if (bodyIt != bodys.end())
@@ -1738,7 +1740,7 @@ void Ui::DrawMessage()
 
         if (!attnames.empty())
         {
-          ss << "Attachments: ";
+          ss << GetHeaderLabel(m_AlignHeaderLabels ? "Attchmnt" : "Attachments");
           ss << Util::Join(attnames, ", ");
           ss << "\n";
         }
@@ -6756,8 +6758,46 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = m_RewrapQuotedLines;
   const int expandTabSize = m_TabSize; // enabled
-  wlines = Util::WordWrap(wtext, m_MaxViewLineLength, m_CurrentMessageProcessFlowed,
-                          outputFlowed, quoteWrap, expandTabSize);
+
+  // header values wrapped with hanging indent, when there is room for them
+  wlines.clear();
+  size_t bodyStart = 0;
+  const size_t headerEnd = wtext.find(L"\n\n");
+  const bool hangingIndent = m_AlignHeaderLabels && !m_ShowFullHeader && (headerEnd != std::wstring::npos) &&
+    (m_MaxViewLineLength >= (int32_t)(HEADER_VALUE_COL + HEADER_VALUE_MIN_WIDTH));
+  if (hangingIndent)
+  {
+    const std::wstring indent(HEADER_VALUE_COL, L' ');
+    const unsigned valueWidth = m_MaxViewLineLength - HEADER_VALUE_COL;
+    std::wistringstream headerss(wtext.substr(0, headerEnd));
+    std::wstring line;
+    while (std::getline(headerss, line))
+    {
+      // lines without label, if any, indented as continuation
+      const bool hasLabel = (line.size() >= HEADER_VALUE_COL) && (line.find(L':') < HEADER_VALUE_COL);
+      const std::wstring prefix = hasLabel ? line.substr(0, HEADER_VALUE_COL) : indent;
+      const std::wstring value = hasLabel ? line.substr(HEADER_VALUE_COL) : line;
+      const std::vector<std::wstring> valueLines =
+        Util::WordWrap(value, valueWidth, false, outputFlowed, false, expandTabSize);
+      if (valueLines.empty())
+      {
+        wlines.push_back(prefix);
+        continue;
+      }
+
+      for (size_t i = 0; i < valueLines.size(); ++i)
+      {
+        wlines.push_back(((i == 0) ? prefix : indent) + valueLines.at(i));
+      }
+    }
+
+    bodyStart = headerEnd + 1; // keep blank line separating header and body
+  }
+
+  const std::vector<std::wstring> bodyLines =
+    Util::WordWrap(wtext.substr(bodyStart), m_MaxViewLineLength, m_CurrentMessageProcessFlowed,
+                   outputFlowed, quoteWrap, expandTabSize);
+  wlines.insert(wlines.end(), bodyLines.begin(), bodyLines.end());
   wlines.push_back(L"");
 
   size_t wlinesSize = wlines.size();
@@ -6795,6 +6835,15 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   }
 
   return wlines;
+}
+
+// header label in compose style, e.g. "To      : ", or unaligned "To: "
+std::string Ui::GetHeaderLabel(const std::string& p_Name) const
+{
+  if (!m_AlignHeaderLabels) return p_Name + ": ";
+
+  const size_t nameWidth = HEADER_VALUE_COL - 2;
+  return p_Name + std::string((p_Name.size() < nameWidth) ? (nameWidth - p_Name.size()) : 0, ' ') + ": ";
 }
 
 void Ui::ClearSelection()

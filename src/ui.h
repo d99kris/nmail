@@ -242,6 +242,7 @@ private:
   void ToggleFilter(SortFilter p_SortFilter);
   void ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond);
   const std::vector<std::wstring>& GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid);
+  std::string GetHeaderLabel(const std::string& p_Name) const;
   void ClearSelection();
   void ToggleSelected();
   void ToggleSelectAll();
@@ -266,6 +267,11 @@ private:
   void SetCurrentFolder(const std::string& p_Folder);
 
 private:
+  // message view header value column, labels as in compose, e.g. "Reply-To: "
+  static const size_t HEADER_VALUE_COL = 10;
+  // min header value width for wrapping with hanging indent
+  static const size_t HEADER_VALUE_MIN_WIDTH = 30;
+
   std::shared_ptr<ImapManager> m_ImapManager;
   std::shared_ptr<SmtpManager> m_SmtpManager;
   std::string m_TrashFolder;
@@ -348,6 +354,7 @@ private:
   bool m_Plaintext = true;
   bool m_MarkdownHtmlCompose = false;
   bool m_MarkdownView = false;
+  bool m_AlignHeaderLabels = true;
   bool m_CurrentMarkdownHtmlCompose = false;
   bool m_IsAutoMove = false;
 

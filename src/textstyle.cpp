@@ -17,7 +17,7 @@ void TextStyle::StyleHeaderLines(const std::vector<std::wstring>& p_Lines, size_
 {
   static const std::vector<std::wstring> names =
   {
-    L"Date:", L"From:", L"Reply-To:", L"To:", L"Cc:", L"Bcc:", L"Subject:", L"Attachments:",
+    L"Date", L"From", L"Reply-To", L"To", L"Cc", L"Bcc", L"Subject", L"Attchmnt", L"Attachments",
   };
 
   for (size_t i = 0; (i < p_End) && (i < p_Lines.size()); ++i)
@@ -42,11 +42,15 @@ void TextStyle::StyleHeaderLines(const std::vector<std::wstring>& p_Lines, size_
       continue;
     }
 
+    // known name, padded with spaces as in compose, then colon
     for (const auto& name : names)
     {
-      if (line.rfind(name, 0) == 0)
+      if (line.rfind(name, 0) != 0) continue;
+
+      const size_t colon = line.find_first_not_of(L' ', name.size());
+      if ((colon != std::wstring::npos) && (line[colon] == L':'))
       {
-        p_Spans[i].push_back(Span{ 0, (int)name.size(), p_Attrs });
+        p_Spans[i].push_back(Span{ 0, (int)(colon + 1), p_Attrs });
         break;
       }
     }

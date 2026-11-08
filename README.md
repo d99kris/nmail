@@ -841,6 +841,7 @@ configure nmail.
 This configuration file controls the UI aspects of nmail. Default configuration
 file (platform-dependent defaults are left empty below):
 
+    align_header_labels=1
     attachment_indicator=📎
     automove_trash_allow=1
     bottom_reply=0
@@ -879,6 +880,13 @@ file (platform-dependent defaults are left empty below):
     top_bar_show_version=0
     unread_indicator=N
     unwrap_quoted_lines=1
+
+### align_header_labels
+
+Controls whether header field labels in message view shall be padded so
+that values line up, as in compose view (`To      : `), with long values
+wrapped with a hanging indent. Set to `0` for unaligned labels (`To: `) as
+in alpine (default enabled).
 
 ### attachment_indicator
 
@@ -1324,7 +1332,7 @@ help bar.
 
 ### color_header_name
 
-Header field names, such as `From:` and `Subject:`, in message view (including
+Header field names, such as `From` and `Subject`, in message view (including
 full header view) and compose view.
 
 ### color_help_desc

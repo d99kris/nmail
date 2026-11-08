@@ -30,7 +30,7 @@ public:
 
   typedef std::vector<std::vector<Span>> LineSpans;
 
-  // style header field names in lines before p_End, any names for raw header
+  // style header field names (optionally padded) in lines before p_End, any names for raw header
   static void StyleHeaderLines(const std::vector<std::wstring>& p_Lines, size_t p_End, int p_Attrs,
                                bool p_RawHeader, LineSpans& p_Spans);
 
