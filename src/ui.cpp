@@ -74,6 +74,7 @@ void Ui::Init()
     { "markdown_html_compose", "0" },
     { "markdown_view", "1" },
     { "markdown_view_links", "1" },
+    { "plain_view_links", "1" },
     { "align_header_labels", "1" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
@@ -128,6 +129,7 @@ void Ui::Init()
   m_MarkdownView = m_Config.Get("markdown_view") == "1";
   m_MarkdownViewLinks = m_MarkdownView && (m_Config.Get("markdown_view_links") == "1");
   Util::SetHtmlToTextLinks(m_MarkdownViewLinks);
+  m_PlainViewLinks = m_Config.Get("plain_view_links") == "1";
   m_AlignHeaderLabels = m_Config.Get("align_header_labels") == "1";
   m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
   m_KeyNextMsg = UiKeyConfig::GetKey("key_next_msg");
@@ -2921,7 +2923,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
       m_MessageViewLinkPastEnd = false;
     }
   }
-  else if (m_MarkdownViewLinks && ((p_Key == m_KeyNextLink) || (p_Key == m_KeyPrevLink)))
+  else if ((m_MarkdownViewLinks || m_PlainViewLinks) && ((p_Key == m_KeyNextLink) || (p_Key == m_KeyPrevLink)))
   {
     SelectLink(p_Key == m_KeyNextLink);
   }
@@ -7078,7 +7080,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
                                 m_MessageViewSpans);
   }
 
-  // markdown only from built-in html converter
+  // markdown only from built-in html converter, otherwise plain text urls
   if (m_MarkdownView && m_CurrentMessageFromHtml && Util::GetHtmlToTextConvertCmd().empty())
   {
     TextStyle::MarkdownAttrs attrs;
@@ -7089,6 +7091,11 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
     attrs.m_Link = m_AttrsLinkText;
     TextStyle::StyleMarkdownLines(wlines, m_MessageViewHeaderLineCount + 1, attrs, m_MessageViewSpans,
                                   m_MarkdownViewLinks ? &m_MessageViewLinks : nullptr);
+  }
+  else if (m_PlainViewLinks)
+  {
+    TextStyle::StyleUrlLines(wlines, m_MessageViewHeaderLineCount + 1, m_AttrsLinkText, m_MaxViewLineLength,
+                             m_MessageViewSpans, m_MessageViewLinks);
   }
 
   if (m_AttrsSignatureText != A_NORMAL)

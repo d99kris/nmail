@@ -513,8 +513,8 @@ IMAP inbox folder name. Required for nmail to open the proper default folder.
 ### link_open_cmd
 
 This field allows overriding the command used for opening links selected in
-message view, see `markdown_view_links` (not used for `mailto:` links). By default nmail uses `open` on macOS
-and `xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
+message view, see `markdown_view_links` and `plain_view_links` (not used for
+`mailto:` links). By default nmail uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
 argument after the command.
 
 ### logdump_enabled
@@ -872,6 +872,7 @@ file (platform-dependent defaults are left empty below):
     persist_search_query=0
     persist_selection_on_sortfilter_change=1
     persist_sortfilter=1
+    plain_view_links=1
     postpone_without_confirm=0
     prefer_html=1
     quit_without_confirm=1
@@ -1036,6 +1037,14 @@ filtering/sorting mode is changed (default enabled).
 
 Specifies whether each folder listing shall persist its filtering/sorting
 mode (default enabled).
+
+### plain_view_links
+
+Controls whether nmail shall detect and allow navigating `http://`, `https://`
+and `mailto:` links in message view, when the message is not shown with
+`markdown_view` (e.g. plain text messages). Links wrapped onto the next line by
+nmail are detected as one link. Links are styled, selected and opened as
+described for `markdown_view_links` (default enabled).
 
 ### postpone_without_confirm
 
@@ -1384,8 +1393,8 @@ Hidden files (names starting with `.`) in file selection list.
 
 ### color_highlighted_link
 
-Selected link in message view, when `markdown_view_links` is enabled. Applied
-on top of `color_link_text`.
+Selected link in message view, when `markdown_view_links` or `plain_view_links`
+is enabled. Applied on top of `color_link_text`.
 
 ### color_highlighted_text
 
@@ -1400,7 +1409,8 @@ underline on terminals not supporting italic).
 
 ### color_link_text
 
-Links in message view, when `markdown_view_links` is enabled.
+Links in message view, when `markdown_view_links` or `plain_view_links` is
+enabled.
 
 ### color_quoted_text
 

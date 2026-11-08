@@ -180,6 +180,101 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
   }
 }
 
+void TextStyle::StyleUrlLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,
+                              size_t p_LineLength, LineSpans& p_Spans, std::vector<Link>& p_Links)
+{
+  struct Segment
+  {
+    size_t m_Line = 0;
+    size_t m_Start = 0;
+    size_t m_End = 0;
+  };
+
+  size_t i = p_Begin;
+  size_t pos = 0;
+  while (i < p_Lines.size())
+  {
+    if (pos >= p_Lines.at(i).size())
+    {
+      ++i;
+      pos = 0;
+      continue;
+    }
+
+    const size_t schemeLen = ParseUrlScheme(p_Lines.at(i), pos);
+    if (schemeLen == 0)
+    {
+      ++pos;
+      continue;
+    }
+
+    // url chars, continued on next line (after same quote prefix) when wrapped at full width
+    std::wstring url;
+    std::vector<Segment> segments;
+    size_t line = i;
+    size_t start = pos;
+    while (true)
+    {
+      const std::wstring& text = p_Lines.at(line);
+      size_t end = start;
+      while ((end < text.size()) && IsUrlChar(text[end]))
+      {
+        ++end;
+      }
+
+      url += text.substr(start, end - start);
+      segments.push_back(Segment{ line, start, end });
+      if ((end < text.size()) || (text.size() != p_LineLength) || ((line + 1) >= p_Lines.size())) break;
+
+      std::wstring prefix;
+      std::wstring content;
+      SplitQuotePrefix(text, prefix, content);
+      const std::wstring& next = p_Lines.at(line + 1);
+      if ((next.rfind(prefix, 0) != 0) || (next.size() <= prefix.size()) ||
+          !IsUrlChar(next[prefix.size()])) break;
+
+      ++line;
+      start = prefix.size();
+    }
+
+    // trailing punctuation, and closing brackets without opening bracket in url
+    auto isTrailing = [&](wchar_t p_Ch)
+    {
+      static const std::wstring punct = L".,;:!?'*_";
+      static const std::wstring closing = L")]}";
+      static const std::wstring opening = L"([{";
+      if (punct.find(p_Ch) != std::wstring::npos) return true;
+
+      const size_t bracket = closing.find(p_Ch);
+      if (bracket == std::wstring::npos) return false;
+
+      return std::count(url.begin(), url.end(), opening[bracket]) < std::count(url.begin(), url.end(), p_Ch);
+    };
+
+    while ((url.size() > schemeLen) && isTrailing(url.back()))
+    {
+      url.pop_back();
+      Segment& last = segments.back();
+      if (--last.m_End == last.m_Start)
+      {
+        segments.pop_back();
+      }
+    }
+
+    i = segments.back().m_Line;
+    pos = segments.back().m_End;
+    if (url.size() <= schemeLen) continue;
+
+    const int id = p_Links.size();
+    p_Links.push_back(Link{ url, segments.front().m_Line });
+    for (const auto& segment : segments)
+    {
+      p_Spans[segment.m_Line].push_back(Span{ (int)segment.m_Start, (int)(segment.m_End - segment.m_Start),
+                                              p_Attrs, id });
+    }
+  }
+}
+
 void TextStyle::StyleSignatureLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,
                                     LineSpans& p_Spans)
 {
@@ -564,6 +659,36 @@ bool TextStyle::IsWebUrl(const std::wstring& p_Url)
 {
   return (p_Url.rfind(L"http://", 0) == 0) || (p_Url.rfind(L"https://", 0) == 0) ||
          (p_Url.rfind(L"mailto:", 0) == 0);
+}
+
+// length of url scheme at p_Pos, not preceded by letter or digit, or 0
+size_t TextStyle::ParseUrlScheme(const std::wstring& p_Line, size_t p_Pos)
+{
+  static const std::vector<std::wstring> schemes = { L"http://", L"https://", L"mailto:" };
+
+  if ((p_Pos > 0) && iswalnum(p_Line[p_Pos - 1])) return 0;
+
+  for (const auto& scheme : schemes)
+  {
+    if ((p_Line.size() - p_Pos) < scheme.size()) continue;
+
+    bool match = true;
+    for (size_t k = 0; match && (k < scheme.size()); ++k)
+    {
+      match = (towlower(p_Line[p_Pos + k]) == scheme[k]);
+    }
+
+    if (match) return scheme.size();
+  }
+
+  return 0;
+}
+
+// printable ascii, except delimiters commonly enclosing urls
+bool TextStyle::IsUrlChar(wchar_t p_Ch)
+{
+  return (p_Ch > 0x20) && (p_Ch < 0x7f) && (p_Ch != L'<') && (p_Ch != L'>') && (p_Ch != L'"') &&
+         (p_Ch != L'`');
 }
 
 // same as quote regex ^(( *> *)+) used by word wrap

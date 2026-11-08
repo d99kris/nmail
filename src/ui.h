@@ -359,6 +359,7 @@ private:
   bool m_MarkdownHtmlCompose = false;
   bool m_MarkdownView = false;
   bool m_MarkdownViewLinks = false;
+  bool m_PlainViewLinks = false;
   bool m_AlignHeaderLabels = true;
   bool m_CurrentMarkdownHtmlCompose = false;
   bool m_IsAutoMove = false;

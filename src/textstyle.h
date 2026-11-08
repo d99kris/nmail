@@ -49,6 +49,11 @@ public:
                                  const MarkdownAttrs& p_Attrs, LineSpans& p_Spans,
                                  std::vector<Link>* p_Links);
 
+  // style http(s) and mailto urls in plain text from p_Begin, also urls hard-wrapped at
+  // p_LineLength onto next line
+  static void StyleUrlLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,
+                            size_t p_LineLength, LineSpans& p_Spans, std::vector<Link>& p_Links);
+
   // style signature from first unquoted separator line (-- or em dash) after p_Begin to end
   static void StyleSignatureLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,
                                   LineSpans& p_Spans);
@@ -65,6 +70,8 @@ private:
   static size_t ParseRefs(const std::vector<std::wstring>& p_Lines, size_t p_Begin, size_t& p_End,
                           Refs& p_Refs);
   static bool IsWebUrl(const std::wstring& p_Url);
+  static size_t ParseUrlScheme(const std::wstring& p_Line, size_t p_Pos);
+  static bool IsUrlChar(wchar_t p_Ch);
   static int ParseRefNum(const std::wstring& p_Text, size_t p_Pos, size_t& p_End);
   static void SplitQuotePrefix(const std::wstring& p_Line, std::wstring& p_Prefix, std::wstring& p_Content);
 };
