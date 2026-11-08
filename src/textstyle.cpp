@@ -675,7 +675,7 @@ size_t TextStyle::ParseUrlScheme(const std::wstring& p_Line, size_t p_Pos)
     bool match = true;
     for (size_t k = 0; match && (k < scheme.size()); ++k)
     {
-      match = (towlower(p_Line[p_Pos + k]) == scheme[k]);
+      match = (static_cast<wchar_t>(towlower(p_Line[p_Pos + k])) == scheme[k]);
     }
 
     if (match) return scheme.size();
