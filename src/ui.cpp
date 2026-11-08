@@ -6585,7 +6585,7 @@ void Ui::HandleConnected()
       SetDialogMessage("Sending queued messages");
 
       Header header;
-      header.SetData(outboxMsg);
+      header.SetHeaderData(outboxMsg, "", 0); // no server time for local message
 
       SmtpManager::Action smtpAction;
       smtpAction.m_CreatedMsg = outboxMsg;
