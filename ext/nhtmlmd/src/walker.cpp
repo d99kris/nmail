@@ -100,6 +100,25 @@ namespace Nhtmlmd
     return (p_Href != nullptr) && ((p_Href->compare(0, 4, "http") == 0) || (p_Href->compare(0, 7, "mailto:") == 0));
   }
 
+  // url without whitespace, as browsers do, to keep it one token
+  static std::string CleanHref(const std::string& p_Href)
+  {
+    std::string href;
+    for (char ch : p_Href)
+    {
+      if (ch == ' ')
+      {
+        href += "%20";
+      }
+      else if ((ch != '\t') && (ch != '\n') && (ch != '\r'))
+      {
+        href += ch;
+      }
+    }
+
+    return href;
+  }
+
   // css length in px, -1 if unknown
   static double CssLengthPx(const std::string& p_Value)
   {
@@ -639,14 +658,25 @@ namespace Nhtmlmd
   {
     if (m_Markdown && (m_Options.m_LinkStyle != LinkStyleText) && MarkdownLink(p_Node)) return;
 
-    m_LinkHasText.push_back(HasText(p_Node));
+    const std::string* href = p_Node.Attr("href");
+    const bool hasText = HasText(p_Node);
+    m_LinkHasText.push_back(hasText);
+
+    // no reference for links without content, like empty or skipped icon links
+    const bool isRef = (m_Options.m_LinkStyle == LinkStyleRefs) && IsWebLink(href) &&
+      (hasText || !RenderSub(p_Node).empty());
     WalkChildren(p_Node);
     m_LinkHasText.pop_back();
 
-    const std::string* href = p_Node.Attr("href");
     if (!IsWebLink(href)) return;
 
-    if (m_Options.m_LinkStyle == LinkStyleRefs)
+    if (isRef && m_Markdown)
+    {
+      // multi-line link, reference after it
+      m_Writer->Space();
+      m_Writer->Text("[link][" + std::to_string(LinkIndex(*href)) + "]");
+    }
+    else if (isRef)
     {
       m_Writer->Text("[" + std::to_string(LinkIndex(*href)) + "]");
     }
@@ -656,7 +686,7 @@ namespace Nhtmlmd
       if ((text == *href) || (("mailto:" + text) == *href)) return;
 
       m_Writer->Space();
-      m_Writer->Text("<" + *href + ">");
+      m_Writer->Text("<" + CleanHref(*href) + ">");
     }
   }
 
@@ -664,11 +694,21 @@ namespace Nhtmlmd
   bool Walker::MarkdownLink(const Node& p_Node)
   {
     const std::string* href = p_Node.Attr("href");
-    if (!IsWebLink(href) || !HasText(p_Node)) return false;
+    if (!IsWebLink(href)) return false;
 
-    m_LinkHasText.push_back(true);
-    const std::string text = RenderSub(p_Node);
+    const bool hasText = HasText(p_Node);
+    m_LinkHasText.push_back(hasText);
+    std::string text = RenderSub(p_Node);
     m_LinkHasText.pop_back();
+
+    // image only link with its [alt] as text
+    if (!hasText)
+    {
+      if ((text.size() < 3) || (text.front() != '[') || (text.find(']') != (text.size() - 1))) return false;
+
+      text = text.substr(1, text.size() - 2);
+    }
+
     if (text.empty() || (text.find('\n') != std::string::npos)) return false;
 
     if (EdgeSpace(p_Node, true)) m_Writer->Space();
@@ -683,7 +723,7 @@ namespace Nhtmlmd
     }
     else
     {
-      m_Writer->Text("[" + text + "](" + *href + ")");
+      m_Writer->Text("[" + text + "](" + CleanHref(*href) + ")");
     }
 
     if (EdgeSpace(p_Node, false)) m_Writer->Space();
@@ -696,7 +736,7 @@ namespace Nhtmlmd
     auto it = m_LinkIndex.find(p_Href);
     if (it != m_LinkIndex.end()) return it->second;
 
-    m_Links.push_back(p_Href);
+    m_Links.push_back(CleanHref(p_Href));
     m_LinkIndex[p_Href] = m_Links.size();
     return m_Links.size();
   }

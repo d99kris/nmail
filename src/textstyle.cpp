@@ -58,7 +58,8 @@ void TextStyle::StyleHeaderLines(const std::vector<std::wstring>& p_Lines, size_
 }
 
 void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_Begin,
-                                   const MarkdownAttrs& p_Attrs, LineSpans& p_Spans)
+                                   const MarkdownAttrs& p_Attrs, LineSpans& p_Spans,
+                                   std::vector<Link>* p_Links)
 {
   auto isFence = [](const std::wstring& p_Content)
   {
@@ -76,10 +77,15 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
     return (level >= 1) && (level <= 6) && (level < p_Content.size()) && (p_Content[level] == L' ');
   };
 
+  // reference definitions at end, removed after styling
+  Refs refs;
+  size_t refsEnd = p_Lines.size();
+  const size_t refsBegin = (p_Links != nullptr) ? ParseRefs(p_Lines, p_Begin, refsEnd, refs) : refsEnd;
+
   bool inFence = false;
-  std::vector<size_t> fenceLines;
+  std::vector<bool> removeLines(p_Lines.size(), false);
   size_t i = p_Begin;
-  while (i < p_Lines.size())
+  while (i < refsBegin)
   {
     std::wstring prefix;
     std::wstring content;
@@ -89,7 +95,7 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
     if (isFence(content))
     {
       inFence = !inFence;
-      fenceLines.push_back(i);
+      removeLines[i] = true;
       ++i;
       continue;
     }
@@ -114,14 +120,14 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
     // table rows styled one by one, with cells padded to keep alignment
     if (isTable(content))
     {
-      StyleParagraph(p_Lines, i, i + 1, A_NORMAL, p_Attrs, p_Spans, true);
+      StyleParagraph(p_Lines, i, i + 1, A_NORMAL, p_Attrs, p_Spans, true, refs, p_Links);
       ++i;
       continue;
     }
 
     // paragraph spanning wrapped lines with same quote prefix
     size_t end = i + 1;
-    while (end < p_Lines.size())
+    while (end < refsBegin)
     {
       std::wstring nextPrefix;
       std::wstring nextContent;
@@ -131,14 +137,46 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
       ++end;
     }
 
-    StyleParagraph(p_Lines, i, end, isHeading(content) ? p_Attrs.m_Bold : A_NORMAL, p_Attrs, p_Spans, false);
+    StyleParagraph(p_Lines, i, end, isHeading(content) ? p_Attrs.m_Bold : A_NORMAL, p_Attrs, p_Spans, false,
+                   refs, p_Links);
     i = end;
   }
 
-  for (auto it = fenceLines.rbegin(); it != fenceLines.rend(); ++it)
+  for (size_t k = refsBegin; k < refsEnd; ++k)
   {
-    p_Lines.erase(p_Lines.begin() + *it);
-    p_Spans.erase(p_Spans.begin() + *it);
+    removeLines[k] = true;
+  }
+
+  // remove lines in one pass
+  size_t count = 0;
+  for (size_t k = 0; k < p_Lines.size(); ++k)
+  {
+    if (removeLines[k]) continue;
+
+    if (count != k)
+    {
+      p_Lines[count] = std::move(p_Lines[k]);
+      p_Spans[count] = std::move(p_Spans[k]);
+    }
+
+    ++count;
+  }
+
+  p_Lines.resize(count);
+  p_Spans.resize(count);
+
+  if (p_Links == nullptr) return;
+
+  std::vector<bool> found(p_Links->size(), false);
+  for (size_t line = 0; line < p_Spans.size(); ++line)
+  {
+    for (const auto& span : p_Spans.at(line))
+    {
+      if ((span.m_Link < 0) || found.at(span.m_Link)) continue;
+
+      found[span.m_Link] = true;
+      p_Links->at(span.m_Link).m_Line = line;
+    }
   }
 }
 
@@ -177,7 +215,7 @@ int TextStyle::CombineAttrs(int p_Base, int p_Over)
 
 void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begin, size_t p_End,
                                int p_BaseAttrs, const MarkdownAttrs& p_Attrs, LineSpans& p_Spans,
-                               bool p_IsTable)
+                               bool p_IsTable, const Refs& p_Refs, std::vector<Link>* p_Links)
 {
   // join paragraph content, with newline separating wrapped lines
   std::wstring text;
@@ -196,7 +234,8 @@ void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begi
   const size_t len = text.size();
   std::vector<int> attrs(len, p_BaseAttrs);
   std::vector<bool> hidden(len, false);
-  std::vector<bool> code(len, false);
+  std::vector<bool> literal(len, false); // code spans and autolinks, without emphasis
+  std::vector<int> link(len, -1);
 
   // code spans
   for (size_t pos = 0; pos < len; ++pos)
@@ -210,7 +249,7 @@ void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begi
     {
       for (size_t k = pos; k <= close; ++k)
       {
-        code[k] = true;
+        literal[k] = true;
         attrs[k] = CombineAttrs(attrs[k], p_Attrs.m_Code);
       }
 
@@ -233,6 +272,82 @@ void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begi
     }
   }
 
+  // links to reference definitions [text][n] (not [n] alone, often literal), and autolinks <url>
+  if (p_Links != nullptr)
+  {
+    static const size_t maxLinkLen = 2000;
+    auto addLink = [&](const std::wstring& p_Url, size_t p_LinkBegin, size_t p_LinkEnd)
+    {
+      const int id = p_Links->size();
+      p_Links->push_back(Link{ p_Url, 0 });
+      for (size_t k = p_LinkBegin; k < p_LinkEnd; ++k)
+      {
+        link[k] = id;
+        attrs[k] = CombineAttrs(attrs[k], p_Attrs.m_Link);
+      }
+    };
+
+    for (size_t pos = 0; pos < len; ++pos)
+    {
+      if (literal[pos]) continue;
+
+      const size_t maxClose = std::min(len, pos + maxLinkLen);
+      size_t end = 0;
+      if (text[pos] == L'[')
+      {
+        // closing bracket, before any nested opening bracket
+        size_t close = pos + 1;
+        while ((close < maxClose) && (text[close] != L']') && (text[close] != L'['))
+        {
+          ++close;
+        }
+
+        if ((close >= maxClose) || (text[close] != L']') || (close == (pos + 1))) continue;
+
+        const int textNum = ParseRefNum(text, close + 1, end);
+        if ((textNum < 0) || !p_Refs.count(textNum) || !IsWebUrl(p_Refs.at(textNum))) continue;
+
+        addLink(p_Refs.at(textNum), pos + 1, close);
+        hidden[pos] = true;
+        for (size_t k = close; k < end; ++k)
+        {
+          hidden[k] = true;
+        }
+
+        pos = end - 1;
+      }
+      else if (text[pos] == L'<')
+      {
+        // url without spaces, newlines from wrapping long url
+        std::wstring url;
+        size_t close = pos + 1;
+        while ((close < maxClose) && (text[close] != L'>') && (text[close] != L'<') &&
+               ((text[close] == L'\n') || !iswspace(text[close])))
+        {
+          if (text[close] != L'\n') url += text[close];
+
+          ++close;
+        }
+
+        if ((close >= maxClose) || (text[close] != L'>') || url.empty()) continue;
+
+        const bool isWeb = IsWebUrl(url);
+        const bool isMail = !isWeb && (url.find(L'@') != std::wstring::npos) && (url.find(L':') == std::wstring::npos);
+        if (!isWeb && !isMail) continue;
+
+        addLink(isMail ? (L"mailto:" + url) : url, pos + 1, close);
+        hidden[pos] = true;
+        hidden[close] = true;
+        for (size_t k = pos + 1; k < close; ++k)
+        {
+          literal[k] = true;
+        }
+
+        pos = close;
+      }
+    }
+  }
+
   auto isSpace = [&](size_t p_Pos)
   {
     return (p_Pos >= len) || iswspace(text[p_Pos]);
@@ -244,7 +359,7 @@ void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begi
 
     for (size_t k = p_Pos; k < (p_Pos + p_MarkLen); ++k)
     {
-      if ((text[k] != p_Mark) || code[k] || hidden[k]) return false;
+      if ((text[k] != p_Mark) || literal[k] || hidden[k]) return false;
     }
 
     // single mark must not be part of double
@@ -362,22 +477,93 @@ void TextStyle::StyleParagraph(std::vector<std::wstring>& p_Lines, size_t p_Begi
 
       const int col = line.size();
       line += text[pos];
-      if (attrs[pos] == A_NORMAL) continue;
+      if ((attrs[pos] == A_NORMAL) && (link[pos] < 0)) continue;
 
-      if (!spans.empty() && (spans.back().m_Attrs == attrs[pos]) &&
+      if (!spans.empty() && (spans.back().m_Attrs == attrs[pos]) && (spans.back().m_Link == link[pos]) &&
           ((spans.back().m_Start + spans.back().m_Len) == col))
       {
         ++spans.back().m_Len;
       }
       else
       {
-        spans.push_back(Span{ col, 1, attrs[pos] });
+        spans.push_back(Span{ col, 1, attrs[pos], link[pos] });
       }
     }
 
     ++pos; // skip newline
     p_Lines[i] = line;
   }
+}
+
+// reference definitions [n]: url in last block, removed with blank line before it, and long
+// urls wrapped onto next lines, returns begin of lines to remove
+size_t TextStyle::ParseRefs(const std::vector<std::wstring>& p_Lines, size_t p_Begin, size_t& p_End,
+                            Refs& p_Refs)
+{
+  size_t end = p_Lines.size();
+  while ((end > p_Begin) && p_Lines.at(end - 1).empty())
+  {
+    --end;
+  }
+
+  size_t begin = end;
+  while ((begin > p_Begin) && !p_Lines.at(begin - 1).empty())
+  {
+    --begin;
+  }
+
+  Refs refs;
+  int num = -1;
+  for (size_t i = begin; i < end; ++i)
+  {
+    const std::wstring& line = p_Lines.at(i);
+    size_t pos = 0;
+    const int lineNum = ParseRefNum(line, 0, pos);
+    const bool isDef = (lineNum >= 0) && (pos < line.size()) && (line[pos] == L':') &&
+      (((pos + 1) == line.size()) || (line[pos + 1] == L' '));
+    const std::wstring url = isDef ? line.substr(std::min(pos + 2, line.size())) : line;
+    if ((!isDef && (num < 0)) || (url.find(L' ') != std::wstring::npos)) return p_Lines.size();
+
+    if (isDef)
+    {
+      num = lineNum;
+    }
+
+    refs[num] += url;
+  }
+
+  if (refs.empty()) return p_Lines.size();
+
+  p_Refs = refs;
+  p_End = end;
+  return ((begin > p_Begin) && p_Lines.at(begin - 1).empty()) ? (begin - 1) : begin;
+}
+
+// reference number [n] at p_Pos, or -1
+int TextStyle::ParseRefNum(const std::wstring& p_Text, size_t p_Pos, size_t& p_End)
+{
+  if ((p_Pos >= p_Text.size()) || (p_Text[p_Pos] != L'[')) return -1;
+
+  static const size_t maxDigits = 6;
+  int num = 0;
+  size_t pos = p_Pos + 1;
+  while ((pos < p_Text.size()) && iswdigit(p_Text[pos]) && ((pos - p_Pos) <= maxDigits))
+  {
+    num = (num * 10) + (p_Text[pos] - L'0');
+    ++pos;
+  }
+
+  if ((pos == (p_Pos + 1)) || (pos >= p_Text.size()) || (p_Text[pos] != L']')) return -1;
+
+  p_End = pos + 1;
+  return num;
+}
+
+// http(s) or mailto url, as other schemes may open local files or apps
+bool TextStyle::IsWebUrl(const std::wstring& p_Url)
+{
+  return (p_Url.rfind(L"http://", 0) == 0) || (p_Url.rfind(L"https://", 0) == 0) ||
+         (p_Url.rfind(L"mailto:", 0) == 0);
 }
 
 // same as quote regex ^(( *> *)+) used by word wrap

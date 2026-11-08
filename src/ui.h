@@ -209,6 +209,10 @@ private:
   int ExtHtmlPreview(const std::string& p_Path);
   void ExtMsgViewer();
   int ExtMsgViewer(const std::string& p_Path);
+  bool IsLinkSelected();
+  void SelectLink(bool p_Next);
+  void OpenLink();
+  void SetComposeMailto(const std::string& p_Url);
   void SetLastStateOrMessageList();
   void ExportMessage();
   void ImportMessage();
@@ -354,6 +358,7 @@ private:
   bool m_Plaintext = false;
   bool m_MarkdownHtmlCompose = false;
   bool m_MarkdownView = false;
+  bool m_MarkdownViewLinks = false;
   bool m_AlignHeaderLabels = true;
   bool m_CurrentMarkdownHtmlCompose = false;
   bool m_IsAutoMove = false;
@@ -413,6 +418,9 @@ private:
   int m_KeyFindNext = 0;
   int m_KeySync = 0;
   int m_KeyToggleMarkdownCompose = 0;
+  int m_KeyNextLink = 0;
+  int m_KeyPrevLink = 0;
+  int m_KeyOpenLink = 0;
   int m_KeyBackwardWord = 0;
   int m_KeyForwardWord = 0;
   int m_KeyBackwardKillWord = 0;
@@ -495,6 +503,8 @@ private:
   int m_AttrsItalicText = A_NORMAL;
   int m_AttrsStrikeText = A_NORMAL;
   int m_AttrsSignatureText = A_NORMAL;
+  int m_AttrsLinkText = A_UNDERLINE;
+  int m_AttrsHighlightedLink = A_REVERSE;
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;
@@ -535,6 +545,7 @@ private:
   int m_ComposeMessageOffsetY = 0;
   uint32_t m_ComposeDraftUid = 0;
   std::string m_ComposeQuotedStart;
+  std::string m_ComposeMailto;
 
   std::deque<SmtpManager::Result> m_SmtpErrorResults;
   std::mutex m_SmtpErrorMutex;
@@ -582,6 +593,11 @@ private:
   int m_MessageViewHeaderLineCount = 0;
   std::vector<std::wstring> m_MessageViewLines;
   std::vector<std::vector<TextStyle::Span>> m_MessageViewSpans;
+  std::vector<TextStyle::Link> m_MessageViewLinks;
+  std::pair<std::string, int32_t> m_MessageViewLinksFolderUid = std::make_pair("", -1);
+  int m_MessageViewLinkIndex = -1;
+  bool m_MessageViewLinkPastEnd = false; // index before first or after last link
+  int m_MessageViewLinkPastEndOffset = 0; // view offset when past end
 
   std::string m_FilterCustomStr;
   int m_TabSize = 8;

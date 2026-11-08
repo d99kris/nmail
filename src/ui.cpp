@@ -73,6 +73,7 @@ void Ui::Init()
     { "show_rich_header", "0" },
     { "markdown_html_compose", "0" },
     { "markdown_view", "1" },
+    { "markdown_view_links", "1" },
     { "align_header_labels", "1" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
@@ -125,6 +126,8 @@ void Ui::Init()
   m_Plaintext = m_Config.Get("prefer_html") != "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_MarkdownView = m_Config.Get("markdown_view") == "1";
+  m_MarkdownViewLinks = m_MarkdownView && (m_Config.Get("markdown_view_links") == "1");
+  Util::SetHtmlToTextLinks(m_MarkdownViewLinks);
   m_AlignHeaderLabels = m_Config.Get("align_header_labels") == "1";
   m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
   m_KeyNextMsg = UiKeyConfig::GetKey("key_next_msg");
@@ -168,6 +171,9 @@ void Ui::Init()
   m_KeyFindNext = UiKeyConfig::GetKey("key_find_next");
   m_KeySync = UiKeyConfig::GetKey("key_sync");
   m_KeyToggleMarkdownCompose = UiKeyConfig::GetKey("key_toggle_markdown_compose");
+  m_KeyNextLink = UiKeyConfig::GetKey("key_next_link");
+  m_KeyPrevLink = UiKeyConfig::GetKey("key_prev_link");
+  m_KeyOpenLink = UiKeyConfig::GetKey("key_open_link");
 
   m_KeyBackwardWord = UiKeyConfig::GetKey("key_backward_word");
   m_KeyForwardWord = UiKeyConfig::GetKey("key_forward_word");
@@ -265,12 +271,18 @@ void Ui::Init()
       { "color_hidden_file_attr", "" },
       { "color_hidden_file_bg", "" },
       { "color_hidden_file_fg", defaultHiddenFg },
+      { "color_highlighted_link_attr", "" },
+      { "color_highlighted_link_bg", "reverse" },
+      { "color_highlighted_link_fg", "reverse" },
       { "color_highlighted_text_attr", "" },
       { "color_highlighted_text_bg", "reverse" },
       { "color_highlighted_text_fg", "reverse" },
       { "color_italic_text_attr", "" },
       { "color_italic_text_bg", "" },
       { "color_italic_text_fg", "" },
+      { "color_link_text_attr", "underline" },
+      { "color_link_text_bg", "" },
+      { "color_link_text_fg", "" },
       { "color_quoted_text_attr", "" },
       { "color_quoted_text_bg", "" },
       { "color_quoted_text_fg", defaultQuotedFg },
@@ -314,6 +326,8 @@ void Ui::Init()
     m_AttrsItalicText = getAttrs("color_italic_text");
     m_AttrsStrikeText = getAttrs("color_strike_text");
     m_AttrsSignatureText = getAttrs("color_signature_text");
+    m_AttrsLinkText = getAttrs("color_link_text");
+    m_AttrsHighlightedLink = getAttrs("color_highlighted_link");
     m_AttrsHiddenFile = getAttrs("color_hidden_file");
     m_AttrsTopBar = getAttrs("color_top_bar");
     m_AttrsSelectedItem = getAttrs("color_selected_item");
@@ -810,6 +824,8 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyFindNext), "FindNext",
       GetKeyDisplay(m_KeyToggleFullHeader), "TgFullHdr",
       GetKeyDisplay(m_KeyGotoInbox), "GotoInbox",
+      GetKeyDisplay(m_KeyNextLink), "NextLink",
+      GetKeyDisplay(m_KeyOpenLink), "OpenLink",
     },
   };
 
@@ -1776,9 +1792,12 @@ void Ui::DrawMessage()
         {
           for (const auto& span : m_MessageViewSpans.at(lineIndex))
           {
+            const bool isCurrentLink = (span.m_Link >= 0) && (span.m_Link == m_MessageViewLinkIndex);
+            const int spanAttrs =
+              isCurrentLink ? TextStyle::CombineAttrs(span.m_Attrs, m_AttrsHighlightedLink) : span.m_Attrs;
             for (int k = span.m_Start; (k < (span.m_Start + span.m_Len)) && (k < (int)attrs.size()); ++k)
             {
-              attrs[k] = TextStyle::CombineAttrs(attrs[k], span.m_Attrs);
+              attrs[k] = TextStyle::CombineAttrs(attrs[k], spanAttrs);
             }
           }
         }
@@ -2882,6 +2901,8 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     {
       m_MessageViewLineOffset = 0;
       m_MessageFindMatchLine = -1;
+      m_MessageViewLinkIndex = -1;
+      m_MessageViewLinkPastEnd = false;
     }
   }
   else if (p_Key == m_KeyNextMsg)
@@ -2896,7 +2917,17 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     {
       m_MessageViewLineOffset = 0;
       m_MessageFindMatchLine = -1;
+      m_MessageViewLinkIndex = -1;
+      m_MessageViewLinkPastEnd = false;
     }
+  }
+  else if (m_MarkdownViewLinks && ((p_Key == m_KeyNextLink) || (p_Key == m_KeyPrevLink)))
+  {
+    SelectLink(p_Key == m_KeyNextLink);
+  }
+  else if ((p_Key == m_KeyOpenLink) && IsLinkSelected())
+  {
+    OpenLink();
   }
   else if (HandleListKey(p_Key, m_MessageViewLineOffset))
   {
@@ -3596,6 +3627,8 @@ void Ui::SetState(Ui::State p_State)
     m_MessageViewLineOffset = 0;
     m_HelpViewMessageOffset = 0;
     m_MessageFindMatchLine = -1;
+    m_MessageViewLinkIndex = -1;
+    m_MessageViewLinkPastEnd = false;
   }
   else if ((m_State == StateComposeMessage) || (m_State == StateComposeCopyMessage))
   {
@@ -3619,7 +3652,7 @@ void Ui::SetState(Ui::State p_State)
     const std::string& folder = m_CurrentFolderUid.first;
     const int uid = m_CurrentFolderUid.second;
 
-    if ((folder == m_DraftsFolder) || (m_State == StateComposeCopyMessage))
+    if (m_ComposeMailto.empty() && ((folder == m_DraftsFolder) || (m_State == StateComposeCopyMessage)))
     {
       std::map<uint32_t, Header>& headers = m_Headers[folder];
       std::map<uint32_t, Body>& bodys = m_Bodys[folder];
@@ -3685,6 +3718,12 @@ void Ui::SetState(Ui::State p_State)
     else
     {
       m_ComposeMessageStr = GetSignatureStr();
+    }
+
+    if (!m_ComposeMailto.empty())
+    {
+      SetComposeMailto(m_ComposeMailto);
+      m_ComposeMailto.clear();
     }
   }
   else if ((m_State == StateReplyAllMessage) || (m_State == StateReplySenderMessage))
@@ -4689,7 +4728,11 @@ std::string Ui::GetKeyDisplay(int p_Key)
 {
   if (p_Key == '\n')
   {
-    return "Re";
+    return "\xE2\x8F\x8E"; // return symbol
+  }
+  else if (p_Key == '\t')
+  {
+    return "\xE2\x87\xA5"; // tab symbol
   }
   else if ((p_Key >= 0x0) && (p_Key <= 0x1F))
   {
@@ -5741,6 +5784,220 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   }
 
   return rv;
+}
+
+// selected link in current message and view, links are from last message laid out
+bool Ui::IsLinkSelected()
+{
+  if ((m_MessageViewLinksFolderUid != m_CurrentFolderUid) || (m_MessageViewLinkIndex < 0) ||
+      (m_MessageViewLinkIndex >= (int)m_MessageViewLinks.size())) return false;
+
+  const int line = m_MessageViewLinks.at(m_MessageViewLinkIndex).m_Line;
+  return (line >= m_MessageViewLineOffset) && (line < (m_MessageViewLineOffset + m_MainWinHeight));
+}
+
+void Ui::SelectLink(bool p_Next)
+{
+  if (m_MessageViewLinks.empty() || (m_MessageViewLinksFolderUid != m_CurrentFolderUid))
+  {
+    SetDialogMessage("No links in message");
+    return;
+  }
+
+  // step from current link if visible, or past first / last (if not scrolled since, when restart
+  // from view after scroll is enabled), otherwise from view
+  static const bool pastEndRestartOnScroll = false;
+  const bool pastEnd = m_MessageViewLinkPastEnd &&
+    (!pastEndRestartOnScroll || (m_MessageViewLinkPastEndOffset == m_MessageViewLineOffset));
+  const int count = m_MessageViewLinks.size();
+  const int viewBegin = m_MessageViewLineOffset;
+  const int viewEnd = m_MessageViewLineOffset + m_MainWinHeight;
+  auto getLine = [&](int p_Index)
+  {
+    return (int)m_MessageViewLinks.at(p_Index).m_Line;
+  };
+
+  int index = -1;
+  if ((m_MessageViewLinkIndex >= 0) && (m_MessageViewLinkIndex < count) &&
+      (getLine(m_MessageViewLinkIndex) >= viewBegin) && (getLine(m_MessageViewLinkIndex) < viewEnd))
+  {
+    index = m_MessageViewLinkIndex + (p_Next ? 1 : -1);
+  }
+  else if (pastEnd)
+  {
+    index = Util::Bound(-1, m_MessageViewLinkIndex, count) + (p_Next ? 1 : -1);
+  }
+  else if (p_Next)
+  {
+    index = 0;
+    while ((index < count) && (getLine(index) < viewBegin))
+    {
+      ++index;
+    }
+  }
+  else
+  {
+    index = count - 1;
+    while ((index >= 0) && (getLine(index) >= viewEnd))
+    {
+      --index;
+    }
+  }
+
+  // none selected beyond first and last, as in message find
+  if ((index < 0) || (index >= count))
+  {
+    m_MessageViewLinkIndex = p_Next ? count : -1;
+    m_MessageViewLinkPastEnd = true;
+    m_MessageViewLinkPastEndOffset = m_MessageViewLineOffset;
+    SetDialogMessage("No more links");
+    return;
+  }
+
+  m_MessageViewLinkIndex = index;
+  m_MessageViewLinkPastEnd = false;
+  const int line = getLine(index);
+  if (line < viewBegin)
+  {
+    m_MessageViewLineOffset = line;
+  }
+  else if (line >= viewEnd)
+  {
+    m_MessageViewLineOffset = line - m_MainWinHeight + 1;
+  }
+
+  SetDialogMessage(Util::ToString(m_MessageViewLinks.at(index).m_Url));
+}
+
+void Ui::OpenLink()
+{
+  if (!IsLinkSelected()) return;
+
+  const std::string url = Util::ToString(m_MessageViewLinks.at(m_MessageViewLinkIndex).m_Url);
+  if (url.empty()) return;
+
+  if (Util::ToLower(url.substr(0, 7)) == "mailto:")
+  {
+    m_ComposeMailto = url;
+    SetState(StateComposeMessage);
+    return;
+  }
+
+  const bool isDefaultLinkOpenCmd = Util::IsDefaultLinkOpenCmd();
+  if (!isDefaultLinkOpenCmd)
+  {
+    TerminalControlPause();
+  }
+
+  // single quoted, as url is from message
+  std::string escapedUrl = url;
+  Util::ReplaceString(escapedUrl, "'", "'\\''");
+  const std::string& cmd = Util::GetLinkOpenCmd() + " '" + escapedUrl + "'";
+  LOG_DEBUG("launching link open: %s", cmd.c_str());
+  int rv = Util::System(cmd);
+  if (rv == 0)
+  {
+    LOG_DEBUG("link open exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("link open exited with %d", rv);
+    Util::DetectCommandNotPresent(cmd);
+  }
+
+  if (!isDefaultLinkOpenCmd)
+  {
+    TerminalControlResume();
+  }
+}
+
+// compose fields from mailto:addrs?cc=..&bcc=..&subject=..&body=.. (rfc 6068)
+void Ui::SetComposeMailto(const std::string& p_Url)
+{
+  // header values without ascii control chars, like newlines, keeping utf-8 bytes
+  auto decodeHeader = [](const std::string& p_Str)
+  {
+    std::string str = Util::DecodeUrl(p_Str);
+    str.erase(std::remove_if(str.begin(), str.end(),
+                             [](char p_Ch) { return ((unsigned char)p_Ch < 0x20) || (p_Ch == 0x7f); }),
+              str.end());
+    return str;
+  };
+
+  const std::string mailto = p_Url.substr(7);
+  const size_t queryPos = mailto.find('?');
+  std::vector<std::string> tos;
+  std::vector<std::string> ccs;
+  std::vector<std::string> bccs;
+  std::string subject;
+  std::string body;
+  const std::string addrs = mailto.substr(0, queryPos);
+  if (!addrs.empty())
+  {
+    tos.push_back(decodeHeader(addrs));
+  }
+
+  if (queryPos != std::string::npos)
+  {
+    for (const auto& field : Util::Split(mailto.substr(queryPos + 1), '&'))
+    {
+      const size_t eqPos = field.find('=');
+      if (eqPos == std::string::npos) continue;
+
+      const std::string name = Util::ToLower(field.substr(0, eqPos));
+      const std::string value = field.substr(eqPos + 1);
+      if (name == "to")
+      {
+        tos.push_back(decodeHeader(value));
+      }
+      else if (name == "cc")
+      {
+        ccs.push_back(decodeHeader(value));
+      }
+      else if (name == "bcc")
+      {
+        bccs.push_back(decodeHeader(value));
+      }
+      else if (name == "subject")
+      {
+        subject = decodeHeader(value);
+      }
+      else if (name == "body")
+      {
+        body = Util::DecodeUrl(value);
+      }
+    }
+  }
+
+  // bcc only in rich header
+  if (!bccs.empty() && !m_ShowRichHeader)
+  {
+    m_ShowRichHeader = true;
+    SetComposeStr(HeaderAll, L"");
+    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    m_ComposeHeaderLine = 1;
+  }
+
+  SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
+  SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+  SetComposeStr(HeaderBcc, Util::ToWString(Util::Join(bccs, ", ")));
+  SetComposeStr(HeaderSub, Util::ToWString(subject));
+  if (!body.empty())
+  {
+    std::wstring wbody = Util::ToWString(body);
+    Util::StripCR(wbody);
+    m_ComposeMessageStr = wbody + L"\n" + m_ComposeMessageStr;
+  }
+
+  // cursor at first field to fill in
+  if (subject.empty())
+  {
+    m_ComposeHeaderLine = m_ShowRichHeader ? 5 : 3;
+  }
+  else
+  {
+    m_IsComposeHeader = false;
+  }
 }
 
 void Ui::ExtMsgViewer()
@@ -6811,6 +7068,10 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   }
 
   m_MessageViewSpans.assign(wlinesSize, std::vector<TextStyle::Span>());
+  m_MessageViewLinks.clear();
+  m_MessageViewLinksFolderUid = std::make_pair(p_Folder, (int32_t)p_Uid);
+  m_MessageViewLinkIndex = -1;
+  m_MessageViewLinkPastEnd = false;
   if (m_AttrsHeaderName != A_NORMAL)
   {
     TextStyle::StyleHeaderLines(wlines, m_MessageViewHeaderLineCount, m_AttrsHeaderName, m_ShowFullHeader,
@@ -6825,7 +7086,9 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
     attrs.m_Italic = m_AttrsItalicText;
     attrs.m_Code = m_AttrsCodeText;
     attrs.m_Strike = m_AttrsStrikeText;
-    TextStyle::StyleMarkdownLines(wlines, m_MessageViewHeaderLineCount + 1, attrs, m_MessageViewSpans);
+    attrs.m_Link = m_AttrsLinkText;
+    TextStyle::StyleMarkdownLines(wlines, m_MessageViewHeaderLineCount + 1, attrs, m_MessageViewSpans,
+                                  m_MarkdownViewLinks ? &m_MessageViewLinks : nullptr);
   }
 
   if (m_AttrsSignatureText != A_NORMAL)

@@ -69,11 +69,13 @@ std::mutex ThreadRegister::m_Mutex;
 std::map<pthread_t, std::string> ThreadRegister::m_Threads;
 
 std::string Util::m_HtmlToTextConvertCmd;
+bool Util::m_HtmlToTextLinks = false;
 std::string Util::m_TextToHtmlConvertCmd;
 std::string Util::m_PartsViewerCmd;
 std::string Util::m_HtmlPreviewCmd;
 std::string Util::m_HtmlViewerCmd;
 std::string Util::m_MsgViewerCmd;
+std::string Util::m_LinkOpenCmd;
 std::string Util::m_ApplicationDir;
 std::string Util::m_PagerCmd;
 std::string Util::m_EditorCmd;
@@ -431,14 +433,25 @@ size_t Util::GetHtmlToTextConvertCmdHash()
   // built-in converter output changes with its version
   static std::hash<std::string> hashStr;
   const std::string& htmlToTextCmd = GetHtmlToTextConvertCmd();
-  const std::string converter = htmlToTextCmd.empty() ? ("nhtmlmd " + Nhtmlmd::GetVersion()) : htmlToTextCmd;
+  const std::string converter = htmlToTextCmd.empty() ?
+    ("nhtmlmd " + Nhtmlmd::GetVersion() + (m_HtmlToTextLinks ? " refs" : "")) : htmlToTextCmd;
   return hashStr(converter);
+}
+
+void Util::SetHtmlToTextLinks(bool p_HtmlToTextLinks)
+{
+  m_HtmlToTextLinks = p_HtmlToTextLinks;
 }
 
 std::string Util::ConvertHtmlToText(const std::string& p_Html)
 {
   const std::string& htmlToTextCmd = GetHtmlToTextConvertCmd();
-  if (htmlToTextCmd.empty()) return Nhtmlmd::HtmlToMarkdown(p_Html);
+  if (htmlToTextCmd.empty())
+  {
+    Nhtmlmd::HtmlOptions options;
+    options.m_LinkStyle = m_HtmlToTextLinks ? Nhtmlmd::LinkStyleRefs : Nhtmlmd::LinkStyleText;
+    return Nhtmlmd::HtmlToMarkdown(p_Html, options);
+  }
 
   // @todo: more elegant removal of meta-tags
   std::string html = p_Html;
@@ -641,6 +654,36 @@ std::string Util::GetDefaultMsgViewerCmd()
 bool Util::IsDefaultMsgViewerCmd()
 {
   return m_MsgViewerCmd.empty();
+}
+
+std::string Util::GetLinkOpenCmd()
+{
+  if (!m_LinkOpenCmd.empty()) return m_LinkOpenCmd;
+
+  static std::string defaultLinkOpenCmd = GetDefaultLinkOpenCmd();
+
+  return defaultLinkOpenCmd;
+}
+
+void Util::SetLinkOpenCmd(const std::string& p_LinkOpenCmd)
+{
+  m_LinkOpenCmd = p_LinkOpenCmd;
+}
+
+std::string Util::GetDefaultLinkOpenCmd()
+{
+#if defined(__APPLE__)
+  return "open";
+#elif defined(__linux__)
+  return "xdg-open >/dev/null 2>&1";
+#else
+  return "";
+#endif
+}
+
+bool Util::IsDefaultLinkOpenCmd()
+{
+  return m_LinkOpenCmd.empty();
 }
 
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,
@@ -1355,20 +1398,20 @@ void Util::CleanupUiSignalHandlers()
 // interrupted register state in the signal ucontext_t (or the current frame for
 // the non-signal, assertion path):
 //
-//   1. A precise frame-record walk down the frame-pointer chain. Exact and
-//      ordered, but only where a frame pointer is maintained -- nmail's own code
-//      is built -fno-omit-frame-pointer (CMakeLists.txt), the static deps
-//      (OpenSSL, libetpan, ...) and musl itself are not. When an async signal
-//      lands in that frame-pointer-less code (or in a thread's entry frame, fp=0),
-//      the chain breaks at the first hop and the walk yields only the faulting pc
-//      -- this is why an x86_64 crash during setup logged a single address.
-//   2. A fallback raw-stack scan, used when the frame-pointer walk barely advanced
-//      (< kMinFpFrames). Every call pushes a return address regardless of frame
-//      pointers, so scanning the thread's stack for words that point into nmail's
-//      own text recovers the chain across frame-pointer-less frames. It is
-//      heuristic -- stale return addresses left on the stack can show as extra or
-//      out-of-order frames -- so it is only a fallback, never used when the precise
-//      walk succeeds.
+// 1. A precise frame-record walk down the frame-pointer chain. Exact and
+// ordered, but only where a frame pointer is maintained -- nmail's own code
+// is built -fno-omit-frame-pointer (CMakeLists.txt), the static deps
+// (OpenSSL, libetpan, ...) and musl itself are not. When an async signal
+// lands in that frame-pointer-less code (or in a thread's entry frame, fp=0),
+// the chain breaks at the first hop and the walk yields only the faulting pc
+// -- this is why an x86_64 crash during setup logged a single address.
+// 2. A fallback raw-stack scan, used when the frame-pointer walk barely advanced
+// (< kMinFpFrames). Every call pushes a return address regardless of frame
+// pointers, so scanning the thread's stack for words that point into nmail's
+// own text recovers the chain across frame-pointer-less frames. It is
+// heuristic -- stale return addresses left on the stack can show as extra or
+// out-of-order frames -- so it is only a fallback, never used when the precise
+// walk succeeds.
 //
 // Both tiers filter return addresses to nmail's own text range
 // [__executable_start, _etext); with the musl binary linked -no-pie that range is
@@ -1415,7 +1458,10 @@ static uintptr_t StackRegionEnd(uintptr_t p_Sp)
       uintptr_t lo = 0;
       uintptr_t hi = 0;
       const char* q = line;
-      while (*q == ' ') ++q;
+      while (*q == ' ')
+      {
+        ++q;
+      }
       while (((*q >= '0') && (*q <= '9')) || ((*q >= 'a') && (*q <= 'f')))
       {
         lo = (lo << 4) + ((*q <= '9') ? (uintptr_t)(*q - '0') : (uintptr_t)(*q - 'a' + 10));
@@ -2150,6 +2196,27 @@ std::string Util::EscapePath(const std::string& p_Str)
   }
 
   return text;
+}
+
+// percent-decoded url component
+std::string Util::DecodeUrl(const std::string& p_Str)
+{
+  std::string str;
+  for (size_t i = 0; i < p_Str.size(); ++i)
+  {
+    if ((p_Str[i] == '%') && ((i + 2) < p_Str.size()) && isxdigit((unsigned char)p_Str[i + 1]) &&
+        isxdigit((unsigned char)p_Str[i + 2]))
+    {
+      str += (char)std::stoi(p_Str.substr(i + 1, 2), nullptr, 16);
+      i += 2;
+    }
+    else
+    {
+      str += p_Str[i];
+    }
+  }
+
+  return str;
 }
 
 std::vector<std::string> Util::SplitAddrs(const std::string& p_Str)

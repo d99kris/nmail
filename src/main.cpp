@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
     { "html_viewer_cmd", "" },
     { "html_preview_cmd", "" },
     { "msg_viewer_cmd", "" },
+    { "link_open_cmd", "" },
     { "prefetch_level", "2" },
     { "prefetch_all_headers", "1" },
     { "verbose_logging", "0" },
@@ -328,6 +329,7 @@ int main(int argc, char* argv[])
   Util::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
   Util::SetHtmlPreviewCmd(mainConfig->Get("html_preview_cmd"));
   Util::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
+  Util::SetLinkOpenCmd(mainConfig->Get("link_open_cmd"));
   Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
   Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
   Util::SetSpellCmd(mainConfig->Get("spell_cmd"));

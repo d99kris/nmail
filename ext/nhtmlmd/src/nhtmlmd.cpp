@@ -187,6 +187,6 @@ namespace Nhtmlmd
 
   std::string GetVersion()
   {
-    return "0.3.0";
+    return "1.0.0";
   }
 }

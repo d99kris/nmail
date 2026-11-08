@@ -327,6 +327,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     imap_host=imap.example.com
     imap_port=993
     inbox=Inbox
+    link_open_cmd=
     logdump_enabled=0
     msg_viewer_cmd=
     name=Firstname Lastname
@@ -508,6 +509,13 @@ IMAP port. Required for fetching emails.
 ### inbox
 
 IMAP inbox folder name. Required for nmail to open the proper default folder.
+
+### link_open_cmd
+
+This field allows overriding the command used for opening links selected in
+message view, see `markdown_view_links` (not used for `mailto:` links). By default nmail uses `open` on macOS
+and `xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
+argument after the command.
 
 ### logdump_enabled
 
@@ -856,6 +864,7 @@ file (platform-dependent defaults are left empty below):
     localized_subject_prefixes=
     markdown_html_compose=0
     markdown_view=1
+    markdown_view_links=1
     new_msg_bell=1
     persist_file_selection_dir=1
     persist_find_query=0
@@ -979,6 +988,21 @@ characters, such as `**`, `*`, `~~`, backticks and code block fences, are
 hidden, and the text styles are configured in `colors.conf`, see
 `color_bold_text`, `color_code_text`, `color_italic_text` and
 `color_strike_text` (default enabled).
+
+### markdown_view_links
+
+Controls whether nmail shall show and allow navigating links in message view,
+when `markdown_view` is enabled. Links are styled with `color_link_text` and
+can be selected using `Tab` / `Shift-Tab` (`key_next_link` / `key_prev_link`),
+with the selected link highlighted using `color_highlighted_link` and its URL
+shown in the dialog bar. As in message find, stepping past the last or first
+link leaves no link selected. Pressing `Enter` (`key_open_link`) opens the
+selected link using `link_open_cmd`, except `mailto:` links which start
+composing a message to the address (with any `cc`, `bcc`, `subject` and `body`
+fields of the link). The built-in converter keeps link URLs in the
+converted text as Markdown reference links (`[text][1]` with `[1]: url` at the
+end), which are hidden in message view but included in quoted replies
+(default enabled).
 
 ### new_msg_bell
 
@@ -1162,12 +1186,15 @@ This configuration file holds user interface key bindings. Default content:
     key_kill_word=
     key_left=KEY_LEFT
     key_move=M
+    key_next_link=KEY_TAB
     key_next_msg=n
     key_next_page=KEY_NPAGE
     key_next_page_compose=KEY_NPAGE
     key_open=.
+    key_open_link=KEY_RETURN
     key_othercmd_help=o
     key_postpone=KEY_CTRLO
+    key_prev_link=KEY_BTAB
     key_prev_msg=p
     key_prev_page=KEY_PPAGE
     key_prev_page_compose=KEY_PPAGE
@@ -1291,12 +1318,18 @@ configuration file:
     color_hidden_file_attr=
     color_hidden_file_bg=
     color_hidden_file_fg=gray
+    color_highlighted_link_attr=
+    color_highlighted_link_bg=reverse
+    color_highlighted_link_fg=reverse
     color_highlighted_text_attr=
     color_highlighted_text_bg=reverse
     color_highlighted_text_fg=reverse
     color_italic_text_attr=
     color_italic_text_bg=
     color_italic_text_fg=
+    color_link_text_attr=underline
+    color_link_text_bg=
+    color_link_text_fg=
     color_quoted_text_attr=
     color_quoted_text_bg=
     color_quoted_text_fg=gray
@@ -1349,6 +1382,11 @@ Help shortcut key binding texts at bottom of the screen, i.e. `C` in
 
 Hidden files (names starting with `.`) in file selection list.
 
+### color_highlighted_link
+
+Selected link in message view, when `markdown_view_links` is enabled. Applied
+on top of `color_link_text`.
+
 ### color_highlighted_text
 
 Highlighted text, such as current message in message view, current folder in
@@ -1359,6 +1397,10 @@ folder list, text strings found in message find, etc.
 Markdown italic text in message view, when `markdown_view` is enabled. Set
 `color_italic_text_attr=italic` to show it using terminal italic (shown as
 underline on terminals not supporting italic).
+
+### color_link_text
+
+Links in message view, when `markdown_view_links` is enabled.
 
 ### color_quoted_text
 

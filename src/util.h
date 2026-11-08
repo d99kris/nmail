@@ -151,6 +151,7 @@ public:
   static std::string GetHtmlToTextConvertCmd();
   static void SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd);
   static size_t GetHtmlToTextConvertCmdHash();
+  static void SetHtmlToTextLinks(bool p_HtmlToTextLinks);
   static std::string ConvertHtmlToText(const std::string& p_Html);
   static std::string GetTextToHtmlConvertCmd();
   static void SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd);
@@ -172,6 +173,10 @@ public:
   static void SetMsgViewerCmd(const std::string& p_MsgViewerCmd);
   static std::string GetDefaultMsgViewerCmd();
   static bool IsDefaultMsgViewerCmd();
+  static std::string GetLinkOpenCmd();
+  static void SetLinkOpenCmd(const std::string& p_LinkOpenCmd);
+  static std::string GetDefaultLinkOpenCmd();
+  static bool IsDefaultLinkOpenCmd();
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static size_t ReplaceStringCount(std::string& p_Str, const std::string& p_Search,
@@ -279,6 +284,7 @@ public:
   static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
   static bool GetAddressBookEncrypt();
   static std::string EscapePath(const std::string& p_Str);
+  static std::string DecodeUrl(const std::string& p_Str);
   static std::vector<std::string> SplitAddrs(const std::string& p_Str);
   static std::vector<std::string> SplitAddrsUnquote(const std::string& p_Str);
   static std::string EscapeName(const std::string& p_Str);
@@ -326,11 +332,13 @@ public:
 
 private:
   static std::string m_HtmlToTextConvertCmd;
+  static bool m_HtmlToTextLinks;
   static std::string m_TextToHtmlConvertCmd;
   static std::string m_PartsViewerCmd;
   static std::string m_HtmlPreviewCmd;
   static std::string m_HtmlViewerCmd;
   static std::string m_MsgViewerCmd;
+  static std::string m_LinkOpenCmd;
   static std::string m_ApplicationDir;
   static std::string m_PagerCmd;
   static std::string m_EditorCmd;

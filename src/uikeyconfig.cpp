@@ -231,6 +231,9 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_find_next", "?" },
     { "key_sync", "s" },
     { "key_toggle_markdown_compose", "KEY_CTRLN" },
+    { "key_next_link", "KEY_TAB" },
+    { "key_prev_link", "KEY_BTAB" },
+    { "key_open_link", "KEY_RETURN" },
 #if defined(__APPLE__)
     { "key_backward_word", "\\33\\142" }, // opt-left
     { "key_forward_word", "\\33\\146" }, // opt-right
@@ -435,7 +438,9 @@ void UiKeyConfig::DetectConflicts()
   // Simplified conflict detection, not taking into account different modes / views, for now.
   std::set<std::string> ignoreKeyFunctions =
   {
+    "key_next_link",
     "key_next_page_compose",
+    "key_open_link",
     "key_prev_page_compose",
     "key_save_file",
     "key_save_all_files",
