@@ -26,8 +26,8 @@ Features
 - Compose using built-in or external editor
 - View using built-in or external viewer
 - Append customizable signature to emails
-- Customizable colors and key bindings
 - User interface similar to Alpine
+- Customizable [themes](https://github.com/d99kris/nmail/wiki/Themes) and key bindings
 
 Not Supported / Out of Scope
 ----------------------------
@@ -35,6 +35,16 @@ Not Supported / Out of Scope
 - Multiple email accounts in a single session
 - Special handling for Gmail labels
 - Threaded view
+
+
+Quick Install
+=============
+Pre-built binary for Linux (glibc >= 2.28 or musl) x86_64 / arm64 and macOS
+arm64:
+
+    curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh | bash
+
+For other installation options, see the sections below.
 
 
 Usage
@@ -145,8 +155,8 @@ There are three AUR packages available -
 
 Install Pre-built Binary
 ========================
-Experimental support for Linux (glibc >= 2.28 or musl) x86_64 and arm64, as
-well as macOS arm64.
+Supported on Linux (glibc >= 2.28 or musl) x86_64 and arm64, as well as macOS
+arm64.
 
 **Install**
 
@@ -514,7 +524,8 @@ IMAP inbox folder name. Required for nmail to open the proper default folder.
 
 This field allows overriding the command used for opening links selected in
 message view, see `markdown_view_links` and `plain_view_links` (not used for
-`mailto:` links). By default nmail uses `open` on macOS and `xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
+`mailto:` links). By default nmail uses `open` on macOS and
+`xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
 argument after the command.
 
 ### logdump_enabled
@@ -1265,10 +1276,10 @@ nmail is not running.
 Available themes:
 
     catppuccin-macchiato
-    claude
     default
     dracula
-    pastel-tint
+    pastel-blue
+    terracotta
 
 See the [Themes wiki-page](https://github.com/d99kris/nmail/wiki/Themes) for
 example screenshots.
@@ -1294,7 +1305,8 @@ Alternatively one may manually edit `colors.conf`. Colors may
 be specified using standard palette names (`black`, `red`, `green`, `yellow`,
 `blue`, `magenta`, `cyan`, `white`, `gray`, `bright_red`, `bright_green`,
 `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan` and
-`bright_white`) or using integer palette numbers (`0`, `1`, `2`, etc).
+`bright_white`) or using integer palette numbers (`0` - `255`, where `16` -
+`255` are the standard xterm 256-color palette).
 
 To use default terminal color, leave the color empty or set it to `normal`.
 To use inverted / reverse color set both `fg` and `bg` values to `reverse`.
