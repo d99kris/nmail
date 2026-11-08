@@ -908,7 +908,7 @@ void Ui::DrawHelp()
       case StateAddressList:
       case StateFromAddressList:
       case StateFileList:
-        DrawHelpText(viewFoldersHelp);
+        DrawHelpText(viewFoldersHelp, 2);
         break;
 
       case StateComposeMessage:
@@ -917,7 +917,7 @@ void Ui::DrawHelp()
       case StateReplySenderMessage:
       case StateForwardMessage:
       case StateForwardAttachedMessage:
-        DrawHelpText(composeMessageHelp);
+        DrawHelpText(composeMessageHelp, 2);
         break;
 
       case StateViewPartList:
@@ -932,7 +932,7 @@ void Ui::DrawHelp()
   }
 }
 
-void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText)
+void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, int p_KeyWidth)
 {
   int cols = 6;
   int width = m_ScreenWidth / cols;
@@ -946,13 +946,18 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText)
       std::wstring wcmd = Util::ToWString(rowIt->at(colIdx));
       std::wstring wdesc = Util::ToWString(rowIt->at(colIdx + 1));
 
+      // right-align key to min width
+      const int cmdWidth = Util::WStringWidth(wcmd);
+      const int cmdPad = std::max(0, p_KeyWidth - cmdWidth);
+      const int cmdX = x + cmdPad;
+
       wattron(m_HelpWin, m_AttrsHelpKeys);
-      mvwaddnwstr(m_HelpWin, y, x, wcmd.c_str(), wcmd.size());
+      mvwaddnwstr(m_HelpWin, y, cmdX, wcmd.c_str(), wcmd.size());
       wattroff(m_HelpWin, m_AttrsHelpKeys);
 
       wattron(m_HelpWin, m_AttrsHelpDesc);
-      const std::wstring wdescTrim = wdesc.substr(0, width - wcmd.size() - 2);
-      mvwaddnwstr(m_HelpWin, y, x + wcmd.size() + 1, wdescTrim.c_str(), wdescTrim.size());
+      const std::wstring wdescTrim = wdesc.substr(0, std::max(0, width - cmdPad - cmdWidth - 2));
+      mvwaddnwstr(m_HelpWin, y, cmdX + cmdWidth + 1, wdescTrim.c_str(), wdescTrim.size());
       wattroff(m_HelpWin, m_AttrsHelpDesc);
 
       x += width;
@@ -5526,7 +5531,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
       }
     };
 
-    DrawHelpText(savePartHelp);
+    DrawHelpText(savePartHelp, 2);
 
     wrefresh(m_HelpWin);
   }

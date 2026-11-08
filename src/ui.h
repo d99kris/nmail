@@ -144,7 +144,7 @@ private:
   void DrawSearchDialog();
   void DrawDefaultDialog();
   void DrawHelp();
-  void DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText);
+  void DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, int p_KeyWidth = 0);
   void DrawFolderList();
   void DrawAddressList();
   void DrawFileList();
