@@ -848,6 +848,28 @@ std::wstring Util::TrimPadWString(const std::wstring& p_Str, int p_Len)
   return str;
 }
 
+// trim to display width, with trailing ellipsis if trimmed
+std::wstring Util::TrimEllipsisWString(const std::wstring& p_Str, int p_Len)
+{
+  p_Len = std::max(p_Len, 0);
+  if (WStringWidth(p_Str) <= p_Len) return p_Str;
+
+  static const std::wstring ellipsis = L"...";
+  const int maxWidth = std::max(p_Len - (int)ellipsis.size(), 0);
+  std::wstring str;
+  int width = 0;
+  for (wchar_t wch : p_Str)
+  {
+    const int wchWidth = std::max(wcwidth(wch), 0);
+    if ((width + wchWidth) > maxWidth) break;
+
+    str += wch;
+    width += wchWidth;
+  }
+
+  return str + ellipsis.substr(0, p_Len - width);
+}
+
 std::string Util::RemoveInvisibleChars(const std::string& p_Str)
 {
   return ToString(RemoveInvisibleChars(ToWString(p_Str)));

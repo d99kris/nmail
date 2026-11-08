@@ -87,9 +87,21 @@ std::string Header::GetCc() const
   return m_Cc;
 }
 
+std::string Header::GetShortCc()
+{
+  ParseShortCcBcc();
+  return m_ShortCc;
+}
+
 std::string Header::GetBcc() const
 {
   return m_Bcc;
+}
+
+std::string Header::GetShortBcc()
+{
+  ParseShortCcBcc();
+  return m_ShortBcc;
 }
 
 std::string Header::GetReplyTo() const
@@ -308,6 +320,37 @@ void Header::Parse()
   m_ParseVersion = GetCurrentParseVersion();
 }
 
+// short cc / bcc parsed on demand, as only needed for compact header view
+void Header::ParseShortCcBcc()
+{
+  if (m_ShortCcBccParsed) return;
+
+  m_ShortCcBccParsed = true;
+  struct mailmime* mime = NULL;
+  size_t current_index = 0;
+  mailmime_parse(m_Data.c_str(), m_Data.size(), &current_index, &mime);
+  if (mime == NULL) return;
+
+  if ((mime->mm_type == MAILMIME_MESSAGE) && (mime->mm_data.mm_message.mm_fields != NULL))
+  {
+    struct mailimf_fields* fields = mime->mm_data.mm_message.mm_fields;
+    for (clistiter* it = clist_begin(fields->fld_list); it != NULL; it = clist_next(it))
+    {
+      struct mailimf_field* field = (struct mailimf_field*)clist_content(it);
+      if (field->fld_type == MAILIMF_FIELD_CC)
+      {
+        m_ShortCc = Util::Join(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list, true), ", ");
+      }
+      else if ((field->fld_type == MAILIMF_FIELD_BCC) && (field->fld_data.fld_bcc->bcc_addr_list != nullptr))
+      {
+        m_ShortBcc = Util::Join(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list, true), ", ");
+      }
+    }
+  }
+
+  mailmime_free(mime);
+}
+
 std::vector<std::string> Header::MailboxListToStrings(mailimf_mailbox_list* p_MailboxList,
                                                       const bool p_Short)
 {
@@ -352,13 +395,18 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   std::string str;
   if (p_Short)
   {
-    if (p_Mailbox->mb_display_name != NULL)
+    if ((p_Mailbox->mb_display_name != NULL) && (strlen(p_Mailbox->mb_display_name) > 0))
     {
       str = Util::MimeToUtf8(std::string(p_Mailbox->mb_display_name));
     }
     else
     {
+      // address only lower-cased for display, ascii only to keep utf-8 intact
       str = std::string(p_Mailbox->mb_addr_spec);
+      std::transform(str.begin(), str.end(), str.begin(), [](char p_Ch)
+      {
+        return ((p_Ch >= 'A') && (p_Ch <= 'Z')) ? (char)(p_Ch - 'A' + 'a') : p_Ch;
+      });
     }
   }
   else
@@ -396,7 +444,7 @@ std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
 
 size_t Header::GetCurrentParseVersion()
 {
-  static size_t parseVersion = 2; // update offset when parsing changes
+  static size_t parseVersion = 3; // update offset when parsing changes
   return parseVersion;
 }
 

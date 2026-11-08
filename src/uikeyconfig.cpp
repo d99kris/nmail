@@ -263,6 +263,7 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_sort_subject", "%" },
     { "key_jump_to", "j" },
     { "key_toggle_full_header", "h" },
+    { "key_toggle_compact_header", "H" },
     { "key_select_item", "KEY_SPACE" },
     { "key_select_all", "a" },
     { "key_search_show_folder", "\\" },

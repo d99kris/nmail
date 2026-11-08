@@ -30,7 +30,9 @@ public:
   std::string GetTo() const;
   std::string GetShortTo() const;
   std::string GetCc() const;
+  std::string GetShortCc();
   std::string GetBcc() const;
+  std::string GetShortBcc();
   std::string GetReplyTo() const;
   std::string GetSubject() const;
   std::string GetUniqueId() const;
@@ -73,6 +75,7 @@ public:
 
 private:
   void Parse();
+  void ParseShortCcBcc();
   std::vector<std::string> MailboxListToStrings(struct mailimf_mailbox_list* p_MailboxList,
                                                 const bool p_Short = false);
   std::vector<std::string> AddressListToStrings(struct mailimf_address_list* p_AddrList,
@@ -104,6 +107,9 @@ private:
   std::set<std::string> m_Addresses;
   bool m_HasAttachments = false;
   std::string m_RawHeaderText;
+  bool m_ShortCcBccParsed = false;
+  std::string m_ShortCc;
+  std::string m_ShortBcc;
 };
 
 std::ostream& operator<<(std::ostream& p_Stream, const Header& p_Header);

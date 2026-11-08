@@ -85,6 +85,7 @@ void Ui::Init()
     { "unread_indicator", "N" },
     { "invalid_input_notify", "1" },
     { "full_header_include_local", "0" },
+    { "show_compact_header", "1" },
     { "tab_size", "8" },
     { "search_show_folder", "1" },
     { "localized_subject_prefixes", "" },
@@ -358,6 +359,8 @@ void Ui::Init()
   m_InvalidInputNotify = m_Config.Get("invalid_input_notify") == "1";
   m_KeyToggleFullHeader = UiKeyConfig::GetKey("key_toggle_full_header");
   m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
+  m_KeyToggleCompactHeader = UiKeyConfig::GetKey("key_toggle_compact_header");
+  m_ShowCompactHeader = m_Config.Get("show_compact_header") == "1";
   m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
   m_KeySelectItem = UiKeyConfig::GetKey("key_select_item");
   m_KeySelectAll = UiKeyConfig::GetKey("key_select_all");
@@ -390,6 +393,7 @@ void Ui::Cleanup()
 
   m_Config.Set("plain_text", m_Plaintext ? "1" : "0");
   m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
+  m_Config.Set("show_compact_header", m_ShowCompactHeader ? "1" : "0");
   m_Config.Set("search_show_folder", m_SearchShowFolder ? "1" : "0");
   m_Config.Save();
 
@@ -1724,6 +1728,24 @@ void Ui::DrawMessage()
       if (m_ShowFullHeader)
       {
         ss << header.GetRawHeaderText(m_FullHeaderIncludeLocal);
+      }
+      else if (m_ShowCompactHeader)
+      {
+        // names only, without reply-to
+        ss << GetHeaderLabel("Date") << header.GetDateTime() << "\n";
+        ss << GetHeaderLabel("From") << header.GetShortFrom() << "\n";
+        ss << GetHeaderLabel("To") << header.GetShortTo() << "\n";
+        if (!header.GetCc().empty())
+        {
+          ss << GetHeaderLabel("Cc") << header.GetShortCc() << "\n";
+        }
+
+        if (!header.GetBcc().empty())
+        {
+          ss << GetHeaderLabel("Bcc") << header.GetShortBcc() << "\n";
+        }
+
+        ss << GetHeaderLabel("Subject") << header.GetSubject() << "\n";
       }
       else
       {
@@ -3099,6 +3121,12 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyToggleFullHeader)
   {
     m_ShowFullHeader = !m_ShowFullHeader;
+    m_MessageViewLineOffset = 0;
+    m_MessageFindMatchLine = -1;
+  }
+  else if (p_Key == m_KeyToggleCompactHeader)
+  {
+    m_ShowCompactHeader = !m_ShowCompactHeader;
     m_MessageViewLineOffset = 0;
     m_MessageFindMatchLine = -1;
   }
@@ -6994,6 +7022,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   static bool prevPlaintext = false;
   static bool prevProcessFlowed = false;
   static bool prevShowFullHeader = false;
+  static bool prevShowCompactHeader = false;
   static bool prevFromHtml = false;
   static int32_t prevMaxViewLineLength = 0;
   static size_t prevTextLen = 0;
@@ -7003,6 +7032,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
 
   if ((prevFolder == p_Folder) && (prevUid == p_Uid) && (prevPlaintext == m_Plaintext) &&
       (prevProcessFlowed == m_CurrentMessageProcessFlowed) && (prevShowFullHeader == m_ShowFullHeader) &&
+      (prevShowCompactHeader == m_ShowCompactHeader) &&
       (prevFromHtml == m_CurrentMessageFromHtml) &&
       (prevMaxViewLineLength == m_MaxViewLineLength) && (prevTextLen == m_CurrentMessageViewText.size()))
   {
@@ -7014,6 +7044,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   prevPlaintext = m_Plaintext;
   prevProcessFlowed = m_CurrentMessageProcessFlowed;
   prevShowFullHeader = m_ShowFullHeader;
+  prevShowCompactHeader = m_ShowCompactHeader;
   prevFromHtml = m_CurrentMessageFromHtml;
   prevMaxViewLineLength = m_MaxViewLineLength;
   prevTextLen = m_CurrentMessageViewText.size(); // cater for search results async header load
@@ -7027,9 +7058,23 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   wlines.clear();
   size_t bodyStart = 0;
   const size_t headerEnd = wtext.find(L"\n\n");
-  const bool hangingIndent = m_AlignHeaderLabels && !m_ShowFullHeader && (headerEnd != std::wstring::npos) &&
-    (m_MaxViewLineLength >= (int32_t)(HEADER_VALUE_COL + HEADER_VALUE_MIN_WIDTH));
-  if (hangingIndent)
+  const bool compactHeader = m_ShowCompactHeader && !m_ShowFullHeader && (headerEnd != std::wstring::npos);
+  const bool hangingIndent = m_AlignHeaderLabels && !m_ShowFullHeader && !compactHeader &&
+    (headerEnd != std::wstring::npos) && (m_MaxViewLineLength >= (int32_t)(HEADER_VALUE_COL + HEADER_VALUE_MIN_WIDTH));
+  if (compactHeader)
+  {
+    // header lines truncated to fit
+    std::wistringstream headerss(wtext.substr(0, headerEnd));
+    std::wstring line;
+    while (std::getline(headerss, line))
+    {
+      std::replace(line.begin(), line.end(), L'\t', L' ');
+      wlines.push_back(Util::TrimEllipsisWString(line, m_MaxViewLineLength));
+    }
+
+    bodyStart = headerEnd + 1; // keep blank line separating header and body
+  }
+  else if (hangingIndent)
   {
     const std::wstring indent(HEADER_VALUE_COL, L' ');
     const unsigned valueWidth = m_MaxViewLineLength - HEADER_VALUE_COL;

@@ -891,6 +891,7 @@ file (platform-dependent defaults are left empty below):
     rewrap_quoted_lines=1
     search_show_folder=1
     send_without_confirm=0
+    show_compact_header=1
     show_embedded_images=1
     show_progress=1
     show_rich_header=0
@@ -1092,6 +1093,13 @@ can be re-configured at run-time by pressing `\` when viewing search results
 Allow sending email during compose without confirmation prompt (default
 disabled).
 
+### show_compact_header
+
+Determines whether to show compact headers when viewing an email, i.e. only
+names (without addresses), no Reply-To, and header lines truncated to fit the
+screen width. This option can be re-configured in run-time by pressing `H`
+when viewing an email (default enabled).
+
 ### show_embedded_images
 
 Determines whether to show embedded images in text/html part when viewing it
@@ -1245,6 +1253,7 @@ This configuration file holds user interface key bindings. Default content:
     key_tab=KEY_TAB
     key_terminal_resize=KEY_RESIZE
     key_to_select=KEY_CTRLT
+    key_toggle_compact_header=H
     key_toggle_full_header=h
     key_toggle_markdown_compose=KEY_CTRLN
     key_toggle_text_html=t

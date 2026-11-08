@@ -445,6 +445,7 @@ private:
   int m_KeySortSubject = 0;
   int m_KeyJumpTo = 0;
   int m_KeyToggleFullHeader = 0;
+  int m_KeyToggleCompactHeader = 0;
   int m_KeySelectItem = 0;
   int m_KeySelectAll = 0;
   int m_KeySearchShowFolder = 0;
@@ -480,6 +481,7 @@ private:
   bool m_ShowRichHeader = false;
   bool m_ColorsEnabled = false;
   bool m_ShowFullHeader = false;
+  bool m_ShowCompactHeader = false;
   bool m_SearchShowFolder = false;
   bool m_Signature = false;
   bool m_TopBarShowVersion = false;
