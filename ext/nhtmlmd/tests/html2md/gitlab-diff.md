@@ -1,0 +1,24 @@
+Alice Smith started a new discussion on README.md:
+
+```
+55  55   ## Name
+56  56   Choose a self-explaining name for your project.
+57  57
+    58  +## Name
+    59  +Choose a self-explaining name for your project.
+    60  +
+58  61   ## Description
+59  62   Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+60  63
+61  64   ## Badges
+62  65   On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+63  66
+    67  +## Description
+    68  +Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```
+
+Why?
+
+—
+Reply to this email directly or view it on GitLab.
+You're receiving this email because of your activity on git.example.com. Unsubscribe from this thread · Manage all notifications · Help

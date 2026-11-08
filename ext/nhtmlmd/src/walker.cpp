@@ -303,6 +303,19 @@ namespace Nhtmlmd
     return false;
   }
 
+  // cell content is preformatted, e.g. a code / diff line
+  static bool IsPreCell(const Node& p_Node)
+  {
+    for (const auto& child : p_Node.m_Children)
+    {
+      if (child->m_Type != Node::Element) continue;
+
+      if ((child->m_Tag == "pre") || IsPreCell(*child)) return true;
+    }
+
+    return false;
+  }
+
   static std::string CodeLanguage(const Node& p_Node)
   {
     for (const auto& child : p_Node.m_Children)
@@ -862,6 +875,7 @@ namespace Nhtmlmd
     }
 
     std::vector<std::vector<std::string>> texts;
+    std::vector<bool> preCols;
     size_t gridRows = 0;
     size_t ncols = 0;
     for (const auto& row : p_Cells)
@@ -876,11 +890,15 @@ namespace Nhtmlmd
 
       ++gridRows;
       ncols = std::max(ncols, row.size());
-      for (const auto& cell : row)
+      preCols.resize(ncols, true);
+      for (size_t col = 0; col < row.size(); ++col)
       {
+        const Cell& cell = row[col];
         if (cell.m_Text.empty()) continue;
 
-        if (!cell.m_SingleLine || (Util::DisplayWidth(cell.m_Text) > maxCellWidth)) return false;
+        if (!cell.m_SingleLine) return false;
+
+        preCols[col] = preCols[col] && IsPreCell(*cell.m_Node);
       }
     }
 
@@ -899,19 +917,34 @@ namespace Nhtmlmd
 
     // skip columns empty in all grid rows
     std::vector<size_t> keep;
-    size_t total = markdown ? 1 : 0;
     for (size_t col = 0; col < ncols; ++col)
     {
       if (widths[col] == 0) continue;
 
       keep.push_back(col);
-      total += widths[col] + (markdown ? 3 : 2);
     }
 
-    if ((keep.size() < 2) || (total > (size_t)m_Options.m_LayoutWidth)) return false;
+    if (keep.size() < 2) return false;
+
+    // last column of code lines (diffs) may be wide, as nothing follows it
+    const bool wideLast = !markdown && preCols[keep.back()];
+    // code lines fenced in markdown, to not be parsed as markup
+    const bool fence = m_Markdown && wideLast;
+    size_t total = markdown ? 1 : 0;
+    for (size_t i = 0; i < keep.size(); ++i)
+    {
+      if (wideLast && ((i + 1) == keep.size())) continue;
+
+      if (widths[keep[i]] > maxCellWidth) return false;
+
+      total += widths[keep[i]] + (markdown ? 3 : 2);
+    }
+
+    if (total > (size_t)m_Options.m_LayoutWidth) return false;
 
     // markdown tables restart after a single cell row, first row is header
     bool firstRow = true;
+    bool inFence = false;
     for (size_t r = 0; r < p_Cells.size(); ++r)
     {
       const std::vector<std::string>& row = texts[r];
@@ -920,6 +953,13 @@ namespace Nhtmlmd
 
       if (count == 1)
       {
+        if (inFence)
+        {
+          m_Writer->Literal("```");
+          m_Writer->Block(1);
+          inFence = false;
+        }
+
         for (const auto& cell : p_Cells[r])
         {
           if (!cell.m_Text.empty()) CellLines(cell, markdown ? 1 : 0);
@@ -951,6 +991,13 @@ namespace Nhtmlmd
 
       if (firstRow && markdown) m_Writer->Block(1);
 
+      if (fence && !inFence)
+      {
+        m_Writer->Block(1);
+        m_Writer->Literal("```");
+        inFence = true;
+      }
+
       m_Writer->Block(0);
       m_Writer->Literal(line);
       if (firstRow && (markdown || header))
@@ -973,6 +1020,12 @@ namespace Nhtmlmd
       }
 
       firstRow = false;
+    }
+
+    if (inFence)
+    {
+      m_Writer->Literal("```");
+      m_Writer->Block(1);
     }
 
     return true;

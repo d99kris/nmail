@@ -260,6 +260,7 @@ public:
   static std::string GetSQLiteVersion();
   static int GetColor(const std::string& p_Str);
   static int GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr);
+  static int GetAttrs(const std::string& p_AttrStr);
   static void SetUseServerTimestamps(bool p_Enable);
   static bool GetUseServerTimestamps();
   static void CopyFile(const std::string& p_SrcPath, const std::string& p_DstPath);

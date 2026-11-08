@@ -16,6 +16,7 @@
 #include "config.h"
 #include "imapmanager.h"
 #include "smtpmanager.h"
+#include "textstyle.h"
 
 class SleepDetect;
 
@@ -346,6 +347,7 @@ private:
   bool m_PersistSearchQuery = false;
   bool m_Plaintext = true;
   bool m_MarkdownHtmlCompose = false;
+  bool m_MarkdownView = false;
   bool m_CurrentMarkdownHtmlCompose = false;
   bool m_IsAutoMove = false;
 
@@ -480,6 +482,12 @@ private:
   int m_AttrsTopBar = A_REVERSE;
   int m_AttrsSelectedItem = A_NORMAL;
   int m_AttrsSelectedHighlighted = A_NORMAL;
+  int m_AttrsBoldText = A_NORMAL;
+  int m_AttrsCodeText = A_NORMAL;
+  int m_AttrsHeaderName = A_NORMAL;
+  int m_AttrsItalicText = A_NORMAL;
+  int m_AttrsStrikeText = A_NORMAL;
+  int m_AttrsSignatureText = A_NORMAL;
 
   std::string m_AttachmentIndicator;
   bool m_BottomReply = false;
@@ -563,7 +571,10 @@ private:
   std::string m_MessageFindQuery;
   bool m_PrefetchAllHeaders = true;
   bool m_CurrentMessageProcessFlowed = false;
+  bool m_CurrentMessageFromHtml = false;
   int m_MessageViewHeaderLineCount = 0;
+  std::vector<std::wstring> m_MessageViewLines;
+  std::vector<std::vector<TextStyle::Span>> m_MessageViewSpans;
 
   std::string m_FilterCustomStr;
   int m_TabSize = 8;

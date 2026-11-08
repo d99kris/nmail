@@ -200,6 +200,8 @@ add_executable(nmail
   src/sqlitehelp.h
   src/status.cpp
   src/status.h
+  src/textstyle.cpp
+  src/textstyle.h
   src/ui.cpp
   src/ui.h
   src/uikeyconfig.cpp

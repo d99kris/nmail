@@ -4,7 +4,7 @@ Thanks for the quick review! A few notes on the **release plan**:
 
 1. Branch is cut on *Friday*
 2. Tests must be green, see [the dashboard](https://ci.example.com/proj)
-3. Ship on Monday
+3. Ship on ~~Friday~~ Monday
 
 | Item  | Owner | Status        |
 |-------|-------|---------------|
@@ -18,7 +18,9 @@ Run `make release` or:
 ```
 
 Best regards,
-Alice
+--
+Alice Smith
+ACME Inc
 
 On Mon, 2 Nov 2026 at 09:15, Bob Jones <bob@example.com> wrote:
 > Looks good overall. Can we ship next week?

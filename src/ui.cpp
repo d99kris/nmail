@@ -23,6 +23,7 @@
 #include "sethelp.h"
 #include "sleepdetect.h"
 #include "status.h"
+#include "textstyle.h"
 #include "uikeyconfig.h"
 #include "uikeyinput.h"
 #include "version.h"
@@ -71,6 +72,7 @@ void Ui::Init()
     { "show_embedded_images", "1" },
     { "show_rich_header", "0" },
     { "markdown_html_compose", "0" },
+    { "markdown_view", "1" },
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
@@ -121,6 +123,7 @@ void Ui::Init()
   m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
   m_Plaintext = m_Config.Get("plain_text") == "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
+  m_MarkdownView = m_Config.Get("markdown_view") == "1";
   m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
   m_KeyNextMsg = UiKeyConfig::GetKey("key_next_msg");
   m_KeyReplyAll = UiKeyConfig::GetKey("key_reply_all");
@@ -236,24 +239,51 @@ void Ui::Init()
     const std::string defaultQuotedFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultHiddenFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultSelectedFg = (COLORS > 8) ? "gray" : "";
+    const std::string defaultStrikeFg = (COLORS > 8) ? "gray" : "";
     const std::map<std::string, std::string> defaultColorsConfig =
     {
+      { "color_bold_text_attr", "" },
+      { "color_bold_text_bg", "" },
+      { "color_bold_text_fg", "" },
+      { "color_code_text_attr", "" },
+      { "color_code_text_bg", "" },
+      { "color_code_text_fg", "" },
+      { "color_dialog_attr", "" },
       { "color_dialog_bg", "reverse" },
       { "color_dialog_fg", "reverse" },
+      { "color_header_name_attr", "" },
+      { "color_header_name_bg", "" },
+      { "color_header_name_fg", "" },
+      { "color_help_desc_attr", "" },
       { "color_help_desc_bg", "" },
       { "color_help_desc_fg", "" },
+      { "color_help_keys_attr", "" },
       { "color_help_keys_bg", "reverse" },
       { "color_help_keys_fg", "reverse" },
-      { "color_highlighted_text_bg", "reverse" },
-      { "color_highlighted_text_fg", "reverse" },
-      { "color_quoted_text_bg", "" },
-      { "color_quoted_text_fg", defaultQuotedFg },
+      { "color_hidden_file_attr", "" },
       { "color_hidden_file_bg", "" },
       { "color_hidden_file_fg", defaultHiddenFg },
+      { "color_highlighted_text_attr", "" },
+      { "color_highlighted_text_bg", "reverse" },
+      { "color_highlighted_text_fg", "reverse" },
+      { "color_italic_text_attr", "" },
+      { "color_italic_text_bg", "" },
+      { "color_italic_text_fg", "" },
+      { "color_quoted_text_attr", "" },
+      { "color_quoted_text_bg", "" },
+      { "color_quoted_text_fg", defaultQuotedFg },
       { "color_regular_text_bg", "" },
       { "color_regular_text_fg", "" },
+      { "color_selected_item_attr", "" },
       { "color_selected_item_bg", "" },
       { "color_selected_item_fg", defaultSelectedFg },
+      { "color_signature_text_attr", "" },
+      { "color_signature_text_bg", "" },
+      { "color_signature_text_fg", "" },
+      { "color_strike_text_attr", "" },
+      { "color_strike_text_bg", "" },
+      { "color_strike_text_fg", defaultStrikeFg },
+      { "color_top_bar_attr", "" },
       { "color_top_bar_bg", "reverse" },
       { "color_top_bar_fg", "reverse" },
     };
@@ -265,29 +295,38 @@ void Ui::Init()
     const int colorRegularTextBg = Util::GetColor(colorsConfig.Get("color_regular_text_bg"));
     assume_default_colors(colorRegularTextFg, colorRegularTextBg);
 
-    m_AttrsDialog = Util::GetColorAttrs(colorsConfig.Get("color_dialog_fg"), colorsConfig.Get("color_dialog_bg"));
-    m_AttrsHelpDesc =
-      Util::GetColorAttrs(colorsConfig.Get("color_help_desc_fg"), colorsConfig.Get("color_help_desc_bg"));
-    m_AttrsHelpKeys =
-      Util::GetColorAttrs(colorsConfig.Get("color_help_keys_fg"), colorsConfig.Get("color_help_keys_bg"));
-    m_AttrsHighlightedText =
-      Util::GetColorAttrs(colorsConfig.Get("color_highlighted_text_fg"), colorsConfig.Get("color_highlighted_text_bg"));
-    m_AttrsQuotedText =
-      Util::GetColorAttrs(colorsConfig.Get("color_quoted_text_fg"), colorsConfig.Get("color_quoted_text_bg"));
-    m_AttrsHiddenFile =
-      Util::GetColorAttrs(colorsConfig.Get("color_hidden_file_fg"), colorsConfig.Get("color_hidden_file_bg"));
-    m_AttrsTopBar = Util::GetColorAttrs(colorsConfig.Get("color_top_bar_fg"), colorsConfig.Get("color_top_bar_bg"));
-    m_AttrsSelectedItem =
-      Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_selected_item_bg"));
-
-    if (m_AttrsHighlightedText == A_REVERSE)
+    auto getAttrs = [&](const std::string& p_Item)
     {
-      m_AttrsSelectedHighlighted = m_AttrsSelectedItem | A_REVERSE;
+      return Util::GetColorAttrs(colorsConfig.Get(p_Item + "_fg"), colorsConfig.Get(p_Item + "_bg")) |
+             Util::GetAttrs(colorsConfig.Get(p_Item + "_attr"));
+    };
+
+    m_AttrsDialog = getAttrs("color_dialog");
+    m_AttrsHelpDesc = getAttrs("color_help_desc");
+    m_AttrsHelpKeys = getAttrs("color_help_keys");
+    m_AttrsHighlightedText = getAttrs("color_highlighted_text");
+    m_AttrsQuotedText = getAttrs("color_quoted_text");
+    m_AttrsBoldText = getAttrs("color_bold_text");
+    m_AttrsHeaderName = getAttrs("color_header_name");
+    m_AttrsCodeText = getAttrs("color_code_text");
+    m_AttrsItalicText = getAttrs("color_italic_text");
+    m_AttrsStrikeText = getAttrs("color_strike_text");
+    m_AttrsSignatureText = getAttrs("color_signature_text");
+    m_AttrsHiddenFile = getAttrs("color_hidden_file");
+    m_AttrsTopBar = getAttrs("color_top_bar");
+    m_AttrsSelectedItem = getAttrs("color_selected_item");
+
+    if (!(m_AttrsHighlightedText & A_COLOR))
+    {
+      // attributes only (e.g. reverse), apply on top of selected item
+      m_AttrsSelectedHighlighted = m_AttrsSelectedItem | m_AttrsHighlightedText;
     }
     else
     {
       m_AttrsSelectedHighlighted =
-        Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg"));
+        Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg")) |
+        Util::GetAttrs(colorsConfig.Get("color_selected_item_attr")) |
+        Util::GetAttrs(colorsConfig.Get("color_highlighted_text_attr"));
     }
 
     colorsConfig.Save();
@@ -1717,6 +1756,7 @@ void Ui::DrawMessage()
       const std::string text = headerText + bodyText;
       m_CurrentMessageViewText = text;
       m_CurrentMessageProcessFlowed = m_RespectFormatFlowed && m_Plaintext && body.IsFormatFlowed();
+      m_CurrentMessageFromHtml = m_Plaintext ? !body.HasTextPlain() : body.HasTextHtml(); // each falls back to the other
       std::vector<std::wstring> wlines = GetCachedWordWrapLines(folder, bodyIt->first);
       int countLines = wlines.size();
 
@@ -1724,40 +1764,48 @@ void Ui::DrawMessage()
                                             countLines - m_MainWinHeight);
       for (int i = 0; ((i < m_MainWinHeight) && (i < countLines)); ++i)
       {
-        const std::wstring& wdispStr = wlines.at(i + m_MessageViewLineOffset);
-        const std::string& dispStr = Util::ToString(wdispStr);
-        const bool isQuote = (dispStr.rfind(">", 0) == 0) &&
-          ((i + m_MessageViewLineOffset) > m_MessageViewHeaderLineCount);
+        const int lineIndex = i + m_MessageViewLineOffset;
+        const std::wstring& wdispStr = wlines.at(lineIndex);
+        const bool isQuote = (wdispStr.rfind(L">", 0) == 0) && (lineIndex > m_MessageViewHeaderLineCount);
 
-        if (isQuote)
+        // per-char attrs from base, styled spans and search match
+        std::vector<int> attrs(wdispStr.size(), isQuote ? m_AttrsQuotedText : A_NORMAL);
+        if (lineIndex < (int)m_MessageViewSpans.size())
         {
-          wattron(m_MainWin, m_AttrsQuotedText);
+          for (const auto& span : m_MessageViewSpans.at(lineIndex))
+          {
+            for (int k = span.m_Start; (k < (span.m_Start + span.m_Len)) && (k < (int)attrs.size()); ++k)
+            {
+              attrs[k] = TextStyle::CombineAttrs(attrs[k], span.m_Attrs);
+            }
+          }
         }
 
-        if (!m_MessageFindQuery.empty() && (m_MessageFindMatchLine == (i + m_MessageViewLineOffset)))
+        if (!m_MessageFindQuery.empty() && (m_MessageFindMatchLine == lineIndex))
         {
-          // search match
-          const std::wstring wquery = Util::ToWString(m_MessageFindQuery);
-          std::wstring beforeMatch = wdispStr.substr(0, m_MessageFindMatchPos);
-          std::wstring match = wdispStr.substr(m_MessageFindMatchPos, wquery.size());
-          std::wstring afterMatch = wdispStr.substr(m_MessageFindMatchPos + wquery.size());
-
-          mvwaddnwstr(m_MainWin, i, 0, beforeMatch.c_str(), beforeMatch.size());
-          wattron(m_MainWin, m_AttrsHighlightedText);
-          mvwaddnwstr(m_MainWin, i, beforeMatch.size(), match.c_str(), match.size());
-          wattroff(m_MainWin, m_AttrsHighlightedText);
-          mvwaddnwstr(m_MainWin, i, beforeMatch.size() + match.size(), afterMatch.c_str(), afterMatch.size());
-        }
-        else
-        {
-          // normal
-          mvwaddnwstr(m_MainWin, i, 0, wdispStr.c_str(), wdispStr.size());
+          const size_t matchLen = Util::ToWString(m_MessageFindQuery).size();
+          for (size_t k = m_MessageFindMatchPos; (k < (m_MessageFindMatchPos + matchLen)) && (k < attrs.size()); ++k)
+          {
+            attrs[k] = TextStyle::CombineAttrs(attrs[k], m_AttrsHighlightedText);
+          }
         }
 
-        if (isQuote)
+        wmove(m_MainWin, i, 0);
+        size_t runStart = 0;
+        while (runStart < wdispStr.size())
         {
-          wattroff(m_MainWin, m_AttrsQuotedText);
+          size_t runEnd = runStart + 1;
+          while ((runEnd < wdispStr.size()) && (attrs[runEnd] == attrs[runStart]))
+          {
+            ++runEnd;
+          }
+
+          wattrset(m_MainWin, attrs[runStart]);
+          waddnwstr(m_MainWin, wdispStr.c_str() + runStart, runEnd - runStart);
+          runStart = runEnd;
         }
+
+        wattrset(m_MainWin, A_NORMAL);
       }
 
       markSeen = true;
@@ -1921,6 +1969,20 @@ void Ui::DrawComposeMessage()
     if (idx < m_ComposeMessageOffsetY) continue;
 
     if (messageY > m_MainWinHeight) break;
+
+    if (idx < (int)headerLines.size())
+    {
+      // header name incl colon, and value
+      const size_t nameLen = std::min(headerLines.at(idx).find(L':') + 1, line->size());
+      const std::string& name = Util::ToString(line->substr(0, nameLen));
+      const std::string& value = Util::ToString(line->substr(nameLen));
+      wattron(m_MainWin, m_AttrsHeaderName);
+      mvwprintw(m_MainWin, messageY, 0, "%s", name.c_str());
+      wattroff(m_MainWin, m_AttrsHeaderName);
+      wprintw(m_MainWin, "%s", value.c_str());
+      ++messageY;
+      continue;
+    }
 
     const std::string& dispStr = Util::ToString(*line);
     const bool isQuote = (dispStr.rfind(">", 0) == 0);
@@ -6665,15 +6727,18 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   static uint32_t prevUid = 0;
   static bool prevPlaintext = false;
   static bool prevProcessFlowed = false;
+  static bool prevShowFullHeader = false;
+  static bool prevFromHtml = false;
   static int32_t prevMaxViewLineLength = 0;
-  static std::vector<std::wstring> wlines;
   static size_t prevTextLen = 0;
 
+  std::vector<std::wstring>& wlines = m_MessageViewLines;
   if (p_Folder.empty() && (p_Uid == 0)) return wlines;
 
   if ((prevFolder == p_Folder) && (prevUid == p_Uid) && (prevPlaintext == m_Plaintext) &&
-      (prevProcessFlowed == m_CurrentMessageProcessFlowed) && (prevMaxViewLineLength == m_MaxViewLineLength) &&
-      (prevTextLen == m_CurrentMessageViewText.size()))
+      (prevProcessFlowed == m_CurrentMessageProcessFlowed) && (prevShowFullHeader == m_ShowFullHeader) &&
+      (prevFromHtml == m_CurrentMessageFromHtml) &&
+      (prevMaxViewLineLength == m_MaxViewLineLength) && (prevTextLen == m_CurrentMessageViewText.size()))
   {
     return wlines;
   }
@@ -6682,6 +6747,8 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   prevUid = p_Uid;
   prevPlaintext = m_Plaintext;
   prevProcessFlowed = m_CurrentMessageProcessFlowed;
+  prevShowFullHeader = m_ShowFullHeader;
+  prevFromHtml = m_CurrentMessageFromHtml;
   prevMaxViewLineLength = m_MaxViewLineLength;
   prevTextLen = m_CurrentMessageViewText.size(); // cater for search results async header load
 
@@ -6701,6 +6768,30 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
       m_MessageViewHeaderLineCount = i;
       break;
     }
+  }
+
+  m_MessageViewSpans.assign(wlinesSize, std::vector<TextStyle::Span>());
+  if (m_AttrsHeaderName != A_NORMAL)
+  {
+    TextStyle::StyleHeaderLines(wlines, m_MessageViewHeaderLineCount, m_AttrsHeaderName, m_ShowFullHeader,
+                                m_MessageViewSpans);
+  }
+
+  // markdown only from built-in html converter
+  if (m_MarkdownView && m_CurrentMessageFromHtml && Util::GetHtmlToTextConvertCmd().empty())
+  {
+    TextStyle::MarkdownAttrs attrs;
+    attrs.m_Bold = m_AttrsBoldText;
+    attrs.m_Italic = m_AttrsItalicText;
+    attrs.m_Code = m_AttrsCodeText;
+    attrs.m_Strike = m_AttrsStrikeText;
+    TextStyle::StyleMarkdownLines(wlines, m_MessageViewHeaderLineCount + 1, attrs, m_MessageViewSpans);
+  }
+
+  if (m_AttrsSignatureText != A_NORMAL)
+  {
+    TextStyle::StyleSignatureLines(wlines, m_MessageViewHeaderLineCount + 1, m_AttrsSignatureText,
+                                   m_MessageViewSpans);
   }
 
   return wlines;

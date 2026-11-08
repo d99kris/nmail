@@ -8,6 +8,7 @@
 #include "nhtmlmd.h"
 
 #include <map>
+#include <sstream>
 
 #include <lexbor/dom/interfaces/character_data.h>
 #include <lexbor/dom/interfaces/text.h>
@@ -119,6 +120,35 @@ namespace Nhtmlmd
     return html;
   }
 
+  // escape signature separator lines (-- ), which would otherwise turn preceding
+  // text into a setext heading, skipping fenced code blocks
+  static std::string EscapeSignatureSeparators(const std::string& p_Markdown)
+  {
+    std::istringstream iss(p_Markdown);
+    std::string out;
+    std::string line;
+    bool inFence = false;
+    while (std::getline(iss, line))
+    {
+      const size_t contentPos = line.find_first_not_of("> ");
+      const std::string content = (contentPos == std::string::npos) ? "" : line.substr(contentPos);
+      if ((content.rfind("```", 0) == 0) || (content.rfind("~~~", 0) == 0))
+      {
+        inFence = !inFence;
+      }
+      else if (!inFence && ((content == "--") || (content == "-- ")))
+      {
+        line = line.substr(0, contentPos) + "\\-\\-" + content.substr(2);
+      }
+
+      out += line + "\n";
+    }
+
+    if (!p_Markdown.empty() && (p_Markdown.back() != '\n')) out.pop_back();
+
+    return out;
+  }
+
   std::string HtmlToMarkdown(const std::string& p_Html, const HtmlOptions& p_Options)
   {
     Node root;
@@ -142,8 +172,9 @@ namespace Nhtmlmd
     unsigned flags = MD_DIALECT_GITHUB;
     if (p_Options.m_HardBreaks) flags |= MD_FLAG_HARD_SOFT_BREAKS;
 
+    const std::string markdown = EscapeSignatureSeparators(p_Markdown);
     std::string body;
-    const int rv = md_html(p_Markdown.c_str(), (MD_SIZE)p_Markdown.size(), OnHtmlOutput, &body, flags,
+    const int rv = md_html(markdown.c_str(), (MD_SIZE)markdown.size(), OnHtmlOutput, &body, flags,
                            MD_HTML_FLAG_SKIP_UTF8_BOM);
     if (rv != 0) return "";
 

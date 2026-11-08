@@ -1966,6 +1966,28 @@ int Util::GetColorAttrs(const std::string& p_FgStr, const std::string& p_BgStr)
   return COLOR_PAIR(colorPairId);
 }
 
+int Util::GetAttrs(const std::string& p_AttrStr)
+{
+  if (p_AttrStr.empty() || (p_AttrStr == "normal")) return A_NORMAL;
+
+  if (p_AttrStr == "bold") return A_BOLD;
+
+  if (p_AttrStr == "dim") return A_DIM;
+
+#ifdef A_ITALIC
+  if (p_AttrStr == "italic") return (termattrs() & A_ITALIC) ? A_ITALIC : A_UNDERLINE;
+#else
+  if (p_AttrStr == "italic") return A_UNDERLINE;
+#endif
+
+  if (p_AttrStr == "reverse") return A_REVERSE;
+
+  if (p_AttrStr == "underline") return A_UNDERLINE;
+
+  LOG_WARNING("unsupported attr string \"%s\"", p_AttrStr.c_str());
+  return A_NORMAL;
+}
+
 void Util::SetUseServerTimestamps(bool p_Enable)
 {
   m_UseServerTimestamps = p_Enable;

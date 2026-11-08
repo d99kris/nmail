@@ -854,6 +854,7 @@ file (platform-dependent defaults are left empty below):
     invalid_input_notify=1
     localized_subject_prefixes=
     markdown_html_compose=0
+    markdown_view=1
     new_msg_bell=1
     persist_file_selection_dir=1
     persist_find_query=0
@@ -960,6 +961,16 @@ compose. I.e. whether nmail shall generate a text/html message part based on
 processing the composed message as Markdown, when sending sending emails from
 nmail. This can be overridden on a per-email basis by pressing CTRL-N when
 editing an email (default disabled).
+
+### markdown_view
+
+Controls whether nmail shall render basic Markdown formatting (bold, italic,
+strikethrough, headings and code) in message view, for HTML emails converted
+by the built-in converter, i.e. when `html_to_text_cmd` is not set. Markup
+characters, such as `**`, `*`, `~~`, backticks and code block fences, are
+hidden, and the text styles are configured in `colors.conf`, see
+`color_bold_text`, `color_code_text`, `color_italic_text` and
+`color_strike_text` (default enabled).
 
 ### new_msg_bell
 
@@ -1210,7 +1221,10 @@ nmail is not running.
 Available themes:
 
     catppuccin-macchiato
+    claude
     default
+    dracula
+    pastel-tint
 
 See the [Themes wiki-page](https://github.com/d99kris/nmail/wiki/Themes) for
 example screenshots.
@@ -1243,30 +1257,75 @@ To use inverted / reverse color set both `fg` and `bg` values to `reverse`.
 
 For terminals supporting custom palettes it is also possible to specify colors
 using six digit hex format with `0x` prefix, e.g. `0xa0a0a0`. For each item
-background `_bg` and foreground `_fg` can be specified. Default
+background `_bg` and foreground `_fg` can be specified. Except for regular
+text, a text attribute `_attr` can also be specified: `bold`, `dim`, `italic`,
+`reverse` or `underline` (leave empty or set to `normal` for none). Default
 configuration file:
 
+    color_bold_text_attr=
+    color_bold_text_bg=
+    color_bold_text_fg=
+    color_code_text_attr=
+    color_code_text_bg=
+    color_code_text_fg=
+    color_dialog_attr=
     color_dialog_bg=reverse
     color_dialog_fg=reverse
+    color_header_name_attr=
+    color_header_name_bg=
+    color_header_name_fg=
+    color_help_desc_attr=
     color_help_desc_bg=
     color_help_desc_fg=
+    color_help_keys_attr=
     color_help_keys_bg=reverse
     color_help_keys_fg=reverse
+    color_hidden_file_attr=
+    color_hidden_file_bg=
+    color_hidden_file_fg=gray
+    color_highlighted_text_attr=
     color_highlighted_text_bg=reverse
     color_highlighted_text_fg=reverse
+    color_italic_text_attr=
+    color_italic_text_bg=
+    color_italic_text_fg=
+    color_quoted_text_attr=
     color_quoted_text_bg=
     color_quoted_text_fg=gray
     color_regular_text_bg=
     color_regular_text_fg=
+    color_selected_item_attr=
     color_selected_item_bg=
     color_selected_item_fg=gray
+    color_signature_text_attr=
+    color_signature_text_bg=
+    color_signature_text_fg=
+    color_strike_text_attr=
+    color_strike_text_bg=
+    color_strike_text_fg=gray
+    color_top_bar_attr=
     color_top_bar_bg=reverse
     color_top_bar_fg=reverse
+
+### color_bold_text
+
+Markdown bold text and headings in message view, when `markdown_view` is
+enabled. Set `color_bold_text_attr=bold` to show it using terminal bold.
+
+### color_code_text
+
+Markdown code spans and code blocks in message view, when `markdown_view` is
+enabled.
 
 ### color_dialog
 
 User prompt dialogs and notifications at bottom of the screen, just above the
 help bar.
+
+### color_header_name
+
+Header field names, such as `From:` and `Subject:`, in message view (including
+full header view) and compose view.
 
 ### color_help_desc
 
@@ -1278,10 +1337,20 @@ Help shortcut description texts at bottom of the screen, i.e. `Compose` in
 Help shortcut key binding texts at bottom of the screen, i.e. `C` in
 `C Compose`.
 
+### color_hidden_file
+
+Hidden files (names starting with `.`) in file selection list.
+
 ### color_highlighted_text
 
 Highlighted text, such as current message in message view, current folder in
 folder list, text strings found in message find, etc.
+
+### color_italic_text
+
+Markdown italic text in message view, when `markdown_view` is enabled. Set
+`color_italic_text_attr=italic` to show it using terminal italic (shown as
+underline on terminals not supporting italic).
 
 ### color_quoted_text
 
@@ -1294,6 +1363,16 @@ Default text color.
 ### color_selected_item
 
 Selected messages in message list view.
+
+### color_signature_text
+
+Email signature in message view, i.e. from the first unquoted signature
+separator line (`-- `, `--` or `—` as used by GitHub / GitLab notifications)
+to the end of the message. Quoted lines keep their `color_quoted_text` style.
+
+### color_strike_text
+
+Markdown strikethrough text in message view, when `markdown_view` is enabled.
 
 ### color_top_bar
 

@@ -128,6 +128,16 @@ bool Body::HasAttachments() const
   return false;
 }
 
+bool Body::HasTextPlain() const
+{
+  return !m_TextPlain.empty();
+}
+
+bool Body::HasTextHtml() const
+{
+  return !m_TextHtml.empty();
+}
+
 bool Body::IsFormatFlowed() const
 {
   // @todo: consider caching lookup

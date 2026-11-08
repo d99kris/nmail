@@ -49,6 +49,8 @@ public:
   std::map<ssize_t, std::string> GetPartDatas();
   bool HasAttachments() const;
   bool IsFormatFlowed() const;
+  bool HasTextPlain() const;
+  bool HasTextHtml() const;
 
   inline bool ParseIfNeeded(bool p_ForceParse = false)
   {
