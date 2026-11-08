@@ -1,6 +1,6 @@
 # Project
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-project(nhtmlmd VERSION 0.3.0 LANGUAGES C CXX)
+project(nhtmlmd LANGUAGES C CXX)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)

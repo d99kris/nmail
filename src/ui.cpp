@@ -6944,7 +6944,11 @@ std::string Ui::GetBodyText(Body& p_Body)
       m_ImapManager->AsyncAction(imapAction);
     }
   }
-  return m_Plaintext ? p_Body.GetTextPlain() : p_Body.GetTextHtml();
+  // skip leading blank lines, keeping indent of first line
+  const std::string& text = m_Plaintext ? p_Body.GetTextPlain() : p_Body.GetTextHtml();
+  const size_t contentPos = text.find_first_not_of(" \t\r\n");
+  const size_t lineEnd = (contentPos == std::string::npos) ? std::string::npos : text.rfind('\n', contentPos);
+  return (lineEnd == std::string::npos) ? text : text.substr(lineEnd + 1);
 }
 
 void Ui::FilePickerOrStateFileList()
