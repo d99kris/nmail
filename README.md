@@ -863,8 +863,8 @@ file (platform-dependent defaults are left empty below):
     persist_search_query=0
     persist_selection_on_sortfilter_change=1
     persist_sortfilter=1
-    plain_text=1
     postpone_without_confirm=0
+    prefer_html=1
     quit_without_confirm=1
     respect_format_flowed=1
     rewrap_quoted_lines=1
@@ -1013,16 +1013,16 @@ filtering/sorting mode is changed (default enabled).
 Specifies whether each folder listing shall persist its filtering/sorting
 mode (default enabled).
 
-### plain_text
-
-Determines whether showing plain text (vs. html converted to text) is
-preferred. If the preferred email part is not present, nmail automatically
-attempts to show the other. This option can be re-configured at run-time
-by pressing `t` when viewing an email (default enabled).
-
 ### postpone_without_confirm
 
 Allow postponing email compose without confirmation prompt (default disabled).
+
+### prefer_html
+
+Determines whether showing html converted to text (vs. plain text) is
+preferred. If the preferred email part is not present, nmail automatically
+attempts to show the other. This option can be re-configured at run-time
+by pressing `t` when viewing an email (default enabled).
 
 ### quit_without_confirm
 

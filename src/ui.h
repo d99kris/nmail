@@ -351,7 +351,7 @@ private:
   bool m_PersistFindQuery = false;
   bool m_PersistFolderFilter = true;
   bool m_PersistSearchQuery = false;
-  bool m_Plaintext = true;
+  bool m_Plaintext = false;
   bool m_MarkdownHtmlCompose = false;
   bool m_MarkdownView = false;
   bool m_AlignHeaderLabels = true;

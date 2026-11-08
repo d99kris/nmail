@@ -61,7 +61,7 @@ void Ui::Init()
     { "persist_find_query", "0" },
     { "persist_folder_filter", "1" },
     { "persist_search_query", "0" },
-    { "plain_text", "1" },
+    { "prefer_html", "1" },
     { "show_progress", "1" },
     { "new_msg_bell", "1" },
     { "quit_without_confirm", "1" },
@@ -122,7 +122,7 @@ void Ui::Init()
   m_PersistFindQuery = m_Config.Get("persist_find_query") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
   m_PersistSearchQuery = m_Config.Get("persist_search_query") == "1";
-  m_Plaintext = m_Config.Get("plain_text") == "1";
+  m_Plaintext = m_Config.Get("prefer_html") != "1";
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_MarkdownView = m_Config.Get("markdown_view") == "1";
   m_AlignHeaderLabels = m_Config.Get("align_header_labels") == "1";
@@ -372,7 +372,7 @@ void Ui::Cleanup()
 {
   m_SleepDetect.reset();
 
-  m_Config.Set("plain_text", m_Plaintext ? "1" : "0");
+  m_Config.Set("prefer_html", m_Plaintext ? "0" : "1");
   m_Config.Set("show_rich_header", m_ShowRichHeader ? "1" : "0");
   m_Config.Set("search_show_folder", m_SearchShowFolder ? "1" : "0");
   m_Config.Save();
