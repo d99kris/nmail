@@ -10,13 +10,14 @@
 #include <algorithm>
 #include <cstring>
 #include <set>
+#include <utility>
 
 #include "util.h"
 #include "writer.h"
 
 namespace Nhtmlmd
 {
-  static bool IsSkipTag(const std::string& p_Tag)
+  bool IsSkipTag(const std::string& p_Tag)
   {
     static const std::set<std::string> tags =
     {
@@ -236,8 +237,21 @@ namespace Nhtmlmd
     return false;
   }
 
-  // subtree text starts (p_Front) or ends with whitespace
-  static bool EdgeSpace(const Node& p_Node, bool p_Front)
+  static bool IsTextVisible(const std::string& p_Text)
+  {
+    for (size_t i = 0; i < p_Text.size(); )
+    {
+      uint32_t cp = 0;
+      i += Util::DecodeUtf8(p_Text, i, cp);
+      if (!Util::IsSpace(cp) && !Util::IsJunk(cp)) return true;
+    }
+
+    return false;
+  }
+
+  // edge text of subtree in one pass, as checking text per level would take quadratic time
+  // for deeply nested elements, returns if subtree has text
+  static bool EdgeSpaceSub(const Node& p_Node, bool p_Front, bool& p_Decided, bool& p_Space)
   {
     static const std::string nbsp = "\xC2\xA0";
     const auto& children = p_Node.m_Children;
@@ -249,15 +263,40 @@ namespace Nhtmlmd
         const std::string& text = child.m_Text;
         if (text.empty()) continue;
 
-        const bool isNbsp = (text.size() >= 2) &&
-          (p_Front ? (text.compare(0, 2, nbsp) == 0) : (text.compare(text.size() - 2, 2, nbsp) == 0));
-        return isNbsp || isspace((unsigned char)(p_Front ? text.front() : text.back()));
-      }
+        if (!p_Decided)
+        {
+          const bool isNbsp = (text.size() >= 2) &&
+            (p_Front ? (text.compare(0, 2, nbsp) == 0) : (text.compare(text.size() - 2, 2, nbsp) == 0));
+          p_Space = isNbsp || isspace((unsigned char)(p_Front ? text.front() : text.back()));
+          p_Decided = true;
+        }
 
-      if (HasText(child)) return EdgeSpace(child, p_Front);
+        if (IsTextVisible(text)) return true;
+      }
+      else if (!IsSkipTag(child.m_Tag) && !IsHidden(child))
+      {
+        // edge decided in child only if it has text
+        bool childDecided = p_Decided;
+        bool childSpace = p_Space;
+        if (EdgeSpaceSub(child, p_Front, childDecided, childSpace))
+        {
+          p_Decided = childDecided;
+          p_Space = childSpace;
+          return true;
+        }
+      }
     }
 
     return false;
+  }
+
+  // subtree text starts (p_Front) or ends with whitespace
+  static bool EdgeSpace(const Node& p_Node, bool p_Front)
+  {
+    bool decided = false;
+    bool space = false;
+    EdgeSpaceSub(p_Node, p_Front, decided, space);
+    return decided && space;
   }
 
   static int Dimension(const Node& p_Node, const char* p_Name)
@@ -450,6 +489,8 @@ namespace Nhtmlmd
     const std::string& tag = p_Node.m_Tag;
     if (IsSkipTag(tag) || IsHidden(p_Node)) return;
 
+    // deeply nested inline styling walked as plain inline elements
+    const bool styled = !IsRenderDeep();
     if (tag == "br")
     {
       m_Writer->LineBreak();
@@ -458,23 +499,23 @@ namespace Nhtmlmd
     {
       Image(p_Node);
     }
-    else if ((tag == "del") || (tag == "s") || (tag == "strike") || IsStruck(p_Node))
+    else if (styled && ((tag == "del") || (tag == "s") || (tag == "strike") || IsStruck(p_Node)))
     {
       Emphasis(p_Node, "~~");
     }
-    else if (tag == "sup")
+    else if (styled && (tag == "sup"))
     {
       Superscript(p_Node);
     }
-    else if (m_Markdown && ((tag == "b") || (tag == "strong")))
+    else if (styled && m_Markdown && ((tag == "b") || (tag == "strong")))
     {
       Emphasis(p_Node, "**");
     }
-    else if (m_Markdown && ((tag == "i") || (tag == "em")))
+    else if (styled && m_Markdown && ((tag == "i") || (tag == "em")))
     {
       Emphasis(p_Node, "*");
     }
-    else if (m_Markdown && ((tag == "code") || (tag == "kbd") || (tag == "samp")) && (m_InPre == 0))
+    else if (styled && m_Markdown && ((tag == "code") || (tag == "kbd") || (tag == "samp")) && (m_InPre == 0))
     {
       Emphasis(p_Node, "`");
     }
@@ -591,15 +632,17 @@ namespace Nhtmlmd
     m_Writer->Block(1);
   }
 
-  // inline marker around one-line text, edge spaces kept outside
+  // inline marker around one-line text, edge spaces kept outside, multi-line text replayed
+  // as rendered, as walking it again would take exponential time for nested elements
   void Walker::Emphasis(const Node& p_Node, const std::string& p_Mark)
   {
-    const std::string text = RenderSub(p_Node);
+    std::vector<Writer::Op> ops;
+    const std::string text = RenderSub(p_Node, nullptr, nullptr, &ops);
     if (text.empty()) return;
 
     if (text.find('\n') != std::string::npos)
     {
-      WalkChildren(p_Node);
+      m_Writer->Replay(ops);
       return;
     }
 
@@ -612,17 +655,11 @@ namespace Nhtmlmd
   // short superscript as ^x, except at line start, after digit or when long
   void Walker::Superscript(const Node& p_Node)
   {
-    const std::string text = RenderSub(p_Node);
+    std::vector<Writer::Op> ops;
+    const std::string text = RenderSub(p_Node, nullptr, nullptr, &ops);
     const bool isShort = !text.empty() && (Util::DisplayWidth(text) <= 4) &&
       (text.find_first_of(" \n") == std::string::npos);
-    const char last = m_Writer->GetLastChar();
-    if (!isShort || (last == '\0') || isdigit((unsigned char)last))
-    {
-      WalkChildren(p_Node);
-      return;
-    }
-
-    m_Writer->Text("^" + text);
+    m_Writer->Superscript(text, isShort, std::move(ops));
   }
 
   void Walker::Image(const Node& p_Node)
@@ -656,16 +693,34 @@ namespace Nhtmlmd
 
   void Walker::Link(const Node& p_Node)
   {
-    if (m_Markdown && (m_Options.m_LinkStyle != LinkStyleText) && MarkdownLink(p_Node)) return;
+    // content rendered at most once, and replayed
+    std::vector<Writer::Op> ops;
+    bool rendered = false;
+    bool empty = false;
+    if (m_Markdown && (m_Options.m_LinkStyle != LinkStyleText) && MarkdownLink(p_Node, ops, rendered, empty)) return;
 
     const std::string* href = p_Node.Attr("href");
     const bool hasText = HasText(p_Node);
     m_LinkHasText.push_back(hasText);
 
     // no reference for links without content, like empty or skipped icon links
-    const bool isRef = (m_Options.m_LinkStyle == LinkStyleRefs) && IsWebLink(href) &&
-      (hasText || !RenderSub(p_Node).empty());
-    WalkChildren(p_Node);
+    const bool isWebRef = (m_Options.m_LinkStyle == LinkStyleRefs) && IsWebLink(href);
+    if (isWebRef && !hasText && !rendered)
+    {
+      empty = RenderSub(p_Node, nullptr, nullptr, &ops).empty();
+      rendered = true;
+    }
+
+    const bool isRef = isWebRef && (hasText || !empty);
+    if (rendered)
+    {
+      m_Writer->Replay(ops);
+    }
+    else
+    {
+      WalkChildren(p_Node);
+    }
+
     m_LinkHasText.pop_back();
 
     if (!IsWebLink(href)) return;
@@ -691,15 +746,18 @@ namespace Nhtmlmd
   }
 
   // one-line link with text as [text](url), [text][n] or <url>
-  bool Walker::MarkdownLink(const Node& p_Node)
+  bool Walker::MarkdownLink(const Node& p_Node, std::vector<Writer::Op>& p_Ops, bool& p_Rendered,
+                            bool& p_Empty)
   {
     const std::string* href = p_Node.Attr("href");
     if (!IsWebLink(href)) return false;
 
     const bool hasText = HasText(p_Node);
     m_LinkHasText.push_back(hasText);
-    std::string text = RenderSub(p_Node);
+    std::string text = RenderSub(p_Node, nullptr, nullptr, &p_Ops);
     m_LinkHasText.pop_back();
+    p_Rendered = true;
+    p_Empty = text.empty();
 
     // image only link with its [alt] as text
     if (!hasText)
@@ -731,6 +789,13 @@ namespace Nhtmlmd
     return true;
   }
 
+  // nested inline styling beyond this is plain, to keep stack use low on threads
+  bool Walker::IsRenderDeep() const
+  {
+    static const int maxRenderDepth = 32;
+    return (m_RenderDepth >= maxRenderDepth);
+  }
+
   size_t Walker::LinkIndex(const std::string& p_Href)
   {
     auto it = m_LinkIndex.find(p_Href);
@@ -741,12 +806,16 @@ namespace Nhtmlmd
     return m_Links.size();
   }
 
-  std::string Walker::RenderSub(const Node& p_Node, bool* p_BlankBefore, bool* p_BlankAfter)
+  std::string Walker::RenderSub(const Node& p_Node, bool* p_BlankBefore, bool* p_BlankAfter,
+                                std::vector<Writer::Op>* p_Ops)
   {
     Writer writer;
+    writer.SetRecord(p_Ops != nullptr);
     Writer* parentWriter = m_Writer;
     m_Writer = &writer;
+    ++m_RenderDepth;
     WalkChildren(p_Node);
+    --m_RenderDepth;
     m_Writer = parentWriter;
 
     std::string str = writer.Finish();
@@ -755,6 +824,8 @@ namespace Nhtmlmd
     if (p_BlankBefore != nullptr) *p_BlankBefore = writer.GetLeadingBlank();
 
     if (p_BlankAfter != nullptr) *p_BlankAfter = writer.GetTrailingBlank();
+
+    if (p_Ops != nullptr) *p_Ops = writer.TakeOps();
 
     return str;
   }

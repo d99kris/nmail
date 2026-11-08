@@ -7,6 +7,7 @@
 
 #include "nhtmlmd.h"
 
+#include <algorithm>
 #include <map>
 #include <sstream>
 
@@ -20,36 +21,118 @@
 
 namespace Nhtmlmd
 {
-  static void BuildNode(lxb_dom_node_t* p_Src, Node* p_Dst)
+  // max element nesting, as recursive processing would otherwise overflow stack on hostile html
+  static const int s_MaxDepth = 256;
+  // max nesting of subtrees kept intact beyond max depth
+  static const int s_MaxFlatSubDepth = 16;
+
+  static Node* AddElement(lxb_dom_node_t* p_Src, Node* p_Dst)
+  {
+    lxb_dom_element_t* element = lxb_dom_interface_element(p_Src);
+    Node* node = p_Dst->AddChild(Node::Element);
+    size_t len = 0;
+    const lxb_char_t* name = lxb_dom_element_local_name(element, &len);
+    node->m_Tag.assign((const char*)name, len);
+    for (lxb_dom_attr_t* attr = lxb_dom_element_first_attribute(element); attr != nullptr;
+         attr = lxb_dom_element_next_attribute(attr))
+    {
+      size_t nameLen = 0;
+      size_t valueLen = 0;
+      const lxb_char_t* attrName = lxb_dom_attr_local_name(attr, &nameLen);
+      const lxb_char_t* attrValue = lxb_dom_attr_value(attr, &valueLen);
+      node->m_Attrs.emplace_back(std::string((const char*)attrName, nameLen),
+                                 (attrValue != nullptr) ? std::string((const char*)attrValue, valueLen)
+                                                        : std::string());
+    }
+
+    return node;
+  }
+
+  static void AddText(lxb_dom_node_t* p_Src, Node* p_Dst)
+  {
+    lxb_dom_text_t* text = lxb_dom_interface_text(p_Src);
+    Node* node = p_Dst->AddChild(Node::Text);
+    node->m_Text.assign((const char*)text->char_data.data.data, text->char_data.data.length);
+  }
+
+  static void BuildNode(lxb_dom_node_t* p_Src, Node* p_Dst, int p_Depth);
+
+  // element nesting below node exceeds p_Max levels
+  static bool IsDeeper(lxb_dom_node_t* p_Src, int p_Max)
+  {
+    for (lxb_dom_node_t* child = p_Src->first_child; child != nullptr; child = child->next)
+    {
+      if (child->type != LXB_DOM_NODE_TYPE_ELEMENT) continue;
+
+      if ((p_Max == 0) || IsDeeper(child, p_Max - 1)) return true;
+    }
+
+    return false;
+  }
+
+  // descendants in document order as children, iteratively, with only shallow subtrees (like
+  // inline styling and links) kept intact
+  static void BuildFlatNode(lxb_dom_node_t* p_Src, Node* p_Dst)
+  {
+    lxb_dom_node_t* child = p_Src->first_child;
+    while (child != nullptr)
+    {
+      bool descend = false;
+      if (child->type == LXB_DOM_NODE_TYPE_ELEMENT)
+      {
+        Node* node = AddElement(child, p_Dst);
+        if (IsSkipTag(node->m_Tag))
+        {
+          // none
+        }
+        else if (!IsDeeper(child, s_MaxFlatSubDepth))
+        {
+          BuildNode(child, node, s_MaxDepth - s_MaxFlatSubDepth);
+        }
+        else
+        {
+          descend = true;
+        }
+      }
+      else if (child->type == LXB_DOM_NODE_TYPE_TEXT)
+      {
+        AddText(child, p_Dst);
+      }
+
+      if (descend && (child->first_child != nullptr))
+      {
+        child = child->first_child;
+        continue;
+      }
+
+      while ((child != p_Src) && (child->next == nullptr))
+      {
+        child = child->parent;
+      }
+
+      child = (child != p_Src) ? child->next : nullptr;
+    }
+  }
+
+  static void BuildNode(lxb_dom_node_t* p_Src, Node* p_Dst, int p_Depth)
   {
     for (lxb_dom_node_t* child = p_Src->first_child; child != nullptr; child = child->next)
     {
       if (child->type == LXB_DOM_NODE_TYPE_ELEMENT)
       {
-        lxb_dom_element_t* element = lxb_dom_interface_element(child);
-        Node* node = p_Dst->AddChild(Node::Element);
-        size_t len = 0;
-        const lxb_char_t* name = lxb_dom_element_local_name(element, &len);
-        node->m_Tag.assign((const char*)name, len);
-        for (lxb_dom_attr_t* attr = lxb_dom_element_first_attribute(element); attr != nullptr;
-             attr = lxb_dom_element_next_attribute(attr))
+        Node* node = AddElement(child, p_Dst);
+        if (p_Depth < s_MaxDepth)
         {
-          size_t nameLen = 0;
-          size_t valueLen = 0;
-          const lxb_char_t* attrName = lxb_dom_attr_local_name(attr, &nameLen);
-          const lxb_char_t* attrValue = lxb_dom_attr_value(attr, &valueLen);
-          node->m_Attrs.emplace_back(std::string((const char*)attrName, nameLen),
-                                     (attrValue != nullptr) ? std::string((const char*)attrValue, valueLen)
-                                                            : std::string());
+          BuildNode(child, node, p_Depth + 1);
         }
-
-        BuildNode(child, node);
+        else
+        {
+          BuildFlatNode(child, node);
+        }
       }
       else if (child->type == LXB_DOM_NODE_TYPE_TEXT)
       {
-        lxb_dom_text_t* text = lxb_dom_interface_text(child);
-        Node* node = p_Dst->AddChild(Node::Text);
-        node->m_Text.assign((const char*)text->char_data.data.data, text->char_data.data.length);
+        AddText(child, p_Dst);
       }
     }
   }
@@ -63,7 +146,7 @@ namespace Nhtmlmd
       lxb_html_document_parse(document, (const lxb_char_t*)p_Html.data(), p_Html.size());
     if (status == LXB_STATUS_OK)
     {
-      BuildNode(lxb_dom_interface_node(document), &p_Root);
+      BuildNode(lxb_dom_interface_node(document), &p_Root, 0);
     }
 
     lxb_html_document_destroy(document);
@@ -128,13 +211,24 @@ namespace Nhtmlmd
     std::string out;
     std::string line;
     bool inFence = false;
+    size_t fenceDepth = 0;
     while (std::getline(iss, line))
     {
       const size_t contentPos = line.find_first_not_of("> ");
       const std::string content = (contentPos == std::string::npos) ? "" : line.substr(contentPos);
+      const std::string prefix = line.substr(0, std::min(contentPos, line.size()));
+      const size_t depth = std::count(prefix.begin(), prefix.end(), '>');
+
+      // fence in quote ends with it, also when unclosed
+      if (inFence && (depth < fenceDepth))
+      {
+        inFence = false;
+      }
+
       if ((content.rfind("```", 0) == 0) || (content.rfind("~~~", 0) == 0))
       {
         inFence = !inFence;
+        fenceDepth = depth;
       }
       else if (!inFence && ((content == "--") || (content == "-- ")))
       {
@@ -188,6 +282,6 @@ namespace Nhtmlmd
 
   std::string GetVersion()
   {
-    return "1.0.1";
+    return "1.0.2";
   }
 }

@@ -8,14 +8,87 @@
 #include "writer.h"
 
 #include <algorithm>
+#include <cctype>
+#include <utility>
 
 #include "util.h"
 
 namespace Nhtmlmd
 {
+  static Writer::Op MakeOp(Writer::Op::Type p_Type, const std::string& p_Str, const std::string& p_Rest,
+                           int p_Blank)
+  {
+    Writer::Op op;
+    op.m_Type = p_Type;
+    op.m_Str = p_Str;
+    op.m_Rest = p_Rest;
+    op.m_Blank = p_Blank;
+    return op;
+  }
+
+  void Writer::SetRecord(bool p_Record)
+  {
+    m_Record = p_Record;
+  }
+
+  std::vector<Writer::Op> Writer::TakeOps()
+  {
+    return std::move(m_Ops);
+  }
+
+  void Writer::Replay(const std::vector<Op>& p_Ops)
+  {
+    for (const auto& op : p_Ops)
+    {
+      switch (op.m_Type)
+      {
+        case Op::Text:
+          Text(op.m_Str);
+          break;
+
+        case Op::Pre:
+          Pre(op.m_Str);
+          break;
+
+        case Op::Literal:
+          Literal(op.m_Str);
+          break;
+
+        case Op::LineBreak:
+          LineBreak();
+          break;
+
+        case Op::Space:
+          Space();
+          break;
+
+        case Op::Block:
+          Block(op.m_Blank);
+          break;
+
+        case Op::PushPrefix:
+          PushPrefix(op.m_Str, op.m_Rest);
+          break;
+
+        case Op::PopPrefix:
+          PopPrefix();
+          break;
+
+        case Op::Superscript:
+          Superscript(op.m_Str, op.m_Short, op.m_Ops);
+          break;
+
+        default:
+          break;
+      }
+    }
+  }
+
   // collapses whitespace, drops invisible padding
   void Writer::Text(const std::string& p_Str)
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::Text, p_Str, "", 0));
+
     for (size_t i = 0; i < p_Str.size(); )
     {
       uint32_t cp = 0;
@@ -45,6 +118,8 @@ namespace Nhtmlmd
   // keeps whitespace and newlines
   void Writer::Pre(const std::string& p_Str)
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::Pre, p_Str, "", 0));
+
     for (char ch : p_Str)
     {
       if (ch == '\r') continue;
@@ -64,6 +139,8 @@ namespace Nhtmlmd
   // complete line of formatted text
   void Writer::Literal(const std::string& p_Str)
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::Literal, p_Str, "", 0));
+
     if (m_HasContent) EmitLine(false);
 
     if (p_Str.empty())
@@ -79,6 +156,8 @@ namespace Nhtmlmd
 
   void Writer::LineBreak()
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::LineBreak, "", "", 0));
+
     if (m_HasContent)
     {
       EmitLine(false);
@@ -93,11 +172,15 @@ namespace Nhtmlmd
 
   void Writer::Space()
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::Space, "", "", 0));
+
     m_PendingSpace = true;
   }
 
   void Writer::Block(int p_Blank)
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::Block, "", "", p_Blank));
+
     if (!m_HasContent && m_NbspOnly) p_Blank = std::max(p_Blank, 1);
 
     m_NbspOnly = false;
@@ -111,12 +194,43 @@ namespace Nhtmlmd
 
   void Writer::PushPrefix(const std::string& p_First, const std::string& p_Rest)
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::PushPrefix, p_First, p_Rest, 0));
+
     m_Prefixes.push_back(Prefix{ p_First, p_Rest, false });
   }
 
   void Writer::PopPrefix()
   {
+    if (m_Record) m_Ops.push_back(MakeOp(Op::PopPrefix, "", "", 0));
+
     m_Prefixes.pop_back();
+  }
+
+  // short superscript as ^x, except at line start or after digit, decided by writer content
+  // also on replay, as when walked
+  void Writer::Superscript(const std::string& p_Text, bool p_Short, std::vector<Op> p_Ops)
+  {
+    const char last = GetLastChar();
+    const bool caret = p_Short && (last != '\0') && !isdigit((unsigned char)last);
+    const bool record = m_Record;
+    m_Record = false;
+    if (caret)
+    {
+      Text("^" + p_Text);
+    }
+    else
+    {
+      Replay(p_Ops);
+    }
+
+    m_Record = record;
+    if (m_Record)
+    {
+      Op op = MakeOp(Op::Superscript, p_Text, "", 0);
+      op.m_Short = p_Short;
+      op.m_Ops = std::move(p_Ops);
+      m_Ops.push_back(std::move(op));
+    }
   }
 
   char Writer::GetLastChar() const

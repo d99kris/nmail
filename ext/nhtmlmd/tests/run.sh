@@ -12,6 +12,7 @@
 #                       X.inline.md (-l inline), each when present
 #   roundtrip/X.md   -> X.rt.md (-m -b, then -l inline)
 #   md2html/X.md     -> X.html (-m -b)
+# Stress tests (generated hostile html) must complete with limited stack and time.
 
 UPDATE=0
 if [[ "${1}" == "--update" ]]; then
@@ -50,28 +51,83 @@ check()
   fi
 }
 
+# output of a failed run is compared too, so it fails the test
 for HTML in html2md/*.html; do
   BASE="${HTML%.html}"
-  "${NHTMLMD}" "${HTML}" > "${ACTUAL}" && check "${BASE}.md"
+  "${NHTMLMD}" "${HTML}" > "${ACTUAL}"; check "${BASE}.md"
   if [[ -f "${BASE}.txt" || "${UPDATE}" == "1" ]]; then
-    "${NHTMLMD}" -t "${HTML}" > "${ACTUAL}" && check "${BASE}.txt"
+    "${NHTMLMD}" -t "${HTML}" > "${ACTUAL}"; check "${BASE}.txt"
   fi
   if [[ -f "${BASE}.refs.md" ]]; then
-    "${NHTMLMD}" -l refs "${HTML}" > "${ACTUAL}" && check "${BASE}.refs.md"
+    "${NHTMLMD}" -l refs "${HTML}" > "${ACTUAL}"; check "${BASE}.refs.md"
   fi
   if [[ -f "${BASE}.inline.md" ]]; then
-    "${NHTMLMD}" -l inline "${HTML}" > "${ACTUAL}" && check "${BASE}.inline.md"
+    "${NHTMLMD}" -l inline "${HTML}" > "${ACTUAL}"; check "${BASE}.inline.md"
   fi
 done
 
 for MD in roundtrip/*.md; do
   [[ "${MD}" == *.rt.md ]] && continue
-  "${NHTMLMD}" -m -b "${MD}" | "${NHTMLMD}" -l inline > "${ACTUAL}" && check "${MD%.md}.rt.md"
+  "${NHTMLMD}" -m -b "${MD}" | "${NHTMLMD}" -l inline > "${ACTUAL}"; check "${MD%.md}.rt.md"
 done
 
 for MD in md2html/*.md; do
-  "${NHTMLMD}" -m -b "${MD}" > "${ACTUAL}" && check "${MD%.md}.html"
+  "${NHTMLMD}" -m -b "${MD}" > "${ACTUAL}"; check "${MD%.md}.html"
 done
+
+# repeats string ${1} ${2} times
+repeat()
+{
+  local STR=""
+  for ((I = 0; I < ${2}; ++I)); do
+    STR+="${1}"
+  done
+  printf '%s' "${STR}"
+}
+
+# runs nhtmlmd with args ${@} on ${INPUT}, with stack and time limited as on a worker thread,
+# to catch deep recursion and exponential time on hostile html
+stress()
+{
+  local NAME="${1}"
+  shift
+  COUNT=$((COUNT + 1))
+  ( ulimit -s 512 && exec "${NHTMLMD}" "${@}" "${INPUT}" > /dev/null 2>&1 ) &
+  local PID=${!}
+  ( sleep 10 && kill -9 "${PID}" ) > /dev/null 2>&1 &
+  local WATCHER=${!}
+  wait "${PID}" 2> /dev/null
+  local RV=${?}
+  kill "${WATCHER}" > /dev/null 2>&1
+  wait "${WATCHER}" 2> /dev/null
+  if [[ "${RV}" == "0" ]]; then
+    echo "ok      stress ${NAME}${*:+ ${*}}"
+  else
+    echo "FAILED  stress ${NAME}${*:+ ${*}} (exit ${RV})"
+    FAILED=$((FAILED + 1))
+  fi
+}
+
+if [[ "${UPDATE}" == "0" ]]; then
+  INPUT="$(mktemp)"
+  trap 'rm -f "${ACTUAL}" "${INPUT}"' EXIT
+  STRESS=(
+    "div:$(repeat '<div>' 5000)x<br>y"
+    "bold:$(repeat '<b>' 5000)x<br>y"
+    "table:$(repeat '<table><tr><td>' 2000)x<br>y"
+    "quote-list:$(repeat '<blockquote><ul><li>' 2000)x<br>y"
+    "bold-lines:$(repeat '<b>' 40)a<br>b"
+    "styles-lines:$(repeat '<b><i><s><sup><del><code><em><strong>' 8)a<br>b"
+    "sup-long:$(repeat '<sup>' 40)hello world"
+    "link-list:$(repeat '<a href="https://x/"><b><ol><li>' 40)a<br>b"
+  )
+  for ENTRY in "${STRESS[@]}"; do
+    printf '%s' "${ENTRY#*:}" > "${INPUT}"
+    stress "${ENTRY%%:*}"
+    stress "${ENTRY%%:*}" -t
+    stress "${ENTRY%%:*}" -l refs
+  done
+fi
 
 if [[ "${UPDATE}" == "0" ]]; then
   echo "${COUNT} tests, ${FAILED} failed"
