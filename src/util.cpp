@@ -59,8 +59,8 @@
 #include <utf8.h>
 
 #include "apathy/path.hpp"
+#include "nhtmlmd.h"
 
-#include "html2nmailscript.h"
 #include "loghelp.h"
 #include "ui.h"
 #include "version.h"
@@ -418,11 +418,7 @@ void Util::MailimapTimeToMailimfTime(mailimap_date_time* p_Src, mailimf_date_tim
 
 std::string Util::GetHtmlToTextConvertCmd()
 {
-  if (!m_HtmlToTextConvertCmd.empty()) return m_HtmlToTextConvertCmd;
-
-  static std::string defaultHtmlToTextConvertCmd = GetDefaultHtmlToTextConvertCmd();
-
-  return defaultHtmlToTextConvertCmd;
+  return m_HtmlToTextConvertCmd;
 }
 
 void Util::SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd)
@@ -430,39 +426,37 @@ void Util::SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd)
   m_HtmlToTextConvertCmd = p_HtmlToTextConvertCmd;
 }
 
-std::string Util::GetDefaultHtmlToTextConvertCmd()
+size_t Util::GetHtmlToTextConvertCmdHash()
 {
-  std::string result;
-  const std::string& commandOutPath = Util::GetTempFilename(".txt");
-  const std::string& command =
-    std::string("which pandoc w3m lynx elinks 2> /dev/null | head -1 > ") + commandOutPath;
-  if (Util::System(command) == 0)
-  {
-    std::string output = Util::ReadFile(commandOutPath);
-    output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
-    if (!output.empty())
-    {
-      // A supported converter is available; use the bundled html2nmail helper,
-      // which dispatches to pandoc/w3m/lynx/elinks per-message (pandoc only for
-      // html without tables).
-      const std::string scriptPath =
-        ExtractEmbeddedScript("html2nmail", Html2nmailScript, sizeof(Html2nmailScript));
-      result = "bash '" + scriptPath + "'";
-    }
-  }
+  // built-in converter output changes with its version
+  static std::hash<std::string> hashStr;
+  const std::string& htmlToTextCmd = GetHtmlToTextConvertCmd();
+  const std::string converter = htmlToTextCmd.empty() ? ("nhtmlmd " + Nhtmlmd::GetVersion()) : htmlToTextCmd;
+  return hashStr(converter);
+}
 
-  Util::DeleteFile(commandOutPath);
+std::string Util::ConvertHtmlToText(const std::string& p_Html)
+{
+  const std::string& htmlToTextCmd = GetHtmlToTextConvertCmd();
+  if (htmlToTextCmd.empty()) return Nhtmlmd::HtmlToMarkdown(p_Html);
 
-  return result;
+  // @todo: more elegant removal of meta-tags
+  std::string html = p_Html;
+  ReplaceString(html, "<meta ", "<beta ");
+  ReplaceString(html, "<META ", "<BETA ");
+
+  const std::string& tempPath = GetTempFilename(".html");
+  Util::WriteFile(tempPath, html);
+  const std::string& cmd = htmlToTextCmd + " " + tempPath;
+  const std::string& text = RunCommand(cmd);
+  Util::DeleteFile(tempPath);
+
+  return text;
 }
 
 std::string Util::GetTextToHtmlConvertCmd()
 {
-  if (!m_TextToHtmlConvertCmd.empty()) return m_TextToHtmlConvertCmd;
-
-  static std::string defaultTextToHtmlConvertCmd = GetDefaultTextToHtmlConvertCmd();
-
-  return defaultTextToHtmlConvertCmd;
+  return m_TextToHtmlConvertCmd;
 }
 
 void Util::SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd)
@@ -470,38 +464,15 @@ void Util::SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd)
   m_TextToHtmlConvertCmd = p_TextToHtmlConvertCmd;
 }
 
-std::string Util::GetDefaultTextToHtmlConvertCmd()
-{
-  std::string result;
-  const std::string& commandOutPath = Util::GetTempFilename(".txt");
-  const std::string& command =
-    std::string("which pandoc markdown 2> /dev/null | head -1 > ") + commandOutPath;
-  if (Util::System(command) == 0)
-  {
-    std::string output = Util::ReadFile(commandOutPath);
-    output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
-    if (!output.empty())
-    {
-      if (output.find("/pandoc") != std::string::npos)
-      {
-        result = "pandoc -s -f gfm -t html";
-      }
-      else if (output.find("/markdown") != std::string::npos)
-      {
-        result = "markdown";
-      }
-    }
-  }
-
-  Util::DeleteFile(commandOutPath);
-
-  return result;
-}
-
 std::string Util::ConvertTextToHtml(const std::string& p_Text)
 {
   const std::string& textToHtmlCmd = GetTextToHtmlConvertCmd();
-  if (textToHtmlCmd.empty()) return "";
+  if (textToHtmlCmd.empty())
+  {
+    Nhtmlmd::MarkdownOptions options;
+    options.m_HardBreaks = true;
+    return Nhtmlmd::MarkdownToHtml(p_Text, options);
+  }
 
   std::string text = p_Text;
   ReplaceString(text, "\n", "  \n"); // prepend line-breaks with double spaces to enforce them

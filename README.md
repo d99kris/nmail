@@ -12,9 +12,9 @@ similar to Alpine.
 
 Features
 --------
-- Send and receive email over IMAP and SMTP
-- View HTML emails as text or in external browser
+- View HTML formatted emails as Markdown
 - Compose HTML emails using Markdown formatting
+- Send and receive email over IMAP and SMTP
 - Open and view attachments in external program
 - Search emails in local cache and on server
 - Save and continue editing draft messages
@@ -197,23 +197,23 @@ Manually
 
 macOS
 
-    brew install openssl ncurses xapian sqlite libmagic ossp-uuid w3m
+    brew install openssl ncurses xapian sqlite libmagic ossp-uuid
 
 Arch
 
-    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m
+    sudo pacman -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file
 
 Debian-based (Ubuntu, Raspbian, etc)
 
-    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m
+    sudo apt install git cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev
 
 Fedora
 
-    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang w3m
+    sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang
 
 Gentoo
 
-    sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m
+    sudo emerge -n dev-util/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file
 
 **Build**
 
@@ -222,20 +222,6 @@ Gentoo
 **Install**
 
     sudo make install
-
-Optional Run-time Dependencies
-------------------------------
-Certain external programs will be utilized by default if installed on the
-system, primarily to improve handling of HTML-formatted emails. For best user
-experience the following packages are recommended to be installed.
-
-macOS
-
-    brew install pandoc poppler lesspipe
-
-Debian-based (Ubuntu, Raspbian, etc)
-
-    sudo apt install pandoc poppler-utils less
 
 
 Getting Started
@@ -476,20 +462,16 @@ on macOS and `xdg-open >/dev/null 2>&1` on Linux.
 ### html_to_text_cmd
 
 This field allows customizing how nmail should convert HTML emails to text.
-If not specified, nmail uses its bundled [html2nmail](/src/html2nmail) helper
-script (extracted to a temporary location at runtime), which in turn uses
-`pandoc` (for html without tables), `w3m`, `lynx` or `elinks` if available
-on the system (in that order). The exact command used by the helper is one of:
+If not specified, nmail uses its built-in converter
+[nhtmlmd](/ext/nhtmlmd), which renders HTML emails as markdown text (bold,
+italic, headings, lists, quotes and tables, with links shown as their text).
+An external command may be used instead, for example:
 - `pandoc -f html -t plain+literate_haskell --wrap=preserve`
 - `w3m -T text/html -I utf-8 -dump`
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump`
 - `elinks -dump-charset utf-8 -dump`
 
-Note that while pandoc generally produces a better text-equivalent to an
-html email, it is also slower than the other tools. For usage on a lower
-spec'ed system, consider using any of the other conversion utilities instead,
-e.g. `html_to_text_cmd=w3m -T text/html -I utf-8 -dump`. The command receives
-the HTML file path as its final argument.
+The command receives the HTML file path as its final argument.
 
 ### html_viewer_cmd
 
@@ -501,6 +483,9 @@ is available on the system (in that order), with fallback to
 - `lynx`
 - `elinks`
 - `xdg-open >/dev/null 2>&1` or `open`
+
+Refer to [Tips](/doc/TIPS.md) for viewing attachments such as PDF in the
+terminal.
 
 ### idle_inbox
 
@@ -645,10 +630,13 @@ one of:
 
 This field allows customizing how nmail should convert composed plain text
 markdown message to corresponding text/html part. If not specified, nmail
-checks if `pandoc` or `markdown` is available on the system (in that order),
-and uses the first found. The exact command used is one of:
+uses its built-in converter [nhtmlmd](/ext/nhtmlmd) (GitHub flavored
+markdown, with line breaks preserved). An external command may be used
+instead, for example:
 - `pandoc -s -f gfm -t html`
 - `markdown`
+
+The command receives the markdown file path as its final argument.
 
 ### trash
 
@@ -1398,8 +1386,12 @@ following third-party libraries:
   Copyright 2010 Louis Delacroix - [Boost License](/ext/cxx-prettyprint/LICENSE_1_0.txt)
 - [cyrus-imap](https://opensource.apple.com/source/CyrusIMAP/CyrusIMAP-156.9/cyrus_imap) -
   Copyright 1994-2000 Carnegie Mellon University - [BSD-3 License](/ext/cyrus-imap/COPYRIGHT)
+- [lexbor](https://github.com/lexbor/lexbor) -
+  Copyright 2018-2020 Alexander Borisov - [Apache-2.0 License](/ext/nhtmlmd/ext/lexbor/LICENSE)
 - [libetpan](https://github.com/dinhvh/libetpan) -
   Copyright 2001-2005 Dinh Viet Hoa - [BSD-3 License](/ext/libetpan/COPYRIGHT)
+- [md4c](https://github.com/mity/md4c) -
+  Copyright 2016-2026 Martin Mitáš - [MIT License](/ext/nhtmlmd/ext/md4c/LICENSE.md)
 - [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp) -
   Copyright 2017 aminroosta - [MIT License](/ext/sqlite_modern_cpp/License.txt)
 - [utfcpp](https://github.com/nemtrif/utfcpp) -

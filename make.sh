@@ -136,36 +136,36 @@ fi
 if [[ "${DEPS}" == "1" ]]; then
   if [ "${OS}" == "Linux" ]; then
     if [[ "${DISTRO}" == "Ubuntu" ]] || [[ "${DISTRO}" == "Raspbian GNU/Linux" ]] || [[ "${DISTRO}" == "Debian GNU/Linux" ]] || [[ "${DISTRO}" == "Pop!_OS" ]] || [[ "${DISTRO}" == "Linux Mint" ]]; then
-      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo apt update && sudo apt -y install cmake build-essential libssl-dev libreadline-dev libncurses5-dev libxapian-dev libsqlite3-dev libsasl2-dev libsasl2-modules libcurl4-openssl-dev libexpat-dev zlib1g-dev libmagic-dev uuid-dev || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Fedora" ]] || [[ "${DISTRO}" == "Fedora Linux" ]] || [[ "${DISTRO}" == "Rocky Linux" ]]; then
       sudo yum -y install cmake openssl-devel ncurses-devel xapian-core-devel sqlite-devel cyrus-sasl-devel cyrus-sasl-plain libcurl-devel expat-devel zlib-devel file-devel libuuid-devel clang || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Arch Linux" ]] || [[ "${DISTRO}" == "Arch Linux ARM" ]]; then
-      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo pacman --needed -Sy cmake make openssl ncurses xapian-core sqlite cyrus-sasl curl expat zlib file || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Gentoo" ]]; then
-      sudo emerge -n dev-build/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo emerge -n dev-build/cmake dev-libs/openssl sys-libs/ncurses dev-libs/xapian dev-db/sqlite dev-libs/cyrus-sasl net-misc/curl dev-libs/expat sys-libs/zlib sys-apps/file || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Alpine Linux" ]]; then
-      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo apk add git build-base cmake ncurses-dev openssl-dev xapian-core-dev sqlite-dev curl-dev expat-dev cyrus-sasl-dev cyrus-sasl-login file-dev util-linux-dev zlib-dev linux-headers || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "openSUSE Tumbleweed" ]]; then
-      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo zypper install -y -t pattern devel_C_C++ && sudo zypper install -y cmake libopenssl-devel libxapian-devel sqlite3-devel libcurl-devel libexpat-devel file-devel || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Void" ]]; then
-      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel w3m || exiterr "deps failed (${DISTRO}), exiting."
+      sudo xbps-install -y base-devel ccache cmake openssl-devel xapian-core-devel sqlite-devel libcurl-devel expat-devel libsasl-devel cyrus-sasl-modules file-devel || exiterr "deps failed (${DISTRO}), exiting."
     elif [[ "${DISTRO}" == "Termux" ]]; then
-      pkg install git cmake clang ccache libxapian libsqlite libsasl file libandroid-wordexp libandroid-glob libandroid-posix-semaphore w3m || exiterr "deps failed (${DISTRO}), exiting."
+      pkg install git cmake clang ccache libxapian libsqlite libsasl file libandroid-wordexp libandroid-glob libandroid-posix-semaphore || exiterr "deps failed (${DISTRO}), exiting."
     else
       exiterr "deps failed (unsupported linux distro ${DISTRO}), exiting."
     fi
   elif [ "${OS}" == "Darwin" ]; then
     if command -v brew &> /dev/null; then
-      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid w3m 2> >(grep -vE "already installed|To reinstall|brew reinstall" >&2) || exiterr "deps failed (${OS} brew), exiting."
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake openssl ncurses xapian sqlite libmagic ossp-uuid 2> >(grep -vE "already installed|To reinstall|brew reinstall" >&2) || exiterr "deps failed (${OS} brew), exiting."
     elif command -v port &> /dev/null; then
-      sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid w3m || exiterr "deps failed (${OS} port), exiting."
+      sudo port -N install openssl ncurses xapian-core sqlite3 libmagic ossp-uuid || exiterr "deps failed (${OS} port), exiting."
     else
       exiterr "deps failed (${OS} missing brew and port), exiting."
     fi
   elif [ "${OS}" == "OpenBSD" ]; then
-    doas pkg_add git cmake ccache xapian-core sqlite3 libiconv libmagic cyrus-sasl-- w3m-- || exiterr "deps failed (${OS}), exiting."
+    doas pkg_add git cmake ccache xapian-core sqlite3 libiconv libmagic cyrus-sasl-- || exiterr "deps failed (${OS}), exiting."
   elif [ "${OS}" == "FreeBSD" ]; then
-    sudo pkg install git cmake ccache xapian-core sqlite3 libiconv cyrus-sasl w3m || exiterr "deps failed (${OS}), exiting."
+    sudo pkg install git cmake ccache xapian-core sqlite3 libiconv cyrus-sasl || exiterr "deps failed (${OS}), exiting."
   else
     exiterr "deps failed (unsupported os ${OS}), exiting."
   fi

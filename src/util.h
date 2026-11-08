@@ -150,10 +150,10 @@ public:
   static void MailimapTimeToMailimfTime(mailimap_date_time* p_Src, mailimf_date_time* p_Dst);
   static std::string GetHtmlToTextConvertCmd();
   static void SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd);
-  static std::string GetDefaultHtmlToTextConvertCmd();
+  static size_t GetHtmlToTextConvertCmdHash();
+  static std::string ConvertHtmlToText(const std::string& p_Html);
   static std::string GetTextToHtmlConvertCmd();
   static void SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd);
-  static std::string GetDefaultTextToHtmlConvertCmd();
   static std::string ConvertTextToHtml(const std::string& p_Text);
   static std::string GetPartsViewerCmd();
   static void SetPartsViewerCmd(const std::string& p_PartsViewerCmd);

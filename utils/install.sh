@@ -24,11 +24,10 @@
 # full-featured (the musl build has no feature caveat). The full tarball is
 # fetched so the man page comes along.
 #
-# nmail bundles two helper scripts (oauth2nmail, html2nmail) inside the binary,
-# extracting them at runtime; they still rely on external interpreters/tools
-# that are NOT bundled: python3 (only for OAuth2 Gmail/Outlook login) and w3m
-# (only for rich HTML-email rendering). Core IMAP mail with password
-# authentication needs neither.
+# nmail bundles the oauth2nmail helper script inside the binary, extracting it
+# at runtime; it relies on python3 (only for OAuth2 Gmail/Outlook login), which
+# is NOT bundled. HTML conversion is built in. Core IMAP mail with password
+# authentication needs no external tools.
 #
 # nmail is distributed under the MIT license, see LICENSE for details.
 
@@ -315,8 +314,8 @@ main() {
   cp "${srcdir}/bin/nmail" "${bindir}/nmail"
   chmod 0755 "${bindir}/nmail"
 
-  # The oauth2nmail and html2nmail helper scripts are bundled inside the nmail
-  # binary (extracted at runtime), so there is nothing to install separately.
+  # The oauth2nmail helper script is bundled inside the nmail binary (extracted
+  # at runtime), so there is nothing to install separately.
 
   if [[ -f "${srcdir}/share/man/man1/nmail.1" ]]; then
     info "installing nmail.1 man to ${mandir}/man1"
@@ -350,12 +349,9 @@ main() {
 
   # These runtime dependencies are only needed for optional features, so a
   # missing one is a note rather than an error. oauth2nmail (OAuth2 login) is a
-  # python3 script; html2nmail (HTML-to-text) tries w3m, lynx, elinks or pandoc.
+  # python3 script.
   if ! have python3; then
     info "note: oauth2 authentication needs python3 (not found)"
-  fi
-  if ! have w3m && ! have lynx && ! have elinks && ! have pandoc; then
-    info "note: html conversion to text needs w3m, lynx, elinks or pandoc (not found)"
   fi
 
   case ":${PATH}:" in

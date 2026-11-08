@@ -112,7 +112,6 @@ message(STATUS "Core Dump: ${HAS_COREDUMP}")
 # dir at runtime, so no separate helper scripts need to be installed.
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(OAUTH2NMAIL_HEADER "${GENERATED_DIR}/oauth2nmailscript.h")
-set(HTML2NMAIL_HEADER "${GENERATED_DIR}/html2nmailscript.h")
 
 # Volatile build metadata (origin, git sha, git branch) is written to a
 # generated buildinfo.h and included only from the two source files that consume
@@ -135,22 +134,10 @@ add_custom_command(
   COMMENT "Embedding oauth2nmail script"
   VERBATIM
 )
-add_custom_command(
-  OUTPUT "${HTML2NMAIL_HEADER}"
-  COMMAND "${CMAKE_COMMAND}"
-          -DIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/src/html2nmail
-          -DOUT_FILE=${HTML2NMAIL_HEADER}
-          -DVAR_NAME=Html2nmailScript
-          -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedfile.cmake
-  DEPENDS src/html2nmail utils/embedfile.cmake
-  COMMENT "Embedding html2nmail script"
-  VERBATIM
-)
 
 # Application
 add_executable(nmail
   ${OAUTH2NMAIL_HEADER}
-  ${HTML2NMAIL_HEADER}
   ${BUILDINFO_HEADER}
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
@@ -377,6 +364,9 @@ find_package(SQLite3 REQUIRED)
 
 # Dependency libetpan
 option(HAS_CUSTOM_LIBETPAN "Custom libetpan" ON)
+# Dependency nhtmlmd (html to markdown / text, markdown to html)
+add_subdirectory(ext/nhtmlmd)
+
 message(STATUS "Custom libetpan: ${HAS_CUSTOM_LIBETPAN}")
 if(HAS_CUSTOM_LIBETPAN)
   set(LIBETPAN_STATIC ON)
@@ -494,7 +484,7 @@ target_link_libraries(nmail PUBLIC
                       ${CURSES_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${SQLite3_LIBRARIES}
                       ${XAPIAN_LIBRARIES} ${LIBETPAN_LIBRARY} ${CYRUS_SASL_LIBRARY}
                       ${MAGIC_LIBRARY} ${LIBUUID_LIBRARIES}
-                      pthread ${CMAKE_DL_LIBS})
+                      nhtmlmd pthread ${CMAKE_DL_LIBS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   target_link_libraries(nmail PUBLIC -rdynamic)

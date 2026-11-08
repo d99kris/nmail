@@ -208,18 +208,7 @@ void Body::ParseHtml()
     std::string partEnc = partInfo.m_Charset;
     std::string partHtml = m_Html;
     Encoding::ConvertToUtf8(partEnc, partHtml);
-
-    // @todo: more elegant removal of meta-tags
-    Util::ReplaceString(partHtml, "<meta ", "<beta ");
-    Util::ReplaceString(partHtml, "<META ", "<BETA ");
-
-    const std::string& textHtmlPath = Util::GetTempFilename(".html");
-    Util::WriteFile(textHtmlPath, partHtml);
-
-    const std::string cmd = Util::GetHtmlToTextConvertCmd() + " " + textHtmlPath;
-    m_TextHtml = Util::RunCommand(cmd);
-
-    Util::DeleteFile(textHtmlPath);
+    m_TextHtml = Util::ConvertHtmlToText(partHtml);
   }
 
   m_HtmlParsed = true;
@@ -520,8 +509,7 @@ void Body::RemoveInvalidHeaders()
 
 size_t Body::GetCurrentParseVersion()
 {
-  static std::hash<std::string> hashStr;
-  static size_t htmlToTextCmdHash = hashStr(Util::GetHtmlToTextConvertCmd());
+  static size_t htmlToTextCmdHash = Util::GetHtmlToTextConvertCmdHash();
   static size_t parseVersionOffset = 1; // bump version offset when parsing changes
   static size_t parseVersion = parseVersionOffset + htmlToTextCmdHash;
   return parseVersion;

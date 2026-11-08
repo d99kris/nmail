@@ -9,9 +9,9 @@
 #   dist/nmail-<version>-<target>.tar.gz     (top dir: nmail-<version>-<target>/)
 #   dist/symbols-<version>-<target>.tar.gz   detached debug symbols (if any)
 #
-# The main tarball carries the whole staged tree: bin/nmail (the oauth2nmail and
-# html2nmail helper scripts are bundled inside the binary, extracted at
-# runtime), share/man, and LICENSE + THIRD_PARTY_LICENSES.
+# The main tarball carries the whole staged tree: bin/nmail (the oauth2nmail
+# helper script is bundled inside the binary, extracted at runtime), share/man,
+# and LICENSE + THIRD_PARTY_LICENSES.
 #
 # The build scripts leave the detached debug info beside the binary in the
 # staged tree (bin/nmail.debug on Linux, bin/nmail.dSYM on macOS). package.sh
