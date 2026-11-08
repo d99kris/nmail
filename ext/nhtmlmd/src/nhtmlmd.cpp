@@ -169,7 +169,8 @@ namespace Nhtmlmd
 
   std::string MarkdownToHtml(const std::string& p_Markdown, const MarkdownOptions& p_Options)
   {
-    unsigned flags = MD_DIALECT_GITHUB;
+    // raw html shown as text, as it is often literal in email (<name>, Vec<T>) or from quoted messages
+    unsigned flags = MD_DIALECT_GITHUB | MD_FLAG_NOHTML;
     if (p_Options.m_HardBreaks) flags |= MD_FLAG_HARD_SOFT_BREAKS;
 
     const std::string markdown = EscapeSignatureSeparators(p_Markdown);
@@ -187,6 +188,6 @@ namespace Nhtmlmd
 
   std::string GetVersion()
   {
-    return "1.0.0";
+    return "1.0.1";
   }
 }
