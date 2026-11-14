@@ -16,7 +16,7 @@ class Config
 public:
   Config();
   Config(const std::string& p_Path, const std::map<std::string, std::string>& p_Default,
-         bool p_AllowUnknown = false);
+         bool p_AllowUnknown = false, const std::map<std::string, std::string>& p_Renamed = {});
   virtual ~Config();
 
   void Load(const std::string& p_Path);
@@ -35,4 +35,5 @@ private:
   std::map<std::string, std::string> m_Map;
   std::string m_Path;
   bool m_AllowUnknown = false;
+  std::map<std::string, std::string> m_Renamed;
 };

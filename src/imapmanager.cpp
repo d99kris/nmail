@@ -19,6 +19,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const bool p_CacheEncrypt,
                          const bool p_CacheIndexEncrypt,
                          const uint32_t p_IdleTimeout,
+                         const uint32_t p_IdleDelay,
                          const std::set<std::string>& p_FoldersExclude,
                          const bool p_SniEnabled,
                          const std::function<void(const ImapManager::Request&,
@@ -48,6 +49,7 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   LOG_IF_NONZERO(pipe(m_CachePipe));
   m_Connecting = m_Connect;
   m_IdleTimeout = std::max(1U, p_IdleTimeout);
+  m_IdleDelay = p_IdleDelay;
 }
 
 ImapManager::~ImapManager()
@@ -521,7 +523,7 @@ void ImapManager::Process()
     FD_ZERO(&fds);
     FD_SET(m_Pipe[0], &fds);
     int maxfd = m_Pipe[0];
-    struct timeval tv = { 15, 0 };
+    struct timeval tv = { static_cast<time_t>(m_IdleDelay), 0 };
 
     int selrv = 1;
     m_QueueMutex.lock();

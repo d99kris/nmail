@@ -227,21 +227,28 @@ int main(int argc, char* argv[])
     { "browser_cmd", "" },
     { "folders_exclude", "" },
     { "server_timestamps", "0" },
-    { "network_timeout", "30" },
+    { "network_timeout_sec", "30" },
     { "queue_encrypt", "1" },
     { "auth", "pass" },
     { "auth_encrypt", "1" },
     { "send_ip", "1" },
     { "file_picker_cmd", "" },
     { "downloads_dir", "" },
-    { "idle_timeout", "29" },
+    { "idle_timeout_min", "29" },
+    { "idle_delay_sec", "15" },
     { "sni_enabled", "1" },
     { "logdump_enabled", "0" },
     { "copy_to_trash", "" },
     { "assert_abort", "0" },
   };
+  const std::map<std::string, std::string> renamedMainConfig =
+  {
+    { "idle_timeout", "idle_timeout_min" },
+    { "network_timeout", "network_timeout_sec" },
+  };
   const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
-  std::shared_ptr<Config> mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
+  std::shared_ptr<Config> mainConfig =
+    std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
 
   const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
 
@@ -272,7 +279,7 @@ int main(int argc, char* argv[])
       return 1;
     }
 
-    mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig);
+    mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
 
     if (setup == "gmail")
     {
@@ -387,13 +394,15 @@ int main(int argc, char* argv[])
   uint32_t prefetchLevel = 0;
   uint64_t networkTimeout = 0;
   uint32_t idleTimeout = 29;
+  uint32_t idleDelay = 15;
   try
   {
     imapPort = std::stoi(mainConfig->Get("imap_port"));
     smtpPort = std::stoi(mainConfig->Get("smtp_port"));
     prefetchLevel = std::stoi(mainConfig->Get("prefetch_level"));
-    networkTimeout = std::stoll(mainConfig->Get("network_timeout"));
-    idleTimeout = std::stoi(mainConfig->Get("idle_timeout"));
+    networkTimeout = std::stoll(mainConfig->Get("network_timeout_sec"));
+    idleTimeout = std::stoi(mainConfig->Get("idle_timeout_min"));
+    idleDelay = std::stoi(mainConfig->Get("idle_delay_sec"));
   }
   catch (...)
   {
@@ -457,6 +466,7 @@ int main(int argc, char* argv[])
                                   networkTimeout,
                                   cacheEncrypt, cacheIndexEncrypt,
                                   idleTimeout,
+                                  idleDelay,
                                   foldersExclude,
                                   sniEnabled,
                                   std::bind(&Ui::ResponseHandler, ui.get(), std::placeholders::_1,

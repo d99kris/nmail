@@ -80,7 +80,7 @@ void Ui::Init()
     { "colors_enabled", "1" },
     { "attachment_indicator", "\xF0\x9F\x93\x8E" },
     { "bottom_reply", "0" },
-    { "compose_backup_interval", "10" },
+    { "compose_backup_interval_sec", "10" },
     { "persist_sortfilter", "1" },
     { "persist_selection_on_sortfilter_change", "1" },
     { "unread_indicator", "N" },
@@ -97,8 +97,12 @@ void Ui::Init()
     { "automove_trash_allow", "1" },
     { "top_bar_show_message_count", "0" },
   };
+  const std::map<std::string, std::string> renamedConfig =
+  {
+    { "compose_backup_interval", "compose_backup_interval_sec" },
+  };
   const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
-  m_Config = Config(configPath, defaultConfig);
+  m_Config = Config(configPath, defaultConfig, false, renamedConfig);
   m_Config.LogParams();
 
   m_TerminalTitle = m_Config.Get("terminal_title");
@@ -376,7 +380,7 @@ void Ui::Init()
 
   try
   {
-    m_ComposeBackupInterval = std::stoll(m_Config.Get("compose_backup_interval"));
+    m_ComposeBackupInterval = std::stoll(m_Config.Get("compose_backup_interval_sec"));
   }
   catch (...)
   {

@@ -335,8 +335,9 @@ Full example of a config file `~/.config/nmail/main.conf`:
     html_preview_cmd=
     html_to_text_cmd=
     html_viewer_cmd=
+    idle_delay_sec=15
     idle_inbox=1
-    idle_timeout=29
+    idle_timeout_min=29
     imap_host=imap.example.com
     imap_port=993
     inbox=Inbox
@@ -344,7 +345,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     logdump_enabled=0
     msg_viewer_cmd=
     name=Firstname Lastname
-    network_timeout=30
+    network_timeout_sec=30
     pager_cmd=
     parts_viewer_cmd=
     prefetch_all_headers=1
@@ -501,12 +502,17 @@ is available on the system (in that order), with fallback to
 Refer to [Tips](/doc/TIPS.md) for viewing attachments such as PDF in the
 terminal.
 
+### idle_delay_sec
+
+This parameter controls the delay in seconds (default 15) after the last
+network operation before nmail enters imap idle.
+
 ### idle_inbox
 
 This parameter controls whether imap idle should watch the inbox for new
 messages (default enabled) or the currently selected imap folder.
 
-### idle_timeout
+### idle_timeout_min
 
 This parameter controls the imap idle timeout in minutes (default 29). This
 should generally not be changed, refer to RFC 2177 for details.
@@ -545,7 +551,7 @@ message (`.eml` file) with `W`. By default nmail uses `open` on macOS and
 
 Real name of sender. Recommended when sending emails.
 
-### network_timeout
+### network_timeout_sec
 
 Specify timeout for IMAP and SMTP operations in seconds. If using a very slow
 network connection and sending very large emails it may be necessary to increase
@@ -871,7 +877,7 @@ file (platform-dependent defaults are left empty below):
     bottom_reply=0
     cancel_without_confirm=0
     colors_enabled=1
-    compose_backup_interval=10
+    compose_backup_interval_sec=10
     compose_line_wrap=0
     delete_without_confirm=0
     full_header_include_local=0
@@ -936,7 +942,7 @@ Allow cancelling email compose without confirmation prompt (default disabled).
 
 Enable terminal color output (default enabled).
 
-### compose_backup_interval
+### compose_backup_interval_sec
 
 Specify interval in seconds for local backups during compose (default 10).
 If the system running nmail is unexpectedly shutdown while user is composing

@@ -23,9 +23,11 @@ Config::Config()
 
 Config::Config(const std::string& p_Path,
                const std::map<std::string, std::string>& p_Default,
-               bool p_AllowUnknown)
+               bool p_AllowUnknown,
+               const std::map<std::string, std::string>& p_Renamed)
   : m_Map(p_Default)
   , m_AllowUnknown(p_AllowUnknown)
+  , m_Renamed(p_Renamed)
 {
   Load(p_Path);
 }
@@ -62,6 +64,14 @@ void Config::Load(const std::string& p_Path)
     std::string value;
     std::getline(linestream, value);
     param = Util::Trim(param);
+
+    auto renamedIt = m_Renamed.find(param);
+    if (renamedIt != m_Renamed.end())
+    {
+      // migrate renamed param
+      LOG_INFO("renamed param \"%s\" to \"%s\"", param.c_str(), renamedIt->second.c_str());
+      param = renamedIt->second;
+    }
 
     if (hasDefaultMap && (m_Map.count(param) == 0) && !m_AllowUnknown)
     {

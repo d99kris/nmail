@@ -121,6 +121,7 @@ public:
               const bool p_CacheEncrypt,
               const bool p_CacheIndexEncrypt,
               const uint32_t p_IdleTimeout,
+              const uint32_t p_IdleDelay,
               const std::set<std::string>& p_FoldersExclude,
               const bool p_SniEnabled,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
@@ -188,6 +189,7 @@ private:
   bool m_IdleInbox = true;
   std::string m_Inbox = "";
   uint32_t m_IdleTimeout = 29;
+  uint32_t m_IdleDelay = 15;
   std::atomic<bool> m_Connecting;
   std::atomic<bool> m_Running;
   std::atomic<bool> m_CacheRunning;
