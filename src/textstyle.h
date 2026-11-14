@@ -49,6 +49,10 @@ public:
                                  const MarkdownAttrs& p_Attrs, LineSpans& p_Spans,
                                  std::vector<Link>* p_Links);
 
+  // convert markdown to plain text with markup removed as when styled, with reference links
+  // parsed when p_ParseLinks is set, numbered in text and their urls listed at end
+  static std::wstring MarkdownToPlain(const std::wstring& p_Text, bool p_ParseLinks);
+
   // style http(s) and mailto urls in plain text from p_Begin, also urls hard-wrapped at
   // p_LineLength onto next line
   static void StyleUrlLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,

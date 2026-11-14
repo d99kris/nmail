@@ -180,6 +180,107 @@ void TextStyle::StyleMarkdownLines(std::vector<std::wstring>& p_Lines, size_t p_
   }
 }
 
+std::wstring TextStyle::MarkdownToPlain(const std::wstring& p_Text, bool p_ParseLinks)
+{
+  std::vector<std::wstring> lines;
+  size_t lineBegin = 0;
+  while (true)
+  {
+    const size_t lineEnd = p_Text.find(L'\n', lineBegin);
+    lines.push_back(p_Text.substr(lineBegin, lineEnd - lineBegin));
+    if (lineEnd == std::wstring::npos) break;
+
+    lineBegin = lineEnd + 1;
+  }
+
+  const MarkdownAttrs attrs; // markup removal does not depend on attrs
+  LineSpans spans(lines.size());
+  std::vector<Link> links;
+  StyleMarkdownLines(lines, 0, attrs, spans, p_ParseLinks ? &links : nullptr);
+
+  // link text and end position of its last span
+  struct LinkPos
+  {
+    std::wstring m_Text;
+    size_t m_Line = 0;
+    size_t m_End = 0;
+  };
+
+  std::vector<LinkPos> linkPoss(links.size());
+  for (size_t line = 0; line < spans.size(); ++line)
+  {
+    for (const auto& span : spans.at(line))
+    {
+      if (span.m_Link < 0) continue;
+
+      LinkPos& linkPos = linkPoss.at(span.m_Link);
+      linkPos.m_Text += lines.at(line).substr(span.m_Start, span.m_Len);
+      linkPos.m_Line = line;
+      linkPos.m_End = span.m_Start + span.m_Len;
+    }
+  }
+
+  // number links not showing their url, same url sharing number
+  std::map<std::wstring, int> urlNums;
+  std::vector<std::wstring> urls;
+  std::map<size_t, std::map<size_t, std::wstring>> lineMarkers;
+  for (size_t id = 0; id < links.size(); ++id)
+  {
+    const std::wstring& url = links.at(id).m_Url;
+    const LinkPos& linkPos = linkPoss.at(id);
+    static const std::wstring mailto = L"mailto:";
+    const bool isMailto = (url.rfind(mailto, 0) == 0);
+    if (linkPos.m_Text.empty() || (linkPos.m_Text == url) ||
+        (isMailto && (linkPos.m_Text == url.substr(mailto.size())))) continue;
+
+    auto numIt = urlNums.find(url);
+    if (numIt == urlNums.end())
+    {
+      urls.push_back(url);
+      numIt = urlNums.insert(std::make_pair(url, (int)urls.size())).first;
+    }
+
+    lineMarkers[linkPos.m_Line][linkPos.m_End] += L"[" + std::to_wstring(numIt->second) + L"]";
+  }
+
+  for (const auto& markers : lineMarkers)
+  {
+    std::wstring& line = lines.at(markers.first);
+    for (auto it = markers.second.rbegin(); it != markers.second.rend(); ++it)
+    {
+      line.insert(it->first, it->second);
+    }
+  }
+
+  std::wstring text;
+  for (size_t i = 0; i < lines.size(); ++i)
+  {
+    if (i > 0) text += L'\n';
+
+    text += lines.at(i);
+  }
+
+  if (!urls.empty())
+  {
+    // keep any trailing newline after reference list
+    const bool trailingNewline = !text.empty() && (text.back() == L'\n');
+    while (!text.empty() && (text.back() == L'\n'))
+    {
+      text.pop_back();
+    }
+
+    text += L"\n";
+    for (size_t i = 0; i < urls.size(); ++i)
+    {
+      text += L"\n[" + std::to_wstring(i + 1) + L"] " + urls.at(i);
+    }
+
+    if (trailingNewline) text += L'\n';
+  }
+
+  return text;
+}
+
 void TextStyle::StyleUrlLines(const std::vector<std::wstring>& p_Lines, size_t p_Begin, int p_Attrs,
                               size_t p_LineLength, LineSpans& p_Spans, std::vector<Link>& p_Links)
 {

@@ -214,6 +214,7 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_to_select", "KEY_CTRLT" },
     { "key_save_file", "s" },
     { "key_save_all_files", "a" },
+    { "key_save_markdown", "S" },
     { "key_ext_editor", "KEY_CTRLW" },
     { "key_ext_pager", "e" },
     { "key_postpone", "KEY_CTRLO" },

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <cwctype>
 #include <sstream>
 
 #include <sys/ioctl.h>
@@ -159,6 +160,7 @@ void Ui::Init()
   m_KeyToSelect = UiKeyConfig::GetKey("key_to_select");
   m_KeySaveFile = UiKeyConfig::GetKey("key_save_file");
   m_KeySaveAllFiles = UiKeyConfig::GetKey("key_save_all_files");
+  m_KeySaveMarkdown = UiKeyConfig::GetKey("key_save_markdown");
   m_KeyExtEditor = UiKeyConfig::GetKey("key_ext_editor");
   m_KeyExtPager = UiKeyConfig::GetKey("key_ext_pager");
   m_KeyPostpone = UiKeyConfig::GetKey("key_postpone");
@@ -833,6 +835,22 @@ void Ui::DrawHelp()
       GetKeyDisplay(m_KeyNextLink), "NextLink",
       GetKeyDisplay(m_KeyOpenLink), "OpenLink",
     },
+    {
+      GetKeyDisplay(m_KeySaveFile), "Save",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      GetKeyDisplay(m_KeyOtherCmdHelp), "OtherCmds",
+    },
+    {
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+    },
   };
 
   static std::vector<std::vector<std::string>> viewFoldersHelp =
@@ -899,6 +917,7 @@ void Ui::DrawHelp()
 
       case StateViewMessage:
         {
+          m_HelpViewMessageSize = viewMessageHelp.size();
           auto first = viewMessageHelp.begin() + m_HelpViewMessageOffset;
           auto last = viewMessageHelp.begin() + m_HelpViewMessageOffset + 2;
           std::vector<std::vector<std::string>> helpMessages(first, last);
@@ -3085,11 +3104,26 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyOtherCmdHelp)
   {
-    m_HelpViewMessageOffset = (m_HelpViewMessageOffset == 0) ? 2 : 0;
+    m_HelpViewMessageOffset += 2;
+    if (m_HelpViewMessageOffset >= m_HelpViewMessageSize)
+    {
+      m_HelpViewMessageOffset = 0;
+    }
   }
   else if (p_Key == m_KeyExport)
   {
     ExportMessage();
+  }
+  else if ((p_Key == m_KeySaveFile) || (p_Key == m_KeySaveMarkdown))
+  {
+    if (CurrentMessageBodyHeaderAvailable())
+    {
+      SaveMessageView(p_Key == m_KeySaveMarkdown);
+    }
+    else
+    {
+      SetDialogMessage("Cannot save message not fetched");
+    }
   }
   else if (p_Key == m_KeyExtPager)
   {
@@ -6156,6 +6190,82 @@ void Ui::ExportMessage()
   {
     SetDialogMessage("Export cancelled");
   }
+}
+
+void Ui::SaveMessageView(bool p_Markdown)
+{
+  // markdown only from built-in html converter
+  const bool hasMarkdown = m_CurrentMessageFromHtml && Util::GetHtmlToTextConvertCmd().empty();
+  if (p_Markdown && !hasMarkdown)
+  {
+    SetDialogMessage("Markdown not available");
+    return;
+  }
+
+  const std::string& folder = m_CurrentFolderUid.first;
+  const int uid = m_CurrentFolderUid.second;
+  std::string subject;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    std::map<uint32_t, Header>& headers = m_Headers[folder];
+    std::map<uint32_t, Header>::iterator hit = headers.find(uid);
+    if (hit != headers.end())
+    {
+      subject = hit->second.GetSubject();
+    }
+  }
+
+  // default filename <uid>-subject, with subject non-alphanumerics replaced and max 40 chars
+  static const size_t maxSubjectLen = 40;
+  std::wstring wsubject;
+  for (wchar_t ch : Util::ToWString(subject))
+  {
+    if (wsubject.size() >= maxSubjectLen) break;
+
+    if (iswalnum(ch))
+    {
+      wsubject += ch;
+    }
+    else if (!wsubject.empty() && (wsubject.back() != L'-'))
+    {
+      wsubject += L'-';
+    }
+  }
+
+  while (!wsubject.empty() && (wsubject.back() == L'-'))
+  {
+    wsubject.pop_back();
+  }
+
+  std::string filename = Util::GetDownloadsDir() + std::to_string(uid) +
+    (wsubject.empty() ? "" : ("-" + Util::ToString(wsubject))) + (p_Markdown ? ".md" : ".txt");
+  if (!PromptString("Save Filename: ", "Save", filename))
+  {
+    SetDialogMessage("Save cancelled");
+    return;
+  }
+
+  if (filename.empty())
+  {
+    SetDialogMessage("Save cancelled (empty filename)");
+    return;
+  }
+
+  filename = Util::ExpandPath(filename);
+
+  // view text is header block, blank line, body
+  const std::string& viewText = m_CurrentMessageViewText;
+  const size_t headerEnd = viewText.find("\n\n");
+  const size_t bodyBegin = (headerEnd == std::string::npos) ? 0 : (headerEnd + 2);
+  const std::string header = viewText.substr(0, bodyBegin);
+  std::string body = viewText.substr(bodyBegin);
+  if (hasMarkdown && !p_Markdown)
+  {
+    body = Util::ToString(TextStyle::MarkdownToPlain(Util::ToWString(body), m_MarkdownViewLinks));
+  }
+
+  Util::WriteFile(filename, header + body);
+  SetDialogMessage(p_Markdown ? "Markdown saved" : "Text saved");
 }
 
 void Ui::ImportMessage()

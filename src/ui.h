@@ -215,6 +215,7 @@ private:
   void SetComposeMailto(const std::string& p_Url);
   void SetLastStateOrMessageList();
   void ExportMessage();
+  void SaveMessageView(bool p_Markdown);
   void ImportMessage();
   void SearchMessageBasedOnCurrent(bool p_Subject);
   void SearchMessage(bool p_IsLocal, const std::string& p_Query = std::string());
@@ -404,6 +405,7 @@ private:
   int m_KeyToSelect = 0;
   int m_KeySaveFile = 0;
   int m_KeySaveAllFiles = 0;
+  int m_KeySaveMarkdown = 0;
   int m_KeyExtEditor = 0;
   int m_KeyExtPager = 0;
   int m_KeyPostpone = 0;
@@ -560,6 +562,7 @@ private:
   int m_HelpViewMessagesListOffset = 0;
   int m_HelpViewMessagesListSize = 0;
   int m_HelpViewMessageOffset = 0;
+  int m_HelpViewMessageSize = 0;
 
   bool m_MessageViewToggledSeen = false;
 

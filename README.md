@@ -722,6 +722,8 @@ The email navigator / viewer supports the following commands:
     '              search server
     <space>        select
     s              start full sync
+    s              save message as plain text (in message view)
+    S              save message as markdown (in message view, html emails)
     =              search messages with same subject
     -              search messages with same sender
     j              jump to message in search results
@@ -1234,6 +1236,7 @@ This configuration file holds user interface key bindings. Default content:
     key_rich_header=KEY_CTRLR
     key_right=KEY_RIGHT
     key_save_file=s
+    key_save_markdown=S
     key_search=/
     key_search_current_name=-
     key_search_current_subject==
