@@ -8,7 +8,10 @@ nmail
 nmail is a terminal-based email client for Linux and macOS with a user interface
 similar to Alpine.
 
-![screenshot nmail](/doc/screenshot-nmail.png)
+<p align="center">
+  <img alt="screenshot nmail" src="doc/screenshot-nmail.png" width="738"><br>
+  <sub>nmail with the pastel-blue theme, see <a href="https://github.com/d99kris/nmail/wiki/Themes">Themes</a> for more.</sub>
+</p>
 
 Features
 --------
@@ -27,7 +30,7 @@ Features
 - View using built-in or external viewer
 - Append customizable signature to emails
 - User interface similar to Alpine
-- Customizable [themes](https://github.com/d99kris/nmail/wiki/Themes) and key bindings
+- Customizable themes and key bindings
 
 Not Supported / Out of Scope
 ----------------------------
