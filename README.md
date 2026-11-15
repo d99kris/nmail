@@ -89,6 +89,10 @@ Command-line Options:
         setup wizard for specified service, supported services: gmail,
         gmail-oauth2, icloud, outlook, outlook-oauth2
 
+    -t, --theme [THEME]
+        install color theme, or select from list of available themes if not
+        specified
+
     -v, --version
         output version information and exit
 
@@ -1289,35 +1293,31 @@ This configuration file controls the color theme of nmail. For this
 configuration to take effect, `colors_enabled=1` must be set in
 `~/.config/nmail/ui.conf`.
 
-Color theme examples are available in the source package under the themes
-directory and can be used by copying to `~/.config/nmail/colors.conf` when
-nmail is not running.
+nmail comes with a set of bundled color themes, which can be installed using
+`nmail --theme`. Without a theme name it presents a list of available themes
+to select from:
+
+    nmail --theme
+
+A theme may also be specified directly, for example:
+
+    nmail --theme pastel-blue
 
 Available themes:
 
-    catppuccin-macchiato
     default
+    catppuccin-macchiato
     dracula
     pastel-blue
     terracotta
 
+The theme is written to `~/.config/nmail/colors.conf`, overwriting any
+existing file. A running nmail instance needs to be restarted for the theme to
+take effect.
+
 See the [Themes wiki-page](https://github.com/d99kris/nmail/wiki/Themes) for
-example screenshots.
-
-### Installing theme from source
-
-With a source code copy, copy the theme file to `~/.config/nmail/colors.conf`
-(while nmail is not running). Example installing `catppuccin-macchiato` theme:
-
-    cp themes/catppuccin-macchiato.conf ~/.config/nmail/colors.conf
-
-### Installing theme from web
-
-One can fetch current `master` copy of a theme from the github repository and
-download to the config directory (while nmail is not running). Example
-installing `catppuccin-macchiato` theme:
-
-    THEME="catppuccin-macchiato" ; curl -L "https://raw.githubusercontent.com/d99kris/nmail/refs/heads/master/themes/${THEME}.conf" -o ~/.config/nmail/colors.conf
+example screenshots. The theme files are available in the source package
+under the `themes` directory and also listed in `themes/index.txt`.
 
 ### Manual configuration
 

@@ -112,6 +112,7 @@ message(STATUS "Core Dump: ${HAS_COREDUMP}")
 # dir at runtime, so no separate helper scripts need to be installed.
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(OAUTH2NMAIL_HEADER "${GENERATED_DIR}/oauth2nmailscript.h")
+set(THEMES_HEADER "${GENERATED_DIR}/themes.h")
 
 # Volatile build metadata (origin, git sha, git branch) is written to a
 # generated buildinfo.h and included only from the two source files that consume
@@ -130,14 +131,36 @@ add_custom_command(
           -DOUT_FILE=${OAUTH2NMAIL_HEADER}
           -DVAR_NAME=Oauth2nmailScript
           -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedfile.cmake
-  DEPENDS src/oauth2nmail utils/embedfile.cmake
+  DEPENDS src/oauth2nmail utils/embedfile.cmake utils/embedutil.cmake
   COMMENT "Embedding oauth2nmail script"
+  VERBATIM
+)
+
+# Embedded color themes - listed in themes/index.txt, which is a configure
+# dependency so that adding or removing a theme updates the DEPENDS list.
+include(utils/embedutil.cmake)
+set(THEMES_INDEX "${CMAKE_CURRENT_SOURCE_DIR}/themes/index.txt")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${THEMES_INDEX}")
+embed_theme_names("${THEMES_INDEX}" THEME_NAMES)
+set(THEME_FILES "")
+foreach(THEME_NAME ${THEME_NAMES})
+  list(APPEND THEME_FILES "themes/${THEME_NAME}.conf")
+endforeach()
+add_custom_command(
+  OUTPUT "${THEMES_HEADER}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DTHEMES_DIR=${CMAKE_CURRENT_SOURCE_DIR}/themes
+          -DOUT_FILE=${THEMES_HEADER}
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedthemes.cmake
+  DEPENDS themes/index.txt ${THEME_FILES} utils/embedthemes.cmake utils/embedutil.cmake
+  COMMENT "Embedding themes"
   VERBATIM
 )
 
 # Application
 add_executable(nmail
   ${OAUTH2NMAIL_HEADER}
+  ${THEMES_HEADER}
   ${BUILDINFO_HEADER}
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
@@ -202,6 +225,8 @@ add_executable(nmail
   src/status.h
   src/textstyle.cpp
   src/textstyle.h
+  src/theme.cpp
+  src/theme.h
   src/ui.cpp
   src/ui.h
   src/uikeyconfig.cpp

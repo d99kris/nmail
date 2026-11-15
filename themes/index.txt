@@ -1,0 +1,11 @@
+# index.txt
+#
+# Themes embedded in the nmail executable, listed in the order presented by
+# "nmail --theme". Each entry <name> refers to themes/<name>.conf. The first
+# entry is the default selection.
+
+default
+catppuccin-macchiato
+dracula
+pastel-blue
+terracotta

@@ -24,6 +24,7 @@
 #include "sasl.h"
 #include "sethelp.h"
 #include "smtpmanager.h"
+#include "theme.h"
 #include "ui.h"
 #include "uikeyconfig.h"
 #include "uikeyinput.h"
@@ -70,7 +71,9 @@ int main(int argc, char* argv[])
   bool keyDump = false;
   bool readOnly = false;
   bool setupAllowCacheEncrypt = false;
+  bool themeInstall = false;
   std::string setup;
+  std::string theme;
   std::string exportDir;
 
   // Argument handling
@@ -120,6 +123,16 @@ int main(int argc, char* argv[])
       ++it;
       setup = *it;
     }
+    else if ((*it == "-t") || (*it == "--theme"))
+    {
+      // optional theme name, prompt for selection if not specified
+      themeInstall = true;
+      if ((std::distance(it + 1, args.end()) > 0) && ((it + 1)->rfind("-", 0) != 0))
+      {
+        ++it;
+        theme = *it;
+      }
+    }
     else if ((*it == "-v") || (*it == "--version"))
     {
       ShowVersion();
@@ -135,6 +148,11 @@ int main(int argc, char* argv[])
       ShowHelp();
       return 1;
     }
+  }
+
+  if (themeInstall)
+  {
+    return Theme::Install(theme) ? 0 : 1;
   }
 
   const bool isSetup = !setup.empty();
@@ -552,11 +570,14 @@ static void ShowHelp()
     "   -s,  --setup <SERVICE>     setup wizard for specified service, supported\n"
     "                              services: gmail, gmail-oauth2, icloud, outlook,\n"
     "                              outlook-oauth2\n"
+    "   -t,  --theme [THEME]       install color theme, or select from list of\n"
+    "                              available themes if not specified\n"
     "   -v,  --version             output version information and exit\n"
     "   -x,  --export <DIR>        export cache to specified dir in Maildir format\n"
     "\n"
     "Examples:\n"
     "   nmail -s gmail             setup nmail for a gmail account\n"
+    "   nmail -t pastel-blue       install the pastel-blue color theme\n"
     "   nmail                      running nmail without setup wizard will generate\n"
     "                              default configuration files in the nmail dir if\n"
     "                              not present already, these can be edited to\n"
