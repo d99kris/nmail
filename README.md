@@ -172,7 +172,6 @@ arm64.
     nmail -u
 
 Upgrades to the latest release, or to a specified release, e.g. `nmail -u 5.16.4`.
-Exit status is 0 when upgraded, 3 when already up to date and 5 on failure.
 
 **Uninstall**
 
