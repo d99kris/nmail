@@ -493,6 +493,7 @@ private:
 
   std::string m_TerminalTitle;
 
+  int m_AttrsRegularText = A_NORMAL;
   int m_AttrsDialog = A_REVERSE;
   int m_AttrsHelpDesc = A_NORMAL;
   int m_AttrsHelpKeys = A_REVERSE;

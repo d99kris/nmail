@@ -314,16 +314,22 @@ void Ui::Init()
     Config colorsConfig = Config(colorsConfigPath, defaultColorsConfig);
     colorsConfig.LogParams();
 
-    const int colorRegularTextFg = Util::GetColor(colorsConfig.Get("color_regular_text_fg"));
-    const int colorRegularTextBg = Util::GetColor(colorsConfig.Get("color_regular_text_bg"));
-    assume_default_colors(colorRegularTextFg, colorRegularTextBg);
+    // regular text is applied as window background, as ncurses does not output
+    // color pair 0 set by assume_default_colors(), unset fg/bg inherit from it
+    const std::string regularFg = colorsConfig.Get("color_regular_text_fg");
+    const std::string regularBg = colorsConfig.Get("color_regular_text_bg");
+    auto getColorAttrs = [&](const std::string& p_Fg, const std::string& p_Bg)
+    {
+      return Util::GetColorAttrs(p_Fg.empty() ? regularFg : p_Fg, p_Bg.empty() ? regularBg : p_Bg);
+    };
 
     auto getAttrs = [&](const std::string& p_Item)
     {
-      return Util::GetColorAttrs(colorsConfig.Get(p_Item + "_fg"), colorsConfig.Get(p_Item + "_bg")) |
+      return getColorAttrs(colorsConfig.Get(p_Item + "_fg"), colorsConfig.Get(p_Item + "_bg")) |
              Util::GetAttrs(colorsConfig.Get(p_Item + "_attr"));
     };
 
+    m_AttrsRegularText = Util::GetColorAttrs(regularFg, regularBg);
     m_AttrsDialog = getAttrs("color_dialog");
     m_AttrsHelpDesc = getAttrs("color_help_desc");
     m_AttrsHelpKeys = getAttrs("color_help_keys");
@@ -349,7 +355,7 @@ void Ui::Init()
     else
     {
       m_AttrsSelectedHighlighted =
-        Util::GetColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg")) |
+        getColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg")) |
         Util::GetAttrs(colorsConfig.Get("color_selected_item_attr")) |
         Util::GetAttrs(colorsConfig.Get("color_highlighted_text_attr"));
     }
@@ -424,10 +430,12 @@ void Ui::InitWindows()
 
   m_MaxViewLineLength = m_ScreenWidth;
   m_MaxComposeLineLength = (m_ComposeLineWrap == LineWrapHardWrap) ? std::min(m_ScreenWidth, 72) : m_ScreenWidth;
+  wbkgd(stdscr, m_AttrsRegularText | ' ');
   wclear(stdscr);
   wrefresh(stdscr);
   const int topHeight = 1;
   m_TopWin = newwin(topHeight, m_ScreenWidth, 0, 0);
+  wbkgd(m_TopWin, m_AttrsRegularText | ' ');
   leaveok(m_TopWin, true);
 
   int helpHeight = 0;
@@ -435,11 +443,13 @@ void Ui::InitWindows()
   {
     helpHeight = 2;
     m_HelpWin = newwin(2, m_ScreenWidth, m_ScreenHeight - helpHeight, 0);
+    wbkgd(m_HelpWin, m_AttrsRegularText | ' ');
     leaveok(m_HelpWin, true);
   }
 
   const int dialogHeight = 1;
   m_DialogWin = newwin(1, m_ScreenWidth, m_ScreenHeight - helpHeight - dialogHeight, 0);
+  wbkgd(m_DialogWin, m_AttrsRegularText | ' ');
   leaveok(m_DialogWin, true);
 
   bool listPad = true;
@@ -454,6 +464,7 @@ void Ui::InitWindows()
     m_MainWin = newwin(m_MainWinHeight, m_ScreenWidth, topHeight, 0);
   }
 
+  wbkgd(m_MainWin, m_AttrsRegularText | ' ');
   leaveok(m_MainWin, true);
 }
 
