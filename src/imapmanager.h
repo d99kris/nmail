@@ -60,6 +60,7 @@ public:
     bool m_Cached = false;
     bool m_UidInvalid = false;
     std::set<std::string> m_Folders;
+    std::map<std::string, std::string> m_SpecialFolders;
     std::set<uint32_t> m_Uids;
     std::map<uint32_t, Header> m_Headers;
     std::map<uint32_t, uint32_t> m_Flags;
@@ -134,6 +135,7 @@ public:
   virtual ~ImapManager();
 
   void Start();
+  void SetDetectSpecialFolders(bool p_DetectSpecialFolders);
 
   void AsyncRequest(const Request& p_Request);
   void PrefetchRequest(const Request& p_Request);
@@ -187,6 +189,7 @@ private:
   std::function<void(const StatusUpdate&)> m_StatusHandler;
   std::function<void(const SearchQuery&, const SearchResult&)> m_SearchHandler;
   bool m_IdleInbox = true;
+  bool m_DetectSpecialFolders = false;
   std::string m_Inbox = "";
   uint32_t m_IdleTimeout = 29;
   uint32_t m_IdleDelay = 15;

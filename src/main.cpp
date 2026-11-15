@@ -8,6 +8,8 @@
 #include <iostream>
 #include <memory>
 
+#include <unistd.h>
+
 #include "apathy/path.hpp"
 
 #include "addressbook.h"
@@ -23,6 +25,7 @@
 #include "offlinequeue.h"
 #include "sasl.h"
 #include "sethelp.h"
+#include "setupwizard.h"
 #include "smtpmanager.h"
 #include "theme.h"
 #include "ui.h"
@@ -45,20 +48,13 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
-static void SetupPromptUserDetails(std::shared_ptr<Config> p_Config);
-static void SetupGmail(std::shared_ptr<Config> p_Config);
-static void SetupGmailCommon(std::shared_ptr<Config> p_Config);
-static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config);
-static void SetupICloud(std::shared_ptr<Config> p_Config);
-static void SetupOutlook(std::shared_ptr<Config> p_Config);
-static void SetupOutlookCommon(std::shared_ptr<Config> p_Config);
-static void SetupOutlookOAuth2(std::shared_ptr<Config> p_Config);
 static void LogSystemInfo();
 static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
                             std::shared_ptr<Config> p_SecretConfig);
 static bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
                                  const std::string& p_OldPass, const std::string& p_NewPass);
 static void KeyDump();
+static std::string GetDisplayPath(const std::string& p_Path);
 
 int main(int argc, char* argv[])
 {
@@ -118,10 +114,15 @@ int main(int argc, char* argv[])
     {
       readOnly = true;
     }
-    else if (((*it == "-s") || (*it == "--setup")) && (std::distance(it + 1, args.end()) > 0))
+    else if ((*it == "-s") || (*it == "--setup"))
     {
-      ++it;
-      setup = *it;
+      // optional service name, detect from email address if not specified
+      setup = "auto";
+      if ((std::distance(it + 1, args.end()) > 0) && ((it + 1)->rfind("-", 0) != 0))
+      {
+        ++it;
+        setup = *it;
+      }
     }
     else if ((*it == "-t") || (*it == "--theme"))
     {
@@ -153,6 +154,16 @@ int main(int argc, char* argv[])
   if (themeInstall)
   {
     return Theme::Install(theme) ? 0 : 1;
+  }
+
+  // start setup wizard on first run
+  const std::string mainConfigFile = Util::GetApplicationDir() + std::string("main.conf");
+  const bool hasMainConfig = apathy::Path(mainConfigFile).exists();
+  if (setup.empty() && !readOnly && !changePass && !keyDump && exportDir.empty() && !hasMainConfig &&
+      isatty(STDIN_FILENO))
+  {
+    std::cout << "No config found in " << GetDisplayPath(Util::GetApplicationDir()) << "\n\n";
+    setup = "auto";
   }
 
   const bool isSetup = !setup.empty();
@@ -289,37 +300,17 @@ int main(int argc, char* argv[])
 
   if (isSetup)
   {
-    if ((setup != "gmail") && (setup != "gmail-oauth2") && (setup != "icloud") && (setup != "outlook") &&
-        (setup != "outlook-oauth2"))
-    {
-      std::cerr << "error: unsupported email service \"" << setup << "\".\n\n";
-      ShowHelp();
-      return 1;
-    }
-
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
 
-    if (setup == "gmail")
+    if (!SetupWizard::Run(setup, mainConfig, defaultMainConfig))
     {
-      SetupGmail(mainConfig);
-    }
-    else if (setup == "gmail-oauth2")
-    {
-      Auth::InitConfig();
-      SetupGmailOAuth2(mainConfig);
-    }
-    else if (setup == "icloud")
-    {
-      SetupICloud(mainConfig);
-    }
-    else if (setup == "outlook")
-    {
-      SetupOutlook(mainConfig);
-    }
-    else if (setup == "outlook-oauth2")
-    {
-      Auth::InitConfig();
-      SetupOutlookOAuth2(mainConfig);
+      if (!hasMainConfig)
+      {
+        // remove default config created above, to rerun setup on next start
+        remove(mainConfigPath.c_str());
+      }
+
+      return 1;
     }
 
     remove(mainConfigPath.c_str());
@@ -455,6 +446,11 @@ int main(int argc, char* argv[])
     }
   }
 
+  if (isSetup)
+  {
+    std::cout << "Config saved to " << GetDisplayPath(mainConfigPath) << "\n";
+  }
+
   // Read config that may be updated during authentication
   const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
   const bool cacheIndexEncrypt = (mainConfig->Get("cache_index_encrypt") == "1");
@@ -510,6 +506,17 @@ int main(int argc, char* argv[])
   ui->SetDraftsFolder(drafts);
   ui->SetSentFolder(sent);
   ui->SetClientStoreSent(clientStoreSent);
+  ui->SetSpecialFoldersHandler([mainConfig](const std::map<std::string, std::string>& p_SpecialFolders)
+  {
+    // persist detected special folders
+    for (const auto& specialFolder : p_SpecialFolders)
+    {
+      mainConfig->Set(specialFolder.first, specialFolder.second);
+    }
+
+    mainConfig->Save();
+  });
+  imapManager->SetDetectSpecialFolders(trash.empty() || spam.empty() || drafts.empty() || sent.empty());
   ui->SetSmtpManager(smtpManager);
 
   imapManager->Start();
@@ -567,30 +574,27 @@ static void ShowHelp()
     "   -o,  --offline             run in offline mode\n"
     "   -p,  --pass                change password\n"
     "   -ro, --read-only           run shadow instance with read-only cache access\n"
-    "   -s,  --setup <SERVICE>     setup wizard for specified service, supported\n"
-    "                              services: gmail, gmail-oauth2, icloud, outlook,\n"
-    "                              outlook-oauth2\n"
+    "   -s,  --setup [SERVICE]     setup wizard, detects service from email address\n"
+    "                              if not specified\n"
     "   -t,  --theme [THEME]       install color theme, or select from list of\n"
     "                              available themes if not specified\n"
     "   -v,  --version             output version information and exit\n"
     "   -x,  --export <DIR>        export cache to specified dir in Maildir format\n"
     "\n"
     "Examples:\n"
-    "   nmail -s gmail             setup nmail for a gmail account\n"
+    "   nmail -s                   setup nmail for an email account\n"
     "   nmail -t pastel-blue       install the pastel-blue color theme\n"
-    "   nmail                      running nmail without setup wizard will generate\n"
-    "                              default configuration files in the nmail dir if\n"
-    "                              not present already, these can be edited to\n"
-    "                              configure nmail for email service providers not\n"
-    "                              supported by the built-in setup wizard (refer to\n"
-    "                              FILES section for details)\n"
+    "   nmail                      running nmail without config starts the setup\n"
+    "                              wizard, alternatively nmail can be configured\n"
+    "                              manually (refer to FILES section for details)\n"
     "\n"
     "Files:\n"
     "   ~/.config/nmail/auth.conf  configures custom oauth2 client id and secret\n"
     "   ~/.config/nmail/key.conf   configures user interface key bindings\n"
     "   ~/.config/nmail/main.conf  configures mail account and general settings,\n"
     "                              for full functionality the following fields\n"
-    "                              shall be configured:\n"
+    "                              shall be configured (folders are detected if\n"
+    "                              not specified):\n"
     "                              address (ex: example@example.com),\n"
     "                              drafts (folder name, ex: Drafts),\n"
     "                              imap_host (ex: imap.example.com),\n"
@@ -623,113 +627,6 @@ static void ShowVersion()
     "Written by Kristofer Berggren.\n";
 }
 
-static void SetupPromptUserDetails(std::shared_ptr<Config> p_Config)
-{
-  std::string email;
-  std::cout << "Email: ";
-  std::getline(std::cin, email);
-  std::cout << "Name: ";
-  std::string name;
-  std::getline(std::cin, name);
-
-  p_Config->Set("name", name);
-  p_Config->Set("address", email);
-  p_Config->Set("user", email);
-}
-
-static void SetupGmail(std::shared_ptr<Config> p_Config)
-{
-  SetupPromptUserDetails(p_Config);
-
-  SetupGmailCommon(p_Config);
-}
-
-static void SetupGmailCommon(std::shared_ptr<Config> p_Config)
-{
-  p_Config->Set("imap_host", "imap.gmail.com");
-  p_Config->Set("imap_port", "993");
-  p_Config->Set("smtp_host", "smtp.gmail.com");
-  p_Config->Set("smtp_port", "465");
-  p_Config->Set("inbox", "INBOX");
-  p_Config->Set("trash", "[Gmail]/Trash");
-  p_Config->Set("spam", "[Gmail]/Spam");
-  p_Config->Set("drafts", "[Gmail]/Drafts");
-  p_Config->Set("sent", "[Gmail]/Sent Mail");
-  p_Config->Set("folders_exclude", "\"[Gmail]/All Mail\",\"[Gmail]/Important\",\"[Gmail]/Starred\"");
-}
-
-static void SetupGmailOAuth2(std::shared_ptr<Config> p_Config)
-{
-  std::string auth = "gmail-oauth2";
-  if (!Auth::GenerateToken(auth))
-  {
-    std::cout << auth << " setup failed, exiting.\n";
-    exit(1);
-  }
-
-  std::string name = Auth::GetName();
-  std::string email = Auth::GetEmail();
-  p_Config->Set("name", name);
-  p_Config->Set("address", email);
-  p_Config->Set("user", email);
-  p_Config->Set("auth", auth);
-
-  SetupGmailCommon(p_Config);
-}
-
-static void SetupICloud(std::shared_ptr<Config> p_Config)
-{
-  SetupPromptUserDetails(p_Config);
-
-  p_Config->Set("imap_host", "imap.mail.me.com");
-  p_Config->Set("smtp_host", "smtp.mail.me.com");
-  p_Config->Set("inbox", "INBOX");
-  p_Config->Set("trash", "Deleted Messages");
-  p_Config->Set("spam", "Junk");
-  p_Config->Set("drafts", "Drafts");
-  p_Config->Set("sent", "Sent Messages");
-  p_Config->Set("client_store_sent", "1");
-}
-
-static void SetupOutlook(std::shared_ptr<Config> p_Config)
-{
-  SetupPromptUserDetails(p_Config);
-
-  SetupOutlookCommon(p_Config);
-  p_Config->Set("imap_host", "imap-mail.outlook.com");
-  p_Config->Set("smtp_host", "smtp-mail.outlook.com");
-}
-
-static void SetupOutlookCommon(std::shared_ptr<Config> p_Config)
-{
-  p_Config->Set("inbox", "Inbox");
-  p_Config->Set("trash", "Deleted");
-  p_Config->Set("spam", "Junk");
-  p_Config->Set("drafts", "Drafts");
-  p_Config->Set("sent", "Sent");
-}
-
-static void SetupOutlookOAuth2(std::shared_ptr<Config> p_Config)
-{
-  std::string auth = "outlook-oauth2";
-  if (!Auth::GenerateToken(auth))
-  {
-    std::cout << auth << " setup failed, exiting.\n";
-    exit(1);
-  }
-
-  std::string name = Auth::GetName();
-  std::string email = Auth::GetEmail();
-  p_Config->Set("name", name);
-  p_Config->Set("address", email);
-  p_Config->Set("user", email);
-  p_Config->Set("auth", auth);
-
-  SetupOutlookCommon(p_Config);
-  p_Config->Set("imap_host", "outlook.office365.com");
-  p_Config->Set("smtp_host", "outlook.office365.com");
-}
-
 static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
                                 std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
                                 std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
@@ -749,8 +646,17 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
 
   if (encPass.empty())
   {
-    std::cout << (p_SmtpUser.empty() ? "Password: " : "IMAP Password: ");
-    p_Pass = Util::GetPass();
+    const std::string label = p_SmtpUser.empty() ? "Password" : "IMAP Password";
+    if (p_IsSetup)
+    {
+      if (!SetupWizard::PromptPassword(label, p_MainConfig, p_Pass)) return false;
+    }
+    else
+    {
+      std::cout << label << ": " << std::flush;
+      p_Pass = Util::GetPass();
+    }
+
     encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
   }
   else
@@ -772,7 +678,7 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
   {
     if (encSmtpPass.empty())
     {
-      std::cout << "SMTP Password: ";
+      std::cout << (p_IsSetup ? SetupWizard::Label("SMTP Password") : "SMTP Password: ") << std::flush;
       p_SmtpPass = Util::GetPass();
       encSmtpPass = Util::ToHex(Crypto::AESEncrypt(p_SmtpPass, p_SmtpUser));
     }
@@ -789,11 +695,12 @@ static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
 
   if (p_IsSetup)
   {
-    std::cout << "Save password (y/n): ";
-    std::string savepass;
-    std::getline(std::cin, savepass);
-    const bool isSavePass = (savepass == "y");
+    std::cout << "\n";
+    bool isSavePass = true;
+    if (!SetupWizard::PromptYesNo("Save password", isSavePass)) return false;
+
     p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
+    std::cout << "\n";
   }
 
   const bool isSavePass = (p_MainConfig->Get("save_pass") == "1");
@@ -822,7 +729,7 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
   {
     if (p_SetupAllowCacheEncrypt)
     {
-      std::cout << "Cache Encryption Password (optional): ";
+      std::cout << SetupWizard::Label("Cache Encryption Password (optional)") << std::flush;
       p_Pass = Util::GetPass();
     }
 
@@ -838,10 +745,10 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
     else
     {
       // if pass specified, prompt user whether to store it
-      std::cout << "Save password (y/n): ";
-      std::string savepass;
-      std::getline(std::cin, savepass);
-      const bool isSavePass = (savepass == "y");
+      std::cout << "\n";
+      bool isSavePass = true;
+      if (!SetupWizard::PromptYesNo("Save password", isSavePass)) return false;
+
       p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
 
       if (isSavePass)
@@ -849,6 +756,11 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
         std::string encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
         p_SecretConfig->Set("pass", encPass);
       }
+    }
+
+    if (p_SetupAllowCacheEncrypt)
+    {
+      std::cout << "\n";
     }
 
     p_SecretConfig->Save();
@@ -1122,4 +1034,23 @@ static void KeyDump()
   UiKeyConfig::Cleanup();
   wclear(stdscr);
   endwin();
+}
+
+std::string GetDisplayPath(const std::string& p_Path)
+{
+  // shorten home dir to ~ and remove trailing slash
+  std::string path = p_Path;
+  if ((path.size() > 1) && (path.back() == '/'))
+  {
+    path.pop_back();
+  }
+
+  const char* homeEnv = getenv("HOME");
+  const std::string home = (homeEnv != nullptr) ? homeEnv : "";
+  if (!home.empty() && ((path == home) || Util::StartsWith(path, home + "/")))
+  {
+    path = "~" + path.substr(home.size());
+  }
+
+  return path;
 }

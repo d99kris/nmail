@@ -66,6 +66,21 @@ std::string ImapUtil::GetImapResponseStr(struct mailimap* p_Imap)
     ? std::string(p_Imap->imap_response) : std::string();
 }
 
+std::string ImapUtil::GetImapResponseCode(struct mailimap* p_Imap)
+{
+  // response codes not handled by libetpan, e.g. rfc 5530 AUTHENTICATIONFAILED
+  return ((p_Imap != nullptr) && (p_Imap->imap_response_info != nullptr) &&
+          (p_Imap->imap_response_info->rsp_atom != nullptr))
+    ? std::string(p_Imap->imap_response_info->rsp_atom) : std::string();
+}
+
+std::string ImapUtil::GetImapResponseAlert(struct mailimap* p_Imap)
+{
+  return ((p_Imap != nullptr) && (p_Imap->imap_response_info != nullptr) &&
+          (p_Imap->imap_response_info->rsp_alert != nullptr))
+    ? std::string(p_Imap->imap_response_info->rsp_alert) : std::string();
+}
+
 std::string ImapUtil::GetPeerIp(struct mailimap* p_Imap)
 {
   int fd = GetImapFd(p_Imap);
@@ -224,6 +239,102 @@ std::string ImapUtil::Utf16LeToAscii(const std::string& p_Str)
   }
 
   return ascii;
+}
+
+std::string ImapUtil::GetSpecialUseRole(const std::string& p_Attr)
+{
+  // rfc 6154 special-use and legacy xlist attributes, without leading backslash
+  static const std::map<std::string, std::string> attrRoles =
+  {
+    { "sent", "sent" },
+    { "drafts", "drafts" },
+    { "trash", "trash" },
+    { "junk", "spam" },
+    { "spam", "spam" },
+  };
+
+  auto it = attrRoles.find(AsciiToLower(p_Attr));
+  return (it != attrRoles.end()) ? it->second : std::string();
+}
+
+std::string ImapUtil::GetSpecialNameRole(const std::string& p_Folder, char p_Delim)
+{
+  // common folder names, ascii in lower case, non-ascii in typical case
+  static const std::map<std::string, std::string> nameRoles = []()
+  {
+    static const std::map<std::string, std::vector<std::string>> roleNames =
+    {
+      { "sent",
+        { "sent", "sent items", "sent mail", "sent messages", "sent email",
+          "gesendet", "gesendete elemente", "gesendete objekte",
+          "envoyés", "Éléments envoyés", "éléments envoyés", "messages envoyés",
+          "enviados", "elementos enviados", "itens enviados", "inviati", "posta inviata",
+          "verzonden", "verzonden items", "verzonden berichten", "skickat", "skickade objekt",
+          "sendt", "sendte elementer", "lähetetyt", "wysłane", "odeslané", "elküldött",
+          "Отправленные", "отправленные", "Απεσταλμένα", "已发送", "已發送", "送信済み", "보낸편지함" } },
+      { "drafts",
+        { "drafts", "draft", "Entwürfe", "entwürfe", "brouillons", "borradores", "rascunhos",
+          "bozze", "concepten", "utkast", "kladder", "luonnokset", "kopie robocze", "koncepty",
+          "piszkozatok", "Черновики", "черновики", "Πρόχειρα", "草稿", "下書き", "임시보관함" } },
+      { "trash",
+        { "trash", "deleted", "deleted items", "deleted messages", "bin", "rubbish",
+          "papierkorb", "gelöschte elemente", "gelöschte objekte",
+          "corbeille", "Éléments supprimés", "éléments supprimés",
+          "papelera", "elementos eliminados", "lixeira", "lixo", "itens excluídos",
+          "cestino", "posta eliminata", "prullenbak", "verwijderde items",
+          "papperskorgen", "borttagna objekt", "papirkurv", "slettede elementer",
+          "roskakori", "poistetut", "kosz", "usunięte", "koš",
+          "Корзина", "корзина", "Удаленные", "удаленные", "Κάδος απορριμμάτων",
+          "已删除", "已刪除", "ゴミ箱", "휴지통" } },
+      { "spam",
+        { "spam", "junk", "junk e-mail", "junk email", "junk mail", "bulk", "bulk mail",
+          "spamverdacht", "courrier indésirable", "indésirables", "correo no deseado",
+          "lixo eletrônico", "posta indesiderata", "ongewenste e-mail", "skräppost",
+          "søppelpost", "uønsket e-post", "roskaposti",
+          "Спам", "спам", "垃圾邮件", "迷惑メール", "스팸메일함" } },
+    };
+
+    std::map<std::string, std::string> map;
+    for (const auto& roleName : roleNames)
+    {
+      for (const auto& name : roleName.second)
+      {
+        map[AsciiToLower(name)] = roleName.first;
+      }
+    }
+
+    return map;
+  }();
+
+  // only consider top-level folders, also when nested under inbox
+  std::string name = p_Folder;
+  if (p_Delim != '\0')
+  {
+    const std::string inboxPrefix = std::string("inbox") + p_Delim;
+    if (Util::StartsWith(AsciiToLower(name), inboxPrefix))
+    {
+      name = name.substr(inboxPrefix.size());
+    }
+
+    if (name.find(p_Delim) != std::string::npos) return std::string();
+  }
+
+  auto it = nameRoles.find(AsciiToLower(name));
+  return (it != nameRoles.end()) ? it->second : std::string();
+}
+
+std::string ImapUtil::AsciiToLower(const std::string& p_Str)
+{
+  std::string lower = p_Str;
+  for (auto& ch : lower)
+  {
+    if ((ch >= 'A') && (ch <= 'Z'))
+    {
+      ch = ch - 'A' + 'a';
+    }
+  }
+
+  return lower;
 }
 
 int ImapUtil::GetImapFd(struct mailimap* p_Imap)

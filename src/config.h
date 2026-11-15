@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <istream>
 #include <map>
 #include <set>
 #include <string>
@@ -20,6 +21,7 @@ public:
   virtual ~Config();
 
   void Load(const std::string& p_Path);
+  void LoadData(const std::string& p_Data);
   void Save() const;
   void Save(const std::string& p_Path) const;
   std::string Get(const std::string& p_Param) const;
@@ -30,6 +32,9 @@ public:
 
   void LogParams() const;
   void LogParamsExcept(const std::set<std::string>& p_Exclude) const;
+
+private:
+  void Parse(std::istream& p_Stream);
 
 private:
   std::map<std::string, std::string> m_Map;

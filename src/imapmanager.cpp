@@ -137,6 +137,11 @@ ImapManager::~ImapManager()
   close(m_CachePipe[1]);
 }
 
+void ImapManager::SetDetectSpecialFolders(bool p_DetectSpecialFolders)
+{
+  m_DetectSpecialFolders = p_DetectSpecialFolders;
+}
+
 void ImapManager::Start()
 {
   SetStatus(m_Connecting ? Status::FlagConnecting : Status::FlagOffline);
@@ -498,6 +503,18 @@ void ImapManager::Process()
       LOG_INFO("initial login ok");
       SetStatus(Status::FlagConnected);
       m_OnceConnected = true;
+
+      if (m_DetectSpecialFolders)
+      {
+        // Fetch folders to detect special folders not configured
+        Request request;
+        request.m_GetFolders = true;
+        Response response;
+        if (PerformRequest(request, false /* p_Cached */, false /* p_Prefetch */, response))
+        {
+          SendRequestResponse(request, response);
+        }
+      }
     }
     else
     {
@@ -949,7 +966,7 @@ bool ImapManager::PerformRequest(const Request& p_Request, bool p_Cached, bool p
 
   if (p_Request.m_GetFolders)
   {
-    const bool rv = m_Imap.GetFolders(p_Cached, p_Response.m_Folders);
+    const bool rv = m_Imap.GetFolders(p_Cached, p_Response.m_Folders, p_Response.m_SpecialFolders);
     p_Response.m_ResponseStatus |= rv ? ResponseStatusOk : ResponseStatusGetFoldersFailed;
   }
 

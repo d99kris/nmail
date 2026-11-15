@@ -7,6 +7,7 @@ message(STATUS "Using cmake ${CMAKE_VERSION}")
 
 # Modules
 include(CheckIncludeFiles)
+include(CheckSymbolExists)
 
 # Install dirs
 if(NOT DEFINED CMAKE_INSTALL_DATADIR)
@@ -113,6 +114,7 @@ message(STATUS "Core Dump: ${HAS_COREDUMP}")
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(OAUTH2NMAIL_HEADER "${GENERATED_DIR}/oauth2nmailscript.h")
 set(THEMES_HEADER "${GENERATED_DIR}/themes.h")
+set(PROVIDERS_HEADER "${GENERATED_DIR}/providers.h")
 
 # Volatile build metadata (origin, git sha, git branch) is written to a
 # generated buildinfo.h and included only from the two source files that consume
@@ -157,10 +159,25 @@ add_custom_command(
   VERBATIM
 )
 
+# Embedded email providers - all providers/*.conf, globbed at configure time so
+# that adding or removing a provider updates the DEPENDS list.
+file(GLOB PROVIDER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/providers/*.conf")
+add_custom_command(
+  OUTPUT "${PROVIDERS_HEADER}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DPROVIDERS_DIR=${CMAKE_CURRENT_SOURCE_DIR}/providers
+          -DOUT_FILE=${PROVIDERS_HEADER}
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/embedproviders.cmake
+  DEPENDS ${PROVIDER_FILES} utils/embedproviders.cmake utils/embedutil.cmake
+  COMMENT "Embedding providers"
+  VERBATIM
+)
+
 # Application
 add_executable(nmail
   ${OAUTH2NMAIL_HEADER}
   ${THEMES_HEADER}
+  ${PROVIDERS_HEADER}
   ${BUILDINFO_HEADER}
   ext/apathy/path.hpp
   ext/cxx-prettyprint/prettyprint.hpp
@@ -199,6 +216,8 @@ add_executable(nmail
   src/imapmanager.h
   src/imaputil.cpp
   src/imaputil.h
+  src/lineedit.cpp
+  src/lineedit.h
   src/lockfile.cpp
   src/lockfile.h
   src/log.cpp
@@ -208,11 +227,15 @@ add_executable(nmail
   src/main.cpp
   src/offlinequeue.cpp
   src/offlinequeue.h
+  src/provider.cpp
+  src/provider.h
   src/sasl.cpp
   src/sasl.h
   src/searchengine.cpp
   src/searchengine.h
   src/serialization.h
+  src/setupwizard.cpp
+  src/setupwizard.h
   src/sleepdetect.cpp
   src/sleepdetect.h
   src/smtp.cpp
@@ -435,6 +458,31 @@ if(FOUND_EXECINFO)
     target_link_libraries(nmail PUBLIC ${EXECINFO_LIBRARY})
   endif()
 endif()
+
+# Dependency resolv (optional, for MX lookup in setup wizard). Linked by name
+# rather than located with find_library, so static ext libs builds still use the
+# system libresolv, where glibc < 2.34 (the manylinux dist image) keeps
+# res_query. Falls back to libc for platforms without libresolv (e.g. FreeBSD).
+set(RESOLV_HEADERS "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h")
+set(CMAKE_REQUIRED_LIBRARIES resolv)
+check_symbol_exists(res_query "${RESOLV_HEADERS}" HAVE_RES_QUERY_LIBRESOLV)
+check_symbol_exists(dn_expand "${RESOLV_HEADERS}" HAVE_DN_EXPAND_LIBRESOLV)
+unset(CMAKE_REQUIRED_LIBRARIES)
+set(HAS_MX_LOOKUP OFF)
+if(HAVE_RES_QUERY_LIBRESOLV AND HAVE_DN_EXPAND_LIBRESOLV)
+  set(HAS_MX_LOOKUP ON)
+  target_link_libraries(nmail PUBLIC resolv)
+else()
+  check_symbol_exists(res_query "${RESOLV_HEADERS}" HAVE_RES_QUERY_LIBC)
+  check_symbol_exists(dn_expand "${RESOLV_HEADERS}" HAVE_DN_EXPAND_LIBC)
+  if(HAVE_RES_QUERY_LIBC AND HAVE_DN_EXPAND_LIBC)
+    set(HAS_MX_LOOKUP ON)
+  endif()
+endif()
+if(HAS_MX_LOOKUP)
+  target_compile_definitions(nmail PRIVATE HAVE_RES_QUERY=1)
+endif()
+message(STATUS "MX lookup: ${HAS_MX_LOOKUP}")
 
 # Dependency magic
 find_library(MAGIC_LIBRARY magic)

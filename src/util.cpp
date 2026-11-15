@@ -1217,6 +1217,21 @@ std::vector<std::wstring> Util::WordWrap(std::wstring p_Text, unsigned p_LineLen
   return lines;
 }
 
+static struct termios s_GetPassTermios;
+
+static void GetPassSignalHandler(int p_Signal)
+{
+  // restore terminal echo before terminating
+  tcsetattr(STDIN_FILENO, TCSANOW, &s_GetPassTermios);
+  if (write(STDOUT_FILENO, "\n", 1) != 1)
+  {
+    // ignore, only async-signal-safe calls allowed here
+  }
+
+  signal(p_Signal, SIG_DFL);
+  raise(p_Signal);
+}
+
 std::string Util::GetPass()
 {
   std::string pass;
@@ -1226,12 +1241,21 @@ std::string Util::GetPass()
   {
     memcpy(&tnew, &told, sizeof(struct termios));
     tnew.c_lflag &= ~ECHO;
+    s_GetPassTermios = told;
+    void (*oldHandler)(int) = signal(SIGINT, GetPassSignalHandler);
+    if (oldHandler == SIG_IGN)
+    {
+      signal(SIGINT, SIG_IGN);
+    }
+
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tnew) == 0)
     {
       std::getline(std::cin, pass);
       tcsetattr(STDIN_FILENO, TCSAFLUSH, &told);
       std::cout << std::endl;
     }
+
+    signal(SIGINT, oldHandler);
   }
 
   return pass;

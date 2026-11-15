@@ -109,8 +109,8 @@ strip --strip-all "${BIN}"
 file "${BIN}"
 
 # glibc target: verify the "mostly static" contract holds — nothing imports
-# a glibc newer than 2.28, and only libc/libm/libpthread/libdl/librt/ld-linux
-# remain dynamically linked (every third-party lib must be static).
+# a glibc newer than 2.28, and only libc/libm/libpthread/libdl/librt/libresolv/
+# ld-linux remain dynamically linked (every third-party lib must be static).
 if [[ "${LIBC}" == "glibc" ]]; then
   echo "$0: verifying glibc floor (<= 2.28) and dynamic-link allowlist..."
 
@@ -125,8 +125,10 @@ if [[ "${LIBC}" == "glibc" ]]; then
     exit 1
   fi
 
-  # linux-vdso and ld-linux are virtual/loader entries, not real deps.
-  ALLOWED='^(libc|libm|libpthread|libdl|librt)\.so'
+  # linux-vdso and ld-linux are virtual/loader entries, not real deps. libresolv
+  # is glibc's too (MX lookup in setup wizard calls res_query, which lives there
+  # before glibc 2.34).
+  ALLOWED='^(libc|libm|libpthread|libdl|librt|libresolv)\.so'
   UNEXPECTED="$(ldd "${BIN}" 2>/dev/null \
     | grep -oE '\b[a-zA-Z0-9_+-]+\.so[.0-9]*' \
     | grep -vE '^(linux-vdso|ld-linux)' \

@@ -22,7 +22,7 @@ Features
 - Search emails in local cache and on server
 - Save and continue editing draft messages
 - Compose and queue emails for sending while offline
-- Setup wizard for Gmail, iCloud and Outlook/Hotmail
+- Setup wizard with settings for common email providers
 - Auto-generated address book from email messages
 - Local cache using SQLite (optionally encrypted)
 - Multi-threaded email fetch and send in background
@@ -85,9 +85,8 @@ Command-line Options:
     -ro, --read-only
         run shadow instance with read-only cache access
 
-    -s, --setup <SERV>
-        setup wizard for specified service, supported services: gmail,
-        gmail-oauth2, icloud, outlook, outlook-oauth2
+    -s, --setup [SERVICE]
+        setup wizard, detects service from email address if not specified
 
     -t, --theme [THEME]
         install color theme, or select from list of available themes if not
@@ -115,8 +114,8 @@ Configuration files:
 
 Examples:
 
-    nmail -s gmail
-        setup nmail for a gmail account
+    nmail -s
+        setup nmail for an email account
 
 
 Supported Platforms
@@ -243,66 +242,69 @@ Gentoo
 Getting Started
 ===============
 
-Gmail Password Authenticated Setup
-----------------------------------
-Use the setup wizard to set up nmail for the account. Example (replace
-example@gmail.com with your actual gmail address):
+Setup Wizard
+------------
+Use the setup wizard to set up nmail for the account. It detects the email
+service from the email address, and prompts for server details if the service
+is not known. Example (replace example@gmail.com with your actual email
+address):
 
-    $ nmail -s gmail
-    Email: example@gmail.com
-    Name: Firstname Lastname
+    $ nmail -s
+    Starting setup wizard (ctrl-c to cancel)
+
+    Email:         example@gmail.com
+    Name:          Firstname Lastname
+    Provider:      Gmail
+
+    Auth method
+    1. Password    (requires app password)
+    2. OAuth2      (requires invite)
+    Select:        1
+
+    App password can be created at https://myaccount.google.com/apppasswords
+
     Password:
-    Save password (y/n): y
 
-Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
-IMAP access and password authentication.
+    Save password: y
 
-Gmail OAuth 2.0 Setup
----------------------
-Use the setup wizard to set up nmail for the account. Example:
+    Config saved to ~/.config/nmail/main.conf
 
-    $ nmail -s gmail-oauth2
+Running nmail without a config file also starts the setup wizard.
 
-Note: Refer to [Gmail Prerequisites](#gmail-prerequisites) for enabling
-IMAP access and obtaining OAuth 2.0 access.
+If the service is not detected, e.g. for a custom domain behind a spam filter,
+it may be specified explicitly, e.g. `nmail -s outlook`. Refer to
+[providers](https://github.com/d99kris/nmail/tree/master/providers) for
+supported services.
+
+Special folders (drafts, sent, spam and trash) not configured are detected at
+first login, and saved in `~/.config/nmail/main.conf`.
+
+Gmail Setup
+-----------
+Gmail requires either an app password, or OAuth 2.0 access. Refer to
+[Gmail Prerequisites](#gmail-prerequisites) for enabling IMAP access and
+password authentication, and [OAuth 2.0](/doc/OAUTH2.md) for OAuth 2.0
+authentication.
 
 iCloud Setup
------------------------
-Use the setup wizard to set up nmail for the account. Example:
-
-    $ nmail -s icloud
-
-Note: iCloud requires setting up an app-specific password under
+------------
+iCloud requires setting up an app-specific password under
 [Apple Account](https://account.apple.com). Select `App-Specific Passwords`
 and then click `+` and set a name, e.g. `IMAP` and click `Create`.
 Use the generated password with nmail.
 
 Outlook (and Hotmail) Setup
 ---------------------------
-Use the setup wizard to set up nmail for the account. Example (replace
-example@hotmail.com with your actual outlook / hotmail address):
-
-    $ nmail -s outlook
-    Email: example@hotmail.com
-    Name: Firstname Lastname
-    Password:
-    Save password (y/n): y
-
-Outlook OAuth 2.0 Setup
------------------------
-Use the setup wizard to set up nmail for the account. Example:
-
-    $ nmail -s outlook-oauth2
+Microsoft has disabled password authentication for most accounts, so the setup
+wizard defaults to OAuth 2.0 for Outlook. Refer to [OAuth 2.0](/doc/OAUTH2.md)
+for details.
 
 Other Email Providers
 ---------------------
-Run nmail once in order for it to automatically generate the default config
-file:
-
-    $ nmail
-
-Then open the config file `~/.config/nmail/main.conf` in your favourite text
-editor and fill out the required fields:
+For email services not known by the setup wizard, it prompts for IMAP and SMTP
+server details. Alternatively nmail can be configured manually, by creating
+the config file `~/.config/nmail/main.conf` in your favourite text editor with
+the required fields:
 
     address=example@example.com
     drafts=Drafts
@@ -316,6 +318,9 @@ editor and fill out the required fields:
     spam=Spam
     trash=Trash
     user=example@example.com
+
+The folder fields (drafts, sent, spam and trash) may be left empty, to be
+detected at first login.
 
 Full example of a config file `~/.config/nmail/main.conf`:
 
@@ -386,18 +391,20 @@ Primarily intended for debugging.
 
 ### auth
 
-Specifies whether nmail shall use password authentication (`pass`) or Gmail
-OAuth 2.0 authentication (`gmail-oauth2`).
+Specifies whether nmail shall use password authentication (`pass`) or OAuth 2.0
+authentication (`gmail-oauth2` or `outlook-oauth2`). Refer to
+[OAuth 2.0](/doc/OAUTH2.md) for details.
 
 ### auth_encrypt
 
 Indicates whether nmail shall encrypt local OAuth 2.0 access token store
-(default enabled).
+(default enabled). Refer to [OAuth 2.0](/doc/OAUTH2.md#token-encryption) for details.
 
 ### browser_cmd
 
 Allows overriding environment variable `$BROWSER` which controls the default
-web browser to use, for example for OAuth log in.
+web browser to use, for example for OAuth login. Refer to
+[OAuth 2.0](/doc/OAUTH2.md#web-browser) for details.
 
 ### cache_encrypt
 
@@ -438,6 +445,7 @@ Specifies a custom downloads directory path to save attachments to, for example
 ### drafts
 
 Name of drafts folder - needed if using functionality to postpone email editing.
+Detected at first login if not specified.
 
 ### editor_cmd
 
@@ -615,7 +623,7 @@ SMTP handshaking when sending outgoing emails (default enabled).
 ### sent
 
 IMAP sent folder name. Used by nmail if `client_store_sent` is enabled to store
-copies of outgoing emails.
+copies of outgoing emails. Detected at first login if not specified.
 
 ### server_timestamps
 
@@ -646,7 +654,7 @@ Controls whether to enable Server Name Indication (SNI) during TLS handshaking.
 
 IMAP spam folder name. Optional. When set, deleting messages from the spam
 folder removes them permanently (same as deleting from `trash`), rather than
-moving them to `trash`.
+moving them to `trash`. Detected at first login if not specified.
 
 ### spell_cmd
 
@@ -672,6 +680,7 @@ The command receives the markdown file path as its final argument.
 ### trash
 
 IMAP trash folder name. Needs to be specified in order to delete emails.
+Detected at first login if not specified.
 
 ### user
 
@@ -1475,6 +1484,7 @@ Top / title bar.
 -------------------------
 This configuration file allows users to set up custom OAuth 2.0 client id and
 client secret. If not specified, nmail uses its own application id and secret.
+Refer to [OAuth 2.0](/doc/OAUTH2.md#custom-oauth-20-application) for details.
 Default configuration file:
 
     oauth2_client_id=
@@ -1510,13 +1520,8 @@ and select app "Mail" and an appropriate device, e.g. "Mac", then click
 Generate.
 
 ### OAuth 2.0 Authentication
-Google OAuth 2.0 application review has not yet been requested for nmail, and
-as such users need to request an invitation to use this. Please send an email
-to `d99kris at gmail dot com` with subject `nmail google oauth2 invite` from
-the google account address you would like to be invited.
-
-Alternatively a user may set up their own OAuth 2.0 application with Google
-and configure `~/.config/nmail/auth.conf` accordingly.
+Gmail OAuth 2.0 access with nmail currently requires an invite. Refer to
+[OAuth 2.0](/doc/OAUTH2.md#gmail-invite) for details.
 
 
 Accessing Email Cache using Other Email Clients

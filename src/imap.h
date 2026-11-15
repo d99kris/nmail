@@ -43,20 +43,33 @@ public:
     int32_t m_Unseen = -1;
   };
 
+  enum LoginResult
+  {
+    LoginResultOk = 0,
+    LoginResultRejected,
+    LoginResultFailed,
+  };
+
 public:
   Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
        const uint16_t p_Port, const int64_t p_Timeout,
        const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
        const std::set<std::string>& p_FoldersExclude,
        const bool p_SniEnabled,
-       const std::function<void(const StatusUpdate&)>& p_StatusHandler);
+       const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+       const bool p_CacheEnabled = true);
   virtual ~Imap();
+
+  static LoginResult CheckLogin(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
+                                const uint16_t p_Port, const int64_t p_Timeout, const bool p_SniEnabled,
+                                std::string& p_Message);
 
   bool Login();
   bool Logout();
   bool AuthRefresh();
 
-  bool GetFolders(const bool p_Cached, std::set<std::string>& p_Folders);
+  bool GetFolders(const bool p_Cached, std::set<std::string>& p_Folders,
+                  std::map<std::string, std::string>& p_SpecialFolders);
   bool GetUids(const std::string& p_Folder, const bool p_Cached, std::set<uint32_t>& p_Uids,
                bool& p_UidInvalid);
   bool GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_Uids,
@@ -109,6 +122,7 @@ private:
                              std::string& p_ServerId, std::string& p_ConnAddrs);
   std::string GetLoginFailureHint(const std::string& p_FailStep, const std::string& p_PeerIp);
   void SetLastErrorHint(const std::string& p_Hint);
+  bool IsLoginRejected();
 
   std::set<std::string>& GetCapabilities();
   bool HasCapability(const std::string& p_Name);
@@ -147,6 +161,8 @@ private:
   // and for detecting the transient failure that triggers alternate-ip retry
   int m_LastAuthRv = 0;
   std::string m_LastAuthResponse;
+  std::string m_LastAuthCode;
+  std::string m_LastAuthAlert;
 
   std::mutex m_ErrorHintMutex;
   std::string m_LastErrorHint;

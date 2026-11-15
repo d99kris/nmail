@@ -49,9 +49,20 @@ void Config::Load(const std::string& p_Path)
     return;
   }
 
+  Parse(stream);
+}
+
+void Config::LoadData(const std::string& p_Data)
+{
+  std::istringstream stream(p_Data);
+  Parse(stream);
+}
+
+void Config::Parse(std::istream& p_Stream)
+{
   const bool hasDefaultMap = !m_Map.empty();
   std::string line;
-  while (std::getline(stream, line))
+  while (std::getline(p_Stream, line))
   {
     if (line.length() == 0) continue;
 

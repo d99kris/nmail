@@ -27,7 +27,8 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
            const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
            const std::set<std::string>& p_FoldersExclude,
            const bool p_SniEnabled,
-           const std::function<void(const StatusUpdate&)>& p_StatusHandler)
+           const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+           const bool p_CacheEnabled)
   : m_User(p_User)
   , m_Pass(p_Pass)
   , m_Host(p_Host)
@@ -49,8 +50,37 @@ Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::stri
 
   InitImap();
 
-  m_ImapCache.reset(new ImapCache(m_CacheEncrypt, m_Pass));
-  m_ImapIndex.reset(new ImapIndex(m_CacheIndexEncrypt, m_Pass, m_ImapCache, p_StatusHandler));
+  if (p_CacheEnabled)
+  {
+    m_ImapCache.reset(new ImapCache(m_CacheEncrypt, m_Pass));
+    m_ImapIndex.reset(new ImapIndex(m_CacheIndexEncrypt, m_Pass, m_ImapCache, p_StatusHandler));
+  }
+}
+
+Imap::LoginResult Imap::CheckLogin(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
+                                   const uint16_t p_Port, const int64_t p_Timeout, const bool p_SniEnabled,
+                                   std::string& p_Message)
+{
+  // login without cache, e.g. to verify credentials during setup
+  Imap imap(p_User, p_Pass, p_Host, p_Port, p_Timeout, false /* p_CacheEncrypt */,
+            false /* p_CacheIndexEncrypt */, std::set<std::string>(), p_SniEnabled,
+            std::function<void(const StatusUpdate&)>(), false /* p_CacheEnabled */);
+  if (imap.Login())
+  {
+    imap.Logout();
+    p_Message.clear();
+    return LoginResultOk;
+  }
+
+  if (imap.IsLoginRejected())
+  {
+    p_Message = !imap.m_LastAuthAlert.empty() ? imap.m_LastAuthAlert : "invalid username or password";
+    return LoginResultRejected;
+  }
+
+  const std::string hint = imap.GetLastErrorHint();
+  p_Message = !hint.empty() ? hint : "login failed";
+  return LoginResultFailed;
 }
 
 Imap::~Imap()
@@ -150,6 +180,8 @@ bool Imap::Login()
   const int64_t loginStartMs = ImapUtil::GetTimeMs();
   m_LastAuthRv = 0;
   m_LastAuthResponse.clear();
+  m_LastAuthCode.clear();
+  m_LastAuthAlert.clear();
 
   {
     std::lock_guard<std::mutex> imapLock(m_ImapMutex);
@@ -195,9 +227,11 @@ bool Imap::Login()
         if (rv != MAILIMAP_NO_ERROR)
         {
           m_LastAuthResponse = ImapUtil::GetImapResponseStr(m_Imap);
-          LOG_WARNING("login failed: rv=%d dur=%lld ms response=\"%s\"",
+          m_LastAuthCode = ImapUtil::GetImapResponseCode(m_Imap);
+          m_LastAuthAlert = ImapUtil::GetImapResponseAlert(m_Imap);
+          LOG_WARNING("login failed: rv=%d dur=%lld ms response=\"%s\" code=\"%s\" alert=\"%s\"",
                       rv, (long long)(ImapUtil::GetTimeMs() - authStartMs),
-                      m_LastAuthResponse.c_str());
+                      m_LastAuthResponse.c_str(), m_LastAuthCode.c_str(), m_LastAuthAlert.c_str());
         }
       }
 
@@ -264,6 +298,18 @@ std::string Imap::GetLoginFailureHint(const std::string& p_FailStep, const std::
 {
   if (p_FailStep == "oauth2") return Auth::GetLastErrorHint();
 
+  if ((p_FailStep == "login") && (m_LastAuthRv == MAILIMAP_ERROR_LOGIN))
+  {
+    // login rejected by server, alert text is intended to be shown to user
+    if (!m_LastAuthAlert.empty()) return m_LastAuthAlert;
+
+    if (m_LastAuthCode == "UNAVAILABLE") return "server temporarily unavailable";
+
+    if (IsLoginRejected()) return "invalid username or password, run nmail -p to change password";
+
+    return !m_LastAuthResponse.empty() ? m_LastAuthResponse : ("rejected by server (" + m_LastAuthCode + ")");
+  }
+
   if ((p_FailStep != "connect") || !p_PeerIp.empty()) return std::string();
 
   std::string dnsErr;
@@ -274,6 +320,16 @@ std::string Imap::GetLoginFailureHint(const std::string& p_FailStep, const std::
   }
 
   return "cannot connect to " + m_Host + ":" + std::to_string(m_Port);
+}
+
+bool Imap::IsLoginRejected()
+{
+  // credentials rejected, as opposed to e.g. network or temporary server errors
+  if (m_LastAuthRv != MAILIMAP_ERROR_LOGIN) return false;
+
+  if (m_LastAuthCode == "UNAVAILABLE") return false;
+
+  return !m_LastAuthAlert.empty() || m_LastAuthCode.empty() || (m_LastAuthCode == "AUTHENTICATIONFAILED");
 }
 
 std::string Imap::GetLastErrorHint()
@@ -451,6 +507,8 @@ bool Imap::LoginRetryAlternateIp(const std::string& p_FailedPeerIp,
 
     m_LastAuthRv = authRv;
     m_LastAuthResponse = (authRv != MAILIMAP_NO_ERROR) ? ImapUtil::GetImapResponseStr(m_Imap) : "";
+    m_LastAuthCode = (authRv != MAILIMAP_NO_ERROR) ? ImapUtil::GetImapResponseCode(m_Imap) : "";
+    m_LastAuthAlert = (authRv != MAILIMAP_NO_ERROR) ? ImapUtil::GetImapResponseAlert(m_Imap) : "";
     LOG_WARNING("login retry %d/%d: ip=%s auth rv=%d dur=%lld ms response=\"%s\"",
                 num, (int)retryIps.size(), ip.c_str(), authRv,
                 (long long)(ImapUtil::GetTimeMs() - authStartMs),
@@ -475,7 +533,8 @@ bool Imap::LoginRetryAlternateIp(const std::string& p_FailedPeerIp,
   return connected;
 }
 
-bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
+bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders,
+                      std::map<std::string, std::string>& p_SpecialFolders)
 {
   LOG_DEBUG_FUNC(STR(p_Cached, p_Folders));
 
@@ -491,6 +550,7 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
   int rv = LOG_IF_IMAP_ERR(mailimap_list(m_Imap, "", "*", &list));
   if (rv == MAILIMAP_NO_ERROR)
   {
+    std::map<std::string, std::string> nameRoleFolders;
     for (clistiter* it = clist_begin(list); it != NULL; it = it->next)
     {
       struct mailimap_mailbox_list* mblist = (struct mailimap_mailbox_list*)clist_content(it);
@@ -514,11 +574,42 @@ bool Imap::GetFolders(const bool p_Cached, std::set<std::string>& p_Folders)
         else
         {
           LOG_DEBUG("folder exclude %s", folder.c_str());
+          continue;
+        }
+
+        // Special folder detection, attributes take precedence over names
+        if (bflags && bflags->mbf_oflags)
+        {
+          for (clistiter* oit = clist_begin(bflags->mbf_oflags); oit != NULL; oit = clist_next(oit))
+          {
+            struct mailimap_mbx_list_oflag* oflag = (struct mailimap_mbx_list_oflag*)clist_content(oit);
+            if (oflag && (oflag->of_type == MAILIMAP_MBX_LIST_OFLAG_FLAG_EXT) && oflag->of_flag_ext)
+            {
+              const std::string role = ImapUtil::GetSpecialUseRole(oflag->of_flag_ext);
+              if (!role.empty() && (p_SpecialFolders.count(role) == 0))
+              {
+                LOG_DEBUG("folder %s attr role %s", folder.c_str(), role.c_str());
+                p_SpecialFolders[role] = folder;
+              }
+            }
+          }
+        }
+
+        const std::string role = ImapUtil::GetSpecialNameRole(folder, mblist->mb_delimiter);
+        if (!role.empty() && (nameRoleFolders.count(role) == 0))
+        {
+          LOG_DEBUG("folder %s name role %s", folder.c_str(), role.c_str());
+          nameRoleFolders[role] = folder;
         }
       }
     }
 
     mailimap_list_result_free(list);
+
+    for (const auto& nameRoleFolder : nameRoleFolders)
+    {
+      p_SpecialFolders.insert(nameRoleFolder);
+    }
 
     m_ImapCache->SetFolders(p_Folders);
     m_ImapIndex->SetFolders(p_Folders);

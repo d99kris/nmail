@@ -8,6 +8,8 @@
 #pragma once
 
 #include <csignal>
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -47,6 +49,7 @@ public:
     UiRequestDrawAll = (1 << 0),
     UiRequestDrawError = (1 << 1),
     UiRequestHandleConnected = (1 << 2),
+    UiRequestSpecialFolders = (1 << 3),
   };
 
   enum PrefetchLevel
@@ -113,6 +116,7 @@ public:
   void SetDraftsFolder(const std::string& p_DraftsFolder);
   void SetSentFolder(const std::string& p_SentFolder);
   void SetClientStoreSent(bool p_ClientStoreSent);
+  void SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler);
   void ResetImapManager();
   void ResetSmtpManager();
 
@@ -230,6 +234,7 @@ private:
   std::string MakeHtmlPart(const std::string& p_Text);
   std::string MakeHtmlPartCustomSig(const std::string& p_Text);
   void HandleConnected();
+  void HandleSpecialFolders();
   void StartComposeBackup();
   void StopComposeBackup();
   void ComposeBackupProcess();
@@ -283,6 +288,8 @@ private:
   std::string m_SpamFolder;
   std::string m_DraftsFolder;
   std::string m_SentFolder;
+  std::map<std::string, std::string> m_DetectedSpecialFolders;
+  std::function<void(const std::map<std::string, std::string>&)> m_SpecialFoldersHandler;
   bool m_ClientStoreSent = false;
 
   std::string m_Inbox;

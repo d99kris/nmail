@@ -2182,6 +2182,11 @@ void Ui::PerformUiRequest(char p_UiRequest)
   {
     HandleConnected();
   }
+
+  if (p_UiRequest & UiRequestSpecialFolders)
+  {
+    HandleSpecialFolders();
+  }
 }
 
 void Ui::Run()
@@ -4124,6 +4129,12 @@ void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManage
       m_Folders = p_Response.m_Folders;
       uiRequest |= UiRequestDrawAll;
       LOG_DEBUG_VAR("new folders =", p_Response.m_Folders);
+
+      if (!p_Response.m_SpecialFolders.empty())
+      {
+        m_DetectedSpecialFolders = p_Response.m_SpecialFolders;
+        uiRequest |= UiRequestSpecialFolders;
+      }
     }
 
     if (p_Request.m_GetUids && !(p_Response.m_ResponseStatus & ImapManager::ResponseStatusGetUidsFailed))
@@ -4612,6 +4623,17 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
   }
   else
   {
+    std::string sentFolder;
+    std::string draftsFolder;
+    std::string trashFolder;
+    {
+      // folders may be updated by special folder detection in ui thread
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      sentFolder = m_SentFolder;
+      draftsFolder = m_DraftsFolder;
+      trashFolder = m_TrashFolder;
+    }
+
     const SmtpManager::Action& action = p_Result.m_Action;
     const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrs(action.m_To));
     const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrs(action.m_Cc));
@@ -4634,19 +4656,19 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
       }
     }
 
-    if ((action.m_ComposeDraftUid != 0) && !m_DraftsFolder.empty() && !m_TrashFolder.empty())
+    if ((action.m_ComposeDraftUid != 0) && !draftsFolder.empty() && !trashFolder.empty())
     {
-      MoveMessages(std::set<uint32_t>({ action.m_ComposeDraftUid }), m_DraftsFolder,
-                   m_TrashFolder);
+      MoveMessages(std::set<uint32_t>({ action.m_ComposeDraftUid }), draftsFolder,
+                   trashFolder);
     }
 
     if (m_ClientStoreSent)
     {
-      if (!m_SentFolder.empty())
+      if (!sentFolder.empty())
       {
         ImapManager::Action imapAction;
         imapAction.m_UploadMessage = true;
-        imapAction.m_Folder = m_SentFolder;
+        imapAction.m_Folder = sentFolder;
         imapAction.m_Msg = p_Result.m_Message;
         m_ImapManager->AsyncAction(imapAction);
       }
@@ -4656,10 +4678,10 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
       }
     }
 
-    if (!m_SentFolder.empty())
+    if (!sentFolder.empty())
     {
       std::lock_guard<std::mutex> lock(m_Mutex);
-      m_HasRequestedUids[m_SentFolder] = false;
+      m_HasRequestedUids[sentFolder] = false;
     }
 
     std::string from = action.m_From;
@@ -4800,6 +4822,45 @@ void Ui::SetSentFolder(const std::string& p_SentFolder)
 void Ui::SetClientStoreSent(bool p_ClientStoreSent)
 {
   m_ClientStoreSent = p_ClientStoreSent;
+}
+
+void Ui::SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler)
+{
+  m_SpecialFoldersHandler = p_Handler;
+}
+
+void Ui::HandleSpecialFolders()
+{
+  // apply detected special folders for those not configured
+  std::map<std::string, std::string> applied;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const std::map<std::string, std::string*> roleFolders =
+    {
+      { "sent", &m_SentFolder },
+      { "drafts", &m_DraftsFolder },
+      { "trash", &m_TrashFolder },
+      { "spam", &m_SpamFolder },
+    };
+
+    for (const auto& detected : m_DetectedSpecialFolders)
+    {
+      auto it = roleFolders.find(detected.first);
+      if ((it != roleFolders.end()) && it->second->empty() && !detected.second.empty())
+      {
+        LOG_INFO("detected %s folder %s", detected.first.c_str(), detected.second.c_str());
+        *it->second = detected.second;
+        applied[detected.first] = detected.second;
+      }
+    }
+
+    m_DetectedSpecialFolders.clear();
+  }
+
+  if (!applied.empty() && m_SpecialFoldersHandler)
+  {
+    m_SpecialFoldersHandler(applied);
+  }
 }
 
 bool Ui::IsConnected()
@@ -5201,7 +5262,13 @@ void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Fro
   action.m_Uids = p_Uids;
 
   static bool copyToTrash = Util::GetCopyToTrash();
-  if (copyToTrash && (p_To == m_TrashFolder))
+  bool isToTrash = false;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    isToTrash = (p_To == m_TrashFolder);
+  }
+
+  if (copyToTrash && isToTrash)
   {
     action.m_CopyDestination = p_To;
     action.m_DeleteMessages = true;
@@ -7840,8 +7907,8 @@ void Ui::AutoMoveSelectFolder()
   const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
 
   const std::string queryNotCurrent = (!folder.empty() ? " AND NOT folder:\"" + folder + "\"" : "");
-  static const std::string queryNotSent = (!m_SentFolder.empty()) ? " AND NOT folder:\"" + m_SentFolder + "\"" : "";
-  static const std::string queryNotTrash = (!m_TrashFolder.empty()) ? " AND NOT folder:\"" + m_TrashFolder + "\"" : "";
+  const std::string queryNotSent = (!m_SentFolder.empty()) ? " AND NOT folder:\"" + m_SentFolder + "\"" : "";
+  const std::string queryNotTrash = (!m_TrashFolder.empty()) ? " AND NOT folder:\"" + m_TrashFolder + "\"" : "";
 
   const std::string queryCommon = queryNotCurrent + queryNotSent + queryNotTrash;
   const std::string queryCommonAllowTrash = queryNotCurrent + queryNotSent;

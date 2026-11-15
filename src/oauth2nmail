@@ -24,6 +24,7 @@ import webbrowser
 
 version = "1.07"
 pathServed = ""
+httpTimeoutSec = 30
 providers = {
     "gmail-oauth2": {
         "auth_scope": "openid profile email https://mail.google.com/",
@@ -185,7 +186,7 @@ def get(url, headers=None):
 
     # Parse the URL
     parsed_url = urllib.parse.urlparse(url)
-    connection = http.client.HTTPSConnection(parsed_url.netloc) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc)
+    connection = http.client.HTTPSConnection(parsed_url.netloc, timeout=httpTimeoutSec) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc, timeout=httpTimeoutSec)
 
     # Construct the path with query parameters if any
     path = parsed_url.path
@@ -211,7 +212,7 @@ def post(url, data, headers=None):
 
     # Parse the URL
     parsed_url = urllib.parse.urlparse(url)
-    connection = http.client.HTTPSConnection(parsed_url.netloc) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc)
+    connection = http.client.HTTPSConnection(parsed_url.netloc, timeout=httpTimeoutSec) if parsed_url.scheme == 'https' else http.client.HTTPConnection(parsed_url.netloc, timeout=httpTimeoutSec)
 
     # Encode the data
     if headers.get("Content-Type") == "application/x-www-form-urlencoded":
@@ -298,15 +299,21 @@ def generate(provider, client_id, client_secret, token_store):
     thread = threading.Thread(target = localServer.serve_forever)
     thread.daemon = True
     thread.start()
-    authTimeoutSec = 90
+    authTimeoutSec = 120
     secs = 0
-    while not pathServed and secs < authTimeoutSec:
-        time.sleep(1)
-        secs = secs + 1
+    try:
+        while not pathServed and secs < authTimeoutSec:
+            time.sleep(1)
+            secs = secs + 1
+    except KeyboardInterrupt:
+        sys.stderr.write("authentication cancelled by user\n")
+        write_hint("login cancelled")
+        return 130
 
     if not pathServed:
         sys.stderr.write("authentication timeout after " + str(authTimeoutSec)
                          + " seconds: browser did not reach localhost redirect\n")
+        write_hint("login timed out after " + str(authTimeoutSec) + " seconds")
         return 2
 
     sys.stderr.write("oauth2 redirect: " + repr(pathServed) + "\n")
@@ -318,6 +325,7 @@ def generate(provider, client_id, client_secret, token_store):
         desc = queryDict.get("error_description", "")
         sys.stderr.write("user did not grant permission (error=" + err
                          + " desc=" + desc + ")\n")
+        write_hint("access not granted")
         return 3
 
     code = queryDict["code"]
