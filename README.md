@@ -42,8 +42,7 @@ Not Supported / Out of Scope
 
 Quick Install
 =============
-Pre-built binary for Linux (glibc >= 2.28 or musl) x86_64 / arm64 and macOS
-arm64:
+Pre-built binary for Linux and macOS:
 
     curl -fsSL https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh | bash
 
