@@ -5,6 +5,10 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 
@@ -48,6 +52,7 @@ static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& 
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
+static int Upgrade(const std::string& p_Version, mode_t p_Umask);
 static void LogSystemInfo();
 static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
                             std::shared_ptr<Config> p_SecretConfig);
@@ -59,7 +64,7 @@ static std::string GetDisplayPath(const std::string& p_Path);
 int main(int argc, char* argv[])
 {
   // Defaults
-  umask(S_IRWXG | S_IRWXO);
+  const mode_t origUmask = umask(S_IRWXG | S_IRWXO);
   Util::SetApplicationDir(Util::GetDefaultApplicationDir());
   Log::SetVerboseLevel(Log::INFO_LEVEL);
   bool online = true;
@@ -68,8 +73,10 @@ int main(int argc, char* argv[])
   bool readOnly = false;
   bool setupAllowCacheEncrypt = false;
   bool themeInstall = false;
+  bool upgrade = false;
   std::string setup;
   std::string theme;
+  std::string upgradeVersion;
   std::string exportDir;
 
   // Argument handling
@@ -134,6 +141,16 @@ int main(int argc, char* argv[])
         theme = *it;
       }
     }
+    else if ((*it == "-u") || (*it == "--upgrade"))
+    {
+      // optional release version, latest if not specified
+      upgrade = true;
+      if ((std::distance(it + 1, args.end()) > 0) && ((it + 1)->rfind("-", 0) != 0))
+      {
+        ++it;
+        upgradeVersion = *it;
+      }
+    }
     else if ((*it == "-v") || (*it == "--version"))
     {
       ShowVersion();
@@ -154,6 +171,11 @@ int main(int argc, char* argv[])
   if (themeInstall)
   {
     return Theme::Install(theme) ? 0 : 1;
+  }
+
+  if (upgrade)
+  {
+    return Upgrade(upgradeVersion, origUmask);
   }
 
   // start setup wizard on first run
@@ -578,12 +600,17 @@ static void ShowHelp()
     "                              if not specified\n"
     "   -t,  --theme [THEME]       install color theme, or select from list of\n"
     "                              available themes if not specified\n"
+    "   -u,  --upgrade [VERSION]   upgrade pre-built release binary to latest or\n"
+    "                              specified version, exit status is 0 when\n"
+    "                              upgraded, 3 when already up to date and 5 on\n"
+    "                              failure\n"
     "   -v,  --version             output version information and exit\n"
     "   -x,  --export <DIR>        export cache to specified dir in Maildir format\n"
     "\n"
     "Examples:\n"
     "   nmail -s                   setup nmail for an email account\n"
     "   nmail -t pastel-blue       install the pastel-blue color theme\n"
+    "   nmail -u                   upgrade to latest release\n"
     "   nmail                      running nmail without config starts the setup\n"
     "                              wizard, alternatively nmail can be configured\n"
     "                              manually (refer to FILES section for details)\n"
@@ -625,6 +652,76 @@ static void ShowVersion()
     "Binaries are distributed under the GNU GPL v2 license.\n"
     "\n"
     "Written by Kristofer Berggren.\n";
+}
+
+static int Upgrade(const std::string& p_Version, mode_t p_Umask)
+{
+  // exit status 0 upgraded, 3 up to date (from install.sh), 5 failed
+  static const int failed = 5;
+#if defined(NMAIL_BUILD_STATIC_EXTLIBS)
+  const bool isRelease = (Version::GetBuildOrigin() == "github");
+#else
+  const bool isRelease = false;
+#endif
+  if (!isRelease)
+  {
+    std::cerr <<
+      "error: upgrade is only supported for pre-built release binaries, upgrade\n"
+      "       using the package manager or method nmail was installed with.\n";
+    return failed;
+  }
+
+  // installed by install.sh as <prefix>/bin/nmail
+  char realPath[PATH_MAX];
+  const std::string selfPath = Util::GetSelfPath();
+  if (selfPath.empty() || (realpath(selfPath.c_str(), realPath) == nullptr))
+  {
+    std::cerr << "error: cannot determine nmail binary path\n";
+    return failed;
+  }
+
+  const std::string binPath = realPath;
+  const std::string binDir = binPath.substr(0, binPath.rfind('/'));
+  const size_t binDirPos = binDir.rfind('/');
+  if ((binDirPos == std::string::npos) || (binDir.substr(binDirPos + 1) != "bin"))
+  {
+    std::cerr <<
+      "error: nmail binary " << realPath << " is not in a bin dir,\n"
+      "       re-install using install.sh\n";
+    return failed;
+  }
+
+  if (access(binDir.c_str(), W_OK) != 0)
+  {
+    std::cerr <<
+      "error: install dir " << binDir << " is not writable by the current user,\n"
+      "       re-run with sudo, e.g.: sudo nmail -u\n";
+    return failed;
+  }
+
+  const std::string prefix = (binDirPos == 0) ? "/" : binDir.substr(0, binDirPos);
+
+  // NMAIL_INSTALL_URL allows testing a local install.sh, e.g. file://$PWD/utils/install.sh
+  const char* envUrl = getenv("NMAIL_INSTALL_URL");
+  const std::string url = ((envUrl != nullptr) && (*envUrl != '\0')) ? envUrl :
+    "https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh";
+
+  // values passed as positional args to avoid shell quoting
+  static const std::string script =
+    "if command -v curl >/dev/null 2>&1; then s=\"$(curl -fsSL \"$1\")\"\n"
+    "elif command -v wget >/dev/null 2>&1; then s=\"$(wget -qO- \"$1\")\"\n"
+    "else echo \"error: need curl or wget to download\" >&2; exit 5; fi ||\n"
+    "  { echo \"error: failed to download $1\" >&2; exit 5; }\n"
+    "NMAIL_PREFIX=\"$2\" NMAIL_VERSION=\"$3\" NMAIL_CURRENT_VERSION=\"$4\" \\\n"
+    "  exec bash -c \"$s\" install.sh\n";
+
+  // exec so the running binary is not held during install, with user umask restored
+  const std::string curVersion = Version::GetAppVersion();
+  umask(p_Umask);
+  execlp("bash", "bash", "-c", script.c_str(), "nmail-upgrade", url.c_str(), prefix.c_str(),
+         p_Version.c_str(), curVersion.c_str(), (char*)nullptr);
+  std::cerr << "error: failed to run bash: " << strerror(errno) << "\n";
+  return failed;
 }
 
 static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,

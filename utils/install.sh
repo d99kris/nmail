@@ -17,6 +17,12 @@
 #                   $NMAIL_PREFIX/share/doc). If the prefix is not writable, the
 #                   installer stops and suggests re-running with sudo.
 #   NMAIL_REPO      GitHub owner/name to fetch from; default: d99kris/nmail
+#   NMAIL_CURRENT_VERSION
+#                   currently installed version, set by `nmail -u`; when it
+#                   equals the latest release (and NMAIL_VERSION is not set)
+#                   nothing is installed and the exit status is 3
+#
+# Exit status: 0 when installed, 3 when already up to date, 5 on failure.
 #
 # On glibc Linux (>= 2.28) the glibc build is selected; on musl Linux, on a
 # glibc older than 2.28, or when the glibc version cannot be determined, the
@@ -33,11 +39,15 @@
 
 set -euo pipefail
 
+# Installed dirs must be world-readable regardless of the caller's umask (a
+# hardened root umask of 077, or one inherited from the invoking process).
+umask 022
+
 REPO="${NMAIL_REPO:-d99kris/nmail}"
 
 info() { printf '%s\n' "$*"; }
 warn() { printf '%s\n' "warning: $*" >&2; }
-err()  { printf '%s\n' "error: $*" >&2; }
+err()  { printf '%s\n' "error: $*" >&2; reported=1; }
 die()  { err "$*"; exit 1; }
 
 # Like die(), but also prints the underlying curl/wget diagnostic captured in
@@ -51,6 +61,30 @@ die_fetch() { # <message>
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# Exit status contract (relied on by `nmail -u`): 0 installed, 3 already up to
+# date, 5 failed. Distinct from the low codes used by shells and tools: under
+# `set -e` a failing command exits with its own status (tar exits 2, for
+# instance), so the EXIT trap maps every non-zero status to 5 except an
+# explicit up-to-date exit. It also removes the temp download dir and any
+# partially installed binary. Script-scope vars, as the trap fires after
+# main() returns.
+EXIT_UP_TO_DATE=3
+EXIT_FAILED=5
+up_to_date=0
+reported=0
+tmp=""
+tmpbin=""
+on_exit() {
+  local rc=$?
+  [[ -n "${tmp}" ]] && rm -rf "${tmp}"
+  [[ -n "${tmpbin}" ]] && rm -f "${tmpbin}"
+  if (( rc != 0 )) && ! (( up_to_date && rc == EXIT_UP_TO_DATE )); then
+    (( reported )) || err "install failed (exit status ${rc})"
+    exit "${EXIT_FAILED}"
+  fi
+}
+trap on_exit EXIT
 
 # --- HTTP helpers (curl preferred, wget fallback) --------------------------
 
@@ -266,18 +300,19 @@ main() {
     tag="${RESOLVED_TAG}"
     version="${tag#v}"
     info "latest release is ${tag} (${target})"
+    if [[ "${NMAIL_CURRENT_VERSION:-}" == "${version}" ]]; then
+      info "nmail ${version} is already up to date"
+      up_to_date=1
+      exit "${EXIT_UP_TO_DATE}"
+    fi
   fi
 
   local asset base srcdir
   asset="nmail-${version}-${target}.tar.gz"
   base="https://github.com/${REPO}/releases/download/${tag}"
 
-  # tmp is intentionally NOT local: the EXIT trap fires after main() returns, so
-  # a function-local would be out of scope by then — under `set -u` that both
-  # errors ("tmp: unbound variable", nonzero exit on an otherwise-successful
-  # install) and skips the cleanup. A script-scope var keeps the trap working.
+  # tmp is script-scope (see on_exit) so the EXIT trap can clean it up.
   tmp="$(mktemp -d)"
-  trap 'rm -rf "${tmp}"' EXIT
 
   info "downloading ${asset}"
   fetch_file "${base}/${asset}" "${tmp}/${asset}" \
@@ -305,14 +340,25 @@ main() {
   if ! target_writable "${prefix}"; then
     err "install prefix ${prefix} is not writable by the current user"
     err "re-run with sudo, e.g.:"
-    err "  curl -fsSL https://raw.githubusercontent.com/${REPO}/master/utils/install.sh | sudo NMAIL_PREFIX=${prefix} bash"
+    if [[ -n "${NMAIL_CURRENT_VERSION:-}" ]]; then
+      err "  sudo nmail -u"
+    else
+      err "  curl -fsSL https://raw.githubusercontent.com/${REPO}/master/utils/install.sh | sudo NMAIL_PREFIX=${prefix} bash"
+    fi
     die "or set NMAIL_PREFIX to a writable location (default: ~/.local)"
   fi
 
   info "installing nmail to ${bindir}"
   mkdir -p "${bindir}" "${mandir}/man1"
-  cp "${srcdir}/bin/nmail" "${bindir}/nmail"
-  chmod 0755 "${bindir}/nmail"
+  # Copy to a temp name and rename over the old binary, giving it a new inode.
+  # Writing in place fails with "Text file busy" on Linux while nmail is
+  # running, and on macOS leaves a stale cached code signature that gets the
+  # new binary killed at launch.
+  tmpbin="${bindir}/.nmail.tmp.$$"
+  cp "${srcdir}/bin/nmail" "${tmpbin}"
+  chmod 0755 "${tmpbin}"
+  mv -f "${tmpbin}" "${bindir}/nmail"
+  tmpbin=""
 
   # The oauth2nmail helper script is bundled inside the nmail binary (extracted
   # at runtime), so there is nothing to install separately.
@@ -345,7 +391,11 @@ main() {
     xattr -dr com.apple.quarantine "${bindir}/nmail" 2>/dev/null || true
   fi
 
-  info "successfully installed nmail"
+  if [[ -n "${NMAIL_CURRENT_VERSION:-}" ]]; then
+    info "successfully installed nmail ${version} (was ${NMAIL_CURRENT_VERSION})"
+  else
+    info "successfully installed nmail"
+  fi
 
   # These runtime dependencies are only needed for optional features, so a
   # missing one is a note rather than an error. oauth2nmail (OAuth2 login) is a
