@@ -152,6 +152,8 @@ private:
   void DrawFolderList();
   void DrawAddressList();
   void DrawFileList();
+  int GetPickerWidth();
+  std::wstring GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos);
   void DrawMessageList();
   void DrawMessageListSearch();
   void DrawMessage();
@@ -384,6 +386,7 @@ private:
   bool m_RespectFormatFlowed = true;
   bool m_RewrapQuotedLines = true;
   bool m_HelpEnabled = true;
+  double m_PickerWidth = 58;
 
   int m_KeyPrevMsg = 0;
   int m_KeyNextMsg = 0;
@@ -507,6 +510,7 @@ private:
   int m_AttrsHighlightedText = A_REVERSE;
   int m_AttrsQuotedText = A_NORMAL;
   int m_AttrsHiddenFile = A_NORMAL;
+  int m_AttrsAddressText = A_NORMAL;
   int m_AttrsTopBar = A_REVERSE;
   int m_AttrsSelectedItem = A_NORMAL;
   int m_AttrsSelectedHighlighted = A_NORMAL;

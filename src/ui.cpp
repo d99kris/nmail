@@ -58,6 +58,7 @@ void Ui::Init()
     { "respect_format_flowed", "1" },
     { "rewrap_quoted_lines", "1" },
     { "help_enabled", "1" },
+    { "picker_width", "58" },
     { "persist_file_selection_dir", "1" },
     { "persist_find_query", "0" },
     { "persist_folder_filter", "1" },
@@ -126,6 +127,39 @@ void Ui::Init()
   m_RespectFormatFlowed = m_Config.Get("respect_format_flowed") == "1";
   m_RewrapQuotedLines = m_Config.Get("rewrap_quoted_lines") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
+  {
+    // fraction (0.618 or 61.8%), columns (2 or more), or 0 for classic layout
+    std::string pickerWidthStr = Util::Trim(m_Config.Get("picker_width"));
+    const bool isPercent = !pickerWidthStr.empty() && (pickerWidthStr.back() == '%');
+    if (isPercent)
+    {
+      pickerWidthStr.pop_back();
+    }
+
+    std::istringstream iss(pickerWidthStr);
+    iss.imbue(std::locale::classic());
+    double pickerWidth = -1;
+    iss >> pickerWidth;
+    bool isValid = !iss.fail() && iss.eof() && (pickerWidth >= 0);
+    if (isValid && isPercent)
+    {
+      isValid = (pickerWidth > 0) && (pickerWidth <= 100);
+      pickerWidth /= 100;
+    }
+    else if (isValid && (pickerWidth > 1))
+    {
+      isValid = (pickerWidth >= 2) && (pickerWidth == (int)pickerWidth);
+    }
+
+    if (isValid)
+    {
+      m_PickerWidth = pickerWidth;
+    }
+    else
+    {
+      LOG_WARNING("invalid picker_width \"%s\"", m_Config.Get("picker_width").c_str());
+    }
+  }
   m_PersistFileSelectionDir = m_Config.Get("persist_file_selection_dir") == "1";
   m_PersistFindQuery = m_Config.Get("persist_find_query") == "1";
   m_PersistFolderFilter = m_Config.Get("persist_folder_filter") == "1";
@@ -253,12 +287,16 @@ void Ui::Init()
     start_color();
     assume_default_colors(-1, -1);
 
+    const std::string defaultAddressFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultQuotedFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultHiddenFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultSelectedFg = (COLORS > 8) ? "gray" : "";
     const std::string defaultStrikeFg = (COLORS > 8) ? "gray" : "";
     const std::map<std::string, std::string> defaultColorsConfig =
     {
+      { "color_address_text_attr", "" },
+      { "color_address_text_bg", "" },
+      { "color_address_text_fg", defaultAddressFg },
       { "color_bold_text_attr", "" },
       { "color_bold_text_bg", "" },
       { "color_bold_text_fg", "" },
@@ -344,6 +382,7 @@ void Ui::Init()
     m_AttrsLinkText = getAttrs("color_link_text");
     m_AttrsHighlightedLink = getAttrs("color_highlighted_link");
     m_AttrsHiddenFile = getAttrs("color_hidden_file");
+    m_AttrsAddressText = getAttrs("color_address_text");
     m_AttrsTopBar = getAttrs("color_top_bar");
     m_AttrsSelectedItem = getAttrs("color_selected_item");
 
@@ -1041,6 +1080,23 @@ void Ui::DrawFolderList()
     }
   }
 
+  int width = GetPickerWidth();
+  if (m_PickerWidth != 0)
+  {
+    // longest name at 4/5 of width, min 4 padding, unfiltered to keep width stable
+    int maxNameWidth = 0;
+    {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      for (const auto& folder : m_Folders)
+      {
+        maxNameWidth = std::max(maxNameWidth, Util::WStringWidth(Util::ToWString(folder)));
+      }
+    }
+
+    const int fitWidth = std::max(((maxNameWidth * 5) + 3) / 4, maxNameWidth + 4);
+    width = Util::Bound(std::min(14, width), fitWidth, width);
+  }
+
   int count = folders.size();
   if (count > 0)
   {
@@ -1073,7 +1129,12 @@ void Ui::DrawFolderList()
         m_FolderListCurrentFolder = folder;
       }
 
-      std::wstring wfolder = Util::ToWString(folder);
+      std::wstring wfolder = Util::TrimEllipsisWString(Util::ToWString(folder), width);
+      if (m_PickerWidth != 0)
+      {
+        wfolder = Util::TrimPadWString(wfolder, width);
+      }
+
       mvwaddnwstr(m_MainWin, i - idxOffs, 2, wfolder.c_str(), wfolder.size());
 
       if (i == m_FolderListCurrentIndex)
@@ -1106,6 +1167,7 @@ void Ui::DrawAddressList()
     lastAddressListFilterStr = m_AddressListFilterStr;
   }
 
+  const int width = GetPickerWidth();
   int count = m_Addresses.size();
   if (count > 0)
   {
@@ -1126,15 +1188,25 @@ void Ui::DrawAddressList()
         m_AddressListCurrentAddress = address;
       }
 
-      std::wstring waddress = Util::ToWString(address);
-      size_t maxWidth = m_ScreenWidth - 4;
-      if (waddress.size() > maxWidth)
+      size_t dimPos = std::wstring::npos;
+      std::wstring waddress = GetAddressListEntry(address, width, dimPos);
+      const bool isCurrent = (i == m_AddressListCurrentIndex);
+      if (isCurrent && (m_PickerWidth != 0))
       {
-        static const std::wstring suffix = L"...";
-        waddress = waddress.substr(0, maxWidth - suffix.size()) + suffix;
+        waddress = Util::TrimPadWString(waddress, width);
       }
 
-      mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), waddress.size());
+      if (isCurrent || (dimPos >= waddress.size()))
+      {
+        mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), waddress.size());
+      }
+      else
+      {
+        mvwaddnwstr(m_MainWin, i - idxOffs, 2, waddress.c_str(), dimPos);
+        wattron(m_MainWin, m_AttrsAddressText);
+        waddnwstr(m_MainWin, waddress.c_str() + dimPos, waddress.size() - dimPos);
+        wattroff(m_MainWin, m_AttrsAddressText);
+      }
 
       if (i == m_AddressListCurrentIndex)
       {
@@ -1168,7 +1240,7 @@ void Ui::DrawFileList()
     }
   }
 
-  int maxWidth = (m_ScreenWidth - 4);
+  int maxWidth = GetPickerWidth();
   std::wstring dirLabel = L"Dir: ";
   int maxDirLen = maxWidth - dirLabel.size();
   std::wstring dirPath = Util::ToWString(m_CurrentDir);
@@ -1234,6 +1306,57 @@ void Ui::DrawFileList()
   }
 
   wrefresh(m_MainWin);
+}
+
+int Ui::GetPickerWidth()
+{
+  // picker width within the two-column margins on each side, min 20
+  const int maxWidth = m_ScreenWidth - 4;
+  int width = maxWidth;
+  if ((m_PickerWidth > 0) && (m_PickerWidth <= 1))
+  {
+    width = (int)((m_PickerWidth * maxWidth) + 0.5);
+  }
+  else if (m_PickerWidth >= 2)
+  {
+    width = (int)m_PickerWidth;
+  }
+
+  return Util::Bound(std::min(20, maxWidth), width, maxWidth);
+}
+
+std::wstring Ui::GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos)
+{
+  // classic layout shows address as stored
+  p_DimPos = std::wstring::npos;
+  if (m_PickerWidth == 0) return Util::TrimEllipsisWString(Util::ToWString(p_Address), p_Width);
+
+  // name followed by dimmed address, or address only if no name or name is address
+  std::wstring entry = Util::ToWString(p_Address);
+  const size_t ltPos = p_Address.rfind('<');
+  if ((ltPos != std::string::npos) && (p_Address.back() == '>'))
+  {
+    std::string name = Util::Trim(p_Address.substr(0, ltPos));
+    if ((name.size() >= 2) && (name.front() == '"') && (name.back() == '"'))
+    {
+      name = name.substr(1, name.size() - 2);
+      Util::ReplaceString(name, "\\\"", "\"");
+    }
+
+    const std::string addr = p_Address.substr(ltPos + 1, p_Address.size() - ltPos - 2);
+    if (name.empty() || (Util::ToLower(name) == Util::ToLower(addr)))
+    {
+      entry = Util::ToWString(addr);
+    }
+    else
+    {
+      const std::wstring wname = Util::ToWString(name) + L" ";
+      entry = wname + L"<" + Util::ToWString(addr) + L">";
+      p_DimPos = wname.size();
+    }
+  }
+
+  return Util::TrimEllipsisWString(entry, p_Width);
 }
 
 void Ui::DrawMessageList()

@@ -1079,6 +1079,15 @@ filtering/sorting mode is changed (default enabled).
 Specifies whether each folder listing shall persist its filtering/sorting
 mode (default enabled).
 
+### picker_width
+
+Width of the address book, file and folder pickers. A value up to 1.0 is a
+fraction of the terminal width excluding margins (e.g. `0.618` or `61.8%`), a
+whole number of 2 or more is a number of columns. The folder list narrows to
+fit its folder names. The address book shows each address after its name in
+`color_address_text`. Set to `0` for the classic full width layout (default
+`58`).
+
 ### plain_text
 
 Determines whether showing plain text (vs. html converted to text) is
@@ -1353,6 +1362,9 @@ text, a text attribute `_attr` can also be specified: `bold`, `dim`, `italic`,
 `reverse` or `underline` (leave empty or set to `normal` for none). Default
 configuration file:
 
+    color_address_text_attr=
+    color_address_text_bg=
+    color_address_text_fg=gray
     color_bold_text_attr=
     color_bold_text_bg=
     color_bold_text_fg=
@@ -1403,6 +1415,12 @@ configuration file:
     color_top_bar_attr=
     color_top_bar_bg=reverse
     color_top_bar_fg=reverse
+
+### color_address_text
+
+Email address following the name in address book list, i.e.
+`<jdoe@example.com>` in `John Doe <jdoe@example.com>`. Set
+`color_address_text_fg=` (empty) to show it as regular text.
 
 ### color_bold_text
 
