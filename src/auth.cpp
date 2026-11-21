@@ -424,10 +424,14 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   }
   else if (WIFSIGNALED(status))
   {
-    LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate killed %d"
-                                           : "oauth2 refresh killed %d",
-                WTERMSIG(status));
+    LOG_WARNING((p_AuthAction == Generate) ? "oauth2 generate killed (%d, %lld ms)"
+                                           : "oauth2 refresh killed (%d, %lld ms)",
+                WTERMSIG(status), actionDurMs);
     std::cerr << output;
+    if (!output.empty())
+    {
+      LOG_WARNING("%s", output.c_str());
+    }
   }
   else if (WIFSTOPPED(status))
   {

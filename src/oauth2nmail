@@ -9,11 +9,15 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
+import base64
 import errno
+import hashlib
 import http.client
 import json
 import os
+import secrets
 import socket
+import socketserver
 import ssl
 import stat
 import sys
@@ -22,8 +26,7 @@ import time
 import urllib.parse
 import webbrowser
 
-version = "1.07"
-pathServed = ""
+version = "1.08"
 httpTimeoutSec = 30
 providers = {
     "gmail-oauth2": {
@@ -72,6 +75,8 @@ def show_help():
     print("   5                 http request returned non-200")
     print("   6                 access token not available")
     print("   7                 refresh token not available")
+    print("   8                 local redirect server could not be started")
+    print("   9                 web browser could not be opened")
     print("   130               keyboard interrupt (ctrl-c)")
     print("")
     print("Examples:")
@@ -164,6 +169,13 @@ def write_https_error(action, url, exc):
     write_hint("python3 has no CA certificates, see log.txt")
 
 
+def redact(value):
+    """Shorten a secret (e.g. auth code) to a non-usable form for logging."""
+    if len(value) <= 24:
+        return "<len=" + str(len(value)) + ">"
+    return value[:12] + "..." + value[-8:] + " <len=" + str(len(value)) + ">"
+
+
 def write_hint(hint):
     """Emit a concise single-line reason for nmail to show in its ui."""
     sys.stderr.write("hint: " + hint + "\n")
@@ -246,10 +258,31 @@ def url_params(params):
     return "&".join(param_list)
 
 
+def parse_json_object(text):
+    """Parse a json object response body, returns None if it is not one."""
+    try:
+        obj = json.loads(text)
+    except ValueError:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
+def write_invalid_json(action, response):
+    """Log a 200 response whose body is not the expected json object."""
+    sys.stderr.write(action + " returned invalid json " + repr(response)
+                     + " len=" + str(len(response.text))
+                     + " body=" + repr(response.text[:200]) + "\n")
+    write_hint("unexpected response from server, see log.txt")
+
+
 def save_tokens(tokenStore, tokenItems):
-    with open(tokenStore, "w") as tokenFile:
+    # write to a temp file and rename it into place, so that an interrupted
+    # write never leaves a truncated token store behind
+    tmpPath = tokenStore + ".tmp"
+    with open(tmpPath, "w") as tokenFile:
         for key, value in tokenItems:
             tokenFile.write(str(key) + "=" + str(value) + "\n")
+    os.replace(tmpPath, tokenStore)
 
 
 def read_tokens(tokenStore):
@@ -258,9 +291,22 @@ def read_tokens(tokenStore):
         with open(tokenStore, "r") as tokenFile:
             tokenLines = tokenFile.read().splitlines()
             for tokenLine in tokenLines:
-                tokenWords = tokenLine.split("=", 1)
-                tokens[str(tokenWords[0])] = tokenWords[1]
+                # skip malformed lines, a missing token is handled by callers
+                key, sep, value = tokenLine.partition("=")
+                if sep:
+                    tokens[key] = value
     return tokens
+
+
+def html_page(title, text):
+    return bytes("<html><head><title>Nmail Oauth2</title></head>"
+                 + "<body><h2>" + title + "</h2><p>" + text + "</p></body></html>", "utf-8")
+
+
+class LocalHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+    """Handle each connection in its own daemon thread, so an idle browser
+    connection neither blocks serving the redirect nor server shutdown."""
+    daemon_threads = True
 
 
 def generate(provider, client_id, client_secret, token_store):
@@ -269,57 +315,136 @@ def generate(provider, client_id, client_secret, token_store):
     redirectPage = "/oauth2nmail"
     redirectUri = "http://" + localHostName + ":" + str(localHostPort) + redirectPage
 
-    # open default web browser for user authentication
-    params = {}
-    params["client_id"] = client_id
-    params["redirect_uri"] = redirectUri
-    params["scope"] = providers[provider]["auth_scope"]
-    params["response_type"] = "code"
-    url = providers[provider]["auth_url"] +  "?" + url_params(params)
-    webbrowser.open(url, new = 0, autoraise = True)
+    # per-attempt state (rfc 6749 csrf protection) and pkce (rfc 7636), so that
+    # redirects not belonging to this login attempt are rejected, and so that an
+    # intercepted auth code cannot be redeemed without the code verifier
+    state = secrets.token_urlsafe(32)
+    codeVerifier = secrets.token_urlsafe(64)
+    codeChallenge = base64.urlsafe_b64encode(
+        hashlib.sha256(codeVerifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
+
+    # redirect handling, written by server thread and read by main thread
+    redirectResult = {}
+    ignoredRedirects = []
 
     # local web server handling redirect
     class LocalServer(BaseHTTPRequestHandler):
+        # browsers (e.g. chrome) may open speculative connections that never
+        # send a request, bound the time a handler waits for request data
+        timeout = 10
+
         def log_message(self, format, *args):
             return
 
-        def do_GET(self):
-            self.send_response(200)
+        def send_page(self, status, title, text):
+            self.send_response(status)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            if self.path.startswith(redirectPage):
-                self.wfile.write(bytes("<html><head><title>Nmail Oauth2</title></head>", "utf-8"))
-                self.wfile.write(bytes("<body><h2>Authentication successful</h2>", "utf-8"))
-                self.wfile.write(bytes("<p>You may close this browser window now.</p>", "utf-8"))
-                self.wfile.write(bytes("</body></html>", "utf-8"))
-                global pathServed
-                pathServed = self.path
+            self.wfile.write(html_page(title, text))
 
-    localServer = HTTPServer((localHostName, localHostPort), LocalServer)
+        def do_GET(self):
+            parsedPath = urlparse(self.path)
+            if parsedPath.path != redirectPage:
+                self.send_page(404, "Not found", "")
+                return
+
+            if "query" in redirectResult:
+                self.send_page(200, "Login already processed",
+                               "You may close this browser window now.")
+                return
+
+            # url-decode redirect query, the code may contain escaped chars (e.g.
+            # microsoft personal account codes ending in %24%24 = $$), which must
+            # be decoded before being form-encoded again in the token request
+            queryDict = dict(urllib.parse.parse_qsl(parsedPath.query, keep_blank_values=True))
+            if queryDict.get("state") != state:
+                ignoredRedirects.append(sorted(queryDict.keys()))
+                self.send_page(400, "Authentication failed",
+                               "Invalid login request state, please retry login from nmail.")
+                return
+
+            if "code" in queryDict:
+                self.send_page(200, "Authentication successful",
+                               "You may close this browser window now.")
+            else:
+                self.send_page(200, "Authentication failed",
+                               "Access was not granted. You may close this browser window now.")
+
+            redirectResult["query"] = queryDict
+
+    # start local server before opening browser, so it is ready for the redirect
+    try:
+        localServer = LocalHTTPServer((localHostName, localHostPort), LocalServer)
+    except OSError as e:
+        sys.stderr.write("local redirect server on " + localHostName + ":" + str(localHostPort)
+                         + " failed to start: " + str(e) + "\n")
+        if e.errno == errno.EADDRINUSE:
+            write_hint("port " + str(localHostPort) + " needed for login is in use")
+        else:
+            write_hint("cannot start local login server, see log.txt")
+        return 8
+
     thread = threading.Thread(target = localServer.serve_forever)
     thread.daemon = True
     thread.start()
-    authTimeoutSec = 120
-    secs = 0
-    try:
-        while not pathServed and secs < authTimeoutSec:
-            time.sleep(1)
-            secs = secs + 1
-    except KeyboardInterrupt:
-        sys.stderr.write("authentication cancelled by user\n")
-        write_hint("login cancelled")
-        return 130
 
-    if not pathServed:
-        sys.stderr.write("authentication timeout after " + str(authTimeoutSec)
-                         + " seconds: browser did not reach localhost redirect\n")
-        write_hint("login timed out after " + str(authTimeoutSec) + " seconds")
+    try:
+        # open default web browser for user authentication
+        params = {}
+        params["client_id"] = client_id
+        params["redirect_uri"] = redirectUri
+        params["scope"] = providers[provider]["auth_scope"]
+        params["response_type"] = "code"
+        params["state"] = state
+        params["code_challenge"] = codeChallenge
+        params["code_challenge_method"] = "S256"
+        url = providers[provider]["auth_url"] +  "?" + url_params(params)
+        try:
+            isBrowserOpened = webbrowser.open(url, new = 0, autoraise = True)
+        except Exception as e:
+            sys.stderr.write("web browser open failed: " + str(e) + "\n")
+            isBrowserOpened = False
+
+        if not isBrowserOpened:
+            sys.stderr.write("no web browser available to open login url: " + url + "\n")
+            write_hint("cannot open web browser for login")
+            return 9
+
+        authTimeoutSec = 120
+        sys.stderr.write("web browser opened, waiting up to " + str(authTimeoutSec)
+                         + " seconds for redirect to " + redirectUri + "\n")
+        secs = 0
+        try:
+            while ("query" not in redirectResult) and (secs < authTimeoutSec):
+                time.sleep(1)
+                secs = secs + 1
+        except KeyboardInterrupt:
+            sys.stderr.write("authentication cancelled by user\n")
+            write_hint("login cancelled")
+            return 130
+    finally:
+        localServer.shutdown()
+        localServer.server_close()
+
+    if ignoredRedirects:
+        sys.stderr.write("oauth2 ignored " + str(len(ignoredRedirects))
+                         + " redirect(s) with missing or mismatched state, params="
+                         + str(ignoredRedirects) + "\n")
+
+    if "query" not in redirectResult:
+        if ignoredRedirects:
+            sys.stderr.write("authentication failed: no redirect with matching state within "
+                             + str(authTimeoutSec) + " seconds\n")
+            write_hint("login failed, redirect state mismatch, see log.txt")
+        else:
+            sys.stderr.write("authentication timeout after " + str(authTimeoutSec)
+                             + " seconds: browser did not reach localhost redirect\n")
+            write_hint("login timed out after " + str(authTimeoutSec) + " seconds")
         return 2
 
-    sys.stderr.write("oauth2 redirect: " + repr(pathServed) + "\n")
-
-    query = urlparse(pathServed).query
-    queryDict = dict(qc.split("=") for qc in query.split("&"))
+    queryDict = redirectResult["query"]
+    sys.stderr.write("oauth2 redirect after " + str(secs) + " seconds: params="
+                     + str(sorted(queryDict.keys())) + " state=verified pkce=S256\n")
     if "code" not in queryDict:
         err = queryDict.get("error", "?")
         desc = queryDict.get("error_description", "")
@@ -334,6 +459,7 @@ def generate(provider, client_id, client_secret, token_store):
     convParams = {}
     convParams["client_id"] = client_id
     convParams["code"] = code
+    convParams["code_verifier"] = codeVerifier
     convParams["redirect_uri"] = redirectUri
     convParams["grant_type"] = "authorization_code"
     convParams["scope"] = providers[provider]["mail_scope"]
@@ -351,13 +477,17 @@ def generate(provider, client_id, client_secret, token_store):
     if convResponse.status_code != 200:
         sys.stderr.write("token request failed " + repr(convResponse) + "\n")
         sys.stderr.write("response: " + convResponse.text + "\n")
-        sys.stderr.write("submitted code (len=" + str(len(code))
-                         + "): " + repr(code) + "\n")
+        sys.stderr.write("submitted code: " + redact(code) + "\n")
+        sys.stderr.write("submitted code_verifier: " + redact(codeVerifier) + " (S256)\n")
         sys.stderr.write("submitted redirect_uri: " + redirectUri + "\n")
         return 5
 
     # save tokens
-    jsonResponse = json.loads(convResponse.text)
+    jsonResponse = parse_json_object(convResponse.text)
+    if jsonResponse is None:
+        write_invalid_json("token request", convResponse)
+        return 5
+
     save_tokens(token_store, jsonResponse.items())
     tokens = read_tokens(token_store)
 
@@ -371,6 +501,11 @@ def generate(provider, client_id, client_secret, token_store):
 
     # use special access token for outlook user id
     if provider == "outlook-oauth2":
+        if "refresh_token" not in tokens:
+            sys.stderr.write("refresh_token not in response, keys="
+                             + str(sorted(tokens.keys())) + "\n")
+            return 7
+
         # exchange auth code for user info access token
         convParams = {}
         convParams["client_id"] = client_id
@@ -391,13 +526,14 @@ def generate(provider, client_id, client_secret, token_store):
             sys.stderr.write("response: " + convResponse.text + "\n")
             return 5
 
-        # ensure access_token is present
-        jsonResponse = json.loads(convResponse.text)
-        infoTokens = jsonResponse.items()
-        for key, value in infoTokens:
-            if key == "access_token":
-                access_token = value
+        # ensure user access_token is present, the mail access token above is
+        # not valid for the user info request
+        jsonResponse = parse_json_object(convResponse.text)
+        if jsonResponse is None:
+            write_invalid_json("user token request", convResponse)
+            return 5
 
+        access_token = str(jsonResponse.get("access_token", ""))
         if not access_token:
             sys.stderr.write("user access_token not in response, keys="
                              + str(sorted(jsonResponse.keys())) + "\n")
@@ -418,7 +554,11 @@ def generate(provider, client_id, client_secret, token_store):
         return 5
 
     # save user info (email, name)
-    jsonInfoResponse = json.loads(infoResponse.text)
+    jsonInfoResponse = parse_json_object(infoResponse.text)
+    if jsonInfoResponse is None:
+        write_invalid_json("info request", infoResponse)
+        return 5
+
     emailItems = jsonInfoResponse.items()
     for key, value in emailItems:
         if key == "email" or key == "name":
@@ -464,9 +604,9 @@ def refresh(provider, client_id, client_secret, token_store):
 
     # parse response - the body is not guaranteed to be json, an intermediate
     # proxy or gateway may return html for 5xx, so tolerate a decode failure
-    try:
-        jsonRefrResponse = json.loads(refrResponse.text)
-    except ValueError:
+    jsonRefrResponse = parse_json_object(refrResponse.text)
+    isJsonValid = jsonRefrResponse is not None
+    if not isJsonValid:
         jsonRefrResponse = {}
 
     # any invalid_grant means the refresh token is no longer usable (expired,
@@ -483,6 +623,10 @@ def refresh(provider, client_id, client_secret, token_store):
         sys.stderr.write("token refresh failed " + repr(refrResponse) + "\n")
         sys.stderr.write("response: " + refrResponse.text + "\n")
         write_hint("mail account authentication failed, see log.txt")
+        return 5
+
+    if not isJsonValid:
+        write_invalid_json("token refresh", refrResponse)
         return 5
 
     # save received tokens
