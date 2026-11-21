@@ -128,8 +128,9 @@ if ! built "zstd-${ZSTD_VERSION}"; then
   stamp "zstd-${ZSTD_VERSION}"
 fi
 
-# libmagic (file): attachment mime/type detection in src/. Also ships
-# magic.mgc (loaded at runtime via magic_load(cookie, NULL)).
+# libmagic (file): charset detection in src/encoding.cpp. Also ships
+# magic.mgc, which the top-level CMakeLists embeds in the binary (loaded via
+# magic_load_buffers()), as the compiled-in db path only exists on this host.
 FILE_VERSION=5.46
 if ! built "file-${FILE_VERSION}"; then
   fetch "https://astron.com/pub/file/file-${FILE_VERSION}.tar.gz"

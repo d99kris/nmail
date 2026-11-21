@@ -89,8 +89,9 @@ RUN set -euo pipefail; \
     make -j"$(nproc)" -C lib install-static install-includes install-pc PREFIX="${DEPS}"; \
     cd ..; rm -rf "zstd-${ZSTD_VERSION}"
 
-# libmagic (file): attachment mime/type detection in src/. Also ships
-# magic.mgc (loaded at runtime via magic_load(cookie, NULL)).
+# libmagic (file): charset detection in src/encoding.cpp. Also ships
+# magic.mgc, which the top-level CMakeLists embeds in the binary (loaded via
+# magic_load_buffers()), as the compiled-in db path only exists on this host.
 ARG FILE_VERSION=5.46
 RUN set -euo pipefail; \
     curl -fsSL "https://astron.com/pub/file/file-${FILE_VERSION}.tar.gz" | tar xz; \
