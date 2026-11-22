@@ -5,8 +5,8 @@ nmail
 |-----------|---------|
 | [![Linux](https://github.com/d99kris/nmail/workflows/Linux/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3ALinux) | [![macOS](https://github.com/d99kris/nmail/workflows/macOS/badge.svg)](https://github.com/d99kris/nmail/actions?query=workflow%3AmacOS) |
 
-nmail is a terminal-based email client for Linux and macOS with a user interface
-similar to Alpine.
+nmail is a terminal-based email client for Linux and macOS with a user
+interface similar to Alpine.
 
 <p align="center">
   <img alt="screenshot nmail" src="doc/screenshot-nmail.png" width="738"><br>
@@ -121,11 +121,11 @@ Examples:
 Supported Platforms
 ===================
 
-nmail is developed and tested on Linux and macOS. Current version has been
+nmail is developed and tested on Linux and macOS. The current version has been
 tested on:
 
-- macOS Sequoia 15.5
-- Ubuntu 24.04 LTS
+- macOS Sequoia 15.8
+- Ubuntu 26.04 LTS
 
 
 Install using Package Manager
@@ -171,7 +171,7 @@ arm64.
 
     nmail -u
 
-Upgrades to the latest release, or to a specified release, e.g. `nmail -u 5.16.4`.
+Upgrades to the latest release, or to specified version: `nmail -u 5.16.4`.
 
 **Uninstall**
 
@@ -296,7 +296,7 @@ iCloud Setup
 ------------
 iCloud requires setting up an app-specific password under
 [Apple Account](https://account.apple.com). Select `App-Specific Passwords`
-and then click `+` and set a name, e.g. `IMAP` and click `Create`.
+and then click `+` and set a name, e.g. `IMAP`, and click `Create`.
 Use the generated password with nmail.
 
 Outlook (and Hotmail) Setup
@@ -404,7 +404,8 @@ authentication (`gmail-oauth2` or `outlook-oauth2`). Refer to
 ### auth_encrypt
 
 Indicates whether nmail shall encrypt local OAuth 2.0 access token store
-(default enabled). Refer to [OAuth 2.0](/doc/OAUTH2.md#token-encryption) for details.
+(default enabled). Refer to [OAuth 2.0](/doc/OAUTH2.md#token-encryption)
+for details.
 
 ### browser_cmd
 
@@ -426,17 +427,18 @@ disabled).
 
 ### client_store_sent
 
-This field should generally be left `0`. It indicates whether nmail shall upload
-sent emails to configured `sent` folder. Many email service providers
-(gmail, outlook, etc) do this on server side, so this should only be enabled if
-emails sent using nmail do not automatically gets stored in the sent folder.
+This field should generally be left `0`. It indicates whether nmail shall
+upload sent emails to configured `sent` folder. Many email service
+providers (Gmail, Outlook, etc.) do this on server side, so this should
+only be enabled if emails sent using nmail do not automatically get stored
+in the sent folder.
 
 ### copy_to_trash
 
 Specifies whether to delete messages by copying them to trash and then deleting
 from current folder, instead of using the IMAP move command. This was added to
 provide a workaround for a
-[GMail IMAP server issue](https://github.com/d99kris/nmail/issues/172) which
+[Gmail IMAP server issue](https://github.com/d99kris/nmail/issues/172) which
 has since been fixed. The setting is now disabled by default.
 
 ### coredump_enabled
@@ -450,8 +452,8 @@ Specifies a custom downloads directory path to save attachments to, for example
 
 ### drafts
 
-Name of drafts folder - needed if using functionality to postpone email editing.
-Detected at first login if not specified.
+Name of drafts folder - needed if using functionality to postpone email
+editing. Detected at first login if not specified.
 
 ### editor_cmd
 
@@ -464,8 +466,8 @@ specified, nmail will use the editor specified by the environment variable
 
 By default when using `Ctrl-T` to select attachment files, the nmail internal
 file picker is used. By specifying this parameter an external command may be
-used instead. The command must output selected file(s) separated by line breaks,
-on stdout. Examples:
+used instead. The command must output selected file(s) separated by line
+breaks, on stdout. Examples:
 
 nnn: `file_picker_cmd=TMP=$(mktemp); 2>&1 nnn -p ${TMP}; (cat ${TMP} | tr '\0' '\n' | uniq; rm ${TMP})`
 
@@ -476,7 +478,7 @@ ranger: `file_picker_cmd=TMP=$(mktemp); 2>&1 ranger --choosefiles=${TMP}; (cat $
 This field allows excluding certain folders from being accessible in nmail
 and also from being indexed by the search engine. This is mainly useful for
 email service providers with "virtual" folders that are holding copies of
-emails in other folders. When using the setup-wizard to configure a Gmail
+emails in other folders. When using the setup wizard to configure a Gmail
 account, this field will be configured to
 `"[Gmail]/All Mail","[Gmail]/Important","[Gmail]/Starred"`. As an alternative
 to configuring this parameter for Gmail, folders can be excluded from IMAP
@@ -508,7 +510,7 @@ The command receives the HTML file path as its final argument.
 ### html_viewer_cmd
 
 This field allows overriding the external viewer used when viewing message
-html using `V`. If not specified, nmail checks if `w3m`, `lynx`, `elinks`
+html using `V`. If not specified, nmail checks if `w3m`, `lynx` or `elinks`
 is available on the system (in that order), with fallback to
 `xdg-open` (Linux) and `open` (macOS). The exact default commands used:
 - `LESSOPEN="|$(which lesspipe.sh lesspipe | head -1) %s" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1`
@@ -571,9 +573,9 @@ Real name of sender. Recommended when sending emails.
 ### network_timeout_sec
 
 Specify timeout for IMAP and SMTP operations in seconds. If using a very slow
-network connection and sending very large emails it may be necessary to increase
-this timeout. By setting it to 0 network operations will not time out.
-Default 30 seconds.
+network connection and sending very large emails it may be necessary to
+increase this timeout. By setting it to 0 network operations will not time
+out. Default 30 seconds.
 
 ### pager_cmd
 
@@ -597,7 +599,7 @@ for the last messages stored/added in the folder will be retrieved from server.
 Also note that some other nmail features may operate in degraded mode when this
 setting is disabled. The ability to disable pre-fetching of all headers is
 mainly to encompass use-cases where one wants to minimize network usage, or
-use nmail without persistant cache. Default enabled.
+use nmail without persistent cache. Default enabled.
 
 ### prefetch_level
 
@@ -642,7 +644,7 @@ SMTP hostname / address. Required for sending emails.
 
 ### smtp_port
 
-SMTP port. Required for fetching emails. Default 587.
+SMTP port. Required for sending emails. Default 587.
 
 ### smtp_user
 
@@ -669,7 +671,7 @@ messages. If not specified, nmail checks if `aspell` or `ispell` is available
 on the system (in that order), and uses the first found. The command used is
 one of:
 - `aspell -c`
-- `spell -o -x`
+- `ispell -o -x`
 
 ### text_to_html_cmd
 
@@ -709,7 +711,7 @@ be used for debugging startup crash / hang regressions.
 Multiple Email Accounts
 =======================
 
-nmail does currently not support multiple email accounts (in a single session).
+nmail does not currently support multiple email accounts (in a single session).
 It is however possible to run multiple nmail instances in parallel with
 different config directories (and thus different email accounts), but it will
 be just that - multiple instances - each in its own terminal. To facilitate
@@ -826,7 +828,7 @@ Email Search
 Local Search
 ------------
 Press `/` in the message list view to search the local cache for an email. The
-local cache can be fully syncronized with server by pressing `s`. The search
+local cache can be fully synchronized with server by pressing `s`. The search
 engine supports queries with `"quoted strings"`, `+musthave`, `-mustnothave`,
 `partialstring*`, `AND`, `OR`, `XOR` and `NOT`.
 
@@ -867,15 +869,15 @@ Security
 ========
 
 nmail caches data locally to improve performance. Cached data can be encrypted
-by setting by setting `cache_encrypt=1` in main.conf. Message databases are
+by setting `cache_encrypt=1` in main.conf. Message databases are
 then encrypted using OpenSSL AES256-CBC with a key derived from a random salt
 and the email account password. Folder names are hashed using SHA256 (thus not
 encrypted).
 
 Storing the account password (`save_pass=1` in main.conf) is *not* secure.
 While nmail encrypts the password, the key is trivial to determine from
-the source code. Only store the password if measurements are taken to ensure
-`~/.config/nmail/secret.conf` cannot by accessed by a third-party.
+the source code. Only store the password if measures are taken to ensure
+`~/.config/nmail/secret.conf` cannot be accessed by a third-party.
 
 
 Configuration
@@ -963,8 +965,8 @@ Enable terminal color output (default enabled).
 ### compose_backup_interval_sec
 
 Specify interval in seconds for local backups during compose (default 10).
-If the system running nmail is unexpectedly shutdown while user is composing
-an email, then upon next nmail startup any backuped compose message will be
+If the system running nmail is unexpectedly shut down while user is composing
+an email, then upon next nmail startup any backed-up compose message will be
 automatically uploaded to the draft folder.
 Setting this parameter to 0 disables local backups.
 
@@ -1017,7 +1019,7 @@ For a German user:
 
 Default value for each new email, whether nmail shall enable markdown HTML
 compose. I.e. whether nmail shall generate a text/html message part based on
-processing the composed message as Markdown, when sending sending emails from
+processing the composed message as Markdown, when sending emails from
 nmail. This can be overridden on a per-email basis by pressing CTRL-N when
 editing an email (default disabled).
 
@@ -1135,7 +1137,7 @@ disabled).
 
 Determines whether to show compact headers when viewing an email, i.e. only
 names (without addresses), no Reply-To, and header lines truncated to fit the
-screen width. This option can be re-configured in run-time by pressing `H`
+screen width. This option can be re-configured at run-time by pressing `H`
 when viewing an email (default enabled).
 
 ### show_embedded_images
@@ -1157,7 +1159,7 @@ emails. Supported options:
 ### show_rich_header
 
 Determines whether to show rich headers (bcc field) during email compose. This
-option can be re-configured in run-time by pressing `CTRL-R` when composing
+option can be re-configured at run-time by pressing `CTRL-R` when composing
 an email (default disabled).
 
 ### signature
@@ -1183,7 +1185,7 @@ space between tab stops (default 8).
 
 ### terminal_title
 
-Specifies custom terminal title, ex: `terminal_title=nmail - d99kris@email.com`.
+Specifies custom terminal title, ex: `terminal_title=d99kris@email.com`
 
 ### top_bar_show_message_count
 
@@ -1563,7 +1565,7 @@ A basic `~/.muttrc` config file for reading the exported Maildir in `mutt`:
     set folder="~/Maildir"
     set mask=".*"
 
-Note: nmail is not designed for working with other email clients, this export
+Note: nmail is not designed for working with other email clients; this export
 option is mainly available as a data recovery option in case access to an
 email account is lost, and one needs a local Maildir archive to import into
 a new email account. Such import is not supported by nmail, but is supported
@@ -1623,5 +1625,5 @@ Binaries are distributed under the [GNU GPL v2 license](/LICENSE.GPL-2.0).
 Keywords
 ========
 
-alternative to alpine, command line, console-based, email client, linux, macos, ncurses,
-terminal-based.
+alternative to alpine, command line, console-based, email client, linux,
+macos, ncurses, terminal-based.
