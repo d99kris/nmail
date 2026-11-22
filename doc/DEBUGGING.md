@@ -1,10 +1,27 @@
 Debugging
 =========
-If any issues are observed, try running nmail with verbose logging
+When reporting a bug, please attach the regular log file:
+
+    ~/.config/nmail/log.txt
+
+The log is rotated when nmail starts, so if nmail has been restarted since
+the problem occurred, attach `~/.config/nmail/log.txt.1` instead.
+
+The regular log contains no message content, but may include folder names,
+email addresses or server hostnames, so skim it and redact anything you don't
+want to share publicly.
+
+Verbose Logging
+---------------
+If requested by a maintainer, reproduce the issue with verbose logging:
 
     nmail --verbose
 
-and provide a copy of `~/.config/nmail/log.txt` when reporting a bug.
+and provide a copy of `~/.config/nmail/log.txt`. Verbose logs contain more
+detail (such as account configuration with secrets masked), and extra verbose
+logs (`--extra-verbose`) include full IMAP/SMTP traffic, i.e. email content.
+Review them carefully before sharing, or share them privately with a
+maintainer.
 
 If nmail **crashes** it's very useful to obtain a core dump and extract
 information from it (such as the callstacks). See details below.

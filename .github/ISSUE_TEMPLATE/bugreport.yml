@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a bug by creating a new issue.
+labels: ["bug"]
+type: Bug
+assignees: ["d99kris"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Drag and drop your regular log file `~/.config/nmail/log.txt` here.
+        It shows version, platform and any errors at a glance, which makes
+        troubleshooting much quicker.
+
+        The `.config` directory is hidden by default; to open it run:
+        - macOS: `open ~/.config/nmail`
+        - Linux: `xdg-open ~/.config/nmail`
+
+        The regular log (without `--verbose`) contains no message content,
+        but may include folder names, email addresses or server hostnames -
+        skim it and redact anything you don't want public.
+
+        Note: the log is rotated at startup - if you restarted nmail after
+        the problem occurred, attach `~/.config/nmail/log.txt.1` instead.
+        Do *not* post `--verbose` logs unless asked. See
+        https://github.com/d99kris/nmail/blob/master/doc/DEBUGGING.md
+      placeholder: Drag and drop log.txt here
+    validations:
+      required: true
