@@ -23,6 +23,7 @@ public:
   static void PushDraftMessage(const std::string& p_Str);
   static void PushOutboxMessage(const std::string& p_Str);
   static void PushComposeMessage(const std::string& p_Str);
+  static bool HasDraftMessages();
   static std::vector<std::string> PopDraftMessages();
   static std::vector<std::string> PopOutboxMessages();
   static std::vector<std::string> PopComposeMessages();

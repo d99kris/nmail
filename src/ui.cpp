@@ -6969,18 +6969,26 @@ void Ui::HandleConnected()
 {
   if (IsConnected() && !Util::GetReadOnly())
   {
-    std::vector<std::string> draftMsgs = OfflineQueue::PopDraftMessages();
-    for (const auto& draftMsg : draftMsgs)
+    if (!m_DraftsFolder.empty())
     {
-      SetDialogMessage("Uploading queued draft messages");
+      std::vector<std::string> draftMsgs = OfflineQueue::PopDraftMessages();
+      for (const auto& draftMsg : draftMsgs)
+      {
+        SetDialogMessage("Uploading queued draft messages");
 
-      ImapManager::Action imapAction;
-      imapAction.m_UploadDraft = true;
-      imapAction.m_Folder = m_DraftsFolder;
-      imapAction.m_Msg = draftMsg;
-      m_ImapManager->AsyncAction(imapAction);
+        ImapManager::Action imapAction;
+        imapAction.m_UploadDraft = true;
+        imapAction.m_Folder = m_DraftsFolder;
+        imapAction.m_Msg = draftMsg;
+        m_ImapManager->AsyncAction(imapAction);
 
-      m_HasRequestedUids[m_DraftsFolder] = false;
+        m_HasRequestedUids[m_DraftsFolder] = false;
+      }
+    }
+    else if (OfflineQueue::HasDraftMessages())
+    {
+      // keep queued drafts until a drafts folder is configured
+      SetDialogMessage("Drafts folder not configured, queued draft kept", true /* p_Warn */);
     }
 
     std::vector<std::string> outboxMsgs = OfflineQueue::PopOutboxMessages();

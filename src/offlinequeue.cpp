@@ -126,6 +126,19 @@ void OfflineQueue::PushComposeMessage(const std::string& p_Str)
   Util::Move(tmpPath, msgPath);
 }
 
+bool OfflineQueue::HasDraftMessages()
+{
+  std::lock_guard<std::mutex> lock(m_Mutex);
+
+  const std::vector<std::string>& fileNames = Util::ListDir(GetDraftQueueDir());
+  for (auto& fileName : fileNames)
+  {
+    if (CanProcessFileName(fileName)) return true;
+  }
+
+  return false;
+}
+
 std::vector<std::string> OfflineQueue::PopDraftMessages()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
