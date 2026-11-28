@@ -476,8 +476,9 @@ void Ui::InitWindows()
   m_MaxViewLineLength = m_ScreenWidth;
   m_MaxComposeLineLength = (m_ComposeLineWrap == LineWrapHardWrap) ? std::min(m_ScreenWidth, 72) : m_ScreenWidth;
   wbkgd(stdscr, m_AttrsRegularText | ' ');
-  wclear(stdscr);
-  wrefresh(stdscr);
+  // erase without flushing, the following draws then only update changed cells
+  werase(stdscr);
+  wnoutrefresh(stdscr);
   const int topHeight = 1;
   m_TopWin = newwin(topHeight, m_ScreenWidth, 0, 0);
   wbkgd(m_TopWin, m_AttrsRegularText | ' ');
@@ -562,8 +563,21 @@ void Ui::TerminalControlResume()
   }
 }
 
+void Ui::RefreshWin(WINDOW* p_Win)
+{
+  // stage update, and flush unless part of a full redraw
+  wnoutrefresh(p_Win);
+  if (!m_DrawAllActive)
+  {
+    doupdate();
+  }
+}
+
 void Ui::DrawAll()
 {
+  const bool wasDrawAllActive = m_DrawAllActive;
+  m_DrawAllActive = true;
+
   switch (m_State)
   {
     case StateViewMessageList:
@@ -632,8 +646,15 @@ void Ui::DrawAll()
     default:
       werase(m_MainWin);
       mvwprintw(m_MainWin, 0, 0, "Unimplemented state %d", m_State);
-      wrefresh(m_MainWin);
+      RefreshWin(m_MainWin);
       break;
+  }
+
+  // flush all staged updates in one go, to avoid partially drawn frames
+  m_DrawAllActive = wasDrawAllActive;
+  if (!m_DrawAllActive)
+  {
+    doupdate();
   }
 
   LOG_LATENCY_END(LatencyKeyPress);
@@ -655,7 +676,7 @@ void Ui::DrawTop()
 
   mvwprintw(m_TopWin, 0, 0, "%s", topCombined.c_str());
   wattroff(m_TopWin, m_AttrsTopBar);
-  wrefresh(m_TopWin);
+  RefreshWin(m_TopWin);
 }
 
 void Ui::DrawDialog()
@@ -710,7 +731,7 @@ void Ui::DrawSearchDialog()
 
   leaveok(m_DialogWin, false);
   wmove(m_DialogWin, 0, 11 + filterPos);
-  wrefresh(m_DialogWin);
+  RefreshWin(m_DialogWin);
   leaveok(m_DialogWin, true);
 }
 
@@ -743,7 +764,7 @@ void Ui::DrawDefaultDialog()
     }
   }
 
-  wrefresh(m_DialogWin);
+  RefreshWin(m_DialogWin);
 }
 
 void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= false */)
@@ -1015,7 +1036,7 @@ void Ui::DrawHelp()
         break;
     }
 
-    wrefresh(m_HelpWin);
+    RefreshWin(m_HelpWin);
   }
 }
 
@@ -1161,7 +1182,7 @@ void Ui::DrawFolderList()
     }
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::DrawAddressList()
@@ -1225,7 +1246,7 @@ void Ui::DrawAddressList()
     }
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::DrawFileList()
@@ -1315,7 +1336,7 @@ void Ui::DrawFileList()
     }
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 int Ui::GetPickerWidth()
@@ -1644,7 +1665,7 @@ void Ui::DrawMessageList()
     }
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::DrawMessageListSearch()
@@ -1838,7 +1859,7 @@ void Ui::DrawMessageListSearch()
     m_ImapManager->AsyncRequest(request);
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::DrawMessage()
@@ -2090,7 +2111,7 @@ void Ui::DrawMessage()
     MarkSeen();
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::DrawComposeMessage()
@@ -2223,7 +2244,7 @@ void Ui::DrawComposeMessage()
 
   leaveok(m_MainWin, false);
   wmove(m_MainWin, cursY, cursX);
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
   leaveok(m_MainWin, true);
 }
 
@@ -2283,7 +2304,7 @@ void Ui::DrawPartList()
     }
   }
 
-  wrefresh(m_MainWin);
+  RefreshWin(m_MainWin);
 }
 
 void Ui::AsyncUiRequest(char p_UiRequest)

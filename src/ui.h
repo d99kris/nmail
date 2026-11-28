@@ -142,6 +142,7 @@ private:
   void TerminalControlPause();
   void TerminalControlResume();
 
+  void RefreshWin(WINDOW* p_Win);
   void DrawAll();
   void DrawTop();
   void DrawDialog();
@@ -386,6 +387,7 @@ private:
   bool m_RespectFormatFlowed = true;
   bool m_RewrapQuotedLines = true;
   bool m_HelpEnabled = true;
+  bool m_DrawAllActive = false;
   double m_PickerWidth = 58;
 
   int m_KeyPrevMsg = 0;
