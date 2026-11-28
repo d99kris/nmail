@@ -273,12 +273,25 @@ add_executable(nmail
   src/theme.h
   src/ui.cpp
   src/ui.h
+  src/uiaddresslistview.cpp
+  src/uicomposeview.cpp
+  src/uidialogview.cpp
+  src/uiexternal.cpp
+  src/uifilelistview.cpp
+  src/uifolderlistview.cpp
+  src/uihelpview.cpp
   src/uikeyconfig.cpp
   src/uikeyconfig.h
   src/uikeydump.cpp
   src/uikeydump.h
   src/uikeyinput.cpp
   src/uikeyinput.h
+  src/uimessagelistview.cpp
+  src/uimessageview.cpp
+  src/uimodel.cpp
+  src/uipartlistview.cpp
+  src/uipickerview.cpp
+  src/uitopview.cpp
   src/upgrade.cpp
   src/upgrade.h
   src/uuid.cpp

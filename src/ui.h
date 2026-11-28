@@ -272,11 +272,11 @@ private:
   std::string GetDefaultFrom();
   std::wstring GetSignatureStr(bool p_NoPrefix = false);
 
-  inline bool HandleListKey(int p_Key, int& p_Index);
-  inline bool HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  inline bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  inline bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  inline bool HandleComposeKey(int p_Key);
+  bool HandleListKey(int p_Key, int& p_Index);
+  bool HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
+  bool HandleComposeKey(int p_Key);
 
   void OnWakeUp();
   void AutoMoveSelectFolder();
