@@ -236,8 +236,12 @@ add_executable(nmail
   src/mailutil.cpp
   src/mailutil.h
   src/main.cpp
+  src/mainconfig.cpp
+  src/mainconfig.h
   src/offlinequeue.cpp
   src/offlinequeue.h
+  src/owned_mutex.cpp
+  src/owned_mutex.h
   src/passutil.cpp
   src/passutil.h
   src/provider.cpp
@@ -274,12 +278,23 @@ add_executable(nmail
   src/ui.cpp
   src/ui.h
   src/uiaddresslistview.cpp
+  src/uiaddresslistview.h
+  src/uicolorconfig.cpp
+  src/uicolorconfig.h
   src/uicomposeview.cpp
+  src/uicomposeview.h
+  src/uiconfig.cpp
+  src/uiconfig.h
   src/uidialogview.cpp
+  src/uidialogview.h
   src/uiexternal.cpp
+  src/uiexternal.h
   src/uifilelistview.cpp
+  src/uifilelistview.h
   src/uifolderlistview.cpp
+  src/uifolderlistview.h
   src/uihelpview.cpp
+  src/uihelpview.h
   src/uikeyconfig.cpp
   src/uikeyconfig.h
   src/uikeydump.cpp
@@ -287,11 +302,21 @@ add_executable(nmail
   src/uikeyinput.cpp
   src/uikeyinput.h
   src/uimessagelistview.cpp
+  src/uimessagelistview.h
   src/uimessageview.cpp
+  src/uimessageview.h
   src/uimodel.cpp
+  src/uimodel.h
   src/uipartlistview.cpp
+  src/uipartlistview.h
   src/uipickerview.cpp
+  src/uipickerview.h
+  src/uiscreenview.cpp
+  src/uiscreenview.h
   src/uitopview.cpp
+  src/uitopview.h
+  src/uiviewbase.cpp
+  src/uiviewbase.h
   src/upgrade.cpp
   src/upgrade.h
   src/uuid.cpp

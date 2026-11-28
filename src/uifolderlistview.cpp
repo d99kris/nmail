@@ -5,23 +5,40 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uifolderlistview.h"
 
 #include <algorithm>
 #include <climits>
 
 #include "loghelp.h"
 #include "strutil.h"
+#include "uiconfig.h"
+#include "uimessagelistview.h"
 
-void Ui::DrawFolderList()
+UiFolderListView::UiFolderListView(Ui* p_Ui)
+  : UiPickerView(p_Ui)
 {
-  if (!m_HasRequestedFolders)
+  m_PersistFolderFilter = UiConfig::GetBool("persist_folder_filter");
+}
+
+void UiFolderListView::Draw()
+{
+  bool requestFolders = false;
+  {
+    UiModel::Lock model(m_Model);
+    if (!model->m_HasRequestedFolders)
+    {
+      model->m_HasRequestedFolders = true;
+      requestFolders = true;
+    }
+  }
+
+  if (requestFolders)
   {
     ImapManager::Request request;
     request.m_GetFolders = true;
     LOG_DEBUG("async req folders");
-    m_HasRequestedFolders = true;
-    m_ImapManager->AsyncRequest(request);
+    m_Model->GetImapManager()->AsyncRequest(request);
   }
 
   werase(m_MainWin);
@@ -31,15 +48,15 @@ void Ui::DrawFolderList()
   bool hasFolders = false;
   if (m_FolderListFilterStr.empty())
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    hasFolders = !m_Folders.empty();
-    folders = m_Folders;
+    UiModel::Lock model(m_Model);
+    hasFolders = !model->m_Folders.empty();
+    folders = model->m_Folders;
   }
   else
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    hasFolders = !m_Folders.empty();
-    for (const auto& folder : m_Folders)
+    UiModel::Lock model(m_Model);
+    hasFolders = !model->m_Folders.empty();
+    for (const auto& folder : model->m_Folders)
     {
       if (StrUtil::ToFold(folder).find(StrUtil::ToFold(StrUtil::ToString(m_FolderListFilterStr)))
           != std::string::npos)
@@ -55,8 +72,8 @@ void Ui::DrawFolderList()
     // longest name at 4/5 of width, min 4 padding, unfiltered to keep width stable
     int maxNameWidth = 0;
     {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      for (const auto& folder : m_Folders)
+      UiModel::Lock model(m_Model);
+      for (const auto& folder : model->m_Folders)
       {
         maxNameWidth = std::max(maxNameWidth, StrUtil::WStringWidth(StrUtil::ToWString(folder)));
       }
@@ -123,35 +140,35 @@ void Ui::DrawFolderList()
   RefreshWin(m_MainWin);
 }
 
-void Ui::ViewFolderListKeyHandler(int p_Key)
+void UiFolderListView::KeyHandler(int p_Key)
 {
   if (p_Key == m_KeyCancel)
   {
-    SetState(StateViewMessageList);
+    SetState(Ui::StateViewMessageList);
   }
   else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
            ((p_Key == m_KeyRight) && (m_FolderListFilterPos == (int)m_FolderListFilterStr.size())))
   {
     if (m_FolderListCurrentFolder != "")
     {
-      if (m_State == StateGotoFolder)
+      if (m_State == Ui::StateGotoFolder)
       {
         SetCurrentFolder(m_FolderListCurrentFolder);
-        SetState(StateViewMessageList);
-        UpdateIndexFromUid();
+        SetState(Ui::StateViewMessageList);
+        m_MessageListView->UpdateIndexFromUid();
       }
-      else if (m_State == StateMoveToFolder)
+      else if (m_State == Ui::StateMoveToFolder)
       {
         const std::string& folder = m_CurrentFolderUid.first;
         if (m_FolderListCurrentFolder != folder)
         {
-          MoveSelectedMessages(m_FolderListCurrentFolder);
+          m_MessageListView->MoveSelectedMessages(m_FolderListCurrentFolder);
           SetLastStateOrMessageList();
         }
         else
         {
           SetDialogMessage("Move to same folder ignored");
-          UpdateUidFromIndex(true /* p_UserTriggered */);
+          m_MessageListView->UpdateUidFromIndex(true /* p_UserTriggered */);
           SetState(m_LastState);
         }
 
@@ -164,7 +181,7 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
         }
       }
 
-      ClearSelection();
+      m_MessageListView->ClearSelection();
     }
   }
   else if (HandleListKey(p_Key, m_FolderListCurrentIndex))
@@ -181,4 +198,54 @@ void Ui::ViewFolderListKeyHandler(int p_Key)
   }
 
   DrawAll();
+}
+
+void UiFolderListView::OnEnter()
+{
+  if (m_State == Ui::StateGotoFolder)
+  {
+    curs_set(1);
+    m_FolderListFilterPos = 0;
+    m_FolderListFilterStr.clear();
+    m_FolderListCurrentFolder = m_CurrentFolder;
+    m_FolderListCurrentIndex = INT_MAX;
+  }
+  else if (m_State == Ui::StateMoveToFolder)
+  {
+    curs_set(1);
+    if (m_IsAutoMove)
+    {
+      m_FolderListFilterPos = 0;
+      m_FolderListFilterStr.clear();
+      m_FolderListCurrentFolder = m_MessageListView->AutoMoveSelectFolder();
+      m_FolderListCurrentIndex = INT_MAX;
+    }
+    else if (m_PersistFolderFilter)
+    {
+      m_FolderListFilterPos = m_PersistedFolderListFilterPos;
+      m_FolderListFilterStr = m_PersistedFolderListFilterStr;
+      if (!m_PersistedFolderListCurrentFolder.empty())
+      {
+        m_FolderListCurrentFolder = m_PersistedFolderListCurrentFolder;
+        m_FolderListCurrentIndex = m_PersistedFolderListCurrentIndex;
+      }
+      else
+      {
+        m_FolderListCurrentFolder = m_CurrentFolder;
+        m_FolderListCurrentIndex = INT_MAX;
+      }
+    }
+    else
+    {
+      m_FolderListFilterPos = 0;
+      m_FolderListFilterStr.clear();
+      m_FolderListCurrentFolder = m_CurrentFolder;
+      m_FolderListCurrentIndex = INT_MAX;
+    }
+  }
+}
+
+void UiFolderListView::DrawDialog()
+{
+  DrawSearchDialog(m_FolderListFilterStr, m_FolderListFilterPos);
 }

@@ -15,13 +15,25 @@
 
 #include <ncurses.h>
 
-#include "config.h"
 #include "fileutil.h"
 #include "imapmanager.h"
 #include "smtpmanager.h"
 #include "textstyle.h"
 
 class SleepDetect;
+class UiAddressListView;
+class UiComposeView;
+class UiDialogView;
+class UiExternal;
+class UiFileListView;
+class UiFolderListView;
+class UiHelpView;
+class UiMessageListView;
+class UiMessageView;
+class UiModel;
+class UiPartListView;
+class UiScreenView;
+class UiTopView;
 
 class Ui
 {
@@ -51,6 +63,7 @@ public:
     UiRequestDrawError = (1 << 1),
     UiRequestHandleConnected = (1 << 2),
     UiRequestSpecialFolders = (1 << 3),
+    UiRequestBell = (1 << 4),
   };
 
   enum PrefetchLevel
@@ -132,6 +145,7 @@ public:
                      const ImapManager::SearchResult& p_SearchResult);
 
 public:
+  static bool IsRunning();
   static void SetRunning(bool p_Running);
 
 private:
@@ -145,197 +159,35 @@ private:
 
   void RefreshWin(WINDOW* p_Win);
   void DrawAll();
-  void DrawTop();
-  void DrawDialog();
-  void DrawSearchDialog();
-  void DrawDefaultDialog();
-  void DrawHelp();
-  void DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, int p_KeyWidth = 0);
-  void DrawFolderList();
-  void DrawAddressList();
-  void DrawFileList();
-  int GetPickerWidth();
-  std::wstring GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos);
-  void DrawMessageList();
-  void DrawMessageListSearch();
-  void DrawMessage();
-  void DrawComposeMessage();
-  void DrawPartList();
 
   void AsyncUiRequest(char p_UiRequest);
   void PerformUiRequest(char p_UiRequest);
-  void SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn = false);
 
-  void ViewFolderListKeyHandler(int p_Key);
-  void ViewAddressListKeyHandler(int p_Key);
-  void ViewFileListKeyHandler(int p_Key);
-  void ViewMessageListKeyHandler(int p_Key);
-  void ViewMessageKeyHandler(int p_Key);
-  void ComposeMessageKeyHandler(int p_Key);
-  void ViewPartListKeyHandler(int p_Key);
 
   void SetState(State p_State);
+  UiScreenView* GetScreenView(State p_State);
   bool IsConnected();
 
-  std::string GetKeyDisplay(int p_Key);
-  std::string GetStatusStr();
-  std::string GetStateStr();
-  std::string GetCountStateStr();
-  std::string GetFilterStateStr();
-  bool IsValidTextKey(int p_Key);
-
-  bool ComposedMessageIsValid(bool p_ForSend);
-  void SendComposedMessage();
-  void UploadDraftMessage();
-  bool DeleteMessage();
-  void MoveSelectedMessages(const std::string& p_To);
-  void MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_From,
-                    const std::string& p_To);
-  void DeleteSelectedMessages();
-  void DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Folder);
-  void ToggleSeen();
-  void SetSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Seen);
-  void MarkSeen();
-  void UpdateUidFromIndex(bool p_UserTriggered);
-  void UpdateIndexFromUid();
-  void AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders);
-  void RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
-  int GetComposeMessageColumn();
-  void SetComposeMessagePos(int p_WrapLine, int p_Column);
-  void ComposeMessagePrevLine();
-  void ComposeMessageNextLine();
-  int ReadKeyBlocking();
-  bool PromptYesNo(const std::string& p_Prompt);
-  bool PromptString(const std::string& p_Prompt, const std::string& p_Action,
-                    std::string& p_Entry);
-  bool CurrentMessageBodyHeaderAvailable();
-  void InvalidateUiCache(const std::string& p_Folder);
-  void InvalidateUidCache(const std::string& p_Folder);
-  void ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos);
-  void ExtPager();
-  int ExtPartsViewer(const std::string& p_Path);
-  void ExtHtmlViewer();
-  int ExtHtmlViewer(const std::string& p_Path);
-  int ExtHtmlPreview(const std::string& p_Path);
-  void ExtMsgViewer();
-  int ExtMsgViewer(const std::string& p_Path);
-  bool IsLinkSelected();
-  void SelectLink(bool p_Next);
-  void OpenLink();
-  void SetComposeMailto(const std::string& p_Url);
   void SetLastStateOrMessageList();
-  void ExportMessage();
-  void SaveMessageView(bool p_Markdown);
-  void ImportMessage();
-  void SearchMessageBasedOnCurrent(bool p_Subject);
-  void SearchMessage(bool p_IsLocal, const std::string& p_Query = std::string());
-  void MessageFind();
-  void MessageFindNext();
   void Quit();
-  std::wstring GetComposeStr(int p_HeaderField);
-  void SetComposeStr(int p_HeaderField, const std::wstring& p_Str);
-  std::wstring GetComposeBodyForSend();
-  int GetCurrentHeaderField();
   void StartSync();
-  std::string MakeHtmlPart(const std::string& p_Text);
-  std::string MakeHtmlPartCustomSig(const std::string& p_Text);
   void HandleConnected();
-  void HandleSpecialFolders();
-  void StartComposeBackup();
-  void StopComposeBackup();
-  void ComposeBackupProcess();
-
-  std::map<std::string, uint32_t>& GetDisplayUids(const std::string& p_Folder);
-  std::set<uint32_t>& GetHeaderUids(const std::string& p_Folder);
-  std::string GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, SortFilter p_SortFilter);
-  void UpdateDisplayUids(const std::string& p_Folder,
-                         const std::set<uint32_t>& p_RemovedUids = std::set<uint32_t>(),
-                         const std::set<uint32_t>& p_AddedUids = std::set<uint32_t>(),
-                         bool p_FilterUpdated = false);
-  void SortFilterPreUpdate();
-  void SortFilterUpdated(bool p_FilterUpdated);
-  void DisableSortFilter();
-  void ToggleFilter(SortFilter p_SortFilter);
-  void ToggleSort(SortFilter p_SortFirst, SortFilter p_SortSecond);
-  const std::vector<std::wstring>& GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid);
-  std::string GetHeaderLabel(const std::string& p_Name) const;
-  void ClearSelection();
-  void ToggleSelected();
-  void ToggleSelectAll();
-  int GetSelectedCount();
-
-  std::string GetBodyText(Body& p_Body);
-  void FilePickerOrStateFileList();
-  void AddAttachmentPath(const std::string& p_Path);
-  void AddAddress(const std::string& p_Address);
-  void SetAddress(const std::string& p_Address);
-  std::string GetDefaultFrom();
-  std::wstring GetSignatureStr(bool p_NoPrefix = false);
-
-  bool HandleListKey(int p_Key, int& p_Index);
-  bool HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  bool HandleTextKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  bool HandleDocKey(int p_Key, std::wstring& p_Str, int& p_Pos);
-  bool HandleComposeKey(int p_Key);
 
   void OnWakeUp();
-  void AutoMoveSelectFolder();
   void SetCurrentFolder(const std::string& p_Folder);
 
 private:
-  // message view header value column, labels as in compose, e.g. "Reply-To: "
-  static const size_t HEADER_VALUE_COL = 10;
-  // min header value width for wrapping with hanging indent
-  static const size_t HEADER_VALUE_MIN_WIDTH = 30;
-
-  std::shared_ptr<ImapManager> m_ImapManager;
+  std::unique_ptr<UiModel> m_Model;
   std::shared_ptr<SmtpManager> m_SmtpManager;
-  std::string m_TrashFolder;
-  std::string m_SpamFolder;
-  std::string m_DraftsFolder;
-  std::string m_SentFolder;
-  std::map<std::string, std::string> m_DetectedSpecialFolders;
-  std::function<void(const std::map<std::string, std::string>&)> m_SpecialFoldersHandler;
-  bool m_ClientStoreSent = false;
 
-  std::string m_Inbox;
-  std::string m_Address;
   std::string m_Name;
-  uint32_t m_PrefetchLevel = 0;
 
   std::string m_CurrentFolder = "INBOX";
   std::string m_PreviousFolder;
 
-  std::mutex m_Mutex;
-  Status m_Status;
-  std::set<std::string> m_Folders;
-  std::map<std::string, std::set<uint32_t>> m_Uids;
-  std::map<std::string, std::map<uint32_t, Header>> m_Headers;
-  std::map<std::string, std::map<uint32_t, uint32_t>> m_Flags;
-  std::map<std::string, std::map<uint32_t, Body>> m_Bodys;
-  std::map<std::string, SortFilter> m_SortFilter;
-  std::map<std::string, std::set<uint32_t>> m_HeaderUids;
-  std::map<std::string, std::map<SortFilter, std::map<std::string, uint32_t>>> m_DisplayUids;
-  std::map<std::string, std::map<SortFilter, uint64_t>> m_DisplayUidsVersion;
-  std::map<std::string, uint64_t> m_HeaderUidsVersion;
 
-  SyncState m_SyncState = SyncStateIdle;
-  bool m_HasRequestedFolders = false;
-  bool m_HasPrefetchRequestedFolders = false;
-  std::map<std::string, bool> m_HasRequestedUids;
-  std::map<std::string, std::set<uint32_t>> m_PrefetchedHeaders;
-  std::map<std::string, std::set<uint32_t>> m_RequestedHeaders;
 
-  std::map<std::string, std::set<uint32_t>> m_PrefetchedFlags;
-  std::map<std::string, std::set<uint32_t>> m_RequestedFlags;
 
-  std::map<std::string, std::set<uint32_t>> m_PrefetchedBodys;
-  std::map<std::string, std::set<uint32_t>> m_RequestedBodys;
-
-  std::vector<std::string> m_Addresses;
-
-  std::string m_CurrentDir;
-  std::set<Fileinfo, FileinfoCompare> m_Files;
 
   WINDOW* m_TopWin = NULL;
   WINDOW* m_MainWin = NULL;
@@ -348,293 +200,73 @@ private:
   int m_TermCols = 0;
   int m_MainWinHeight = 0;
 
-  std::string m_DialogMessage;
-  std::chrono::time_point<std::chrono::system_clock> m_DialogMessageTime;
-
   std::map<std::string, int32_t> m_MessageListCurrentIndex;
   std::map<std::string, int32_t> m_MessageListCurrentUid;
-  std::map<std::string, bool> m_MessageListUidSet;
-
-  int m_AddressListCurrentIndex = 0;
-  std::string m_AddressListCurrentAddress;
-
-  int m_FileListCurrentIndex = 0;
-  Fileinfo m_FileListCurrentFile;
-
-  int m_PartListCurrentIndex = 0;
-  PartInfo m_PartListCurrentPartInfo;
 
   int m_MessageViewLineOffset = 0;
-  bool m_PersistFileSelectionDir = true;
-  bool m_PersistFindQuery = false;
-  bool m_PersistFolderFilter = true;
-  bool m_PersistSearchQuery = false;
   bool m_Plaintext = false;
-  bool m_MarkdownHtmlCompose = false;
   bool m_MarkdownView = false;
   bool m_MarkdownViewLinks = false;
-  bool m_PlainViewLinks = false;
-  bool m_AlignHeaderLabels = true;
   bool m_CurrentMarkdownHtmlCompose = false;
   bool m_IsAutoMove = false;
 
-  int m_FolderListCurrentIndex = 0;
-  std::string m_FolderListCurrentFolder;
-
-  int m_PersistedFolderListCurrentIndex = 0;
-  std::string m_PersistedFolderListCurrentFolder;
-
-  Config m_Config;
-
   int m_ComposeLineWrap = LineWrapNone;
-  bool m_RespectFormatFlowed = true;
-  bool m_RewrapQuotedLines = true;
   bool m_HelpEnabled = true;
   bool m_DrawAllActive = false;
-  double m_PickerWidth = 58;
 
-  int m_KeyPrevMsg = 0;
-  int m_KeyNextMsg = 0;
-  int m_KeyReplyAll = 0;
-  int m_KeyReplySender = 0;
-  int m_KeyForward = 0;
-  int m_KeyForwardAttached = 0;
-  int m_KeyDelete = 0;
-  int m_KeyCompose = 0;
-  int m_KeyComposeCopy = 0;
-  int m_KeyToggleUnread = 0;
-  int m_KeyMove = 0;
-  int m_KeyAutoMove = 0;
-  int m_KeyRefresh = 0;
-  int m_KeyQuit = 0;
-  int m_KeyToggleTextHtml = 0;
-  int m_KeyCancel = 0;
-  int m_KeySend = 0;
-  int m_KeyDeleteCharAfterCursor = 0;
-  int m_KeyDeleteLineAfterCursor = 0;
-  int m_KeyDeleteLineBeforeCursor = 0;
-  int m_KeyOpen = 0;
-  int m_KeyBack = 0;
-  int m_KeyGotoFolder = 0;
-  int m_KeyGotoInbox = 0;
-  int m_KeyToSelect = 0;
-  int m_KeySaveFile = 0;
-  int m_KeySaveAllFiles = 0;
-  int m_KeySaveMarkdown = 0;
-  int m_KeyExtEditor = 0;
-  int m_KeyExtPager = 0;
-  int m_KeyPostpone = 0;
-  int m_KeyOtherCmdHelp = 0;
-  int m_KeyExport = 0;
-  int m_KeyImport = 0;
-  int m_KeyRichHeader = 0;
-  int m_KeyExtHtmlViewer = 0;
-  int m_KeyExtHtmlPreview = 0;
-  int m_KeyExtMsgViewer = 0;
-  int m_KeySearch = 0;
-  int m_KeyFind = 0;
-  int m_KeyFindNext = 0;
-  int m_KeySync = 0;
-  int m_KeyToggleMarkdownCompose = 0;
-  int m_KeyNextLink = 0;
-  int m_KeyPrevLink = 0;
-  int m_KeyOpenLink = 0;
-  int m_KeyBackwardWord = 0;
-  int m_KeyForwardWord = 0;
-  int m_KeyBackwardKillWord = 0;
-  int m_KeyKillWord = 0;
-  int m_KeyBeginLine = 0;
-  int m_KeyEndLine = 0;
-  int m_KeyPrevPage = 0;
-  int m_KeyNextPage = 0;
-  int m_KeyPrevPageCompose = 0;
-  int m_KeyNextPageCompose = 0;
-  int m_KeyFilterSortReset = 0;
-  int m_KeyFilterShowUnread = 0;
-  int m_KeyFilterShowHasAttachments = 0;
-  int m_KeyFilterShowCurrentDate = 0;
-  int m_KeyFilterShowCurrentName = 0;
-  int m_KeyFilterShowCurrentSubject = 0;
-  int m_KeySortUnread = 0;
-  int m_KeySortHasAttachments = 0;
-  int m_KeySortDate = 0;
-  int m_KeySortName = 0;
-  int m_KeySortSubject = 0;
-  int m_KeyJumpTo = 0;
-  int m_KeyToggleFullHeader = 0;
-  int m_KeyToggleCompactHeader = 0;
-  int m_KeySelectItem = 0;
-  int m_KeySelectAll = 0;
-  int m_KeySearchShowFolder = 0;
-  int m_KeySearchCurrentSubject = 0;
-  int m_KeySearchCurrentName = 0;
-  int m_KeySpell = 0;
-  int m_KeySearchServer = 0;
-
-  int m_KeyReturn = 0;
-  int m_KeyEnter = 0;
-  int m_KeyLeft = 0;
-  int m_KeyRight = 0;
-
-  int m_KeyDown = 0;
-  int m_KeyUp = 0;
-  int m_KeyEnd = 0;
-  int m_KeyHome = 0;
-  int m_KeyBackspace = 0;
-  int m_KeyBackspaceAlt = 0;
-  int m_KeyDeleteChar = 0;
-  int m_KeySpace = 0;
-  int m_KeyTab = 0;
   int m_KeyTerminalResize = 0;
 
   int m_ShowProgress = 1;
-  bool m_NewMsgBell = false;
   bool m_QuitWithoutConfirm = true;
-  bool m_SendWithoutConfirm = false;
-  bool m_CancelWithoutConfirm = false;
-  bool m_PostponeWithoutConfirm = false;
-  bool m_DeleteWithoutConfirm = false;
-  bool m_ShowEmbeddedImages = true;
-  bool m_ShowRichHeader = false;
-  bool m_ColorsEnabled = false;
-  bool m_ShowFullHeader = false;
-  bool m_ShowCompactHeader = false;
-  bool m_SearchShowFolder = false;
-  bool m_Signature = false;
-  bool m_TopBarShowVersion = false;
-  bool m_UnwrapQuotedLines = false;
-  bool m_AutomoveTrashAllow = false;
-  bool m_TopBarShowMessageCount = false;
 
   std::string m_TerminalTitle;
 
   int m_AttrsRegularText = A_NORMAL;
-  int m_AttrsDialog = A_REVERSE;
-  int m_AttrsHelpDesc = A_NORMAL;
-  int m_AttrsHelpKeys = A_REVERSE;
-  int m_AttrsHighlightedText = A_REVERSE;
-  int m_AttrsQuotedText = A_NORMAL;
-  int m_AttrsHiddenFile = A_NORMAL;
-  int m_AttrsAddressText = A_NORMAL;
-  int m_AttrsTopBar = A_REVERSE;
-  int m_AttrsSelectedItem = A_NORMAL;
-  int m_AttrsSelectedHighlighted = A_NORMAL;
-  int m_AttrsBoldText = A_NORMAL;
-  int m_AttrsCodeText = A_NORMAL;
-  int m_AttrsHeaderName = A_NORMAL;
-  int m_AttrsItalicText = A_NORMAL;
-  int m_AttrsStrikeText = A_NORMAL;
-  int m_AttrsSignatureText = A_NORMAL;
-  int m_AttrsLinkText = A_UNDERLINE;
-  int m_AttrsHighlightedLink = A_REVERSE;
 
-  std::string m_AttachmentIndicator;
-  bool m_BottomReply = false;
-  bool m_PersistSortFilter = true;
-  bool m_PersistSelectionOnSortFilterChange = true;
-  std::string m_UnreadIndicator;
-  bool m_InvalidInputNotify = true;
-  bool m_FullHeaderIncludeLocal = false;
-
-  int m_FolderListFilterPos = 0;
-  std::wstring m_FolderListFilterStr;
-
-  int m_PersistedFolderListFilterPos = 0;
-  std::wstring m_PersistedFolderListFilterStr;
-
-  int m_AddressListFilterPos = 0;
-  std::wstring m_AddressListFilterStr;
-
-  int m_FileListFilterPos = 0;
-  std::wstring m_FileListFilterStr;
-
-  int m_FilenameEntryStringPos = 0;
-  std::wstring m_FilenameEntryString;
-
-  std::map<uint32_t, std::wstring> m_ComposeHeaderStr;
-  int m_ComposeHeaderLine = 0;
-  int m_ComposeHeaderPos = 0;
-  bool m_IsComposeHeader = true;
-
-  std::string m_ComposeHeaderRef;
-  std::string m_ComposeTempDirectory;
-
-  std::wstring m_ComposeMessageStr;
-  int m_ComposeMessagePos = 0;
-  std::vector<std::wstring> m_ComposeMessageLines;
-  std::vector<int> m_ComposeMessageLineOffsets;
-  int m_ComposeMessageWrapLine = 0;
-  int m_ComposeMessageWrapPos = 0;
-  int m_ComposeMessageOffsetY = 0;
-  uint32_t m_ComposeDraftUid = 0;
-  std::string m_ComposeQuotedStart;
   std::string m_ComposeMailto;
 
-  std::deque<SmtpManager::Result> m_SmtpErrorResults;
-  std::mutex m_SmtpErrorMutex;
 
   State m_State = StateViewMessageList;
   State m_LastState = StateViewMessageList;
   State m_LastMessageState = StateComposeMessage;
 
-  int m_HelpViewMessagesListOffset = 0;
-  int m_HelpViewMessagesListSize = 0;
-  int m_HelpViewMessageOffset = 0;
-  int m_HelpViewMessageSize = 0;
+  std::unique_ptr<UiTopView> m_TopView;
+  std::unique_ptr<UiHelpView> m_HelpView;
+  std::unique_ptr<UiDialogView> m_DialogView;
+  std::unique_ptr<UiExternal> m_External;
+  std::unique_ptr<UiAddressListView> m_AddressListView;
+  std::unique_ptr<UiFileListView> m_FileListView;
+  std::unique_ptr<UiPartListView> m_PartListView;
+  std::unique_ptr<UiFolderListView> m_FolderListView;
+  std::unique_ptr<UiComposeView> m_ComposeView;
+  std::unique_ptr<UiMessageView> m_MessageView;
+  std::unique_ptr<UiMessageListView> m_MessageListView;
 
   bool m_MessageViewToggledSeen = false;
 
-  std::string m_CurrentMessageViewText;
 
   int m_MaxViewLineLength = 0;
   int m_MaxComposeLineLength = 0;
 
   int m_Pipe[2] = { -1, -1 };
 
-  std::mutex m_SearchMutex;
   bool m_MessageListSearch = false;
   std::string m_MessageListSearchQuery;
-  size_t m_MessageListSearchOffset = 0;
-  size_t m_MessageListSearchMax = 0;
-  bool m_MessageListSearchHasMore = false;
-  std::vector<Header> m_MessageListSearchResultHeaders;
-  std::vector<std::pair<std::string, uint32_t>> m_MessageListSearchResultFolderUids;
 
   std::pair<std::string, int32_t> m_CurrentFolderUid = std::make_pair("", -1);
 
-  uint32_t m_ComposeBackupInterval = 0;
-  std::thread m_ComposeBackupThread;
-  bool m_ComposeBackupRunning = false;
-  bool m_ComposeBackupKeep = false;
-  std::condition_variable m_ComposeBackupCond;
-  std::mutex m_ComposeBackupMutex;
 
   int m_MessageFindMatchLine = -1;
-  int m_MessageFindMatchPos = 0;
-  int m_MessageFindMatchLen = 0;
   std::string m_MessageFindQuery;
-  bool m_PrefetchAllHeaders = true;
   bool m_CurrentMessageProcessFlowed = false;
-  bool m_CurrentMessageFromHtml = false;
-  int m_MessageViewHeaderLineCount = 0;
-  std::vector<std::wstring> m_MessageViewLines;
-  std::vector<std::vector<TextStyle::Span>> m_MessageViewSpans;
-  std::vector<TextStyle::Link> m_MessageViewLinks;
-  std::pair<std::string, int32_t> m_MessageViewLinksFolderUid = std::make_pair("", -1);
-  int m_MessageViewLinkIndex = -1;
-  bool m_MessageViewLinkPastEnd = false; // index before first or after last link
-  int m_MessageViewLinkPastEndOffset = 0; // view offset when past end
 
-  std::string m_FilterCustomStr;
-  int m_TabSize = 8;
 
-  std::map<std::string, std::set<uint32_t>> m_SelectedUids;
-  bool m_AllSelected = false;
 
   std::unique_ptr<SleepDetect> m_SleepDetect;
 
-  bool m_IsLocalSearch = true;
 
 private:
   static bool s_Running;
+
+  friend class UiViewBase;
 };

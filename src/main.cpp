@@ -26,6 +26,7 @@
 #include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
+#include "mainconfig.h"
 #include "offlinequeue.h"
 #include "passutil.h"
 #include "sasl.h"
@@ -167,8 +168,7 @@ int main(int argc, char* argv[])
   }
 
   // start setup wizard on first run
-  const std::string mainConfigFile = AppUtil::GetApplicationDir() + std::string("main.conf");
-  const bool hasMainConfig = apathy::Path(mainConfigFile).exists();
+  const bool hasMainConfig = apathy::Path(MainConfig::GetPath()).exists();
   if (setup.empty() && !readOnly && !changePass && !keyDump && exportDir.empty() && !hasMainConfig &&
       isatty(STDIN_FILENO))
   {
@@ -230,66 +230,7 @@ int main(int argc, char* argv[])
   FileUtil::InitTempDir();
   CacheUtil::InitCacheDir();
 
-  const std::map<std::string, std::string> defaultMainConfig =
-  {
-    { "name", "" },
-    { "address", "" },
-    { "user", "" },
-    { "imap_host", "" },
-    { "imap_port", "993" },
-    { "smtp_host", "" },
-    { "smtp_port", "587" },
-    { "smtp_user", "" },
-    { "save_pass", "1" },
-    { "idle_inbox", "1" },
-    { "inbox", "INBOX" },
-    { "trash", "" },
-    { "spam", "" },
-    { "drafts", "" },
-    { "sent", "" },
-    { "addressbook_encrypt", "0" },
-    { "cache_encrypt", "0" },
-    { "cache_index_encrypt", "0" },
-    { "client_store_sent", "0" },
-    { "coredump_enabled", "0" },
-    { "html_to_text_cmd", "" },
-    { "text_to_html_cmd", "" },
-    { "parts_viewer_cmd", "" },
-    { "html_viewer_cmd", "" },
-    { "html_preview_cmd", "" },
-    { "msg_viewer_cmd", "" },
-    { "link_open_cmd", "" },
-    { "prefetch_level", "2" },
-    { "prefetch_all_headers", "1" },
-    { "verbose_logging", "0" },
-    { "pager_cmd", "" },
-    { "editor_cmd", "" },
-    { "spell_cmd", "" },
-    { "browser_cmd", "" },
-    { "folders_exclude", "" },
-    { "server_timestamps", "0" },
-    { "network_timeout_sec", "30" },
-    { "queue_encrypt", "1" },
-    { "auth", "pass" },
-    { "auth_encrypt", "1" },
-    { "send_ip", "1" },
-    { "file_picker_cmd", "" },
-    { "downloads_dir", "" },
-    { "idle_timeout_min", "29" },
-    { "idle_delay_sec", "15" },
-    { "sni_enabled", "1" },
-    { "logdump_enabled", "0" },
-    { "copy_to_trash", "" },
-    { "assert_abort", "0" },
-  };
-  const std::map<std::string, std::string> renamedMainConfig =
-  {
-    { "idle_timeout", "idle_timeout_min" },
-    { "network_timeout", "network_timeout_sec" },
-  };
-  const std::string mainConfigPath(AppUtil::GetApplicationDir() + std::string("main.conf"));
-  std::shared_ptr<Config> mainConfig =
-    std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
+  MainConfig::Init();
 
   const std::string secretConfigPath(AppUtil::GetApplicationDir() + std::string("secret.conf"));
 
@@ -309,30 +250,30 @@ int main(int argc, char* argv[])
   }
 
   // Read params needed for setup
-  ExtUtil::SetBrowserCmd(mainConfig->Get("browser_cmd"));
+  ExtUtil::SetBrowserCmd(MainConfig::GetStr("browser_cmd"));
 
   if (isSetup)
   {
     LOG_INFO("start setup");
-    mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
+    MainConfig::Init();
 
-    if (!SetupWizard::Run(setup, mainConfig, defaultMainConfig))
+    if (!SetupWizard::Run(setup, MainConfig::GetConfig(), MainConfig::GetDefaultConfig()))
     {
       if (!hasMainConfig)
       {
         // remove default config created above, to rerun setup on next start
-        remove(mainConfigPath.c_str());
+        remove(MainConfig::GetPath().c_str());
       }
 
       return 1;
     }
 
-    remove(mainConfigPath.c_str());
+    remove(MainConfig::GetPath().c_str());
     remove(secretConfigPath.c_str());
     FileUtil::RmDir(AppUtil::GetApplicationDir() + std::string("cache"));
     CacheUtil::InitCacheDir();
 
-    mainConfig->Save();
+    MainConfig::Save();
   }
 
   // Read secret config
@@ -340,51 +281,51 @@ int main(int argc, char* argv[])
   std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
   // Read main config
-  const std::string& name = mainConfig->Get("name");
-  const std::string& address = mainConfig->Get("address");
-  const std::string& user = mainConfig->Get("user");
-  const std::string& imapHost = mainConfig->Get("imap_host");
-  const std::string& smtpHost = mainConfig->Get("smtp_host");
-  std::string smtpUser = mainConfig->Get("smtp_user");
-  const std::string& inbox = mainConfig->Get("inbox");
-  std::string trash = mainConfig->Get("trash");
-  std::string spam = mainConfig->Get("spam");
-  std::string drafts = mainConfig->Get("drafts");
-  std::string sent = mainConfig->Get("sent");
-  const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
-  const bool idleInbox = (mainConfig->Get("idle_inbox") == "1");
-  ExtUtil::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
-  ExtUtil::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
-  ExtUtil::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
-  ExtUtil::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
-  ExtUtil::SetHtmlPreviewCmd(mainConfig->Get("html_preview_cmd"));
-  ExtUtil::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
-  ExtUtil::SetLinkOpenCmd(mainConfig->Get("link_open_cmd"));
-  ExtUtil::SetPagerCmd(mainConfig->Get("pager_cmd"));
-  ExtUtil::SetEditorCmd(mainConfig->Get("editor_cmd"));
-  ExtUtil::SetSpellCmd(mainConfig->Get("spell_cmd"));
-  std::set<std::string> foldersExclude = ToSet(StrUtil::SplitQuoted(mainConfig->Get("folders_exclude"), true));
-  AppUtil::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
-  const std::string auth = mainConfig->Get("auth");
-  const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
-  AppUtil::SetSendIp(mainConfig->Get("send_ip") == "1");
-  ExtUtil::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
-  FileUtil::SetDownloadsDir(mainConfig->Get("downloads_dir"));
-  const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
-  const bool sniEnabled = (mainConfig->Get("sni_enabled") == "1");
-  const bool isLogdumpEnabled = (mainConfig->Get("logdump_enabled") == "1");
-  AppUtil::SetCopyToTrash(mainConfig->Get("copy_to_trash"), mainConfig->Get("imap_host"));
-  mainConfig->Set("copy_to_trash", std::to_string(AppUtil::GetCopyToTrash()));
-  AppUtil::SetAssertAbort(mainConfig->Get("assert_abort") == "1");
+  const std::string& name = MainConfig::GetStr("name");
+  const std::string& address = MainConfig::GetStr("address");
+  const std::string& user = MainConfig::GetStr("user");
+  const std::string& imapHost = MainConfig::GetStr("imap_host");
+  const std::string& smtpHost = MainConfig::GetStr("smtp_host");
+  std::string smtpUser = MainConfig::GetStr("smtp_user");
+  const std::string& inbox = MainConfig::GetStr("inbox");
+  std::string trash = MainConfig::GetStr("trash");
+  std::string spam = MainConfig::GetStr("spam");
+  std::string drafts = MainConfig::GetStr("drafts");
+  std::string sent = MainConfig::GetStr("sent");
+  const bool clientStoreSent = MainConfig::GetBool("client_store_sent");
+  const bool idleInbox = MainConfig::GetBool("idle_inbox");
+  ExtUtil::SetHtmlToTextConvertCmd(MainConfig::GetStr("html_to_text_cmd"));
+  ExtUtil::SetTextToHtmlConvertCmd(MainConfig::GetStr("text_to_html_cmd"));
+  ExtUtil::SetPartsViewerCmd(MainConfig::GetStr("parts_viewer_cmd"));
+  ExtUtil::SetHtmlViewerCmd(MainConfig::GetStr("html_viewer_cmd"));
+  ExtUtil::SetHtmlPreviewCmd(MainConfig::GetStr("html_preview_cmd"));
+  ExtUtil::SetMsgViewerCmd(MainConfig::GetStr("msg_viewer_cmd"));
+  ExtUtil::SetLinkOpenCmd(MainConfig::GetStr("link_open_cmd"));
+  ExtUtil::SetPagerCmd(MainConfig::GetStr("pager_cmd"));
+  ExtUtil::SetEditorCmd(MainConfig::GetStr("editor_cmd"));
+  ExtUtil::SetSpellCmd(MainConfig::GetStr("spell_cmd"));
+  std::set<std::string> foldersExclude = ToSet(StrUtil::SplitQuoted(MainConfig::GetStr("folders_exclude"), true));
+  AppUtil::SetUseServerTimestamps(MainConfig::GetBool("server_timestamps"));
+  const std::string auth = MainConfig::GetStr("auth");
+  const bool prefetchAllHeaders = MainConfig::GetBool("prefetch_all_headers");
+  AppUtil::SetSendIp(MainConfig::GetBool("send_ip"));
+  ExtUtil::SetFilePickerCmd(MainConfig::GetStr("file_picker_cmd"));
+  FileUtil::SetDownloadsDir(MainConfig::GetStr("downloads_dir"));
+  const bool isCoredumpEnabled = MainConfig::GetBool("coredump_enabled");
+  const bool sniEnabled = MainConfig::GetBool("sni_enabled");
+  const bool isLogdumpEnabled = MainConfig::GetBool("logdump_enabled");
+  AppUtil::SetCopyToTrash(MainConfig::GetStr("copy_to_trash"), MainConfig::GetStr("imap_host"));
+  MainConfig::SetStr("copy_to_trash", std::to_string(AppUtil::GetCopyToTrash()));
+  AppUtil::SetAssertAbort(MainConfig::GetBool("assert_abort"));
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
   {
-    if (mainConfig->Get("verbose_logging") == "1")
+    if (MainConfig::GetStr("verbose_logging") == "1")
     {
       Log::SetVerboseLevel(Log::DEBUG_LEVEL);
     }
-    else if (mainConfig->Get("verbose_logging") == "2")
+    else if (MainConfig::GetStr("verbose_logging") == "2")
     {
       Log::SetVerboseLevel(Log::TRACE_LEVEL);
     }
@@ -410,7 +351,7 @@ int main(int argc, char* argv[])
   }
 
   // Log config
-  mainConfig->LogParamsExcept(std::set<std::string>({ "name", "address", "user", "smtp_user" }));
+  MainConfig::LogParamsExcept(std::set<std::string>({ "name", "address", "user", "smtp_user" }));
 
   uint16_t imapPort = 0;
   uint16_t smtpPort = 0;
@@ -420,12 +361,12 @@ int main(int argc, char* argv[])
   uint32_t idleDelay = 15;
   try
   {
-    imapPort = std::stoi(mainConfig->Get("imap_port"));
-    smtpPort = std::stoi(mainConfig->Get("smtp_port"));
-    prefetchLevel = std::stoi(mainConfig->Get("prefetch_level"));
-    networkTimeout = std::stoll(mainConfig->Get("network_timeout_sec"));
-    idleTimeout = std::stoi(mainConfig->Get("idle_timeout_min"));
-    idleDelay = std::stoi(mainConfig->Get("idle_delay_sec"));
+    imapPort = std::stoi(MainConfig::GetStr("imap_port"));
+    smtpPort = std::stoi(MainConfig::GetStr("smtp_port"));
+    prefetchLevel = std::stoi(MainConfig::GetStr("prefetch_level"));
+    networkTimeout = std::stoll(MainConfig::GetStr("network_timeout_sec"));
+    idleTimeout = std::stoi(MainConfig::GetStr("idle_timeout_min"));
+    idleDelay = std::stoi(MainConfig::GetStr("idle_delay_sec"));
   }
   catch (...)
   {
@@ -439,14 +380,14 @@ int main(int argc, char* argv[])
 
   if (changePass)
   {
-    return PassUtil::ChangePasswords(mainConfig, secretConfig) ? 0 : 1;
+    return PassUtil::ChangePasswords(MainConfig::GetConfig(), secretConfig) ? 0 : 1;
   }
 
   std::string pass;
   std::string smtpPass;
   if (auth == "pass")
   {
-    if (!PassUtil::ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
+    if (!PassUtil::ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, MainConfig::GetConfig()))
     {
       return 1;
     }
@@ -454,7 +395,7 @@ int main(int argc, char* argv[])
   else
   {
     if (!PassUtil::ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass,
-                                              secretConfig, mainConfig))
+                                              secretConfig, MainConfig::GetConfig()))
     {
       return 1;
     }
@@ -462,15 +403,15 @@ int main(int argc, char* argv[])
 
   if (isSetup)
   {
-    std::cout << "Config saved to " << GetDisplayPath(mainConfigPath) << "\n";
+    std::cout << "Config saved to " << GetDisplayPath(MainConfig::GetPath()) << "\n";
   }
 
   // Read config that may be updated during authentication
-  const bool cacheEncrypt = (mainConfig->Get("cache_encrypt") == "1");
-  const bool cacheIndexEncrypt = (mainConfig->Get("cache_index_encrypt") == "1");
-  const bool addressBookEncrypt = (mainConfig->Get("addressbook_encrypt") == "1");
-  const bool queueEncrypt = (mainConfig->Get("queue_encrypt") == "1");
-  const bool authEncrypt = (mainConfig->Get("auth_encrypt") == "1");
+  const bool cacheEncrypt = MainConfig::GetBool("cache_encrypt");
+  const bool cacheIndexEncrypt = MainConfig::GetBool("cache_index_encrypt");
+  const bool addressBookEncrypt = MainConfig::GetBool("addressbook_encrypt");
+  const bool queueEncrypt = MainConfig::GetBool("queue_encrypt");
+  const bool authEncrypt = MainConfig::GetBool("auth_encrypt");
 
   // Perform export if requested
   if (!exportDir.empty())
@@ -520,15 +461,15 @@ int main(int argc, char* argv[])
   ui->SetDraftsFolder(drafts);
   ui->SetSentFolder(sent);
   ui->SetClientStoreSent(clientStoreSent);
-  ui->SetSpecialFoldersHandler([mainConfig](const std::map<std::string, std::string>& p_SpecialFolders)
+  ui->SetSpecialFoldersHandler([](const std::map<std::string, std::string>& p_SpecialFolders)
   {
     // persist detected special folders
     for (const auto& specialFolder : p_SpecialFolders)
     {
-      mainConfig->Set(specialFolder.first, specialFolder.second);
+      MainConfig::SetStr(specialFolder.first, specialFolder.second);
     }
 
-    mainConfig->Save();
+    MainConfig::Save();
   });
   imapManager->SetDetectSpecialFolders(trash.empty() || spam.empty() || drafts.empty() || sent.empty());
   ui->SetSmtpManager(smtpManager);
@@ -546,8 +487,7 @@ int main(int argc, char* argv[])
 
   Auth::Cleanup();
 
-  mainConfig->Save();
-  mainConfig.reset();
+  MainConfig::Cleanup();
 
   secretConfig->Save();
   secretConfig.reset();
@@ -666,7 +606,7 @@ bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
 
 bool ReportConfigError(const std::string& p_Param)
 {
-  const std::string configPath(AppUtil::GetApplicationDir() + std::string("main.conf"));
+  const std::string configPath = MainConfig::GetPath();
   std::cerr << "error: " << p_Param << " not specified in config file (" << configPath
             << ").\n\n";
   return false;

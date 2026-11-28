@@ -5,15 +5,23 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uitopview.h"
 
 #include <cstdint>
 
 #include "flag.h"
 #include "strutil.h"
+#include "uiconfig.h"
 #include "version.h"
 
-void Ui::DrawTop()
+UiTopView::UiTopView(Ui* p_Ui)
+  : UiViewBase(p_Ui)
+{
+  m_TopBarShowVersion = UiConfig::GetBool("top_bar_show_version");
+  m_TopBarShowMessageCount = UiConfig::GetBool("top_bar_show_message_count");
+}
+
+void UiTopView::Draw()
 {
   werase(m_TopWin);
   wattron(m_TopWin, m_AttrsTopBar);
@@ -32,37 +40,37 @@ void Ui::DrawTop()
   RefreshWin(m_TopWin);
 }
 
-std::string Ui::GetStatusStr()
+std::string UiTopView::GetStatusStr()
 {
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_Status.ToString();
+  UiModel::Lock model(m_Model);
+  return model->m_Status.ToString();
 }
 
-std::string Ui::GetStateStr()
+std::string UiTopView::GetStateStr()
 {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  UiModel::Lock model(m_Model);
 
   switch (m_State)
   {
-    case StateViewMessageList:
+    case Ui::StateViewMessageList:
       if (m_MessageListSearch)
       {
         return "Search: " + m_MessageListSearchQuery;
       }
-      else if (m_SortFilter[m_CurrentFolder] != SortDefault)
+      else if (model->m_SortFilter[m_CurrentFolder] != Ui::SortDefault)
       {
-        return "Folder: " + m_CurrentFolder + GetCountStateStr() + GetFilterStateStr();
+        return "Folder: " + m_CurrentFolder + GetCountStateStr(model) + GetFilterStateStr(model);
       }
       else
       {
-        return "Folder: " + m_CurrentFolder + GetCountStateStr();
+        return "Folder: " + m_CurrentFolder + GetCountStateStr(model);
       }
-    case StateViewMessage:
+    case Ui::StateViewMessage:
       {
         std::string str = std::string("Message ") + (m_Plaintext ? "plain" : "html");
         if (m_MessageViewToggledSeen)
         {
-          const std::map<uint32_t, uint32_t>& flags = m_Flags[m_CurrentFolder];
+          const std::map<uint32_t, uint32_t>& flags = model->m_Flags[m_CurrentFolder];
           const int uid = m_MessageListCurrentUid[m_CurrentFolder];
           const bool unread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
           if (unread)
@@ -73,73 +81,73 @@ std::string Ui::GetStateStr()
 
         return str;
       }
-    case StateGotoFolder:
+    case Ui::StateGotoFolder:
       return "Goto Folder";
-    case StateMoveToFolder:
+    case Ui::StateMoveToFolder:
       return "Move To Folder";
-    case StateComposeMessage:
+    case Ui::StateComposeMessage:
       return std::string("Compose") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateComposeCopyMessage:
+    case Ui::StateComposeCopyMessage:
       return std::string("Compose Copy") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateReplyAllMessage:
-    case StateReplySenderMessage:
+    case Ui::StateReplyAllMessage:
+    case Ui::StateReplySenderMessage:
       return std::string("Reply") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateForwardMessage:
+    case Ui::StateForwardMessage:
       return std::string("Forward") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateForwardAttachedMessage:
+    case Ui::StateForwardAttachedMessage:
       return std::string("Forward Attached") + (m_CurrentMarkdownHtmlCompose ? " Markdown" : "");
-    case StateAddressList:
-    case StateFromAddressList:
+    case Ui::StateAddressList:
+    case Ui::StateFromAddressList:
       return "Address Book";
-    case StateFileList:
+    case Ui::StateFileList:
       return "File Selection";
-    case StateViewPartList:
+    case Ui::StateViewPartList:
       return "Message Parts";
-    default: return "Unknown State";
+    default: return "Unknown Ui::State";
   }
 }
 
-std::string Ui::GetCountStateStr()
+std::string UiTopView::GetCountStateStr(UiModel::Lock& p_Model)
 {
   if (!m_TopBarShowMessageCount) return "";
 
-  const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
+  const std::map<std::string, uint32_t>& displayUids = p_Model->GetDisplayUids(m_CurrentFolder);
   return " (" + std::to_string(displayUids.size()) + ")";
 }
 
-std::string Ui::GetFilterStateStr()
+std::string UiTopView::GetFilterStateStr(UiModel::Lock& p_Model)
 {
-  switch (m_SortFilter[m_CurrentFolder])
+  switch (p_Model->m_SortFilter[m_CurrentFolder])
   {
-    case SortUnseenAsc:
+    case Ui::SortUnseenAsc:
       return " [Unrd Asc]";
-    case SortUnseenDesc:
+    case Ui::SortUnseenDesc:
       return " [Unrd Desc]";
-    case SortUnseenOnly:
+    case Ui::SortUnseenOnly:
       return " [Unrd Only]";
-    case SortAttchAsc:
+    case Ui::SortAttchAsc:
       return " [Attc Asc]";
-    case SortAttchDesc:
+    case Ui::SortAttchDesc:
       return " [Attc Desc]";
-    case SortAttchOnly:
+    case Ui::SortAttchOnly:
       return " [Attc Only]";
-    case SortDateAsc:
+    case Ui::SortDateAsc:
       return " [Date Asc]";
-    case SortDateDesc:
+    case Ui::SortDateDesc:
       return " [Date Desc]";
-    case SortCurrDateOnly:
+    case Ui::SortCurrDateOnly:
       return " [Date Curr]";
-    case SortNameAsc:
+    case Ui::SortNameAsc:
       return " [Name Asc]";
-    case SortNameDesc:
+    case Ui::SortNameDesc:
       return " [Name Desc]";
-    case SortCurrNameOnly:
+    case Ui::SortCurrNameOnly:
       return " [Name Curr]";
-    case SortSubjAsc:
+    case Ui::SortSubjAsc:
       return " [Subj Asc]";
-    case SortSubjDesc:
+    case Ui::SortSubjDesc:
       return " [Subj Desc]";
-    case SortCurrSubjOnly:
+    case Ui::SortCurrSubjOnly:
       return " [Subj Curr]";
     default:
       return ""; // should not reach here

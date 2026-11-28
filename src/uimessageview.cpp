@@ -5,7 +5,7 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uimessageview.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -19,11 +19,34 @@
 #include "flag.h"
 #include "loghelp.h"
 #include "strutil.h"
-#include "sysutil.h"
 #include "textstyle.h"
 #include "textutil.h"
+#include "uiconfig.h"
+#include "uiexternal.h"
+#include "uihelpview.h"
+#include "uimessagelistview.h"
 
-void Ui::DrawMessage()
+UiMessageView::UiMessageView(Ui* p_Ui)
+  : UiScreenView(p_Ui)
+{
+  m_AlignHeaderLabels = UiConfig::GetBool("align_header_labels");
+  m_FullHeaderIncludeLocal = UiConfig::GetBool("full_header_include_local");
+  m_PersistFindQuery = UiConfig::GetBool("persist_find_query");
+  m_PlainViewLinks = UiConfig::GetBool("plain_view_links");
+  m_RespectFormatFlowed = UiConfig::GetBool("respect_format_flowed");
+  m_RewrapQuotedLines = UiConfig::GetBool("rewrap_quoted_lines");
+  m_TabSize = StrUtil::Bound(1, UiConfig::GetNum("tab_size"), 80);
+  m_MarkdownView = UiConfig::GetBool("markdown_view");
+  m_MarkdownViewLinks = m_MarkdownView && UiConfig::GetBool("markdown_view_links");
+  m_ShowCompactHeader = UiConfig::GetBool("show_compact_header");
+}
+
+void UiMessageView::Cleanup()
+{
+  UiConfig::SetBool("show_compact_header", m_ShowCompactHeader);
+}
+
+void UiMessageView::Draw()
 {
   werase(m_MainWin);
 
@@ -36,10 +59,10 @@ void Ui::DrawMessage()
   bool markSeen = false;
   bool unseen = false;
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
+    UiModel::Lock model(m_Model);
 
-    std::map<uint32_t, Header>& headers = m_Headers[folder];
-    std::set<uint32_t>& requestedHeaders = m_RequestedHeaders[folder];
+    std::map<uint32_t, Header>& headers = model->m_Headers[folder];
+    std::set<uint32_t>& requestedHeaders = model->m_RequestedHeaders[folder];
 
     if ((uid != -1) &&
         (headers.find(uid) == headers.end()) &&
@@ -49,8 +72,8 @@ void Ui::DrawMessage()
       fetchHeaderUids.insert(uid);
     }
 
-    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-    std::set<uint32_t>& requestedBodys = m_RequestedBodys[folder];
+    std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
+    std::set<uint32_t>& requestedBodys = model->m_RequestedBodys[folder];
 
     if ((uid != -1) &&
         (bodys.find(uid) == bodys.end()) &&
@@ -60,7 +83,7 @@ void Ui::DrawMessage()
       fetchBodyPriUids.insert(uid);
     }
 
-    std::map<uint32_t, uint32_t>& flags = m_Flags[folder];
+    std::map<uint32_t, uint32_t>& flags = model->m_Flags[folder];
     if ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))))
     {
       unseen = true;
@@ -210,12 +233,12 @@ void Ui::DrawMessage()
       markSeen = true;
     }
 
-    if (m_PrefetchLevel >= PrefetchLevelCurrentView)
+    if (m_Model->GetPrefetchLevel() >= Ui::PrefetchLevelCurrentView)
     {
-      const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
+      const std::map<std::string, uint32_t>& displayUids = model->GetDisplayUids(m_CurrentFolder);
       if (displayUids.size() > 0)
       {
-        int32_t maxIndex = (int)GetDisplayUids(m_CurrentFolder).size() - 1;
+        int32_t maxIndex = (int)model->GetDisplayUids(m_CurrentFolder).size() - 1;
         int32_t nextIndex = StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] + 1, maxIndex);
         int32_t prevIndex = StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] - 1, maxIndex);
         uint32_t nextUid = std::prev(displayUids.end(), nextIndex + 1)->second;
@@ -244,7 +267,7 @@ void Ui::DrawMessage()
     request.m_Folder = folder;
     request.m_GetHeaders = fetchHeaderUids;
     LOG_DEBUG_VAR("async req headers =", fetchHeaderUids);
-    m_ImapManager->AsyncRequest(request);
+    m_Model->GetImapManager()->AsyncRequest(request);
   }
 
   if (!fetchBodyPriUids.empty())
@@ -254,7 +277,7 @@ void Ui::DrawMessage()
     request.m_GetBodys = fetchBodyPriUids;
     request.m_ProcessHtml = !m_Plaintext;
     LOG_DEBUG_VAR("async req pri bodys =", fetchBodyPriUids);
-    m_ImapManager->AsyncRequest(request);
+    m_Model->GetImapManager()->AsyncRequest(request);
   }
 
   if (!fetchBodySecUids.empty())
@@ -264,18 +287,18 @@ void Ui::DrawMessage()
     request.m_GetBodys = fetchBodySecUids;
     request.m_ProcessHtml = !m_Plaintext;
     LOG_DEBUG_VAR("async req sec bodys =", fetchBodySecUids);
-    m_ImapManager->AsyncRequest(request);
+    m_Model->GetImapManager()->AsyncRequest(request);
   }
 
   if (unseen && markSeen && !m_MessageViewToggledSeen)
   {
-    MarkSeen();
+    m_Model->MarkSeen(folder, uid);
   }
 
   RefreshWin(m_MainWin);
 }
 
-void Ui::ViewMessageKeyHandler(int p_Key)
+void UiMessageView::KeyHandler(int p_Key)
 {
   if (p_Key == m_KeyQuit)
   {
@@ -284,7 +307,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyPrevMsg)
   {
     int prevIndex = m_MessageListCurrentIndex[m_CurrentFolder]--;
-    UpdateUidFromIndex(true /* p_UserTriggered */);
+    m_MessageListView->UpdateUidFromIndex(true /* p_UserTriggered */);
     if (prevIndex == m_MessageListCurrentIndex[m_CurrentFolder])
     {
       SetDialogMessage("Already on first message");
@@ -300,7 +323,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   else if (p_Key == m_KeyNextMsg)
   {
     int prevIndex = m_MessageListCurrentIndex[m_CurrentFolder]++;
-    UpdateUidFromIndex(true /* p_UserTriggered */);
+    m_MessageListView->UpdateUidFromIndex(true /* p_UserTriggered */);
     if (prevIndex == m_MessageListCurrentIndex[m_CurrentFolder])
     {
       SetDialogMessage("No more messages");
@@ -331,15 +354,15 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt) || (p_Key == m_KeyBack) || (p_Key == m_KeyLeft))
   {
-    SetState(StateViewMessageList);
+    SetState(Ui::StateViewMessageList);
   }
   else if ((p_Key == m_KeyOpen) || (p_Key == m_KeyRight))
   {
-    SetState(StateViewPartList);
+    SetState(Ui::StateViewPartList);
   }
   else if (p_Key == m_KeyGotoFolder)
   {
-    SetState(StateGotoFolder);
+    SetState(Ui::StateGotoFolder);
   }
   else if (p_Key == m_KeyGotoInbox)
   {
@@ -349,16 +372,16 @@ void Ui::ViewMessageKeyHandler(int p_Key)
       m_PreviousFolder = "";
     }
 
-    SetCurrentFolder(m_Inbox);
-    SetState(StateViewMessageList);
+    SetCurrentFolder(m_Model->GetInbox());
+    SetState(Ui::StateViewMessageList);
   }
   else if ((p_Key == m_KeyMove) || (p_Key == m_KeyAutoMove))
   {
     if (IsConnected())
     {
-      ClearSelection();
+      m_MessageListView->ClearSelection();
       m_IsAutoMove = (p_Key != m_KeyMove);
-      SetState(StateMoveToFolder);
+      SetState(Ui::StateMoveToFolder);
     }
     else
     {
@@ -367,13 +390,13 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyCompose)
   {
-    SetState(StateComposeMessage);
+    SetState(Ui::StateComposeMessage);
   }
   else if (p_Key == m_KeyComposeCopy)
   {
     if (CurrentMessageBodyHeaderAvailable())
     {
-      SetState(StateComposeCopyMessage);
+      SetState(Ui::StateComposeCopyMessage);
     }
     else
     {
@@ -384,7 +407,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (CurrentMessageBodyHeaderAvailable())
     {
-      SetState((p_Key == m_KeyReplyAll) ? StateReplyAllMessage : StateReplySenderMessage);
+      SetState((p_Key == m_KeyReplyAll) ? Ui::StateReplyAllMessage : Ui::StateReplySenderMessage);
     }
     else
     {
@@ -395,7 +418,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (CurrentMessageBodyHeaderAvailable())
     {
-      SetState(StateForwardMessage);
+      SetState(Ui::StateForwardMessage);
     }
     else
     {
@@ -406,7 +429,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (CurrentMessageBodyHeaderAvailable())
     {
-      SetState(StateForwardAttachedMessage);
+      SetState(Ui::StateForwardAttachedMessage);
     }
     else
     {
@@ -423,8 +446,8 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   {
     if (IsConnected())
     {
-      ClearSelection();
-      DeleteMessage();
+      m_MessageListView->ClearSelection();
+      m_MessageListView->DeleteMessage();
     }
     else
     {
@@ -436,10 +459,10 @@ void Ui::ViewMessageKeyHandler(int p_Key)
     if (IsConnected())
     {
       {
-        std::lock_guard<std::mutex> lock(m_Mutex);
+        UiModel::Lock model(m_Model);
         m_MessageViewToggledSeen = true;
       }
-      ToggleSeen();
+      m_MessageListView->ToggleSeen();
     }
     else
     {
@@ -448,11 +471,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyOtherCmdHelp)
   {
-    m_HelpViewMessageOffset += 2;
-    if (m_HelpViewMessageOffset >= m_HelpViewMessageSize)
-    {
-      m_HelpViewMessageOffset = 0;
-    }
+    m_HelpView->NextMessageOffset();
   }
   else if (p_Key == m_KeyExport)
   {
@@ -471,7 +490,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeyExtPager)
   {
-    ExtPager();
+    m_External->ExtPager(m_CurrentMessageViewText);
   }
   else if (p_Key == m_KeyExtHtmlViewer)
   {
@@ -516,20 +535,20 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   DrawAll();
 }
 
-bool Ui::CurrentMessageBodyHeaderAvailable()
+bool UiMessageView::CurrentMessageBodyHeaderAvailable()
 {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  UiModel::Lock model(m_Model);
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
-  const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-  std::map<uint32_t, Header>& headers = m_Headers[folder];
+  const std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
+  std::map<uint32_t, Header>& headers = model->m_Headers[folder];
   std::map<uint32_t, Body>::const_iterator bit = bodys.find(uid);
   std::map<uint32_t, Header>::iterator hit = headers.find(uid);
   return ((hit != headers.end()) && (bit != bodys.end()));
 }
 
 // selected link in current message and view, links are from last message laid out
-bool Ui::IsLinkSelected()
+bool UiMessageView::IsLinkSelected()
 {
   if ((m_MessageViewLinksFolderUid != m_CurrentFolderUid) || (m_MessageViewLinkIndex < 0) ||
       (m_MessageViewLinkIndex >= (int)m_MessageViewLinks.size())) return false;
@@ -538,7 +557,7 @@ bool Ui::IsLinkSelected()
   return (line >= m_MessageViewLineOffset) && (line < (m_MessageViewLineOffset + m_MainWinHeight));
 }
 
-void Ui::SelectLink(bool p_Next)
+void UiMessageView::SelectLink(bool p_Next)
 {
   if (m_MessageViewLinks.empty() || (m_MessageViewLinksFolderUid != m_CurrentFolderUid))
   {
@@ -611,7 +630,7 @@ void Ui::SelectLink(bool p_Next)
   SetDialogMessage(StrUtil::ToString(m_MessageViewLinks.at(index).m_Url));
 }
 
-void Ui::OpenLink()
+void UiMessageView::OpenLink()
 {
   if (!IsLinkSelected()) return;
 
@@ -621,37 +640,14 @@ void Ui::OpenLink()
   if (StrUtil::ToLower(url.substr(0, 7)) == "mailto:")
   {
     m_ComposeMailto = url;
-    SetState(StateComposeMessage);
+    SetState(Ui::StateComposeMessage);
     return;
   }
 
-  const bool isDefaultLinkOpenCmd = ExtUtil::IsDefaultLinkOpenCmd();
-  if (!isDefaultLinkOpenCmd)
-  {
-    TerminalControlPause();
-  }
-
-  // single quoted, as url is from message
-  const std::string& cmd = ExtUtil::MakeCmd(ExtUtil::GetLinkOpenCmd(), url);
-  LOG_DEBUG("launching link open: %s", cmd.c_str());
-  int rv = SysUtil::System(cmd);
-  if (rv == 0)
-  {
-    LOG_DEBUG("link open exited successfully");
-  }
-  else
-  {
-    LOG_WARNING("link open exited with %d", rv);
-    SysUtil::DetectCommandNotPresent(cmd);
-  }
-
-  if (!isDefaultLinkOpenCmd)
-  {
-    TerminalControlResume();
-  }
+  m_External->ExtLinkOpen(url);
 }
 
-void Ui::ExportMessage()
+void UiMessageView::ExportMessage()
 {
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
@@ -661,17 +657,23 @@ void Ui::ExportMessage()
     if (!filename.empty())
     {
       filename = FileUtil::ExpandPath(filename);
-      std::unique_lock<std::mutex> lock(m_Mutex);
-      const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-      if (bodys.find(uid) != bodys.end())
+      bool exported = false;
       {
-        FileUtil::WriteFile(filename, m_Bodys[folder][uid].GetData());
-        lock.unlock();
+        UiModel::Lock model(m_Model);
+        const std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
+        if (bodys.find(uid) != bodys.end())
+        {
+          FileUtil::WriteFile(filename, model->m_Bodys[folder][uid].GetData());
+          exported = true;
+        }
+      }
+
+      if (exported)
+      {
         SetDialogMessage("Message exported");
       }
       else
       {
-        lock.unlock();
         SetDialogMessage("Export failed (message not available)", true /* p_Warn */);
       }
     }
@@ -686,7 +688,73 @@ void Ui::ExportMessage()
   }
 }
 
-void Ui::SaveMessageView(bool p_Markdown)
+void UiMessageView::ExtHtmlViewer()
+{
+  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("htmlview/tmp.html");
+  FileUtil::DeleteFile(tempPath);
+
+  const std::string folder = m_CurrentFolderUid.first;
+  const int uid = m_CurrentFolderUid.second;
+  {
+    UiModel::Lock model(m_Model);
+    std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+    if (bodyIt != bodys.end())
+    {
+      Body& body = bodyIt->second;
+      const std::string& html = body.GetHtml(); // falls back to text/plain if no html
+      FileUtil::WriteFile(tempPath, html);
+    }
+  }
+
+  if (FileUtil::Exists(tempPath))
+  {
+    int rv = m_External->ExtHtmlViewer(tempPath);
+    if (rv == 0)
+    {
+      m_Model->MarkSeen(folder, uid);
+    }
+  }
+  else
+  {
+    SetDialogMessage("View html failed (message not available)", true /* p_Warn */);
+  }
+}
+
+void UiMessageView::ExtMsgViewer()
+{
+  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("msgview/tmp.eml");
+  FileUtil::DeleteFile(tempPath);
+
+  const std::string folder = m_CurrentFolderUid.first;
+  const int uid = m_CurrentFolderUid.second;
+  {
+    UiModel::Lock model(m_Model);
+    std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
+    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
+    if (bodyIt != bodys.end())
+    {
+      Body& body = bodyIt->second;
+      const std::string& data = body.GetData(); // falls back to text/plain if no html
+      FileUtil::WriteFile(tempPath, data);
+    }
+  }
+
+  if (FileUtil::Exists(tempPath))
+  {
+    int rv = m_External->ExtMsgViewer(tempPath);
+    if (rv == 0)
+    {
+      m_Model->MarkSeen(folder, uid);
+    }
+  }
+  else
+  {
+    SetDialogMessage("View message failed (message not available)", true /* p_Warn */);
+  }
+}
+
+void UiMessageView::SaveMessageView(bool p_Markdown)
 {
   // markdown only from built-in html converter
   const bool hasMarkdown = m_CurrentMessageFromHtml && ExtUtil::GetHtmlToTextConvertCmd().empty();
@@ -700,8 +768,8 @@ void Ui::SaveMessageView(bool p_Markdown)
   const int uid = m_CurrentFolderUid.second;
   std::string subject;
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    std::map<uint32_t, Header>& headers = m_Headers[folder];
+    UiModel::Lock model(m_Model);
+    std::map<uint32_t, Header>& headers = model->m_Headers[folder];
     std::map<uint32_t, Header>::iterator hit = headers.find(uid);
     if (hit != headers.end())
     {
@@ -762,7 +830,7 @@ void Ui::SaveMessageView(bool p_Markdown)
   SetDialogMessage(p_Markdown ? "Markdown saved" : "Text saved");
 }
 
-void Ui::MessageFind()
+void UiMessageView::MessageFind()
 {
   std::string query = m_PersistFindQuery ? m_MessageFindQuery : "";
   if (PromptString("Find Text: ", "Find", query))
@@ -780,11 +848,11 @@ void Ui::MessageFind()
   }
 }
 
-void Ui::MessageFindNext()
+void UiMessageView::MessageFindNext()
 {
   int findFromLine = m_MessageFindMatchLine + 1;
   const std::wstring wquery = StrUtil::ToFold(StrUtil::ToWString(m_MessageFindQuery));
-  std::vector<std::wstring> wlines = Ui::GetCachedWordWrapLines("", 0);
+  std::vector<std::wstring> wlines = UiMessageView::GetCachedWordWrapLines("", 0);
   int countLines = wlines.size();
 
   bool found = false;
@@ -818,7 +886,7 @@ void Ui::MessageFindNext()
   }
 }
 
-const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid)
+const std::vector<std::wstring>& UiMessageView::GetCachedWordWrapLines(const std::string& p_Folder, uint32_t p_Uid)
 {
   static std::string prevFolder;
   static uint32_t prevUid = 0;
@@ -961,7 +1029,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
 }
 
 // header label in compose style, e.g. "To      : ", or unaligned "To: "
-std::string Ui::GetHeaderLabel(const std::string& p_Name) const
+std::string UiMessageView::GetHeaderLabel(const std::string& p_Name) const
 {
   if (!m_AlignHeaderLabels) return p_Name + ": ";
 
@@ -969,7 +1037,7 @@ std::string Ui::GetHeaderLabel(const std::string& p_Name) const
   return p_Name + std::string((p_Name.size() < nameWidth) ? (nameWidth - p_Name.size()) : 0, ' ') + ": ";
 }
 
-std::string Ui::GetBodyText(Body& p_Body)
+std::string UiMessageView::GetBodyText(Body& p_Body)
 {
   if (!m_Plaintext)
   {
@@ -982,7 +1050,7 @@ std::string Ui::GetBodyText(Body& p_Body)
       imapAction.m_Folder = folder;
       imapAction.m_UpdateCache = true;
       imapAction.m_SetBodysCache[uid] = p_Body;
-      m_ImapManager->AsyncAction(imapAction);
+      m_Model->GetImapManager()->AsyncAction(imapAction);
     }
   }
   // skip leading blank lines, keeping indent of first line
@@ -990,4 +1058,14 @@ std::string Ui::GetBodyText(Body& p_Body)
   const size_t contentPos = text.find_first_not_of(" \t\r\n");
   const size_t lineEnd = (contentPos == std::string::npos) ? std::string::npos : text.rfind('\n', contentPos);
   return (lineEnd == std::string::npos) ? text : text.substr(lineEnd + 1);
+}
+
+void UiMessageView::OnEnter()
+{
+  curs_set(0);
+  m_MessageViewLineOffset = 0;
+  m_HelpView->ResetMessageOffset();
+  m_MessageFindMatchLine = -1;
+  m_MessageViewLinkIndex = -1;
+  m_MessageViewLinkPastEnd = false;
 }

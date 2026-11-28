@@ -5,17 +5,22 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uifilelistview.h"
 
 #include <algorithm>
 
-#include "extutil.h"
 #include "fileutil.h"
-#include "loghelp.h"
 #include "strutil.h"
-#include "sysutil.h"
+#include "uicomposeview.h"
+#include "uiconfig.h"
 
-void Ui::DrawFileList()
+UiFileListView::UiFileListView(Ui* p_Ui)
+  : UiPickerView(p_Ui)
+{
+  m_PersistFileSelectionDir = UiConfig::GetBool("persist_file_selection_dir");
+}
+
+void UiFileListView::Draw()
 {
   werase(m_MainWin);
 
@@ -105,7 +110,7 @@ void Ui::DrawFileList()
   RefreshWin(m_MainWin);
 }
 
-void Ui::ViewFileListKeyHandler(int p_Key)
+void UiFileListView::KeyHandler(int p_Key)
 {
   if (p_Key == m_KeyCancel)
   {
@@ -126,7 +131,7 @@ void Ui::ViewFileListKeyHandler(int p_Key)
     else
     {
       std::string newFilePath = FileUtil::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
-      AddAttachmentPath(newFilePath);
+      m_ComposeView->AddAttachmentPath(newFilePath);
       SetState(m_LastMessageState);
     }
   }
@@ -179,37 +184,22 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   DrawAll();
 }
 
-void Ui::FilePickerOrStateFileList()
+void UiFileListView::OnEnter()
 {
-  std::string filePickerCmd = ExtUtil::GetFilePickerCmd();
-  if (filePickerCmd.empty())
+  curs_set(1);
+  m_FileListFilterPos = 0;
+  m_FileListFilterStr.clear();
+  if (m_CurrentDir.empty() || !m_PersistFileSelectionDir)
   {
-    SetState(StateFileList);
+    m_CurrentDir = FileUtil::GetCurrentWorkingDir();
   }
-  else
-  {
-    TerminalControlPause();
 
-    std::string outPath = FileUtil::GetTempFilename(".txt");
-    std::string command = filePickerCmd + " > " + outPath;
-    if (SysUtil::System(command) == 0)
-    {
-      std::string filesStr = FileUtil::ReadFile(outPath);
-      if (!filesStr.empty())
-      {
-        std::vector<std::string> files = StrUtil::Split(filesStr, '\n');
-        for (const auto& file : files)
-        {
-          AddAttachmentPath(file);
-        }
-      }
-    }
-    else
-    {
-      LOG_WARNING("external command failed: %s", command.c_str());
-    }
+  m_Files = FileUtil::ListPaths(m_CurrentDir);
+  m_FileListCurrentIndex = 0;
+  m_FileListCurrentFile.m_Name = "";
+}
 
-    FileUtil::DeleteFile(outPath);
-    TerminalControlResume();
-  }
+void UiFileListView::DrawDialog()
+{
+  DrawSearchDialog(m_FileListFilterStr, m_FileListFilterPos);
 }

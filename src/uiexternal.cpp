@@ -5,16 +5,22 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uiexternal.h"
 
 #include <cstdint>
 
 #include "extutil.h"
 #include "fileutil.h"
 #include "loghelp.h"
+#include "strutil.h"
 #include "sysutil.h"
 
-void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
+UiExternal::UiExternal(Ui* p_Ui)
+  : UiViewBase(p_Ui)
+{
+}
+
+void UiExternal::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
 {
   TerminalControlPause();
   const std::string& tempPath = FileUtil::GetTempFilename(".txt");
@@ -38,11 +44,11 @@ void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessag
   TerminalControlResume();
 }
 
-void Ui::ExtPager()
+void UiExternal::ExtPager(const std::string& p_Text)
 {
   TerminalControlPause();
   const std::string& tempPath = FileUtil::GetTempFilename(".txt");
-  FileUtil::WriteFile(tempPath, m_CurrentMessageViewText);
+  FileUtil::WriteFile(tempPath, p_Text);
   const std::string& pager = ExtUtil::GetPagerCmd();
   const std::string& cmd = ExtUtil::MakeCmd(pager, tempPath);
   LOG_DEBUG("launching external pager: %s", cmd.c_str());
@@ -61,7 +67,7 @@ void Ui::ExtPager()
   TerminalControlResume();
 }
 
-int Ui::ExtPartsViewer(const std::string& p_Path)
+int UiExternal::ExtPartsViewer(const std::string& p_Path)
 {
   const bool isDefaultPartsViewerCmd = ExtUtil::IsDefaultPartsViewerCmd();
   if (!isDefaultPartsViewerCmd)
@@ -92,40 +98,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
   return rv;
 }
 
-void Ui::ExtHtmlViewer()
-{
-  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("htmlview/tmp.html");
-  FileUtil::DeleteFile(tempPath);
-
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
-    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
-    if (bodyIt != bodys.end())
-    {
-      Body& body = bodyIt->second;
-      const std::string& html = body.GetHtml(); // falls back to text/plain if no html
-      FileUtil::WriteFile(tempPath, html);
-    }
-  }
-
-  if (FileUtil::Exists(tempPath))
-  {
-    int rv = ExtHtmlViewer(tempPath);
-    if (rv == 0)
-    {
-      MarkSeen();
-    }
-  }
-  else
-  {
-    SetDialogMessage("View html failed (message not available)", true /* p_Warn */);
-  }
-}
-
-int Ui::ExtHtmlViewer(const std::string& p_Path)
+int UiExternal::ExtHtmlViewer(const std::string& p_Path)
 {
   const bool isDefaultHtmlViewerCmd = ExtUtil::IsHtmlViewerSystemOpenCmd();
   if (!isDefaultHtmlViewerCmd)
@@ -155,7 +128,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   return rv;
 }
 
-int Ui::ExtHtmlPreview(const std::string& p_Path)
+int UiExternal::ExtHtmlPreview(const std::string& p_Path)
 {
   const bool isDefaultHtmlPreviewCmd = ExtUtil::IsDefaultHtmlPreviewCmd();
   if (!isDefaultHtmlPreviewCmd)
@@ -185,40 +158,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   return rv;
 }
 
-void Ui::ExtMsgViewer()
-{
-  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("msgview/tmp.eml");
-  FileUtil::DeleteFile(tempPath);
-
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
-    std::map<uint32_t, Body>& bodys = m_Bodys[folder];
-    std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
-    if (bodyIt != bodys.end())
-    {
-      Body& body = bodyIt->second;
-      const std::string& data = body.GetData(); // falls back to text/plain if no html
-      FileUtil::WriteFile(tempPath, data);
-    }
-  }
-
-  if (FileUtil::Exists(tempPath))
-  {
-    int rv = ExtMsgViewer(tempPath);
-    if (rv == 0)
-    {
-      MarkSeen();
-    }
-  }
-  else
-  {
-    SetDialogMessage("View message failed (message not available)", true /* p_Warn */);
-  }
-}
-
-int Ui::ExtMsgViewer(const std::string& p_Path)
+int UiExternal::ExtMsgViewer(const std::string& p_Path)
 {
   const bool isDefaultMsgViewerCmd = ExtUtil::IsDefaultMsgViewerCmd();
   if (!isDefaultMsgViewerCmd)
@@ -246,4 +186,59 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
   }
 
   return rv;
+}
+
+int UiExternal::ExtLinkOpen(const std::string& p_Url)
+{
+  const bool isDefaultLinkOpenCmd = ExtUtil::IsDefaultLinkOpenCmd();
+  if (!isDefaultLinkOpenCmd)
+  {
+    TerminalControlPause();
+  }
+
+  // single quoted, as url is from message
+  const std::string& cmd = ExtUtil::MakeCmd(ExtUtil::GetLinkOpenCmd(), p_Url);
+  LOG_DEBUG("launching link open: %s", cmd.c_str());
+  int rv = SysUtil::System(cmd);
+  if (rv == 0)
+  {
+    LOG_DEBUG("link open exited successfully");
+  }
+  else
+  {
+    LOG_WARNING("link open exited with %d", rv);
+    SysUtil::DetectCommandNotPresent(cmd);
+  }
+
+  if (!isDefaultLinkOpenCmd)
+  {
+    TerminalControlResume();
+  }
+
+  return rv;
+}
+
+std::vector<std::string> UiExternal::ExtFilePicker(const std::string& p_FilePickerCmd)
+{
+  std::vector<std::string> files;
+  TerminalControlPause();
+
+  std::string outPath = FileUtil::GetTempFilename(".txt");
+  std::string command = p_FilePickerCmd + " > " + outPath;
+  if (SysUtil::System(command) == 0)
+  {
+    std::string filesStr = FileUtil::ReadFile(outPath);
+    if (!filesStr.empty())
+    {
+      files = StrUtil::Split(filesStr, '\n');
+    }
+  }
+  else
+  {
+    LOG_WARNING("external command failed: %s", command.c_str());
+  }
+
+  FileUtil::DeleteFile(outPath);
+  TerminalControlResume();
+  return files;
 }

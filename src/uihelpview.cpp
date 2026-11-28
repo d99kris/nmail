@@ -5,13 +5,20 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uihelpview.h"
 
 #include <algorithm>
 
 #include "strutil.h"
+#include "uiconfig.h"
 
-void Ui::DrawHelp()
+UiHelpView::UiHelpView(Ui* p_Ui)
+  : UiViewBase(p_Ui)
+{
+  m_HelpEnabled = UiConfig::GetBool("help_enabled");
+}
+
+void UiHelpView::Draw()
 {
   static std::vector<std::vector<std::string>> viewMessagesListCommonHelp =
   {
@@ -212,7 +219,7 @@ void Ui::DrawHelp()
     werase(m_HelpWin);
     switch (m_State)
     {
-      case StateViewMessageList:
+      case Ui::StateViewMessageList:
         {
           const std::vector<std::vector<std::string>>& listHelp =
             m_MessageListSearch ? viewMessagesListSearchHelp : viewMessagesListHelp;
@@ -225,7 +232,7 @@ void Ui::DrawHelp()
           break;
         }
 
-      case StateViewMessage:
+      case Ui::StateViewMessage:
         {
           m_HelpViewMessageSize = viewMessageHelp.size();
           auto first = viewMessageHelp.begin() + m_HelpViewMessageOffset;
@@ -236,24 +243,24 @@ void Ui::DrawHelp()
         }
         break;
 
-      case StateGotoFolder:
-      case StateMoveToFolder:
-      case StateAddressList:
-      case StateFromAddressList:
-      case StateFileList:
+      case Ui::StateGotoFolder:
+      case Ui::StateMoveToFolder:
+      case Ui::StateAddressList:
+      case Ui::StateFromAddressList:
+      case Ui::StateFileList:
         DrawHelpText(viewFoldersHelp, 2);
         break;
 
-      case StateComposeMessage:
-      case StateComposeCopyMessage:
-      case StateReplyAllMessage:
-      case StateReplySenderMessage:
-      case StateForwardMessage:
-      case StateForwardAttachedMessage:
+      case Ui::StateComposeMessage:
+      case Ui::StateComposeCopyMessage:
+      case Ui::StateReplyAllMessage:
+      case Ui::StateReplySenderMessage:
+      case Ui::StateForwardMessage:
+      case Ui::StateForwardAttachedMessage:
         DrawHelpText(composeMessageHelp, 2);
         break;
 
-      case StateViewPartList:
+      case Ui::StateViewPartList:
         DrawHelpText(viewPartListHelp);
         break;
 
@@ -265,7 +272,7 @@ void Ui::DrawHelp()
   }
 }
 
-void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, int p_KeyWidth)
+void UiHelpView::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, int p_KeyWidth)
 {
   int cols = 6;
   int width = m_ScreenWidth / cols;
@@ -300,7 +307,7 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, i
   }
 }
 
-std::string Ui::GetKeyDisplay(int p_Key)
+std::string UiHelpView::GetKeyDisplay(int p_Key)
 {
   if (p_Key == '\n')
   {
@@ -340,4 +347,32 @@ std::string Ui::GetKeyDisplay(int p_Key)
   }
 
   return "??";
+}
+
+void UiHelpView::ResetMessagesListOffset()
+{
+  m_HelpViewMessagesListOffset = 0;
+}
+
+void UiHelpView::NextMessagesListOffset()
+{
+  m_HelpViewMessagesListOffset += 2;
+  if (m_HelpViewMessagesListOffset >= m_HelpViewMessagesListSize)
+  {
+    m_HelpViewMessagesListOffset = 0;
+  }
+}
+
+void UiHelpView::ResetMessageOffset()
+{
+  m_HelpViewMessageOffset = 0;
+}
+
+void UiHelpView::NextMessageOffset()
+{
+  m_HelpViewMessageOffset += 2;
+  if (m_HelpViewMessageOffset >= m_HelpViewMessageSize)
+  {
+    m_HelpViewMessageOffset = 0;
+  }
 }

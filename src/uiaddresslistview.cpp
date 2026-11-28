@@ -5,14 +5,20 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uiaddresslistview.h"
 
 #include <algorithm>
 
 #include "addressbook.h"
 #include "strutil.h"
+#include "uicomposeview.h"
 
-void Ui::DrawAddressList()
+UiAddressListView::UiAddressListView(Ui* p_Ui)
+  : UiPickerView(p_Ui)
+{
+}
+
+void UiAddressListView::Draw()
 {
   werase(m_MainWin);
 
@@ -20,8 +26,8 @@ void Ui::DrawAddressList()
   if (m_AddressListFilterStr != lastAddressListFilterStr)
   {
     std::string filter = StrUtil::ToString(m_AddressListFilterStr);
-    m_Addresses = (m_State == StateAddressList) ? AddressBook::Get(filter)
-                                                : AddressBook::GetFrom(filter);
+    m_Addresses = (m_State == Ui::StateAddressList) ? AddressBook::Get(filter)
+                                                    : AddressBook::GetFrom(filter);
     lastAddressListFilterStr = m_AddressListFilterStr;
   }
 
@@ -76,7 +82,7 @@ void Ui::DrawAddressList()
   RefreshWin(m_MainWin);
 }
 
-std::wstring Ui::GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos)
+std::wstring UiAddressListView::GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos)
 {
   // classic layout shows address as stored
   p_DimPos = std::wstring::npos;
@@ -110,7 +116,7 @@ std::wstring Ui::GetAddressListEntry(const std::string& p_Address, int p_Width, 
   return StrUtil::TrimEllipsisWString(entry, p_Width);
 }
 
-void Ui::ViewAddressListKeyHandler(int p_Key)
+void UiAddressListView::KeyHandler(int p_Key)
 {
   if (p_Key == m_KeyCancel)
   {
@@ -119,13 +125,13 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
            ((p_Key == m_KeyRight) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
-    if (m_State == StateAddressList)
+    if (m_State == Ui::StateAddressList)
     {
-      AddAddress(m_AddressListCurrentAddress);
+      m_ComposeView->AddAddress(m_AddressListCurrentAddress);
     }
-    else if (m_State == StateFromAddressList)
+    else if (m_State == Ui::StateFromAddressList)
     {
-      SetAddress(m_AddressListCurrentAddress);
+      m_ComposeView->SetAddress(m_AddressListCurrentAddress);
     }
     SetState(m_LastMessageState);
   }
@@ -143,4 +149,19 @@ void Ui::ViewAddressListKeyHandler(int p_Key)
   }
 
   DrawAll();
+}
+
+void UiAddressListView::OnEnter()
+{
+  curs_set(1);
+  m_AddressListFilterPos = 0;
+  m_AddressListFilterStr.clear();
+  m_Addresses = (m_State == Ui::StateAddressList) ? AddressBook::Get("") : AddressBook::GetFrom("");
+  m_AddressListCurrentIndex = 0;
+  m_AddressListCurrentAddress = "";
+}
+
+void UiAddressListView::DrawDialog()
+{
+  DrawSearchDialog(m_AddressListFilterStr, m_AddressListFilterPos);
 }

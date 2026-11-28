@@ -5,7 +5,7 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uidialogview.h"
 
 #include <algorithm>
 
@@ -15,70 +15,22 @@
 #include "loghelp.h"
 #include "strutil.h"
 #include "textwrap.h"
+#include "uiconfig.h"
+#include "uihelpview.h"
 #include "uikeyinput.h"
 
-void Ui::DrawDialog()
+UiDialogView::UiDialogView(Ui* p_Ui)
+  : UiViewBase(p_Ui)
 {
-  switch (m_State)
-  {
-    case StateGotoFolder:
-    case StateMoveToFolder:
-    case StateAddressList:
-    case StateFromAddressList:
-    case StateFileList:
-      DrawSearchDialog();
-      break;
-
-    default:
-      DrawDefaultDialog();
-      break;
-  }
+  m_HelpEnabled = UiConfig::GetBool("help_enabled");
 }
 
-void Ui::DrawSearchDialog()
-{
-  int filterPos = 0;
-  std::wstring filterStr;
-
-  switch (m_State)
-  {
-    case StateGotoFolder:
-    case StateMoveToFolder:
-      filterPos = m_FolderListFilterPos;
-      filterStr = m_FolderListFilterStr;
-      break;
-
-    case StateAddressList:
-    case StateFromAddressList:
-      filterPos = m_AddressListFilterPos;
-      filterStr = m_AddressListFilterStr;
-      break;
-
-    case StateFileList:
-      filterPos = m_FileListFilterPos;
-      filterStr = m_FileListFilterStr;
-      break;
-
-    default:
-      break;
-  }
-
-  werase(m_DialogWin);
-  const std::string& dispStr = StrUtil::ToString(filterStr);
-  mvwprintw(m_DialogWin, 0, 0, "   Search: %s", dispStr.c_str());
-
-  leaveok(m_DialogWin, false);
-  wmove(m_DialogWin, 0, 11 + TextWrap::GetWidth(filterStr.substr(0, filterPos)));
-  RefreshWin(m_DialogWin);
-  leaveok(m_DialogWin, true);
-}
-
-void Ui::DrawDefaultDialog()
+void UiDialogView::Draw()
 {
   werase(m_DialogWin);
 
   {
-    std::lock_guard<std::mutex> lock(m_Mutex);
+    std::lock_guard<std::mutex> lock(m_DialogMutex);
     std::chrono::time_point<std::chrono::system_clock> nowTime =
       std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed = nowTime - m_DialogMessageTime;
@@ -105,9 +57,9 @@ void Ui::DrawDefaultDialog()
   RefreshWin(m_DialogWin);
 }
 
-void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= false */)
+void UiDialogView::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= false */)
 {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  std::lock_guard<std::mutex> lock(m_DialogMutex);
   m_DialogMessage = p_DialogMessage;
   m_DialogMessageTime = std::chrono::system_clock::now();
   if (!p_DialogMessage.empty())
@@ -124,7 +76,7 @@ void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= fa
   }
 }
 
-int Ui::ReadKeyBlocking()
+int UiDialogView::ReadKeyBlocking()
 {
   while (true)
   {
@@ -149,7 +101,7 @@ int Ui::ReadKeyBlocking()
   }
 }
 
-bool Ui::PromptYesNo(const std::string& p_Prompt)
+bool UiDialogView::PromptYesNo(const std::string& p_Prompt)
 {
   werase(m_DialogWin);
 
@@ -166,8 +118,8 @@ bool Ui::PromptYesNo(const std::string& p_Prompt)
   return ((key == 'y') || (key == 'Y'));
 }
 
-bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
-                      std::string& p_Entry)
+bool UiDialogView::PromptString(const std::string& p_Prompt, const std::string& p_Action,
+                                std::string& p_Entry)
 {
   if (m_HelpEnabled)
   {
@@ -175,14 +127,14 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
     static std::vector<std::vector<std::string>> savePartHelp =
     {
       {
-        GetKeyDisplay(m_KeyReturn), p_Action,
+        m_HelpView->GetKeyDisplay(m_KeyReturn), p_Action,
       },
       {
-        GetKeyDisplay(m_KeyCancel), "Cancel",
+        m_HelpView->GetKeyDisplay(m_KeyCancel), "Cancel",
       }
     };
 
-    DrawHelpText(savePartHelp, 2);
+    m_HelpView->DrawHelpText(savePartHelp, 2);
 
     wrefresh(m_HelpWin);
   }

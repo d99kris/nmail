@@ -5,7 +5,7 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include "ui.h"
+#include "uipartlistview.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -13,15 +13,23 @@
 #include "fileutil.h"
 #include "loghelp.h"
 #include "strutil.h"
+#include "uiconfig.h"
+#include "uiexternal.h"
 
-void Ui::DrawPartList()
+UiPartListView::UiPartListView(Ui* p_Ui)
+  : UiScreenView(p_Ui)
+{
+  m_ShowEmbeddedImages = UiConfig::GetBool("show_embedded_images");
+}
+
+void UiPartListView::Draw()
 {
   werase(m_MainWin);
 
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  UiModel::Lock model(m_Model);
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
-  std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+  std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
   std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
   if (bodyIt != bodys.end())
   {
@@ -73,7 +81,7 @@ void Ui::DrawPartList()
   RefreshWin(m_MainWin);
 }
 
-void Ui::ViewPartListKeyHandler(int p_Key)
+void UiPartListView::KeyHandler(int p_Key)
 {
   if (p_Key == m_KeyQuit)
   {
@@ -84,7 +92,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     const std::string& attachmentsTempDir = FileUtil::GetAttachmentsTempDir();
     LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
     FileUtil::CleanupAttachmentsTempDir();
-    SetState(StateViewMessage);
+    SetState(Ui::StateViewMessage);
   }
   else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight) ||
            (p_Key == m_KeyExtHtmlViewer))
@@ -117,10 +125,10 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     std::string partData;
 
     {
-      std::lock_guard<std::mutex> lock(m_Mutex);
+      UiModel::Lock model(m_Model);
       const std::string& folder = m_CurrentFolderUid.first;
       const int uid = m_CurrentFolderUid.second;
-      std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+      std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
       std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
       if (bodyIt != bodys.end())
       {
@@ -165,12 +173,12 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     if (p_Key == m_KeyExtHtmlViewer)
     {
       LOG_DEBUG("opening \"%s\" in external html viewer", tempFilePath.c_str());
-      rv = ExtHtmlViewer(tempFilePath);
+      rv = m_External->ExtHtmlViewer(tempFilePath);
     }
     else
     {
       LOG_DEBUG("opening \"%s\" in external viewer", tempFilePath.c_str());
-      rv = ExtPartsViewer(tempFilePath);
+      rv = m_External->ExtPartsViewer(tempFilePath);
     }
 
     if (rv != 0)
@@ -194,10 +202,10 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
         std::string partData;
         {
-          std::lock_guard<std::mutex> lock(m_Mutex);
+          UiModel::Lock model(m_Model);
           const std::string& folder = m_CurrentFolderUid.first;
           const int uid = m_CurrentFolderUid.second;
-          std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+          std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
           std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
           if (bodyIt != bodys.end())
           {
@@ -233,10 +241,10 @@ void Ui::ViewPartListKeyHandler(int p_Key)
         bool savedOne = false;
 
         {
-          std::lock_guard<std::mutex> lock(m_Mutex);
+          UiModel::Lock model(m_Model);
           const std::string& folder = m_CurrentFolderUid.first;
           const int uid = m_CurrentFolderUid.second;
-          std::map<uint32_t, Body>& bodys = m_Bodys[folder];
+          std::map<uint32_t, Body>& bodys = model->m_Bodys[folder];
           std::map<uint32_t, Body>::iterator bodyIt = bodys.find(uid);
           if (bodyIt != bodys.end())
           {
@@ -290,8 +298,8 @@ void Ui::ViewPartListKeyHandler(int p_Key)
       m_PreviousFolder = "";
     }
 
-    SetCurrentFolder(m_Inbox);
-    SetState(StateViewMessageList);
+    SetCurrentFolder(m_Model->GetInbox());
+    SetState(Ui::StateViewMessageList);
   }
   else if (HandleListKey(p_Key, m_PartListCurrentIndex))
   {
@@ -303,4 +311,10 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
 
   DrawAll();
+}
+
+void UiPartListView::OnEnter()
+{
+  curs_set(0);
+  m_PartListCurrentIndex = 0;
 }
