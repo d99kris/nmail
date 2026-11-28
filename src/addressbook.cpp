@@ -124,6 +124,12 @@ void AddressBook::OpenDb()
   {
     m_Db.reset(new sqlite::database(m_DbPath));
   }
+
+  // custom function used by address filter, as sqlite's built-in like / lower() only handle ascii
+  m_Db->define("nmfold", [](std::string p_Str) -> std::string
+  {
+    return Util::ToFold(p_Str);
+  });
 }
 
 void AddressBook::CloseDb()
@@ -242,8 +248,8 @@ std::vector<std::string> AddressBook::Get(const std::string& p_Filter)
     }
     else
     {
-      // @todo: strip out any % from p_Filter?
-      *m_Db << "SELECT address FROM addresses WHERE address LIKE ? ORDER BY usages DESC;" << ("%" + p_Filter + "%") >>
+      *m_Db << "SELECT address FROM addresses WHERE instr(nmfold(address), nmfold(?)) > 0 ORDER BY usages DESC;" <<
+        p_Filter >>
         [&](const std::string& address) { addresses.push_back(address); };
     }
   }
@@ -271,9 +277,8 @@ std::vector<std::string> AddressBook::GetFrom(const std::string& p_Filter)
     }
     else
     {
-      // @todo: strip out any % from p_Filter?
-      *m_Db << "SELECT address FROM fromaddresses WHERE address LIKE ? ORDER BY usages DESC;" <<
-        ("%" + p_Filter + "%") >>
+      *m_Db << "SELECT address FROM fromaddresses WHERE instr(nmfold(address), nmfold(?)) > 0 "
+        "ORDER BY usages DESC;" << p_Filter >>
         [&](const std::string& address) { addresses.push_back(address); };
     }
   }

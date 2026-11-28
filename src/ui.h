@@ -607,6 +607,7 @@ private:
 
   int m_MessageFindMatchLine = -1;
   int m_MessageFindMatchPos = 0;
+  int m_MessageFindMatchLen = 0;
   std::string m_MessageFindQuery;
   bool m_PrefetchAllHeaders = true;
   bool m_CurrentMessageProcessFlowed = false;

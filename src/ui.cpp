@@ -1103,7 +1103,7 @@ void Ui::DrawFolderList()
     hasFolders = !m_Folders.empty();
     for (const auto& folder : m_Folders)
     {
-      if (Util::ToLower(folder).find(Util::ToLower(Util::ToString(m_FolderListFilterStr)))
+      if (Util::ToFold(folder).find(Util::ToFold(Util::ToString(m_FolderListFilterStr)))
           != std::string::npos)
       {
         folders.insert(folder);
@@ -1263,7 +1263,7 @@ void Ui::DrawFileList()
   {
     for (const auto& file : m_Files)
     {
-      if (Util::ToLower(file.m_Name).find(Util::ToLower(Util::ToString(m_FileListFilterStr)))
+      if (Util::ToFold(file.m_Name).find(Util::ToFold(Util::ToString(m_FileListFilterStr)))
           != std::string::npos)
       {
         files.insert(file);
@@ -2021,7 +2021,7 @@ void Ui::DrawMessage()
 
         if (!m_MessageFindQuery.empty() && (m_MessageFindMatchLine == lineIndex))
         {
-          const size_t matchLen = Util::ToWString(m_MessageFindQuery).size();
+          const size_t matchLen = m_MessageFindMatchLen;
           for (size_t k = m_MessageFindMatchPos; (k < (m_MessageFindMatchPos + matchLen)) && (k < attrs.size()); ++k)
           {
             attrs[k] = TextStyle::CombineAttrs(attrs[k], m_AttrsHighlightedText);
@@ -6680,20 +6680,25 @@ void Ui::MessageFind()
 void Ui::MessageFindNext()
 {
   int findFromLine = m_MessageFindMatchLine + 1;
-  const std::wstring wquery = Util::ToLower(Util::ToWString(m_MessageFindQuery));;
+  const std::wstring wquery = Util::ToFold(Util::ToWString(m_MessageFindQuery));
   std::vector<std::wstring> wlines = Ui::GetCachedWordWrapLines("", 0);
   int countLines = wlines.size();
 
   bool found = false;
   for (int i = findFromLine; i < countLines; ++i)
   {
-    std::wstring wline = Util::ToLower(wlines.at(i));
+    std::vector<size_t> positions;
+    std::wstring wline = Util::ToFold(wlines.at(i), &positions);
     size_t pos = wline.find(wquery);
-    if (pos != std::string::npos)
+    if (!wquery.empty() && (pos != std::string::npos))
     {
+      // map match in folded line back to original line
+      const size_t matchFirst = positions.at(pos);
+      const size_t matchLast = positions.at(pos + wquery.size() - 1);
       m_MessageViewLineOffset = Util::Bound(0, i, countLines - m_MainWinHeight);
       m_MessageFindMatchLine = i;
-      m_MessageFindMatchPos = pos;
+      m_MessageFindMatchPos = matchFirst;
+      m_MessageFindMatchLen = matchLast - matchFirst + 1;
       found = true;
       break;
     }

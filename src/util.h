@@ -205,6 +205,8 @@ public:
     return std::max(p_Min, std::min(p_Val, p_Max));
   }
 
+  static std::string ToFold(const std::string& p_Str);
+  static std::wstring ToFold(const std::wstring& p_WStr, std::vector<size_t>* p_Positions = nullptr);
   static std::string ToLower(const std::string& p_Str);
   static std::wstring ToLower(const std::wstring& p_WStr);
   static std::vector<std::string> Split(const std::string& p_Str, char p_Sep = ',');

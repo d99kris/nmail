@@ -12,6 +12,7 @@
 #include <csignal>
 #include <cstring>
 #include <cwchar>
+#include <cwctype>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -917,17 +918,92 @@ int Util::WStringWidth(const std::wstring& p_WStr)
   return (width != -1) ? width : p_WStr.size();
 }
 
+// Base letter folding table for Latin-1 Supplement (U+00C0 - U+00FF) and Latin Extended-A
+// (U+0100 - U+017F), mapping each code point to its lowercase ascii base letter(s). Empty
+// string means the code point is left as-is (the two math symbols in the range). Limited to
+// these two blocks by design, leaving cjk, greek, cyrillic, etc untouched by base folding.
+static const char* const s_LatinFold[] =
+{
+  // U+00C0 - U+00DF
+  "a", "a", "a", "a", "a", "a", "ae", "c", "e", "e", "e", "e", "i", "i", "i", "i",
+  "d", "n", "o", "o", "o", "o", "o", "", "o", "u", "u", "u", "u", "y", "th", "ss",
+  // U+00E0 - U+00FF
+  "a", "a", "a", "a", "a", "a", "ae", "c", "e", "e", "e", "e", "i", "i", "i", "i",
+  "d", "n", "o", "o", "o", "o", "o", "", "o", "u", "u", "u", "u", "y", "th", "y",
+  // U+0100 - U+011F
+  "a", "a", "a", "a", "a", "a", "c", "c", "c", "c", "c", "c", "c", "c", "d", "d",
+  "d", "d", "e", "e", "e", "e", "e", "e", "e", "e", "e", "e", "g", "g", "g", "g",
+  // U+0120 - U+013F
+  "g", "g", "g", "g", "h", "h", "h", "h", "i", "i", "i", "i", "i", "i", "i", "i",
+  "i", "i", "ij", "ij", "j", "j", "k", "k", "k", "l", "l", "l", "l", "l", "l", "l",
+  // U+0140 - U+015F
+  "l", "l", "l", "n", "n", "n", "n", "n", "n", "n", "n", "n", "o", "o", "o", "o",
+  "o", "o", "oe", "oe", "r", "r", "r", "r", "r", "r", "s", "s", "s", "s", "s", "s",
+  // U+0160 - U+017F
+  "s", "s", "t", "t", "t", "t", "t", "t", "u", "u", "u", "u", "u", "u", "u", "u",
+  "u", "u", "u", "u", "w", "w", "y", "y", "y", "z", "z", "z", "z", "z", "z", "s",
+};
+
+std::string Util::ToFold(const std::string& p_Str)
+{
+  // Fast path for ascii-only strings, which need neither decoding nor base letter folding
+  if (std::none_of(p_Str.begin(), p_Str.end(),
+                   [](char ch) { return static_cast<unsigned char>(ch) >= 0x80; }))
+  {
+    return ToLower(p_Str);
+  }
+
+  return ToString(ToFold(ToWString(p_Str)));
+}
+
+std::wstring Util::ToFold(const std::wstring& p_WStr, std::vector<size_t>* p_Positions /*= nullptr*/)
+{
+  static const wchar_t foldFirst = 0x00C0;
+  static const wchar_t foldLast = foldFirst + (sizeof(s_LatinFold) / sizeof(*s_LatinFold)) - 1;
+
+  // Optionally outputs the source position of each folded char, as folding may change length
+  std::wstring fold;
+  fold.reserve(p_WStr.size());
+  for (size_t i = 0; i < p_WStr.size(); ++i)
+  {
+    const wchar_t wch = p_WStr[i];
+    if ((wch >= foldFirst) && (wch <= foldLast) && (s_LatinFold[wch - foldFirst][0] != '\0'))
+    {
+      for (const char* base = s_LatinFold[wch - foldFirst]; *base != '\0'; ++base)
+      {
+        fold += static_cast<wchar_t>(*base);
+      }
+    }
+    else
+    {
+      // Handles case folding for scripts outside the table (greek, cyrillic, etc), based on
+      // the locale set up by the ui. Code points without case mapping are left as-is.
+      fold += static_cast<wchar_t>(towlower(static_cast<wint_t>(wch)));
+    }
+
+    if (p_Positions != nullptr)
+    {
+      p_Positions->resize(fold.size(), i);
+    }
+  }
+
+  return fold;
+}
+
+// Ascii-only, as it operates on single bytes / code points. Use ToFold() for search matching.
 std::string Util::ToLower(const std::string& p_Str)
 {
   std::string lower = p_Str;
-  std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+  std::transform(lower.begin(), lower.end(), lower.begin(),
+                 [](char ch) { return static_cast<char>(::tolower(static_cast<unsigned char>(ch))); });
   return lower;
 }
 
 std::wstring Util::ToLower(const std::wstring& p_WStr)
 {
   std::wstring lower = p_WStr;
-  std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+  std::transform(lower.begin(), lower.end(), lower.begin(),
+                 [](wchar_t wch) { return static_cast<wchar_t>(towlower(static_cast<wint_t>(wch))); });
   return lower;
 }
 
@@ -2168,7 +2244,7 @@ void Util::NormalizeSubject(std::string& p_String, bool p_ToLower)
   p_String = std::regex_replace(p_String, re, "");
   if (p_ToLower)
   {
-    std::transform(p_String.begin(), p_String.end(), p_String.begin(), ::tolower);
+    p_String = ToLower(p_String);
   }
 }
 
