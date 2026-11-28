@@ -83,8 +83,8 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;USE_SSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;USE_SSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;../../third-party/json-c/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;HAVE_OPENSSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -98,7 +98,7 @@
     </ClCompile>
     <Link>
       <AdditionalOptions>/DLL %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MDd.lib;libeay32MDd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MDd.lib;libeay32MDd.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>../../third-party/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>C;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -116,8 +116,8 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;USE_SSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;USE_SSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;../../third-party/json-c/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;HAVE_OPENSSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -130,7 +130,7 @@
     </ClCompile>
     <Link>
       <AdditionalOptions>/DLL %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MDd.lib;libeay32MDd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MDd.lib;libeay32MDd.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>../../third-party/lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>C;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -147,8 +147,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;USE_SSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;USE_SSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;../../third-party/json-c/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;HAVE_OPENSSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -160,7 +160,7 @@
     </ClCompile>
     <Link>
       <AdditionalOptions>/DLL %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MD.lib;libeay32MD.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MD.lib;libeay32MD.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../third-party/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>C;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -175,8 +175,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;USE_SSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;USE_SSL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src/data-types;../../src/driver;../../src/driver/interface;../../src/driver/tools;../../src/low-level/feed;../../src/low-level/imap;../../src/low-level/imf;../../src/low-level/maildir;../../src/low-level/mbox;../../src/low-level/mh;../../src/low-level/mime;../../src/low-level/nntp;../../src/low-level/pop3;../../src/low-level/smtp;../../src/windows;../../src/main;..;../include;../../src/driver/implementation/pop3;../../third-party/include;../../third-party/json-c/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_ZLIB;USE_SASL;HAVE_OPENSSL;WIN32;_WINDOWS;_USRDLL;LIBETPAN_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -189,7 +189,7 @@
     </ClCompile>
     <Link>
       <AdditionalOptions>/DLL %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MD.lib;libeay32MD.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsasl2.lib;zlib.lib;Ws2_32.lib;ssleay32MD.lib;libeay32MD.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../third-party/lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>C;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -200,6 +200,15 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(EnableJMAP)'=='true'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../src/low-level/jmap;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_JMAP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libcurl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -240,7 +249,13 @@ build_headers.bat
     <ClCompile Include="..\..\src\data-types\mailstream_low.c" />
     <ClCompile Include="..\..\src\data-types\mailstream_socket.c" />
     <ClCompile Include="..\..\src\data-types\mailstream_ssl.c" />
+    <ClCompile Include="..\..\src\data-types\mailstream_ssl_internal.c" />
+    <ClCompile Include="..\..\src\data-types\mailstream_openssl.c" />
+    <ClCompile Include="..\..\src\data-types\mailstream_gnutls.c" />
     <ClCompile Include="..\..\src\data-types\mail_cache_db.c" />
+    <ClCompile Include="..\..\src\data-types\mailjson.c" />
+    <ClCompile Include="..\..\src\data-types\mailhttp.c" />
+    <ClCompile Include="..\..\src\data-types\mailhttp_curl.c" />
     <ClCompile Include="..\..\src\data-types\md5.c" />
     <ClCompile Include="..\..\src\data-types\mmapstring.c" />
     <ClCompile Include="..\..\src\data-types\timeutils.c" />
@@ -310,6 +325,13 @@ build_headers.bat
     <ClCompile Include="..\..\src\low-level\feed\parser_atom10.c" />
     <ClCompile Include="..\..\src\low-level\feed\parser_rdf.c" />
     <ClCompile Include="..\..\src\low-level\feed\parser_rss20.c" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_blob.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_http.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_mail.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_request.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_response.c" Condition="'$(EnableJMAP)'=='true'" />
+    <ClCompile Include="..\..\src\low-level\jmap\mailjmap_types.c" Condition="'$(EnableJMAP)'=='true'" />
     <ClCompile Include="..\..\src\low-level\imap\acl.c" />
     <ClCompile Include="..\..\src\low-level\imap\acl_parser.c" />
     <ClCompile Include="..\..\src\low-level\imap\acl_sender.c" />
@@ -374,6 +396,7 @@ build_headers.bat
     <ClCompile Include="..\..\src\low-level\mime\mailmime_content.c" />
     <ClCompile Include="..\..\src\low-level\mime\mailmime_decode.c" />
     <ClCompile Include="..\..\src\low-level\mime\mailmime_disposition.c" />
+    <ClCompile Include="..\..\src\low-level\mime\mailmime_rfc2231.c" />
     <ClCompile Include="..\..\src\low-level\mime\mailmime_types.c" />
     <ClCompile Include="..\..\src\low-level\mime\mailmime_types_helper.c" />
     <ClCompile Include="..\..\src\low-level\mime\mailmime_write_file.c" />
@@ -425,10 +448,15 @@ build_headers.bat
     <ClInclude Include="..\..\src\data-types\mailstream_low.h" />
     <ClInclude Include="..\..\src\data-types\mailstream_socket.h" />
     <ClInclude Include="..\..\src\data-types\mailstream_ssl.h" />
+    <ClInclude Include="..\..\src\data-types\mailstream_ssl_internal.h" />
+    <ClInclude Include="..\..\src\data-types\mailstream_openssl.h" />
+    <ClInclude Include="..\..\src\data-types\mailstream_gnutls.h" />
     <ClInclude Include="..\..\src\data-types\mailstream_ssl_private.h" />
     <ClInclude Include="..\..\src\data-types\mailstream_types.h" />
     <ClInclude Include="..\..\src\data-types\mail_cache_db.h" />
     <ClInclude Include="..\..\src\data-types\mail_cache_db_types.h" />
+    <ClInclude Include="..\..\src\data-types\mailjson.h" />
+    <ClInclude Include="..\..\src\data-types\mailhttp.h" />
     <ClInclude Include="..\..\src\data-types\md5.h" />
     <ClInclude Include="..\..\src\data-types\md5global.h" />
     <ClInclude Include="..\..\src\data-types\mmapstring.h" />
@@ -571,6 +599,14 @@ build_headers.bat
     <ClInclude Include="..\..\src\low-level\imf\mailimf_write_file.h" />
     <ClInclude Include="..\..\src\low-level\imf\mailimf_write_generic.h" />
     <ClInclude Include="..\..\src\low-level\imf\mailimf_write_mem.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_blob.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_http.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_mail.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_private.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_request.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_response.h" />
+    <ClInclude Include="..\..\src\low-level\jmap\mailjmap_types.h" />
     <ClInclude Include="..\..\src\low-level\maildir\maildir.h" />
     <ClInclude Include="..\..\src\low-level\maildir\maildir_types.h" />
     <ClInclude Include="..\..\src\low-level\mbox\mailmbox.h" />

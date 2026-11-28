@@ -39,6 +39,7 @@
 
 #include "mailmime_disposition.h"
 #include "mailmime.h"
+#include "mailmime_rfc2231.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -89,7 +90,7 @@ int mailmime_disposition_parse(const char * message, size_t length,
   size_t final_token;
   size_t cur_token;
   struct mailmime_disposition_type * dsp_type;
-  clist * list;
+  clist /* struct mailmime_disposition_parm * */ * list;
   struct mailmime_disposition * dsp;
   int r;
   int res;
@@ -144,6 +145,12 @@ int mailmime_disposition_parse(const char * message, size_t length,
       res = MAILIMF_ERROR_MEMORY;
       goto free_list;
     }
+  }
+
+  r = mailmime_rfc2231_normalize_disposition_parameters(list);
+  if (r != MAILIMF_NO_ERROR) {
+    res = r;
+    goto free_list;
   }
 
   dsp = mailmime_disposition_new(dsp_type, list);

@@ -38,6 +38,12 @@
 #endif
 
 #include "mailstream_socket.h"
+#include "connect.h"
+
+#if HAVE_CFNETWORK
+#include "mailstream_cfstream.h"
+#include "mailstream_ssl.h"
+#endif
 
 #ifdef HAVE_UNISTD_H
 #	include <unistd.h>
@@ -79,6 +85,10 @@ struct mailstream_socket_data {
   int fd;
   struct mailstream_cancel * cancel;
   int use_read;
+#ifdef WIN32
+  HANDLE read_event;
+  HANDLE write_event;
+#endif
 };
 
 /* mailstream_low, socket */
@@ -122,13 +132,32 @@ static struct mailstream_socket_data * socket_data_new(int fd)
   
   socket_data->fd = fd;
   socket_data->use_read = 0;
+#ifdef WIN32
+  socket_data->read_event = CreateEvent(NULL, TRUE, FALSE, NULL);
+  if (socket_data->read_event == NULL)
+    goto free_socket_data;
+
+  socket_data->write_event = CreateEvent(NULL, TRUE, FALSE, NULL);
+  if (socket_data->write_event == NULL)
+    goto close_read_event;
+#endif
   socket_data->cancel = mailstream_cancel_new();
   if (socket_data->cancel == NULL)
-    goto free;
+#ifdef WIN32
+    goto close_write_event;
+#else
+    goto free_socket_data;
+#endif
   
   return socket_data;
   
- free:
+#ifdef WIN32
+ close_write_event:
+  CloseHandle(socket_data->write_event);
+ close_read_event:
+  CloseHandle(socket_data->read_event);
+#endif
+ free_socket_data:
   free(socket_data);
  err:
   return NULL;
@@ -137,6 +166,10 @@ static struct mailstream_socket_data * socket_data_new(int fd)
 static void socket_data_free(struct mailstream_socket_data * socket_data)
 {
   mailstream_cancel_free(socket_data->cancel);
+#ifdef WIN32
+  CloseHandle(socket_data->read_event);
+  CloseHandle(socket_data->write_event);
+#endif
   free(socket_data);
 }
 
@@ -243,20 +276,27 @@ static ssize_t mailstream_low_socket_read(mailstream_low * s,
     FD_ZERO(&fds_read);
     FD_SET(cancellation_fd, &fds_read);
 
-    event = CreateEvent(NULL, TRUE, FALSE, NULL);
+    event = socket_data->read_event;
+    ResetEvent(event);
     WSAEventSelect(socket_data->fd, event, FD_READ | FD_CLOSE);
     FD_SET(event, &fds_read);
     r = WaitForMultipleObjects(fds_read.fd_count, fds_read.fd_array, FALSE, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-    if (WAIT_TIMEOUT == r) {
+    if (r < WAIT_OBJECT_0 || r >= WAIT_OBJECT_0 + fds_read.fd_count) {
       WSAEventSelect(socket_data->fd, event, 0);
-      CloseHandle(event);
       return -1;
     }
     
     cancelled = (fds_read.fd_array[r - WAIT_OBJECT_0] == cancellation_fd);
     got_data = (fds_read.fd_array[r - WAIT_OBJECT_0] == event);
+    if (got_data) {
+      WSANETWORKEVENTS events;
+      if (WSAEnumNetworkEvents(socket_data->fd, event, &events) == SOCKET_ERROR) {
+        WSAEventSelect(socket_data->fd, event, 0);
+        return -1;
+      }
+      got_data = (events.lNetworkEvents & (FD_READ | FD_CLOSE)) != 0;
+    }
     WSAEventSelect(socket_data->fd, event, 0);
-    CloseHandle(event);
 #elif USE_POLL
     pfd[0].fd = socket_data->fd;
     pfd[0].events = POLLIN;
@@ -296,23 +336,27 @@ static ssize_t mailstream_low_socket_read(mailstream_low * s,
   }
   
   if (socket_data->use_read) {
-    r = read(socket_data->fd, buf, count);
+    ssize_t read_bytes;
+
+    read_bytes = read(socket_data->fd, buf, count);
+    return read_bytes;
   }
   else {
-    r = recv(socket_data->fd, buf, count, 0);
+    ssize_t read_bytes;
+
+    read_bytes = recv(socket_data->fd, buf, count, 0);
 #ifdef WIN32
-    if (SOCKET_ERROR == r) {
+    if (SOCKET_ERROR == read_bytes) {
       if (WSAEWOULDBLOCK == WSAGetLastError()) {
-        r = 0;
+        read_bytes = 0;
       }
-    } else if (r == 0 && count > 0) {
+    } else if (read_bytes == 0 && count > 0) {
       /* The socket is gracefully closed */
-      r = SOCKET_ERROR;
+      read_bytes = SOCKET_ERROR;
     }
 #endif
+    return read_bytes;
   }
-
-  return r;
 }
 
 static ssize_t mailstream_low_socket_write(mailstream_low * s,
@@ -358,20 +402,27 @@ static ssize_t mailstream_low_socket_write(mailstream_low * s,
     FD_SET(cancellation_fd, &fds_read);
     FD_ZERO(&fds_write);
 
-    event = CreateEvent(NULL, TRUE, FALSE, NULL);
+    event = socket_data->write_event;
+    ResetEvent(event);
     WSAEventSelect(socket_data->fd, event, FD_WRITE | FD_CLOSE);
     FD_SET(event, &fds_read);
     r = WaitForMultipleObjects(fds_read.fd_count, fds_read.fd_array, FALSE, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-    if (r < 0) {
+    if (r < WAIT_OBJECT_0 || r >= WAIT_OBJECT_0 + fds_read.fd_count) {
       WSAEventSelect(socket_data->fd, event, 0);
-      CloseHandle(event);
       return -1;
     }
     
     cancelled = (fds_read.fd_array[r - WAIT_OBJECT_0] == cancellation_fd);
     write_enabled = (fds_read.fd_array[r - WAIT_OBJECT_0] == event);
+    if (write_enabled) {
+      WSANETWORKEVENTS events;
+      if (WSAEnumNetworkEvents(socket_data->fd, event, &events) == SOCKET_ERROR) {
+        WSAEventSelect(socket_data->fd, event, 0);
+        return -1;
+      }
+      write_enabled = (events.lNetworkEvents & (FD_WRITE | FD_CLOSE)) != 0;
+    }
     WSAEventSelect(socket_data->fd, event, 0);
-    CloseHandle(event);
 #elif USE_POLL
     pfd[0].fd = socket_data->fd;
     pfd[0].events = POLLOUT;
@@ -411,17 +462,24 @@ static ssize_t mailstream_low_socket_write(mailstream_low * s,
       return 0;
   }
   
-  r = send(socket_data->fd, buf, count, 0);
+  {
+    ssize_t written;
+
+    if (socket_data->use_read)
+      written = write(socket_data->fd, buf, count);
+    else
+      written = send(socket_data->fd, buf, count, 0);
 
 #ifdef WIN32
-  if (SOCKET_ERROR == r) {
-    if (WSAEWOULDBLOCK == WSAGetLastError()) {
-      r = 0;
+    if (SOCKET_ERROR == written) {
+      if (WSAEWOULDBLOCK == WSAGetLastError()) {
+        written = 0;
+      }
     }
-  }
 #endif
 
-  return r;
+    return written;
+  }
 }
 
 
@@ -452,6 +510,48 @@ mailstream * mailstream_socket_open_timeout(int fd, time_t timeout)
   mailstream_low_close(low);
  err:
   return NULL;
+}
+
+mailstream * mailstream_socket_connect_timeout(const char * server,
+    uint16_t port, time_t timeout,
+    enum mailstream_socket_connect_error * error)
+{
+  mailstream * stream;
+  int fd;
+
+  if (error != NULL)
+    * error = MAILSTREAM_SOCKET_CONNECT_ERROR_CONNECTION_REFUSED;
+
+#if HAVE_CFNETWORK
+  if (mailstream_ssl_get_backend() == MAILSTREAM_SSL_BACKEND_CFNETWORK) {
+    if (error != NULL)
+      * error = MAILSTREAM_SOCKET_CONNECT_ERROR_CFNETWORK;
+    stream = mailstream_cfstream_open_timeout(server, port, timeout);
+    if (stream != NULL && error != NULL)
+      * error = MAILSTREAM_SOCKET_CONNECT_NO_ERROR;
+    return stream;
+  }
+#endif
+
+  fd = mail_tcp_connect_timeout(server, port, timeout);
+  if (fd == -1)
+    return NULL;
+
+  stream = mailstream_socket_open_timeout(fd, timeout);
+  if (stream == NULL) {
+#ifdef WIN32
+    closesocket(fd);
+#else
+    close(fd);
+#endif
+    if (error != NULL)
+      * error = MAILSTREAM_SOCKET_CONNECT_ERROR_MEMORY;
+    return NULL;
+  }
+
+  if (error != NULL)
+    * error = MAILSTREAM_SOCKET_CONNECT_NO_ERROR;
+  return stream;
 }
 
 static void mailstream_low_socket_cancel(mailstream_low * s)

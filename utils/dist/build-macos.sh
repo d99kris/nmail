@@ -6,7 +6,7 @@
 # dist/nmail-macos-arm64/. Third-party libraries are linked static from a
 # source-built deps prefix (utils/dist/build-deps-macos.sh, invoked
 # automatically; cached under ~/.cache/nmail-dist/); only stable system
-# libraries (curl, expat, iconv, libc++, libSystem) and frameworks stay
+# libraries (iconv, libc++, libSystem) and frameworks stay
 # dynamic, with a macOS 12.0 deployment floor. The binary is ad-hoc
 # codesigned — installs via curl/tar run as-is, browser-downloaded archives
 # need the quarantine attribute cleared (xattr -d com.apple.quarantine) or

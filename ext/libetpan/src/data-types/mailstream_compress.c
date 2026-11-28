@@ -62,7 +62,8 @@ static int mailstream_low_compress_get_fd(mailstream_low * s);
 static struct mailstream_cancel * mailstream_low_compress_get_cancel(mailstream_low * s);
 static void mailstream_low_compress_free(mailstream_low * s);
 static void mailstream_low_compress_cancel(mailstream_low * s);
-static carray * mailstream_low_compress_get_certificate_chain(mailstream_low * s);
+static carray /* MMAPString * */ *
+mailstream_low_compress_get_certificate_chain(mailstream_low * s);
 static int mailstream_low_compress_setup_idle(mailstream_low * low);
 static int mailstream_low_compress_unsetup_idle(mailstream_low * low);
 static int mailstream_low_compress_interrupt_idle(mailstream_low * low);
@@ -236,7 +237,7 @@ static ssize_t mailstream_low_compress_write(mailstream_low * s, const void * bu
   size_t remaining = CHUNK_SIZE - strm->avail_out;
   while (remaining > 0) {
     ssize_t wr = data->ms->driver->mailstream_write(data->ms, p, remaining);
-    if (wr < 0) {
+    if (wr <= 0) {
       return -1;
     }
     
@@ -307,7 +308,8 @@ static void mailstream_low_compress_cancel(mailstream_low * s)
 #endif
 }
 
-static carray * mailstream_low_compress_get_certificate_chain(mailstream_low * s)
+static carray /* MMAPString * */ *
+mailstream_low_compress_get_certificate_chain(mailstream_low * s)
 {
 #if HAVE_ZLIB
   compress_data * data = s->data;

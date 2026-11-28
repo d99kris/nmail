@@ -61,6 +61,7 @@
 
 #include "mailmime_types.h"
 #include "mailmime_disposition.h"
+#include "mailmime_rfc2231.h"
 #include "mailimf.h"
 
 #ifndef TRUE
@@ -204,7 +205,7 @@ int mailmime_content_parse(const char * message, size_t length,
   size_t cur_token;
   struct mailmime_type * type;
   char * subtype;
-  clist * parameters_list;
+  clist /* struct mailmime_parameter * */ * parameters_list;
   struct mailmime_content * content;
   int r;
   int res;
@@ -287,6 +288,12 @@ int mailmime_content_parse(const char * message, size_t length,
       res = MAILIMF_ERROR_MEMORY;
       goto free_parameters;
     }
+  }
+
+  r = mailmime_rfc2231_normalize_parameters(parameters_list);
+  if (r != MAILIMF_NO_ERROR) {
+    res = r;
+    goto free_parameters;
   }
 
   content = mailmime_content_new(type, subtype, parameters_list);
@@ -576,18 +583,22 @@ mailmime_field_parse(struct mailimf_optional_field * field,
     if (strcasecmp(name, "Content-Type") != 0)
       return MAILIMF_ERROR_PARSE;
     {
-      size_t cur_token = 0;
+      size_t content_cur_token;
       char * decoded_value;
-      r = mailmime_encoded_phrase_parse("us-ascii",
-          value, strlen(value),
-          &cur_token, "utf-8", &decoded_value);
-      if (r != MAILIMF_NO_ERROR) {
+
+      content_cur_token = 0;
+      r = mailmime_content_parse(value, strlen(value), &content_cur_token,
+          &content);
+      if (r == MAILIMF_ERROR_PARSE) {
         cur_token = 0;
-        r = mailmime_content_parse(value, strlen(value), &cur_token, &content);
-      }
-      else {
-        cur_token = 0;
-        r = mailmime_content_parse(decoded_value, strlen(decoded_value), &cur_token, &content);
+        decoded_value = NULL;
+        r = mailmime_encoded_phrase_parse("us-ascii", value, strlen(value),
+            &cur_token, "utf-8", &decoded_value);
+        if (r == MAILIMF_NO_ERROR) {
+          content_cur_token = 0;
+          r = mailmime_content_parse(decoded_value, strlen(decoded_value),
+              &content_cur_token, &content);
+        }
         free(decoded_value);
       }
       if (r != MAILIMF_NO_ERROR)
@@ -633,6 +644,20 @@ mailmime_field_parse(struct mailimf_optional_field * field,
       return MAILIMF_ERROR_PARSE;
     r = mailmime_disposition_parse(value, strlen(value),
 				   &cur_token, &disposition);
+    if (r == MAILIMF_ERROR_PARSE) {
+      char * decoded_value;
+
+      cur_token = 0;
+      decoded_value = NULL;
+      r = mailmime_encoded_phrase_parse("us-ascii", value, strlen(value),
+          &cur_token, "utf-8", &decoded_value);
+      if (r == MAILIMF_NO_ERROR) {
+        cur_token = 0;
+        r = mailmime_disposition_parse(decoded_value, strlen(decoded_value),
+            &cur_token, &disposition);
+      }
+      free(decoded_value);
+    }
     if (r != MAILIMF_NO_ERROR)
       return r;
     break;
@@ -852,7 +877,7 @@ mailmime_unparsed_fields_parse(struct mailimf_unparsed_fields *
 {
   clistiter * cur;
   struct mailmime_fields * mime_fields;
-  clist * list;
+  clist /* struct mailmime_field * */ * list;
   int r;
   int res;
 
@@ -915,7 +940,7 @@ mailmime_fields_parse(struct mailimf_fields *
 {
   clistiter * cur;
   struct mailmime_fields * mime_fields;
-  clist * list;
+  clist /* struct mailmime_field * */ * list;
   int r;
   int res;
 
@@ -1409,7 +1434,7 @@ int mailmime_language_parse(const char * message, size_t length,
   size_t cur_token;
   int r;
   int res;
-  clist * list;
+  clist /* char * */ * list;
   struct mailmime_language * language;
 
   cur_token = * indx;

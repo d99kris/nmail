@@ -117,8 +117,8 @@ mailimap_annotatemore_entry_list_parse(mailstream * fd, MMAPString * buffer, str
     progress_function * progr_fun)
 {
   size_t cur_token;
-  clist * en_att_list;
-  clist * en_list;
+  clist /* struct mailimap_annotatemore_entry_att * */ * en_att_list;
+  clist /* char * */ * en_list;
   int type;
   struct mailimap_annotatemore_entry_list * entry_list;
   int r;
@@ -140,6 +140,10 @@ mailimap_annotatemore_entry_list_parse(mailstream * fd, MMAPString * buffer, str
         progr_rate, progr_fun);
   if (r == MAILIMAP_NO_ERROR)
     type = MAILIMAP_ANNOTATEMORE_ENTRY_LIST_TYPE_ENTRY_ATT_LIST;
+  else if (r != MAILIMAP_ERROR_PARSE) {
+    res = r;
+    goto err;
+  }
 
   if (r == MAILIMAP_ERROR_PARSE) {
     r = mailimap_oparenth_parse(fd, buffer, parser_ctx, &cur_token);
@@ -205,7 +209,7 @@ mailimap_annotatemore_entry_att_parse(mailstream * fd, MMAPString * buffer, stru
 {
   size_t cur_token;
   char * entry;
-  clist * list;
+  clist /* struct mailimap_annotatemore_att_value * */ * list;
   struct mailimap_annotatemore_entry_att * entry_att;
   int r;
   int res;
@@ -458,4 +462,3 @@ int mailimap_annotatemore_parse(int calling_parser, mailstream * fd,
 
   return MAILIMAP_NO_ERROR;
 }
-

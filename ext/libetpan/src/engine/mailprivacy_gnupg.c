@@ -218,6 +218,79 @@ int pgp_is_crypted_armor(char * data, size_t len)
   return 0;
 }
 
+static int shell_quote_append_char(char ** result_p, size_t * remaining, char ch)
+{
+  if (* remaining <= 1)
+    return -1;
+
+  ** result_p = ch;
+  (* result_p) ++;
+  (* remaining) --;
+  ** result_p = '\0';
+
+  return 0;
+}
+
+static int shell_quote_arg(char * result, size_t size, const char * value)
+{
+  char * result_p;
+  size_t remaining;
+  const char * p;
+
+  if (size == 0)
+    return -1;
+
+  result_p = result;
+  remaining = size;
+  * result_p = '\0';
+
+  if (shell_quote_append_char(&result_p, &remaining, '\'') < 0)
+    return -1;
+
+  for(p = value ; * p != '\0' ; p ++) {
+    if (* p == '\'') {
+      if (shell_quote_append_char(&result_p, &remaining, '\'') < 0)
+        return -1;
+      if (shell_quote_append_char(&result_p, &remaining, '\\') < 0)
+        return -1;
+      if (shell_quote_append_char(&result_p, &remaining, '\'') < 0)
+        return -1;
+      if (shell_quote_append_char(&result_p, &remaining, '\'') < 0)
+        return -1;
+    }
+    else {
+      if (shell_quote_append_char(&result_p, &remaining, * p) < 0)
+        return -1;
+    }
+  }
+
+  if (shell_quote_append_char(&result_p, &remaining, '\'') < 0)
+    return -1;
+
+  return 0;
+}
+
+static int default_key_add(char * default_key, size_t size, char * email)
+{
+  char quoted_email[PATH_MAX];
+  int r;
+
+  * default_key = '\0';
+
+  if (email == NULL)
+    return MAIL_NO_ERROR;
+
+  r = shell_quote_arg(quoted_email, sizeof(quoted_email), email);
+  if (r < 0)
+    return MAIL_ERROR_MEMORY;
+
+  r = snprintf(default_key, size, "--default-key %s", quoted_email);
+  if ((r < 0) || ((size_t) r >= size))
+    return MAIL_ERROR_MEMORY;
+
+  return MAIL_NO_ERROR;
+}
+
 
 #if 0
 #define BUF_SIZE 1024
@@ -1407,11 +1480,12 @@ static int pgp_sign_mime(struct mailprivacy * privacy,
   
   /* get signing key */
   
-  * default_key = '\0';
   email = get_first_from_addr(mime);
-  if (email != NULL)
-    snprintf(default_key, sizeof(default_key),
-        "--default-key %s", email);
+  r = default_key_add(default_key, sizeof(default_key), email);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* part to sign */
 
@@ -1617,10 +1691,20 @@ static int recipient_add_mb(char * recipient, size_t * len,
     struct mailimf_mailbox * mb)
 {
   char buffer[PATH_MAX];
+  char quoted_addr_spec[PATH_MAX];
   size_t buflen;
+  int r;
 
   if (mb->mb_addr_spec != NULL) {
-    snprintf(buffer, sizeof(buffer), "-r %s ", mb->mb_addr_spec);
+    r = shell_quote_arg(quoted_addr_spec, sizeof(quoted_addr_spec),
+        mb->mb_addr_spec);
+    if (r < 0)
+      return MAIL_ERROR_MEMORY;
+
+    r = snprintf(buffer, sizeof(buffer), "-r %s ", quoted_addr_spec);
+    if ((r < 0) || ((size_t) r >= sizeof(buffer)))
+      return MAIL_ERROR_MEMORY;
+
     buflen = strlen(buffer);
     if (buflen >= * len)
       return MAIL_ERROR_MEMORY;
@@ -1779,11 +1863,12 @@ static int pgp_sign_encrypt_mime(struct mailprivacy * privacy,
   
   /* get signing key */
   
-  * default_key = '\0';
   email = get_first_from_addr(mime);
-  if (email != NULL)
-    snprintf(default_key, sizeof(default_key),
-        "--default-key %s", email);
+  r = default_key_add(default_key, sizeof(default_key), email);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   root = mime;
   while (root->mm_parent != NULL)
@@ -1795,7 +1880,11 @@ static int pgp_sign_encrypt_mime(struct mailprivacy * privacy,
   
   /* recipient */
   
-  collect_recipient(recipient, sizeof(recipient), fields);
+  r = collect_recipient(recipient, sizeof(recipient), fields);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* part to encrypt */
   
@@ -2021,7 +2110,11 @@ static int pgp_encrypt_mime(struct mailprivacy * privacy,
   
   /* recipient */
   
-  collect_recipient(recipient, sizeof(recipient), fields);
+  r = collect_recipient(recipient, sizeof(recipient), fields);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* part to encrypt */
   
@@ -2239,11 +2332,12 @@ static int pgp_clear_sign(struct mailprivacy * privacy,
   
   /* get signing key */
   
-  * default_key = '\0';
   email = get_first_from_addr(mime);
-  if (email != NULL)
-    snprintf(default_key, sizeof(default_key),
-        "--default-key %s", email);
+  r = default_key_add(default_key, sizeof(default_key), email);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* get part to sign */
   
@@ -2424,7 +2518,11 @@ static int pgp_armor_encrypt(struct mailprivacy * privacy,
   
   /* recipient */
   
-  collect_recipient(recipient, sizeof(recipient), fields);
+  r = collect_recipient(recipient, sizeof(recipient), fields);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* get part to encrypt */
   
@@ -2598,11 +2696,12 @@ static int pgp_armor_sign_encrypt(struct mailprivacy * privacy,
   
   /* get signing key */
   
-  * default_key = '\0';
   email = get_first_from_addr(mime);
-  if (email != NULL)
-    snprintf(default_key, sizeof(default_key),
-        "--default-key %s", email);
+  r = default_key_add(default_key, sizeof(default_key), email);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   root = mime;
   while (root->mm_parent != NULL)
@@ -2614,7 +2713,11 @@ static int pgp_armor_sign_encrypt(struct mailprivacy * privacy,
   
   /* recipient */
   
-  collect_recipient(recipient, sizeof(recipient), fields);
+  r = collect_recipient(recipient, sizeof(recipient), fields);
+  if (r != MAIL_NO_ERROR) {
+    res = r;
+    goto err;
+  }
   
   /* get part to encrypt */
   
@@ -2833,7 +2936,7 @@ static int mailprivacy_gnupg_init_lock_done = 0;
 #define LOCK() do while (0)
 #define UNLOCK() do while (0)
 #endif
-static chash * encryption_id_hash = NULL;
+static chash /* mailmessage * -> clist (char *) */ * encryption_id_hash = NULL;
 
 #ifdef LIBETPAN_REENTRANT
 #if defined(HAVE_PTHREAD_H) && !defined(IGNORE_PTHREAD_H)
@@ -2857,9 +2960,10 @@ void mailprivacy_gnupg_done(struct mailprivacy * privacy)
   mailprivacy_unregister(privacy, &pgp_protocol);
 }
 
-static clist * get_list(struct mailprivacy * privacy, mailmessage * msg)
+static clist /* char * */ * get_list(struct mailprivacy * privacy,
+    mailmessage * msg)
 {
-  clist * encryption_id_list;
+  clist /* char * */ * encryption_id_list;
   
   encryption_id_list = NULL;
   if (encryption_id_hash != NULL) {
@@ -2881,7 +2985,7 @@ static clist * get_list(struct mailprivacy * privacy, mailmessage * msg)
 void mailprivacy_gnupg_encryption_id_list_clear(struct mailprivacy * privacy,
     mailmessage * msg)
 {
-  clist * encryption_id_list;
+  clist /* char * */ * encryption_id_list;
   clistiter * iter;
   
   LOCK();
@@ -2910,10 +3014,10 @@ void mailprivacy_gnupg_encryption_id_list_clear(struct mailprivacy * privacy,
   UNLOCK();
 }
 
-clist * mailprivacy_gnupg_encryption_id_list(struct mailprivacy * privacy,
+clist /* char * */ * mailprivacy_gnupg_encryption_id_list(struct mailprivacy * privacy,
     mailmessage * msg)
 {
-  clist * encryption_id_list;
+  clist /* char * */ * encryption_id_list;
   
   LOCK();
   encryption_id_list = get_list(privacy, msg);
@@ -2925,7 +3029,7 @@ clist * mailprivacy_gnupg_encryption_id_list(struct mailprivacy * privacy,
 static int mailprivacy_gnupg_add_encryption_id(struct mailprivacy * privacy,
     mailmessage * msg, char * encryption_id)
 {
-  clist * encryption_id_list;
+  clist /* char * */ * encryption_id_list;
   int r;
   int res;
   
@@ -2978,7 +3082,7 @@ static int mailprivacy_gnupg_add_encryption_id(struct mailprivacy * privacy,
 
 #define MAX_EMAIL_SIZE 1024
 
-static chash * passphrase_hash = NULL;
+static chash /* char * user_id -> char * passphrase */ * passphrase_hash = NULL;
 
 int mailprivacy_gnupg_set_encryption_id(struct mailprivacy * privacy,
     char * user_id, char * passphrase)

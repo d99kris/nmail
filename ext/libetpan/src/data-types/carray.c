@@ -40,22 +40,33 @@
 #	include <config.h>
 #endif
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include "carray.h"
 
 #define MIN_ARRAY_SIZE 4
 
-LIBETPAN_EXPORT
-carray * carray_new(unsigned int initsize) {
-  carray * array;
+static int size_mul_overflows(unsigned int count, size_t item_size)
+{
+  return count > ((size_t) -1) / item_size;
+}
 
-  array = (carray *) malloc(sizeof(carray));
+LIBETPAN_EXPORT
+carray /* void * */ * carray_new(unsigned int initsize) {
+  carray /* void * */ * array;
+
+  array = (carray /* void * */ *) malloc(sizeof(carray));
   if (!array) return NULL;
   
   if (initsize < MIN_ARRAY_SIZE)
     initsize = MIN_ARRAY_SIZE;
   
+  if (size_mul_overflows(initsize, sizeof(void *))) {
+    free(array);
+    return NULL;
+  }
+
   array->len = 0;
   array->max = initsize;
   array->array = (void **) malloc(sizeof(void *) * initsize);
@@ -67,9 +78,12 @@ carray * carray_new(unsigned int initsize) {
 }
 
 LIBETPAN_EXPORT
-int carray_add(carray * array, void * data, unsigned int * indx) {
+int carray_add(carray /* void * */ * array, void * data, unsigned int * indx) {
   int r;
   
+  if (array->len == UINT_MAX)
+    return -1;
+
   r = carray_set_size(array, array->len + 1);
   if (r < 0)
     return r;
@@ -82,14 +96,29 @@ int carray_add(carray * array, void * data, unsigned int * indx) {
 }
 
 LIBETPAN_EXPORT
-int carray_set_size(carray * array, unsigned int new_size)
+int carray_set_size(carray /* void * */ * array, unsigned int new_size)
 {
+  unsigned int old_size;
+
+  old_size = array->len;
+
   if (new_size > array->max) {
-    unsigned int n = array->max * 2;
+    unsigned int n;
     void * new;
 
-    while (n <= new_size)
+    if (array->max > UINT_MAX / 2)
+      return -1;
+
+    n = array->max * 2;
+
+    while (n <= new_size) {
+      if (n > UINT_MAX / 2)
+        return -1;
       n *= 2;
+    }
+
+    if (size_mul_overflows(n, sizeof(void *)))
+      return -1;
 
     new = (void **) realloc(array->array, sizeof(void *) * n);
     if (!new)
@@ -97,13 +126,19 @@ int carray_set_size(carray * array, unsigned int new_size)
     array->array = new;
     array->max = n;
   }
+
+  if (new_size > old_size) {
+    memset(array->array + old_size, 0,
+        sizeof(void *) * (new_size - old_size));
+  }
+
   array->len = new_size;
 
   return 0;
 }
 
 LIBETPAN_EXPORT
-int carray_delete_fast(carray * array, unsigned int indx) {
+int carray_delete_fast(carray /* void * */ * array, unsigned int indx) {
   if (indx >= array->len)
     return -1;
 
@@ -113,7 +148,7 @@ int carray_delete_fast(carray * array, unsigned int indx) {
 }
 
 LIBETPAN_EXPORT
-int carray_delete(carray * array, unsigned int indx) {
+int carray_delete(carray /* void * */ * array, unsigned int indx) {
   if (indx >= array->len)
     return -1;
 
@@ -123,7 +158,7 @@ int carray_delete(carray * array, unsigned int indx) {
 }
 
 LIBETPAN_EXPORT
-int carray_delete_slow(carray * array, unsigned int indx) {
+int carray_delete_slow(carray /* void * */ * array, unsigned int indx) {
   if (indx >= array->len)
     return -1;
 
@@ -135,28 +170,28 @@ int carray_delete_slow(carray * array, unsigned int indx) {
 
 #ifdef NO_MACROS
 LIBETPAN_EXPORT
-void ** carray_data(carray * array) {
+void ** carray_data(carray /* void * */ * array) {
   return array->array;
 }
 
 LIBETPAN_EXPORT
-unsigned int carray_count(carray * array) {
+unsigned int carray_count(carray /* void * */ * array) {
   return array->len;
 }
 
 LIBETPAN_EXPORT
-void * carray_get(carray * array, unsigned int indx) {
+void * carray_get(carray /* void * */ * array, unsigned int indx) {
   return array->array[indx];
 }
 
 LIBETPAN_EXPORT
-void carray_set(carray * array, unsigned int indx, void * value) {
+void carray_set(carray /* void * */ * array, unsigned int indx, void * value) {
   array->array[indx] = value;
 }
 #endif
 
 LIBETPAN_EXPORT
-void carray_free(carray * array) {
+void carray_free(carray /* void * */ * array) {
   free(array->array);
   free(array);
 }

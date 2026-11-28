@@ -14,8 +14,8 @@
 # nmail is pure C/C++ (no Go/cgo/tdlib/Rust), so this is materially simpler
 # than the nchat counterpart it is lifted from: no Go toolchain, and none of
 # the clipboard stack (libpng, the X11/xcb libraries) that nmail does not use.
-# The nmail-specific additions over nchat are xapian-core, cyrus-sasl,
-# libcurl, expat and libuuid — see utils/dist/ notes / NMAILRELEASES.md.
+# The nmail-specific additions over nchat are xapian-core, cyrus-sasl and
+# libuuid — see utils/dist/ notes / NMAILRELEASES.md.
 #
 # nmail is distributed under the MIT license, see LICENSE for details.
 
@@ -42,7 +42,7 @@ RUN dnf install -y epel-release && \
 
 # --- Static dependency builds (one layer each for docker-cache reuse) ---
 
-# zlib: needed by libmagic, xapian, libcurl. Fetched from the madler/zlib
+# zlib: needed by libmagic, xapian, libetpan. Fetched from the madler/zlib
 # GitHub release (byte-identical to the upstream tarball) rather than
 # zlib.net/fossils/, whose host intermittently rejects CI/datacenter requests
 # with HTTP 415 — the GitHub release asset is stable and versioned.
@@ -54,7 +54,7 @@ RUN set -euo pipefail; \
     make -j"$(nproc)"; make install; \
     cd ..; rm -rf "zlib-${ZLIB_VERSION}"
 
-# openssl: nmail crypto, libetpan TLS, libcurl, cyrus-sasl
+# openssl: nmail crypto, libetpan TLS, cyrus-sasl
 # (OPENSSL_USE_STATIC_LIBS). --libdir=lib keeps it out of lib64 so a single
 # -L covers everything.
 ARG OPENSSL_VERSION=3.0.16
@@ -137,36 +137,6 @@ RUN set -euo pipefail; \
       --without-python --without-systemd --without-tinfo --without-ncurses; \
     make -j"$(nproc)"; make install; \
     cd ..; rm -rf "util-linux-${UTIL_LINUX_VERSION}"
-
-# expat: libetpan (HAVE_EXPAT=1) XML parsing.
-ARG EXPAT_VERSION=2.6.4
-ARG EXPAT_TAG=R_2_6_4
-RUN set -euo pipefail; \
-    curl -fsSL "https://github.com/libexpat/libexpat/releases/download/${EXPAT_TAG}/expat-${EXPAT_VERSION}.tar.gz" | tar xz; \
-    cd "expat-${EXPAT_VERSION}"; \
-    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
-      --without-docbook --without-examples --without-tests; \
-    make -j"$(nproc)"; make install; \
-    cd ..; rm -rf "expat-${EXPAT_VERSION}"
-
-# libcurl: libetpan (HAVE_CURL=1). nmail/libetpan only reach curl through the
-# RSS/newsfeed path (http/https), so build a minimal openssl-backed curl and
-# disable every other protocol/feature to keep the static closure small and
-# avoid dragging in ldap/gssapi/ssh/etc.
-ARG CURL_VERSION=8.11.1
-RUN set -euo pipefail; \
-    curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz; \
-    cd "curl-${CURL_VERSION}"; \
-    ./configure --prefix="${DEPS}" --disable-shared --enable-static \
-      --with-openssl="${DEPS}" --with-zlib="${DEPS}" \
-      --without-libpsl --without-brotli --without-zstd --without-libidn2 \
-      --without-nghttp2 --without-ngtcp2 --without-libssh2 --without-librtmp \
-      --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet \
-      --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher \
-      --disable-smb --disable-mqtt --disable-ftp --disable-file \
-      --disable-manual --disable-ntlm --disable-unix-sockets; \
-    make -j"$(nproc)"; make install; \
-    cd ..; rm -rf "curl-${CURL_VERSION}"
 
 # xapian-core: full-text search index (find_package(Xapian)). Installs its
 # CMake package config under ${DEPS}/lib/cmake/xapian so nmail resolves it

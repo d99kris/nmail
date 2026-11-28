@@ -1,0 +1,27 @@
+[submodule "dependencies/submodules/cyrus-sasl"]
+	path = dependencies/submodules/cyrus-sasl
+	url = https://github.com/cyrusimap/cyrus-sasl.git
+[submodule "dependencies/submodules/openssl"]
+	path = dependencies/submodules/openssl
+	url = https://github.com/openssl/openssl.git
+[submodule "dependencies/submodules/rnp"]
+	path = dependencies/submodules/rnp
+	url = https://github.com/rnpgp/rnp.git
+[submodule "dependencies/submodules/json-c"]
+	path = dependencies/submodules/json-c
+	url = https://github.com/json-c/json-c.git
+[submodule "dependencies/submodules/tidy-html5"]
+	path = dependencies/submodules/tidy-html5
+	url = https://github.com/htacg/tidy-html5.git
+[submodule "dependencies/submodules/curl"]
+	path = dependencies/submodules/curl
+	url = https://github.com/curl/curl.git
+[submodule "dependencies/submodules/libxml2"]
+	path = dependencies/submodules/libxml2
+	url = https://gitlab.gnome.org/GNOME/libxml2.git
+[submodule "dependencies/submodules/icu"]
+	path = dependencies/submodules/icu
+	url = https://github.com/unicode-org/icu.git
+[submodule "dependencies/submodules/icu-data"]
+	path = dependencies/submodules/icu-data
+	url = https://github.com/unicode-org/icu-data.git

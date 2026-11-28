@@ -55,47 +55,29 @@
 #define SERVICE_NAME_POP3 "pop3"
 #define SERVICE_TYPE_TCP "tcp"
 
-#if HAVE_CFNETWORK
-static int mailpop3_cfsocket_connect(mailpop3 * f, const char * server, uint16_t port);
-#endif
-
 int mailpop3_socket_connect(mailpop3 * f, const char * server, uint16_t port)
 {
-  int s;
+  enum mailstream_socket_connect_error connect_error;
   mailstream * stream;
 
-#if HAVE_CFNETWORK
-  if (mailstream_cfstream_enabled) {
-    return mailpop3_cfsocket_connect(f, server, port);
-  }
-#endif
-  
   if (port == 0) {
     port = mail_get_service_port(SERVICE_NAME_POP3, SERVICE_TYPE_TCP);
     if (port == 0)
       port = DEFAULT_POP3_PORT;
   }
-  
-  /* Connection */
 
-  s = mail_tcp_connect_timeout(server, port, f->pop3_timeout);
-  if (s == -1)
-    return MAILPOP3_ERROR_CONNECTION_REFUSED;
-
-  stream = mailstream_socket_open_timeout(s, f->pop3_timeout);
+  stream = mailstream_socket_connect_timeout(server, port, f->pop3_timeout,
+      &connect_error);
   if (stream == NULL) {
-#ifdef WIN32
-	closesocket(s);
-#else
-    close(s);
-#endif
-    return MAILPOP3_ERROR_MEMORY;
+    if (connect_error == MAILSTREAM_SOCKET_CONNECT_ERROR_MEMORY)
+      return MAILPOP3_ERROR_MEMORY;
+    return MAILPOP3_ERROR_CONNECTION_REFUSED;
   }
 
   return mailpop3_connect(f, stream);
 }
 
-static int mailpop3_cfsocket_starttls(mailpop3 * f);
+static int mailpop3_cfsocket_starttls(mailpop3 * f, const char * server_name);
 
 LIBETPAN_EXPORT
 int mailpop3_socket_starttls(mailpop3 * f)
@@ -107,6 +89,19 @@ LIBETPAN_EXPORT
 int mailpop3_socket_starttls_with_callback(mailpop3 * f,
     void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
 {
+  return mailpop3_socket_starttls_with_server_name_callback(f, NULL, callback, data);
+}
+
+int mailpop3_socket_starttls_with_server_name(mailpop3 * f,
+    const char * server_name)
+{
+  return mailpop3_socket_starttls_with_server_name_callback(f, server_name, NULL, NULL);
+}
+
+int mailpop3_socket_starttls_with_server_name_callback(mailpop3 * f,
+    const char * server_name,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
+{
   int r;
   int fd;
   mailstream_low * low;
@@ -115,7 +110,7 @@ int mailpop3_socket_starttls_with_callback(mailpop3 * f,
   low = mailstream_get_low(f->pop3_stream);
   if (low->driver == mailstream_cfstream_driver) {
     // won't use callback
-    return mailpop3_cfsocket_starttls(f);
+    return mailpop3_cfsocket_starttls(f, server_name);
   }
   
   r = mailpop3_stls(f);
@@ -131,8 +126,8 @@ int mailpop3_socket_starttls_with_callback(mailpop3 * f,
   if (fd == -1)
     return MAILPOP3_ERROR_STREAM;
   
-  new_low = mailstream_low_tls_open_with_callback_timeout(fd,
-      f->pop3_timeout, callback, data);
+  new_low = mailstream_low_tls_open_with_server_name_callback_timeout(fd,
+      f->pop3_timeout, server_name, callback, data);
   if (new_low == NULL)
     return MAILPOP3_ERROR_SSL;
   
@@ -142,21 +137,7 @@ int mailpop3_socket_starttls_with_callback(mailpop3 * f,
   return MAILPOP3_NO_ERROR;
 }
 
-#if HAVE_CFNETWORK
-static int mailpop3_cfsocket_connect(mailpop3 * f, const char * server, uint16_t port)
-{
-  mailstream * stream;
-  
-  stream = mailstream_cfstream_open_timeout(server, port, f->pop3_timeout);
-  if (stream == NULL) {
-    return MAILPOP3_ERROR_CONNECTION_REFUSED;
-  }
-  
-  return mailpop3_connect(f, stream);
-}
-#endif
-
-static int mailpop3_cfsocket_starttls(mailpop3 * f)
+static int mailpop3_cfsocket_starttls(mailpop3 * f, const char * server_name)
 {
   int r;
   
@@ -168,6 +149,8 @@ static int mailpop3_cfsocket_starttls(mailpop3 * f)
       return r;
   }
   
+  if (server_name != NULL)
+    mailstream_cfstream_set_ssl_peer_name(f->pop3_stream, server_name);
   mailstream_cfstream_set_ssl_verification_mask(f->pop3_stream, MAILSTREAM_CFSTREAM_SSL_NO_VERIFICATION);
   r = mailstream_cfstream_set_ssl_enabled(f->pop3_stream, 1);
   if (r < 0) {

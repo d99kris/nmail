@@ -29,11 +29,8 @@
 
 include $(top_srcdir)/rules.mk
 
-etpaninclude_HEADERS = \
-	feeddriver.h \
-	feeddriver_message.h \
-	feeddriver_types.h \
-	feedstorage.h
+etpaninclude_HEADERS = feedstorage.h
+etpaninclude_CONDITION = defined(HAVE_FEED) || (defined(LIBETPAN_HAS_FEED) && LIBETPAN_HAS_FEED)
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
 	-I$(top_srcdir)/src/driver/interface \
@@ -49,3 +46,8 @@ libfeed_la_SOURCES = \
 	feeddriver.c \
 	feeddriver_message.c \
 	feedstorage.c
+
+noinst_HEADERS = \
+	feeddriver.h \
+	feeddriver_message.h \
+	feeddriver_types.h

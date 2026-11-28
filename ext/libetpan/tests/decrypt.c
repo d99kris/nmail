@@ -3,6 +3,7 @@
 #endif
 
 #include <libetpan/libetpan.h>
+#include "data_message_driver.h"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -121,7 +122,7 @@ int main(int argc, char ** argv)
   mailmime_write(stdout, &col, mime);
   
   {
-    clist * id_list;
+	    clist /* char * */ * id_list;
     clistiter * iter;
     
     id_list = mailprivacy_gnupg_encryption_id_list(privacy, msg);
@@ -136,7 +137,7 @@ int main(int argc, char ** argv)
   }
   
   {
-    clist * id_list;
+    clist /* char * */ * id_list;
     clistiter * iter;
     
     id_list = mailprivacy_smime_encryption_id_list(privacy, msg);

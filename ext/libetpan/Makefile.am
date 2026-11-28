@@ -31,7 +31,25 @@ include $(top_srcdir)/rules.mk
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = libetpan.pc.in libetpan-config.h.in COPYRIGHT
+EXTRA_DIST = libetpan.pc.in libetpan-config.h.in COPYRIGHT \
+	tools/public_headers.py README.md \
+	unittest/public-headers/test_public_headers.py \
+	unittest/mailpgp/fixtures/hidden-recipient-secret.asc \
+	unittest/mailpgp/fixtures/hidden-recipient-message.eml \
+	unittest/mailpgp/fixtures/hidden-recipient-body.txt \
+	unittest/jmap/data/blob/download-message.eml \
+	unittest/jmap/data/blob/upload-response.json \
+	unittest/jmap/data/email/get-multipart-vendor.json \
+	unittest/jmap/data/mailbox/changes.json \
+	unittest/jmap/data/mailbox/get.json \
+	unittest/jmap/data/mailbox/query.json \
+	unittest/jmap/data/mailbox/set.json \
+	unittest/jmap/data/request/mailbox-get.json \
+	unittest/jmap/data/request/email-query-get-result-reference.json \
+	unittest/jmap/data/response/method-success-and-error.json \
+	unittest/jmap/data/response/problem-limit.json \
+	unittest/jmap/data/session/fastmail-style.json \
+	unittest/jmap/data/session/minimal.json
 
 # The file stamp-prepare is generated in the top build directory by
 # rules defined in rules.mk.
@@ -55,3 +73,32 @@ $(top_builddir)/stamp-prepare: libetpan-config.h
 libetpan-config.h: libetpan-config.h.in config.h
 	cat $(srcdir)/libetpan-config.h.in | $(CPP) -I$(top_builddir) - \
 	| sed -e '/^#/d;/^[ \t]*$$/d;s/^@/#/' > $@
+
+.PHONY: public-headers-check unittest
+public-headers-check: stamp-prepare
+	$(PYTHON) $(top_srcdir)/tools/public_headers.py \
+		--source-root $(top_srcdir) --build-root $(top_builddir) \
+		check --include-dir $(top_builddir)/include/libetpan
+
+unittest:
+	$(MAKE) -C unittest check
+
+check-local: unittest
+
+EXTRA_DIST += unittest/Makefile unittest/charconv/main.c \
+	unittest/xctest/CharconvTests.m \
+	unittest/charconv/charset_cases.h unittest/charconv/charset_cases_test.c \
+	unittest/charconv/charset_singlebyte_cases.c \
+	unittest/charconv/charset_multibyte_cases.c \
+	unittest/charconv/charset_case_vectors.h \
+	unittest/charconv/charset_apple_cases.h \
+	unittest/charconv/data/iconv-glibc-charsets.txt \
+	unittest/charconv/data/provider-comparison.json \
+	unittest/charconv/data/apple-provider-comparison.json
+
+EXTRA_DIST += unittest/plaintext-rendering/data/input/icu-optional-iso-8859-16.eml \
+	unittest/plaintext-rendering/data/output/icu-optional-iso-8859-16.txt \
+	unittest/plaintext-rendering/data/input/icu-optional-viscii.eml \
+	unittest/plaintext-rendering/data/output/icu-optional-viscii.txt \
+	unittest/plaintext-rendering/data/input/icu-optional-koi8-t.eml \
+	unittest/plaintext-rendering/data/output/icu-optional-koi8-t.txt

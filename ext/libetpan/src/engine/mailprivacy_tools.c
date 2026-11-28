@@ -61,7 +61,7 @@
 #include <ctype.h>
 #include "mailprivacy.h"
 #include <libetpan/libetpan-config.h>
-#include <libetpan/data_message_driver.h>
+#include "data_message_driver.h"
 
 void mailprivacy_mime_clear(struct mailmime * mime)
 {
@@ -1167,7 +1167,7 @@ struct mailmime_type * mailmime_type_dup(struct mailmime_type * type)
 struct mailmime_content *
 mailmime_content_dup(struct mailmime_content * content)
 {
-  clist * list;
+  clist /* struct mailmime_parameter * */ * list;
   struct mailmime_type * type;
   int r;
   struct mailmime_content * dup_content;
@@ -1574,5 +1574,3 @@ int mailprivacy_spawn_and_wait(char * command, char * passphrase,
   return res;
 #endif
 }
-
-

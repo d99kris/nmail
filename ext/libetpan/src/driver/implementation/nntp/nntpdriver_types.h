@@ -42,7 +42,7 @@
 #include <libetpan/maildriver_types.h>
 #include <libetpan/newsnntp.h>
 #include <libetpan/clist.h>
-#include <libetpan/generic_cache_types.h>
+#include "generic_cache_types.h"
 #include <libetpan/mailstorage_types.h>
 
 #ifdef __cplusplus
@@ -63,7 +63,7 @@ struct nntp_session_state_data {
   struct newsnntp_group_info * nntp_group_info;
   char * nntp_group_name;
 
-  clist * nntp_subscribed_list;
+  clist /* char * */ * nntp_subscribed_list;
 
   uint32_t nntp_max_articles;
 

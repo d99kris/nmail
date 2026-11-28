@@ -102,16 +102,6 @@ set(LIB_SOURCES
   src/low-level/imf/mailimf_types.c
   src/low-level/imf/mailimf_write_mem.c
   src/low-level/imf/mailimf_types_helper.c
-  src/low-level/feed/parser_rss20.c
-  src/low-level/feed/newsfeed_private.c
-  src/low-level/feed/newsfeed_item.c
-  src/low-level/feed/newsfeed_item_enclosure.c
-  src/low-level/feed/parser_rdf.c
-  src/low-level/feed/parser_atom10.c
-  src/low-level/feed/parser_atom03.c
-  src/low-level/feed/date.c
-  src/low-level/feed/parser.c
-  src/low-level/feed/newsfeed.c
   src/low-level/smtp/mailsmtp_socket.c
   src/low-level/smtp/mailsmtp_oauth2.c
   src/low-level/smtp/mailsmtp.c
@@ -130,6 +120,7 @@ set(LIB_SOURCES
   src/low-level/mime/mailmime_disposition.c
   src/low-level/mime/mailmime_write_mem.c
   src/low-level/mime/mailmime_types_helper.c
+  src/low-level/mime/mailmime_rfc2231.c
   src/low-level/maildir/maildir.c
   src/low-level/nntp/newsnntp_ssl.c
   src/low-level/nntp/newsnntp_socket.c
@@ -152,6 +143,8 @@ set(LIB_SOURCES
   src/data-types/chash.c
   src/data-types/mailstream_socket.c
   src/data-types/mailstream_ssl.c
+  src/data-types/mailstream_ssl_internal.c
+  src/data-types/mailstream_openssl.c
   src/data-types/timeutils.c
   src/data-types/mailsem.c
   src/data-types/mailstream_cfstream.c
@@ -188,9 +181,6 @@ set(LIB_SOURCES
   src/driver/implementation/mbox/mboxdriver_cached.c
   src/driver/implementation/mbox/mboxdriver_tools.c
   src/driver/implementation/mbox/mboxdriver_cached_message.c
-  src/driver/implementation/feed/feeddriver_message.c
-  src/driver/implementation/feed/feedstorage.c
-  src/driver/implementation/feed/feeddriver.c
   src/driver/implementation/pop3/pop3driver_cached.c
   src/driver/implementation/pop3/pop3driver.c
   src/driver/implementation/pop3/pop3driver_cached_message.c
@@ -247,16 +237,7 @@ endif()
 add_custom_target(libetpan_headers
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND mkdir -p                                ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan
-    COMMAND cp -pPR src/low-level/imap/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/mh/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/mbox/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/imf/*.h             ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/feed/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/smtp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/pop3/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/mime/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/maildir/*.h         ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
-    COMMAND cp -pPR src/low-level/nntp/*.h            ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
+    COMMAND cp -pPR src/low-level/*/*.h               ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
     COMMAND cp -pPR src/data-types/*.h                ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
     COMMAND cp -pPR src/driver/interface/*.h          ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
     COMMAND cp -pPR src/driver/tools/*.h              ${CMAKE_CURRENT_BINARY_DIR}/include/libetpan/
@@ -328,8 +309,6 @@ check_include_add_define("unistd.h" HAVE_UNISTD_H WARNING)
 
 # Capabilities - Required
 target_compile_definitions(${LIBNAME} PRIVATE HAVE___ATTRIBUTE__=1)
-target_compile_definitions(${LIBNAME} PRIVATE HAVE_CURL=1)
-target_compile_definitions(${LIBNAME} PRIVATE HAVE_EXPAT=1)
 target_compile_definitions(${LIBNAME} PRIVATE HAVE_GETADDRINFO=1)
 target_compile_definitions(${LIBNAME} PRIVATE HAVE_GETNAMEINFO=1)
 target_compile_definitions(${LIBNAME} PRIVATE HAVE_GETOPT_LONG=1)
@@ -342,6 +321,7 @@ target_compile_definitions(${LIBNAME} PRIVATE LIBETPAN_REENTRANT=1)
 target_compile_definitions(${LIBNAME} PRIVATE STDC_HEADERS=1)
 target_compile_definitions(${LIBNAME} PRIVATE USE_SASL=1)
 target_compile_definitions(${LIBNAME} PRIVATE USE_SSL=1)
+target_compile_definitions(${LIBNAME} PRIVATE HAVE_OPENSSL=1)
 if(WIN32)
   target_compile_definitions(${LIBNAME} PRIVATE HAVE_MINGW32_SYSTEM=1)
   target_compile_definitions(${LIBNAME} PRIVATE HAVE_WINSOCK2_H=1)
@@ -360,14 +340,6 @@ endif()
 #target_compile_definitions(${LIBNAME} PRIVATE UNSTRICT_SYNTAX=1)
 #target_compile_definitions(${LIBNAME} PRIVATE USE_GNUTLS=1)
 #target_compile_definitions(${LIBNAME} PRIVATE HAVE_LIBLOCKFILE=1)
-
-# Find Dependencies - curl
-find_package(CURL REQUIRED)
-target_include_directories(${LIBNAME} PRIVATE ${CURL_INCLUDE_DIR})
-
-# Find Dependencies - expat
-find_package(EXPAT REQUIRED)
-target_include_directories(${LIBNAME} PRIVATE ${EXPAT_INCLUDE_DIRS})
 
 # Find Dependencies - OpenSSL
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -400,7 +372,7 @@ target_include_directories(${LIBNAME} PRIVATE ${ZLIB_INCLUDE_DIRS})
 target_compile_options(${LIBNAME} PRIVATE -w -Wall $<$<CONFIG:Debug>:-DDEBUG>)
 
 # Linking
-target_link_libraries(${LIBNAME} PUBLIC ${CURL_LIBRARIES} ${EXPAT_LIBRARIES} ${ZLIB_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${CYRUS_SASL_LIBRARY})
+target_link_libraries(${LIBNAME} PUBLIC ${ZLIB_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${CYRUS_SASL_LIBRARY})
 
 # Install
 if(LIBETPAN_NOINSTALL)

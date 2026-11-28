@@ -56,49 +56,30 @@
 #define SERVICE_NAME_SMTP "smtp"
 #define SERVICE_TYPE_TCP "tcp"
 
-#if HAVE_CFNETWORK
-static int mailsmtp_cfsocket_connect(mailsmtp * session,
-                                     const char * server, uint16_t port);
-#endif
-
 int mailsmtp_socket_connect(mailsmtp * session,
     const char * server, uint16_t port)
 {
-  int s;
+  enum mailstream_socket_connect_error connect_error;
   mailstream * stream;
 
-#if HAVE_CFNETWORK
-  if (mailstream_cfstream_enabled) {
-    return mailsmtp_cfsocket_connect(session, server, port);
-  }
-#endif
-  
   if (port == 0) {
     port = mail_get_service_port(SERVICE_NAME_SMTP, SERVICE_TYPE_TCP);
     if (port == 0)
       port = DEFAULT_SMTP_PORT;
   }
 
-  /* Connection */
-
-  s = mail_tcp_connect_timeout(server, port, session->smtp_timeout);
-  if (s == -1)
-    return MAILSMTP_ERROR_CONNECTION_REFUSED;
-
-  stream = mailstream_socket_open(s);
+  stream = mailstream_socket_connect_timeout(server, port,
+      session->smtp_timeout, &connect_error);
   if (stream == NULL) {
-#ifdef WIN32
-	closesocket(s);
-#else
-    close(s);
-#endif
-    return MAILSMTP_ERROR_MEMORY;
+    if (connect_error == MAILSTREAM_SOCKET_CONNECT_ERROR_MEMORY)
+      return MAILSMTP_ERROR_MEMORY;
+    return MAILSMTP_ERROR_CONNECTION_REFUSED;
   }
 
   return mailsmtp_connect(session, stream);
 }
 
-static int mailsmtp_cfsocket_starttls(mailsmtp * session);
+static int mailsmtp_cfsocket_starttls(mailsmtp * session, const char * server_name);
 
 int mailsmtp_socket_starttls(mailsmtp * session)
 {
@@ -106,6 +87,19 @@ int mailsmtp_socket_starttls(mailsmtp * session)
 }
 
 int mailsmtp_socket_starttls_with_callback(mailsmtp * session,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
+{
+  return mailsmtp_socket_starttls_with_server_name_callback(session, NULL, callback, data);
+}
+
+int mailsmtp_socket_starttls_with_server_name(mailsmtp * session,
+    const char * server_name)
+{
+  return mailsmtp_socket_starttls_with_server_name_callback(session, server_name, NULL, NULL);
+}
+
+int mailsmtp_socket_starttls_with_server_name_callback(mailsmtp * session,
+    const char * server_name,
     void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
 {
   int r;
@@ -116,7 +110,7 @@ int mailsmtp_socket_starttls_with_callback(mailsmtp * session,
   low = mailstream_get_low(session->stream);
   if (low->driver == mailstream_cfstream_driver) {
     // won't use callback
-    return mailsmtp_cfsocket_starttls(session);
+    return mailsmtp_cfsocket_starttls(session, server_name);
   }
   
   r = mailesmtp_starttls(session);
@@ -127,7 +121,8 @@ int mailsmtp_socket_starttls_with_callback(mailsmtp * session,
   if (fd == -1)
     return MAILSMTP_ERROR_STREAM;
 
-  new_low = mailstream_low_tls_open_with_callback_timeout(fd, session->smtp_timeout, callback, data);
+  new_low = mailstream_low_tls_open_with_server_name_callback_timeout(fd,
+      session->smtp_timeout, server_name, callback, data);
   if (new_low == NULL)
     return MAILSMTP_ERROR_SSL;
 
@@ -137,22 +132,7 @@ int mailsmtp_socket_starttls_with_callback(mailsmtp * session,
   return MAILSMTP_NO_ERROR;
 }
 
-#if HAVE_CFNETWORK
-static int mailsmtp_cfsocket_connect(mailsmtp * session,
-                                     const char * server, uint16_t port)
-{
-  mailstream * stream;
-  
-  stream = mailstream_cfstream_open_timeout(server, port, session->smtp_timeout);
-  if (stream == NULL) {
-    return MAILSMTP_ERROR_CONNECTION_REFUSED;
-  }
-  
-  return mailsmtp_connect(session, stream);
-}
-#endif
-
-static int mailsmtp_cfsocket_starttls(mailsmtp * session)
+static int mailsmtp_cfsocket_starttls(mailsmtp * session, const char * server_name)
 {
   int r;
   
@@ -160,6 +140,8 @@ static int mailsmtp_cfsocket_starttls(mailsmtp * session)
   if (r != MAILSMTP_NO_ERROR)
     return r;
   
+  if (server_name != NULL)
+    mailstream_cfstream_set_ssl_peer_name(session->stream, server_name);
   mailstream_cfstream_set_ssl_verification_mask(session->stream, MAILSTREAM_CFSTREAM_SSL_NO_VERIFICATION);
   r = mailstream_cfstream_set_ssl_enabled(session->stream, 1);
   if (r < 0) {

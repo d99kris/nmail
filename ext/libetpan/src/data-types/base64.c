@@ -54,18 +54,25 @@ static char index_64[128] = {
 static char basis_64[] =
    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-LIBETPAN_EXPORT
 char * encode_base64(const char * in, int len)
 {
   char * output, * tmp;
   unsigned char oval;
-  int out_len;
+  size_t input_len;
+  size_t out_len;
   const unsigned char * uin = (const unsigned char *) in;
 
-  out_len = ((len + 2) / 3 * 4) + 1;
+  if (len < 0)
+    return NULL;
 
   if ((len > 0) && (in == NULL))
     return NULL;
+
+  input_len = (size_t) len;
+  if (input_len > (((size_t) -1) - 1) / 4 * 3)
+    return NULL;
+
+  out_len = ((input_len + 2) / 3 * 4) + 1;
 
   output = malloc(out_len);
   if (!output)
@@ -94,11 +101,16 @@ char * encode_base64(const char * in, int len)
   return output;
 }
 
-LIBETPAN_EXPORT
 char * decode_base64(const char * in, int len)
 {
   char * output, * out;
   int i, c1, c2, c3, c4, out_len;
+
+  if (len < 0)
+    return NULL;
+
+  if ((len > 0) && (in == NULL))
+    return NULL;
 
   out_len = 0;
   
@@ -107,8 +119,10 @@ char * decode_base64(const char * in, int len)
     return NULL;
   out = output;
 
-  if (in[0] == '+' && in[1] == ' ')
+  if (len >= 2 && in[0] == '+' && in[1] == ' ') {
     in += 2;
+    len -= 2;
+  }
   
   for (i = 0; i < (len / 4); i++) {
     c1 = in[0];
@@ -124,18 +138,24 @@ char * decode_base64(const char * in, int len)
 
     in += 4;
     *output++ = (CHAR64(c1) << 2) | (CHAR64(c2) >> 4);
-    if (++out_len >= OUTPUT_SIZE)
+    if (++out_len >= OUTPUT_SIZE) {
+      free(out);
       return NULL;
+    }
 
     if (c3 != '=') {
       *output++ = ((CHAR64(c2) << 4) & 0xf0) | (CHAR64(c3) >> 2);
-      if (++out_len >= OUTPUT_SIZE)
+      if (++out_len >= OUTPUT_SIZE) {
+        free(out);
         return NULL;
+      }
       
       if (c4 != '=') {
         *output++ = ((CHAR64(c3) << 6) & 0xc0) | CHAR64(c4);  
-        if (++out_len >= OUTPUT_SIZE)
+        if (++out_len >= OUTPUT_SIZE) {
+          free(out);
           return NULL;
+        }
       }
     }
   }
@@ -144,5 +164,3 @@ char * decode_base64(const char * in, int len)
   
   return out;
 }
-
-

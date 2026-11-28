@@ -33,9 +33,9 @@
 #ifndef NEWSFEED_H
 #define NEWSFEED_H
 
-#include <libetpan/newsfeed_types.h>
-#include <libetpan/newsfeed_item.h>
-#include <libetpan/newsfeed_item_enclosure.h>
+#include "newsfeed_types.h"
+#include "newsfeed_item.h"
+#include "newsfeed_item_enclosure.h"
 
 struct newsfeed * newsfeed_new(void);
 void newsfeed_free(struct newsfeed * feed);
@@ -68,6 +68,10 @@ time_t newsfeed_get_date(struct newsfeed * feed);
 
 void newsfeed_set_timeout(struct newsfeed * feed, unsigned int timeout);
 unsigned int newsfeed_get_timeout(struct newsfeed * feed);
+
+/* Takes ownership of transport. */
+int newsfeed_set_http_transport(struct newsfeed * feed,
+    struct mailhttp_transport * transport);
 
 int newsfeed_add_item(struct newsfeed * feed, struct newsfeed_item * item);
 

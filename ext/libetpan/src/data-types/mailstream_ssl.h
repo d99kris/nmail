@@ -45,15 +45,27 @@ extern "C" {
 
 /* socket */
 
-#ifdef LIBETPAN_IOS_DISABLE_SSL
-#undef USE_SSL
-#endif
-
-#ifdef USE_SSL
+#if defined(HAVE_OPENSSL) || defined(HAVE_GNUTLS)
 extern mailstream_low_driver * mailstream_ssl_driver;
 #endif
 
 struct mailstream_ssl_context;
+
+enum mailstream_ssl_backend {
+  MAILSTREAM_SSL_BACKEND_OPENSSL,
+  MAILSTREAM_SSL_BACKEND_GNUTLS,
+  MAILSTREAM_SSL_BACKEND_CFNETWORK
+};
+
+/* Configure once, before opening streams. Returns -1 when unavailable. */
+LIBETPAN_EXPORT
+int mailstream_ssl_set_backend(enum mailstream_ssl_backend backend);
+
+LIBETPAN_EXPORT
+enum mailstream_ssl_backend mailstream_ssl_get_backend(void);
+
+LIBETPAN_EXPORT
+int mailstream_ssl_backend_is_available(enum mailstream_ssl_backend backend);
 
 LIBETPAN_EXPORT
 mailstream_low * mailstream_low_ssl_open(int fd);
@@ -80,6 +92,23 @@ mailstream * mailstream_ssl_open_with_callback(int fd,
 LIBETPAN_EXPORT
 mailstream * mailstream_ssl_open_with_callback_timeout(int fd, time_t timeout,
     void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data);
+
+LIBETPAN_EXPORT
+mailstream * mailstream_ssl_open_with_server_name_callback_timeout(int fd, time_t timeout,
+    const char * server_name,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data);
+
+enum mailstream_ssl_connect_error {
+  MAILSTREAM_SSL_CONNECT_NO_ERROR = 0,
+  MAILSTREAM_SSL_CONNECT_ERROR_CONNECTION_REFUSED,
+  MAILSTREAM_SSL_CONNECT_ERROR_SSL
+};
+
+LIBETPAN_EXPORT
+mailstream * mailstream_ssl_connect_timeout(const char * server,
+    uint16_t port, time_t timeout,
+    void (* callback)(struct mailstream_ssl_context *, void *),
+    void * callback_data, enum mailstream_ssl_connect_error * error);
 
 LIBETPAN_EXPORT
 void mailstream_gnutls_init_not_required(void);
@@ -110,6 +139,16 @@ mailstream_low * mailstream_low_tls_open_with_callback_timeout(int fd, time_t ti
     void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data);
 
 LIBETPAN_EXPORT
+mailstream_low * mailstream_low_ssl_open_with_server_name_callback_timeout(int fd, time_t timeout,
+    const char * server_name,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data);
+
+LIBETPAN_EXPORT
+mailstream_low * mailstream_low_tls_open_with_server_name_callback_timeout(int fd, time_t timeout,
+    const char * server_name,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data);
+
+LIBETPAN_EXPORT
 int mailstream_ssl_set_client_certicate(struct mailstream_ssl_context * ssl_context,
     char * file_name);
 
@@ -125,7 +164,11 @@ int mailstream_ssl_set_server_certicate(struct mailstream_ssl_context * ssl_cont
 
 LIBETPAN_EXPORT
 int mailstream_ssl_set_server_name(struct mailstream_ssl_context * ssl_context,
-    char * hostname);
+    const char * hostname);
+
+LIBETPAN_EXPORT
+void mailstream_ssl_set_server_name_callback(struct mailstream_ssl_context * ssl_context,
+    void * data);
 
 LIBETPAN_EXPORT
 void * mailstream_ssl_get_openssl_ssl_ctx(struct mailstream_ssl_context * ssl_context);

@@ -29,11 +29,12 @@
 
 include $(top_srcdir)/rules.mk
 
-etpaninclude_HEADERS = \
-	newsfeed_types.h newsfeed.h newsfeed_item.h newsfeed_item_enclosure.h
+etpaninclude_HEADERS =
+etpaninclude_CONDITION = defined(HAVE_FEED) || (defined(LIBETPAN_HAS_FEED) && LIBETPAN_HAS_FEED)
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
-	-I$(top_srcdir)/src/data-types -I$(top_srcdir)/src/low-level/imf
+	-I$(top_srcdir)/src/data-types -I$(top_srcdir)/src/low-level/imf \
+	@LIBXML2_CFLAGS@
 
 noinst_LTLIBRARIES = libfeed.la
 
@@ -46,3 +47,9 @@ libfeed_la_SOURCES = \
 	parser_atom03.h parser_atom03.c \
 	parser_rdf.h parser_rdf.c \
 	parser_rss20.h parser_rss20.c
+
+noinst_HEADERS = \
+	newsfeed.h \
+	newsfeed_item.h \
+	newsfeed_item_enclosure.h \
+	newsfeed_types.h

@@ -93,7 +93,7 @@ if(HAS_STATIC_EXTLIBS)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # Fully-static is impossible on macOS: prefer static (.a) from the deps
     # prefix but fall back to the system dylibs/stubs (.tbd/.dylib) for the
-    # libraries that only ship dynamically there (curl, expat, iconv). The
+    # libraries that only ship dynamically there (iconv). The
     # deps prefix is on CMAKE_PREFIX_PATH and searched before the SDK, so a
     # source-built .a wins wherever one exists; build-macos.sh's otool
     # allowlist enforces that only /usr/lib + frameworks stay dynamic.

@@ -33,14 +33,12 @@
  * $Id: md5global.h,v 1.7 2006/06/02 15:44:29 smarinier Exp $
  */
 
-/* GLOBAL.H - RSAREF types and constants
- */
-
 #ifndef MD5GLOBAL_H
 
 #define MD5GLOBAL_H
 
 #include "md5namespace.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,7 +61,7 @@ typedef const unsigned char *CONST_POINTER;
 typedef unsigned short int UINT2;
 
 /* UINT4 defines a four byte word */
-typedef unsigned long int UINT4;
+typedef uint32_t UINT4;
 
 /* PROTO_LIST is defined depending on how PROTOTYPES is defined above.
 If using PROTOTYPES, then PROTO_LIST returns the list, otherwise it

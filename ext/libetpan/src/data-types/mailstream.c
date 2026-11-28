@@ -52,6 +52,7 @@
 #include <sys/stat.h>
 
 #define DEFAULT_NETWORK_TIMEOUT 300
+#define MAILSTREAM_MAX_ZERO_WRITES 16
 
 struct timeval mailstream_network_delay =
 {  DEFAULT_NETWORK_TIMEOUT, 0 };
@@ -110,9 +111,11 @@ static ssize_t write_direct(mailstream * s, const void * buf, size_t count)
   size_t left;
   const char * cur_buf;
   ssize_t written;
+  unsigned int zero_writes;
   
   cur_buf = buf;
   left = count;
+  zero_writes = 0;
   while (left > 0) {
     written = mailstream_low_write(s->low, cur_buf, left);
 
@@ -122,9 +125,25 @@ static ssize_t write_direct(mailstream * s, const void * buf, size_t count)
       else
 	return count - left;
     }
+    if (written == 0) {
+      if (++ zero_writes >= MAILSTREAM_MAX_ZERO_WRITES) {
+        if (count == left)
+	  return -1;
+        else
+	  return count - left;
+      }
+      continue;
+    }
+    if ((size_t) written > left) {
+      if (count == left)
+	return -1;
+      else
+	return count - left;
+    }
 
     cur_buf += written;
     left -= written;
+    zero_writes = 0;
   }
   
   return count;
@@ -156,19 +175,29 @@ int mailstream_flush(mailstream * s)
   char * cur_buf;
   size_t left;
   ssize_t written;
+  unsigned int zero_writes;
 
   if (s == NULL)
     return -1;
 
   cur_buf = s->write_buffer;
   left = s->write_buffer_len;
+  zero_writes = 0;
   while (left > 0) {
     written = mailstream_low_write(s->low, cur_buf, left);
 
     if (written < 0)
       goto move_buffer;
+    if (written == 0) {
+      if (++ zero_writes >= MAILSTREAM_MAX_ZERO_WRITES)
+        goto move_buffer;
+      continue;
+    }
+    if ((size_t) written > left)
+      goto move_buffer;
     cur_buf += written;
     left -=  written;
+    zero_writes = 0;
   }
 
   s->write_buffer_len = 0;
@@ -401,13 +430,14 @@ void mailstream_set_logger(mailstream * s, void (* logger)(mailstream * s, int l
 }
 
 LIBETPAN_EXPORT
-carray * mailstream_get_certificate_chain(mailstream * s)
+carray /* MMAPString * */ * mailstream_get_certificate_chain(mailstream * s)
 {
   return mailstream_low_get_certificate_chain(s->low);
 }
 
 LIBETPAN_EXPORT
-void mailstream_certificate_chain_free(carray * certificate_chain)
+void mailstream_certificate_chain_free(
+    carray /* MMAPString * */ * certificate_chain)
 {
   unsigned int i;
   
@@ -419,4 +449,3 @@ void mailstream_certificate_chain_free(carray * certificate_chain)
   }
   carray_free(certificate_chain);
 }
-

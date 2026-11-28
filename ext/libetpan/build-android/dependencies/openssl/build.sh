@@ -1,52 +1,113 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-build_version=3
-version=1.1.1i
+set -euo pipefail
+
+# OpenSSL 3.5 is the current LTS line and is required by recent curl.
+version=3.5.9
 package_name=openssl-android
 export MIN_SDK_VERSION=23
-export HOST_TAG=darwin-x86_64
+current_dir="$(cd "$(dirname "$0")" && pwd)"
+repo_root="$(cd "$current_dir/../../.." && pwd)"
+submodule_dir="$repo_root/dependencies/submodules/openssl"
+output_dir="$current_dir/../build/$package_name"
+cd "$current_dir"
+
+detect_host_tag() {
+  case "$(uname -s)" in
+    Darwin)
+      if test "$(uname -m)" = arm64 && test -d "$ANDROID_NDK/toolchains/llvm/prebuilt/darwin-arm64" ; then
+        echo darwin-arm64
+      else
+        echo darwin-x86_64
+      fi
+      ;;
+    Linux)
+      echo linux-x86_64
+      ;;
+    *)
+      echo "Unsupported Android NDK host: $(uname -s) $(uname -m)" >&2
+      exit 1
+      ;;
+  esac
+}
 
 if test "x$ANDROID_NDK" = x ; then
   echo should set ANDROID_NDK before running this script.
   exit 1
 fi
 
-if test ! -f packages/openssl-$version.tar.gz; then
-  mkdir -p packages
-  cd packages
-  curl -O https://ftp.openssl.org/source/openssl-$version.tar.gz
-  cd ..
+export HOST_TAG="$(detect_host_tag)"
+
+source_name=openssl-source
+if test ! -f "$submodule_dir/Configure" ; then
+  source_name=openssl-$version
+  if test ! -f packages/openssl-$version.tar.gz; then
+    mkdir -p packages
+    cd packages
+    curl -fL -O https://www.openssl.org/source/openssl-$version.tar.gz
+    cd ..
+  fi
+  if ! tar tzf packages/openssl-$version.tar.gz >/dev/null 2>&1; then
+    rm -f packages/openssl-$version.tar.gz
+    echo "Downloaded OpenSSL archive is invalid; retry the script to download it again." >&2
+    exit 1
+  fi
 fi
 
-rm -rf "./src"
+rm -rf "./src" "$output_dir"
+mkdir -p "$(dirname "$output_dir")"
 mkdir -p "./src"
 cd "./src"
 
-tar xzf "../packages/openssl-$version.tar.gz"
+if test -f "$submodule_dir/Configure" ; then
+  mkdir -p "$source_name"
+  (
+    cd "$submodule_dir"
+    tar --exclude=.git -cf - .
+  ) | (
+    cd "$source_name"
+    tar -xf -
+  )
+else
+  tar xzf "../packages/openssl-$version.tar.gz"
+fi
 
+# OpenSSL prefers ANDROID_NDK_ROOT; match it to the NDK selected by the build.
+export ANDROID_NDK_ROOT="$ANDROID_NDK"
+export TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG"
+export ANDROID_NDK_HOME="$ANDROID_NDK"
+export PATH="$TOOLCHAIN/bin:$PATH"
 
-export TOOLCHAIN=$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG
-
-# openssl refers to the host specific toolchain as "ANDROID_NDK_HOME"
-export ANDROID_NDK_HOME=$TOOLCHAIN
-PATH=$TOOLCHAIN/bin:$PATH
+# NDK r23+ removed the GNU binutils-style per-target archiver tools
+# (<triple>-ar, <triple>-ranlib); provide the legacy names as symlinks to the
+# llvm tools for every target triple we build below.
+for triple in aarch64-linux-android arm-linux-androideabi i686-linux-android x86_64-linux-android ; do
+  if test ! -e "$TOOLCHAIN/bin/$triple-ar" ; then
+    ln -s "$TOOLCHAIN/bin/llvm-ar" "$TOOLCHAIN/bin/$triple-ar"
+  fi
+  if test ! -e "$TOOLCHAIN/bin/$triple-ranlib" ; then
+    ln -s "$TOOLCHAIN/bin/llvm-ranlib" "$TOOLCHAIN/bin/$triple-ranlib"
+  fi
+done
 
 mkdir -p build/openssl
-cd "./openssl-$version"
+cd "./$source_name"
 
 # arm64
 export TARGET_HOST=aarch64-linux-android
 export ANDROID_ARCH=arm64-v8a
 
 # openssl does not handle api suffix well
-ln -sfn $TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang $TOOLCHAIN/bin/$TARGET_HOST-clang
+if test ! -e "$TOOLCHAIN/bin/$TARGET_HOST-clang" ; then
+  ln -s "$TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang" "$TOOLCHAIN/bin/$TARGET_HOST-clang"
+fi
 
-./Configure android-arm64 no-shared \
+./Configure android-arm64 no-shared no-tests no-asm \
  -D__ANDROID_API__=$MIN_SDK_VERSION \
  --prefix=$PWD/build/$ANDROID_ARCH
 
-make -j5
-make install_sw
+make -j5 build_libs
+make install_dev
 make clean
 mkdir -p ../build/openssl/$ANDROID_ARCH
 cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
@@ -56,22 +117,24 @@ export TARGET_HOST=arm-linux-androideabi
 export ANDROID_ARCH=armeabi-v7a
 
 # for 32-bit ARM, the compiler is prefixed with armv7a-linux-androideabi, but the binutils tools are prefixed with arm-linux-androideabi
-ln -sfn $TOOLCHAIN/bin/armv7a-linux-androideabi$MIN_SDK_VERSION-clang $TOOLCHAIN/bin/$TARGET_HOST-clang
+if test ! -e "$TOOLCHAIN/bin/$TARGET_HOST-clang" ; then
+  ln -s "$TOOLCHAIN/bin/armv7a-linux-androideabi$MIN_SDK_VERSION-clang" "$TOOLCHAIN/bin/$TARGET_HOST-clang"
+fi
 
-./Configure android-arm no-shared \
+./Configure android-arm no-shared no-tests no-asm \
  -D__ANDROID_API__=$MIN_SDK_VERSION \
  --prefix=$PWD/build/$ANDROID_ARCH
 
 export arch_dir_name="arm64-v8a"
-mkdir -p "./../$package_name-$build_version"
-mkdir -p "./../$package_name-$build_version/libs"
-mkdir -p "./../$package_name-$build_version/libs/$arch_dir_name"
-cp -r "./../build/openssl/arm64-v8a/include" "./../$package_name-$build_version"
-cp "./../build/openssl/arm64-v8a/lib/libssl.a" "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/arm64-v8a/lib/libcrypto.a" "./../$package_name-$build_version/libs/$arch_dir_name"
+mkdir -p "$output_dir"
+mkdir -p "$output_dir/libs"
+mkdir -p "$output_dir/libs/$arch_dir_name"
+cp -r "./../build/openssl/arm64-v8a/include" "$output_dir"
+cp "./../build/openssl/arm64-v8a/lib/libssl.a" "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/arm64-v8a/lib/libcrypto.a" "$output_dir/libs/$arch_dir_name"
 
-make -j5
-make install_sw
+make -j5 build_libs
+make install_dev
 make clean
 mkdir -p ../build/openssl/$ANDROID_ARCH
 cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
@@ -80,21 +143,23 @@ cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
 export TARGET_HOST=i686-linux-android
 export ANDROID_ARCH=x86
 
-ln -sfn $TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang $TOOLCHAIN/bin/$TARGET_HOST-clang
+if test ! -e "$TOOLCHAIN/bin/$TARGET_HOST-clang" ; then
+  ln -s "$TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang" "$TOOLCHAIN/bin/$TARGET_HOST-clang"
+fi
 
-./Configure android-x86 no-shared \
+./Configure android-x86 no-shared no-tests no-asm \
  -D__ANDROID_API__=$MIN_SDK_VERSION \
  --prefix=$PWD/build/$ANDROID_ARCH
 
 export arch_dir_name="armeabi-v7a"
-mkdir -p "./../$package_name-$build_version"
-mkdir -p "./../$package_name-$build_version/libs"
-mkdir -p "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "./../$package_name-$build_version/libs/$arch_dir_name"
+mkdir -p "$output_dir"
+mkdir -p "$output_dir/libs"
+mkdir -p "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "$output_dir/libs/$arch_dir_name"
 
-make -j5
-make install_sw
+make -j5 build_libs
+make install_dev
 make clean
 mkdir -p ../build/openssl/$ANDROID_ARCH
 cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
@@ -103,34 +168,34 @@ cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
 export TARGET_HOST=x86_64-linux-android
 export ANDROID_ARCH=x86_64
 
-ln -sfn $TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang $TOOLCHAIN/bin/$TARGET_HOST-clang
+if test ! -e "$TOOLCHAIN/bin/$TARGET_HOST-clang" ; then
+  ln -s "$TOOLCHAIN/bin/$TARGET_HOST$MIN_SDK_VERSION-clang" "$TOOLCHAIN/bin/$TARGET_HOST-clang"
+fi
 
-./Configure android-x86_64 no-shared \
+./Configure android-x86_64 no-shared no-tests no-asm \
  -D__ANDROID_API__=$MIN_SDK_VERSION \
  --prefix=$PWD/build/$ANDROID_ARCH
 
 export arch_dir_name="x86"
-mkdir -p "./../$package_name-$build_version"
-mkdir -p "./../$package_name-$build_version/libs"
-mkdir -p "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "./../$package_name-$build_version/libs/$arch_dir_name"
+mkdir -p "$output_dir"
+mkdir -p "$output_dir/libs"
+mkdir -p "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "$output_dir/libs/$arch_dir_name"
 
-make -j5
-make install_sw
+make -j5 build_libs
+make install_dev
 make clean
 mkdir -p ../build/openssl/$ANDROID_ARCH
 cp -R $PWD/build/$ANDROID_ARCH ../build/openssl/
 
 export arch_dir_name="x86_64"
-mkdir -p "./../$package_name-$build_version"
-mkdir -p "./../$package_name-$build_version/libs"
-mkdir -p "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "./../$package_name-$build_version/libs/$arch_dir_name"
-cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "./../$package_name-$build_version/libs/$arch_dir_name"
+mkdir -p "$output_dir"
+mkdir -p "$output_dir/libs"
+mkdir -p "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libssl.a" "$output_dir/libs/$arch_dir_name"
+cp "./../build/openssl/$arch_dir_name/lib/libcrypto.a" "$output_dir/libs/$arch_dir_name"
 
-cd ".."
-zip -qry "$package_name-$build_version.zip" "$package_name-$build_version"
-cd ".."
-cp "./src/$package_name-$build_version.zip" `pwd`
+cd "$current_dir"
 rm -rf "./src"
+echo "Created $output_dir"

@@ -40,9 +40,9 @@
 #include <libetpan/libetpan-config.h>
 
 #include <libetpan/maildriver_types.h>
-#include <libetpan/mailmh.h>
+#include "mailmh.h"
 #include <libetpan/clist.h>
-#include <libetpan/generic_cache_types.h>
+#include "generic_cache_types.h"
 #include <libetpan/mailstorage_types.h>
 
 #ifdef __cplusplus
@@ -54,7 +54,7 @@ struct mh_session_state_data {
 
   struct mailmh_folder * mh_cur_folder;
 
-  clist * mh_subscribed_list;
+  clist /* char * */ * mh_subscribed_list;
 };
 
 enum {

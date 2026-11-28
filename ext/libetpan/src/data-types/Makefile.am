@@ -30,26 +30,63 @@
 include $(top_srcdir)/rules.mk
 
 etpaninclude_HEADERS = \
-	mmapstring.h mailstream.h mailstream_helper.h mail.h \
-        mailstream_low.h \
-        mailstream_socket.h mailstream_ssl.h mailstream_cfstream.h \
-        mailstream_compress.h \
+	carray.h \
+	charconv.h \
+	chash.h \
+	clist.h \
+	mailhttp.h \
+	mailjson.h \
+	mailsem.h \
+	mailstream.h \
+	mailstream_cfstream.h \
+	mailstream_helper.h \
+	mailstream_low.h \
+	mailstream_socket.h \
+	mailstream_ssl.h \
 	mailstream_types.h \
-	carray.h clist.h chash.h \
-	charconv.h mailsem.h maillock.h
+	mmapstring.h
 
-AM_CPPFLAGS = -I$(top_builddir)/include
+AM_CPPFLAGS = -I$(top_builddir)/include @ICUCPPFLAGS@ @JSON_C_CFLAGS@
+
+# Libtool has no Objective-C language tag. Compile the Apple backend through
+# the C configuration, as is done for the Gmail NSURLSession backend.
+AM_LIBTOOLFLAGS = --tag=CC
 
 noinst_LTLIBRARIES = libdata-types.la
 
 libdata_types_la_SOURCES = connect.h connect.c base64.h hmac-md5.h	\
 	md5global.h md5namespace.h md5.h md5.c mmapstring.c mailstream_helper.c	\
 	mailstream_low.c mailstream.c mailstream_socket.c		\
-	mailstream_ssl.c carray.c clist.c chash.c		        \
+	mailstream_ssl.c mailstream_ssl_internal.c mailstream_openssl.c mailstream_gnutls.c \
+	carray.c clist.c chash.c		        \
 	charconv.c maillock.c base64.c mail_cache_db_types.h		\
 	mail_cache_db.h mail_cache_db.c mail_cache_lmdb.c mailsem.c mailsasl.h		\
 	mailsasl.c mailstream_cancel_types.h mailstream_cancel.h	\
 	mailstream_cancel.c timeutils.h timeutils.c			\
 	mmapstring_private.h mailstream_ssl_private.h			\
 	mailstream_cfstream.c mailstream_cfstream.h \
-    mailstream_compress.c mailstream_compress.h
+    mailstream_compress.c mailstream_compress.h mailjson.c mailjson.h \
+	mailhttp.c mailhttp.h
+
+if HAVE_CURL
+libdata_types_la_SOURCES += mailhttp_curl.c
+endif
+
+if HAVE_NSURLSESSION
+libdata_types_la_SOURCES += mailhttp_nsurlsession.m
+endif
+
+libdata_types_la_LINK = $(LINK)
+
+noinst_HEADERS = \
+	base64.h \
+	mail.h \
+	maillock.h \
+	mailstream_compress.h \
+	mailstream_gnutls.h \
+	mailstream_openssl.h \
+	mailstream_ssl_internal.h
+
+EXTRA_DIST = charconv-icu/data.h charconv-icu/aliases.h \
+	charconv-icu/apple-legacy.h \
+	charconv-icu/manifest.json charconv-icu/LICENSE charconv-icu/README.md

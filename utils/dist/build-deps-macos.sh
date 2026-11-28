@@ -11,9 +11,9 @@
 # versions and auth/protocol behaviour.
 #
 # nmail is pure C/C++, so this is a subset of the Linux dependency set:
-#   - curl, expat and iconv stay dynamic (stable macOS system dylibs under
-#     /usr/lib, allowed by the build-macos.sh otool allowlist), so they are
-#     NOT built here.
+#   - iconv stays dynamic (a stable macOS system dylib under /usr/lib,
+#     allowed by the build-macos.sh otool allowlist), so it is NOT built
+#     here.
 #   - libuuid is not built: uuid_generate/uuid_unparse live in libSystem and
 #     <uuid/uuid.h> ships in the SDK (see the top-level CMakeLists).
 # Everything version-sensitive / non-system is source-built static below:

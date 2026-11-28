@@ -29,8 +29,9 @@
 
 include $(top_srcdir)/rules.mk
 
-etpaninclude_HEADERS = \
-	data_message_driver.h
+etpaninclude_HEADERS = data_message_driver.h
+
+etpanpublic_noexport = data_message_driver.h
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
 	-I$(top_srcdir)/src/driver/interface

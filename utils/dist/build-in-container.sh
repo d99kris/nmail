@@ -50,7 +50,7 @@ elif [[ "${LIBC}" == "glibc" ]]; then
   EXTRA_CMAKE_ARGS+=(-DCMAKE_PREFIX_PATH="${DEPS}" -DOPENSSL_ROOT_DIR="${DEPS}")
   # Put the static-deps prefix first on the link search path: -L is searched
   # before system dirs and the prefix holds only static archives, so a dep that
-  # also ships a dynamic .so under the manylinux base (e.g. curl/xapian/expat in
+  # also ships a dynamic .so under the manylinux base (e.g. xapian in
   # /usr/lib64) still links static as required.
   LINKER_FLAGS="-L${DEPS}/lib"
 fi

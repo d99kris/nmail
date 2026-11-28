@@ -1,0 +1,13 @@
+#include "libetpan-macos.xcconfig"
+
+DYLIB_COMPATIBILITY_VERSION = 1
+DYLIB_CURRENT_VERSION = 1
+FRAMEWORK_VERSION = A
+INFOPLIST_FILE = Info.plist
+INSTALL_PATH = @loader_path/../Frameworks
+OTHER_LDFLAGS = -lz -liconv -lc++ -lxml2
+PRODUCT_NAME = libetpan
+WRAPPER_EXTENSION = framework
+
+DEBUG_INFORMATION_FORMAT[config=Release] = dwarf-with-dsym
+STRIP_INSTALLED_PRODUCT[config=Release] = YES

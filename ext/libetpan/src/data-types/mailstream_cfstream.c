@@ -29,6 +29,10 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "mailstream_cfstream.h"
 
 #if HAVE_CFNETWORK
@@ -46,7 +50,7 @@
 #include <pthread.h>
 #endif
 
-#if LIBETPAN_IOS_DISABLE_SSL && HAVE_CFNETWORK
+#if HAVE_CFNETWORK
 #define CFSTREAM_ENABLED_DEFAULT 1
 #else
 #define CFSTREAM_ENABLED_DEFAULT 0
@@ -122,6 +126,8 @@ struct mailstream_cfstream_data {
 #if HAVE_CFNETWORK
 static int low_open(mailstream_low * s);
 static void cfstream_data_close(struct mailstream_cfstream_data * socket_data);
+static int cfstream_evaluate_trust(SecTrustRef secTrust);
+static CFArrayRef cfstream_copy_trust_certificates(SecTrustRef secTrust);
 #endif
 
 /* mailstream_low, socket */
@@ -134,7 +140,8 @@ static ssize_t mailstream_low_cfstream_write(mailstream_low * s,
 static void mailstream_low_cfstream_free(mailstream_low * s);
 static int mailstream_low_cfstream_get_fd(mailstream_low * s);
 static void mailstream_low_cfstream_cancel(mailstream_low * s);
-static carray * mailstream_low_cfstream_get_certificate_chain(mailstream_low * s);
+static carray /* MMAPString * */ *
+mailstream_low_cfstream_get_certificate_chain(mailstream_low * s);
 
 static int mailstream_low_cfstream_setup_idle(mailstream_low * s);
 static int mailstream_low_cfstream_unsetup_idle(mailstream_low * s);
@@ -195,31 +202,44 @@ static void cfstream_data_close(struct mailstream_cfstream_data * cfstream_data)
     cfstream_data->readStream = NULL;
   }
 }
+
+static int cfstream_evaluate_trust(SecTrustRef secTrust)
+{
+  if (__builtin_available(macOS 10.14, iOS 13.0, *)) {
+    CFErrorRef error = NULL;
+    Boolean trusted;
+
+    trusted = SecTrustEvaluateWithError(secTrust, &error);
+    if (error != NULL)
+      CFRelease(error);
+
+    return trusted ? 0 : -1;
+  }
+
+  return -1;
+}
+
+static CFArrayRef cfstream_copy_trust_certificates(SecTrustRef secTrust)
+{
+  if (__builtin_available(macOS 12.0, iOS 15.0, *))
+    return SecTrustCopyCertificateChain(secTrust);
+
+  return NULL;
+}
 #endif
 
 mailstream * mailstream_cfstream_open(const char * hostname, int16_t port)
 {
-	return mailstream_cfstream_open_voip_timeout(hostname, port, 0, 0);
+	return mailstream_cfstream_open_timeout(hostname, port, 0);
 }
 
 mailstream * mailstream_cfstream_open_timeout(const char * hostname, int16_t port, time_t timeout)
-{
-	return mailstream_cfstream_open_voip_timeout(hostname, port, 0, timeout);
-}
-
-mailstream * mailstream_cfstream_open_voip(const char * hostname, int16_t port, int voip_enabled)
-{
-	return mailstream_cfstream_open_voip_timeout(hostname, port, voip_enabled, 0);
-}
-
-mailstream * mailstream_cfstream_open_voip_timeout(const char * hostname, int16_t port, int voip_enabled,
-  time_t timeout)
 {
 #if HAVE_CFNETWORK
   mailstream_low * low;
   mailstream * s;
   
-  low = mailstream_low_cfstream_open_voip_timeout(hostname, port, voip_enabled, timeout);
+  low = mailstream_low_cfstream_open_timeout(hostname, port, timeout);
   if (low == NULL) {
     return NULL;
   }
@@ -228,6 +248,20 @@ mailstream * mailstream_cfstream_open_voip_timeout(const char * hostname, int16_
 #else
   return NULL;
 #endif
+}
+
+mailstream * mailstream_cfstream_open_voip(const char * hostname, int16_t port,
+  int voip_enabled)
+{
+  (void) voip_enabled;
+  return mailstream_cfstream_open(hostname, port);
+}
+
+mailstream * mailstream_cfstream_open_voip_timeout(const char * hostname,
+  int16_t port, int voip_enabled, time_t timeout)
+{
+  (void) voip_enabled;
+  return mailstream_cfstream_open_timeout(hostname, port, timeout);
 }
 
 #if HAVE_CFNETWORK
@@ -445,36 +479,23 @@ static void writeStreamCallback(CFWriteStreamRef stream, CFStreamEventType event
 
 mailstream_low * mailstream_low_cfstream_open(const char * hostname, int16_t port)
 {
-    return mailstream_low_cfstream_open_voip_timeout(hostname, port, mailstream_cfstream_voip_enabled, 0);
-}
-
-mailstream_low * mailstream_low_cfstream_open_timeout(const char * hostname, int16_t port,
-  time_t timeout)
-{
-	return mailstream_low_cfstream_open_voip_timeout(hostname, port,
-	  mailstream_cfstream_voip_enabled, timeout);
-}
-
-mailstream_low * mailstream_low_cfstream_open_voip(const char * hostname, int16_t port, int voip_enabled)
-{
-	return mailstream_low_cfstream_open_voip_timeout(hostname, port, voip_enabled, 0);
+  return mailstream_low_cfstream_open_timeout(hostname, port, 0);
 }
 
 #if HAVE_CFNETWORK
 static int numberIntValue(CFNumberRef nb)
 {
-  if (nb == NULL) {
-    return 0;
-  }
-
   int result;
+
+  if (nb == NULL)
+    return 0;
   CFNumberGetValue(nb, kCFNumberIntType, &result);
   return result;
 }
 #endif
 
-mailstream_low * mailstream_low_cfstream_open_voip_timeout(const char * hostname, int16_t port,
-  int voip_enabled, time_t timeout)
+mailstream_low * mailstream_low_cfstream_open_timeout(const char * hostname, int16_t port,
+  time_t timeout)
 {
 #if HAVE_CFNETWORK
   mailstream_low * s;
@@ -489,13 +510,6 @@ mailstream_low * mailstream_low_cfstream_open_voip_timeout(const char * hostname
   hostString = CFStringCreateWithCString(NULL, hostname, kCFStringEncodingUTF8);
   CFStreamCreatePairWithSocketToHost(NULL, hostString, port, &readStream, &writeStream);
   CFRelease(hostString);
-
-#if TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR  
-  if (voip_enabled) {
-    CFReadStreamSetProperty(readStream, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP);
-    CFWriteStreamSetProperty(writeStream, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP);
-  }
-#endif
 
 #if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
   CFDictionaryRef proxySettings = CFNetworkCopySystemProxySettings();
@@ -549,6 +563,21 @@ mailstream_low * mailstream_low_cfstream_open_voip_timeout(const char * hostname
 #else
   return NULL;
 #endif
+}
+
+mailstream_low * mailstream_low_cfstream_open_voip(const char * hostname,
+  int16_t port, int voip_enabled)
+{
+  (void) voip_enabled;
+  return mailstream_low_cfstream_open(hostname, port);
+}
+
+mailstream_low * mailstream_low_cfstream_open_voip_timeout(
+  const char * hostname, int16_t port, int voip_enabled, time_t timeout)
+{
+  /* Retained for compatibility; the platform VoIP service type is deprecated. */
+  (void) voip_enabled;
+  return mailstream_low_cfstream_open_timeout(hostname, port, timeout);
 }
 
 
@@ -957,17 +986,17 @@ int mailstream_cfstream_set_ssl_enabled(mailstream * s, int ssl_enabled)
   cfstream_data->ssl_enabled = ssl_enabled;
   if (ssl_enabled) {
     CFMutableDictionaryRef settings;
+    CFStringRef peerName;
     
+    peerName = NULL;
     settings = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     switch (cfstream_data->ssl_level) {
       case MAILSTREAM_CFSTREAM_SSL_LEVEL_NONE:
         CFDictionarySetValue(settings, kCFStreamSSLLevel, kCFStreamSocketSecurityLevelNone);
         break;
       case MAILSTREAM_CFSTREAM_SSL_LEVEL_SSLv2:
-        CFDictionarySetValue(settings, kCFStreamSSLLevel, kCFStreamSocketSecurityLevelSSLv2);
-        break;
       case MAILSTREAM_CFSTREAM_SSL_LEVEL_SSLv3:
-        CFDictionarySetValue(settings, kCFStreamSSLLevel, kCFStreamSocketSecurityLevelSSLv3);
+        CFDictionarySetValue(settings, kCFStreamSSLLevel, kCFStreamSocketSecurityLevelNegotiatedSSL);
         break;
       case MAILSTREAM_CFSTREAM_SSL_LEVEL_TLSv1:
         CFDictionarySetValue(settings, kCFStreamSSLLevel, kCFStreamSocketSecurityLevelTLSv1);
@@ -977,21 +1006,21 @@ int mailstream_cfstream_set_ssl_enabled(mailstream * s, int ssl_enabled)
         break;
     }
     
-    if ((cfstream_data->ssl_certificate_verification_mask & MAILSTREAM_CFSTREAM_SSL_ALLOWS_EXPIRED_CERTIFICATES) != 0) {
-      CFDictionarySetValue(settings, kCFStreamSSLAllowsExpiredCertificates, kCFBooleanTrue);
-    }
-    if ((cfstream_data->ssl_certificate_verification_mask & MAILSTREAM_CFSTREAM_SSL_ALLOWS_EXPIRED_ROOTS) != 0) {
-      CFDictionarySetValue(settings, kCFStreamSSLAllowsExpiredRoots, kCFBooleanTrue);
-    }
-    if ((cfstream_data->ssl_certificate_verification_mask & MAILSTREAM_CFSTREAM_SSL_ALLOWS_ANY_ROOT) != 0) {
-      CFDictionarySetValue(settings, kCFStreamSSLAllowsAnyRoot, kCFBooleanTrue);
-    }
-    if ((cfstream_data->ssl_certificate_verification_mask & MAILSTREAM_CFSTREAM_SSL_DISABLE_VALIDATES_CERTIFICATE_CHAIN) != 0) {
+    if (cfstream_data->ssl_certificate_verification_mask != 0) {
       CFDictionarySetValue(settings, kCFStreamSSLValidatesCertificateChain, kCFBooleanFalse);
+    }
+
+    if (cfstream_data->ssl_peer_name != NULL) {
+      peerName = CFStringCreateWithCString(NULL,
+          cfstream_data->ssl_peer_name, kCFStringEncodingUTF8);
+      if (peerName != NULL)
+        CFDictionarySetValue(settings, kCFStreamSSLPeerName, peerName);
     }
     
     CFReadStreamSetProperty(cfstream_data->readStream, kCFStreamPropertySSLSettings, settings);
     CFWriteStreamSetProperty(cfstream_data->writeStream, kCFStreamPropertySSLSettings, settings);
+    if (peerName != NULL)
+      CFRelease(peerName);
     CFRelease(settings);
   }
   else {
@@ -1007,7 +1036,6 @@ int mailstream_cfstream_set_ssl_enabled(mailstream * s, int ssl_enabled)
   // We need to investigate more about how to establish a STARTTLS connection.
   // For now, wait until we get the certificate chain.
   
-  CFArrayRef certs;
   SecTrustRef secTrust;
   while (1) {
     r = wait_runloop(s->low, STATE_WAIT_SSL);
@@ -1021,21 +1049,22 @@ int mailstream_cfstream_set_ssl_enabled(mailstream * s, int ssl_enabled)
     
     secTrust = (SecTrustRef)CFReadStreamCopyProperty(cfstream_data->readStream, kCFStreamPropertySSLPeerTrust);
     if (secTrust) {
-        // SecTrustEvaluate() needs to be called before SecTrustGetCertificateCount() in Mac OS X <= 10.8
-        SecTrustEvaluate(secTrust, NULL);
-        count = SecTrustGetCertificateCount(secTrust);
-        CFRelease(secTrust);
-    }
-    else {
-        certs = CFReadStreamCopyProperty(cfstream_data->readStream, kCFStreamPropertySSLPeerCertificates);
+        CFArrayRef certs;
+
+        cfstream_evaluate_trust(secTrust);
+        certs = cfstream_copy_trust_certificates(secTrust);
         if (certs) {
             count = CFArrayGetCount(certs);
             CFRelease(certs);
         }
         else {
-            // No trust and no certs, wait more.
-            continue;
+            count = 0;
         }
+        CFRelease(secTrust);
+    }
+    else {
+        // No trust, wait more.
+        continue;
     }
       
     if (count == 0) {
@@ -1203,12 +1232,26 @@ static int mailstream_low_cfstream_interrupt_idle(mailstream_low * s)
 #endif
 }
 
-static carray * mailstream_low_cfstream_get_certificate_chain(mailstream_low * s)
+static void mailstream_low_cfstream_certificate_chain_free(
+    carray /* MMAPString * */ * result)
+{
+  unsigned int i;
+
+  if (result == NULL)
+    return;
+
+  for(i = 0 ; i < carray_count(result) ; i ++)
+    mmap_string_free(carray_get(result, i));
+  carray_free(result);
+}
+
+static carray /* MMAPString * */ *
+mailstream_low_cfstream_get_certificate_chain(mailstream_low * s)
 {
 #if HAVE_CFNETWORK
   struct mailstream_cfstream_data * cfstream_data;
   unsigned int i;
-  carray * result;
+  carray /* MMAPString * */ * result;
   CFArrayRef certs;
   CFIndex count;
   
@@ -1216,52 +1259,61 @@ static carray * mailstream_low_cfstream_get_certificate_chain(mailstream_low * s
     
   SecTrustRef secTrust = (SecTrustRef)CFReadStreamCopyProperty(cfstream_data->readStream, kCFStreamPropertySSLPeerTrust);
   if (secTrust) {
-      // SecTrustEvaluate() needs to be called before SecTrustGetCertificateCount() in Mac OS X <= 10.8
-      SecTrustEvaluate(secTrust, NULL);
-      count = SecTrustGetCertificateCount(secTrust);
+      cfstream_evaluate_trust(secTrust);
+      certs = cfstream_copy_trust_certificates(secTrust);
+      if (certs == NULL) {
+        CFRelease(secTrust);
+        return NULL;
+      }
+      count = CFArrayGetCount(certs);
       result = carray_new(4);
+      if (result == NULL) {
+        CFRelease(certs);
+        CFRelease(secTrust);
+        return NULL;
+      }
       for(i = 0 ; i < count ; i ++) {
-          SecCertificateRef cert = (SecCertificateRef) SecTrustGetCertificateAtIndex(secTrust, i);
+          SecCertificateRef cert = (SecCertificateRef) CFArrayGetValueAtIndex(certs, i);
           CFDataRef data = SecCertificateCopyData(cert);
           if (data == NULL) {
-            carray_free(result);
+            mailstream_low_cfstream_certificate_chain_free(result);
+            CFRelease(certs);
             CFRelease(secTrust);
             return NULL;
           }
           CFIndex length = CFDataGetLength(data);
           const UInt8 * bytes = CFDataGetBytePtr(data);
           MMAPString * str = mmap_string_sized_new(length);
-          mmap_string_append_len(str, (char*) bytes, length);
-          carray_add(result, str, NULL);
+          if (str == NULL) {
+            CFRelease(data);
+            mailstream_low_cfstream_certificate_chain_free(result);
+            CFRelease(certs);
+            CFRelease(secTrust);
+            return NULL;
+          }
+          if (mmap_string_append_len(str, (char*) bytes, length) == NULL) {
+            mmap_string_free(str);
+            CFRelease(data);
+            mailstream_low_cfstream_certificate_chain_free(result);
+            CFRelease(certs);
+            CFRelease(secTrust);
+            return NULL;
+          }
+          if (carray_add(result, str, NULL) < 0) {
+            mmap_string_free(str);
+            CFRelease(data);
+            mailstream_low_cfstream_certificate_chain_free(result);
+            CFRelease(certs);
+            CFRelease(secTrust);
+            return NULL;
+          }
           CFRelease(data);
       }
+      CFRelease(certs);
       CFRelease(secTrust);
   }
   else {
-      certs = CFReadStreamCopyProperty(cfstream_data->readStream, kCFStreamPropertySSLPeerCertificates);
-      if (certs) {
-          count = CFArrayGetCount(certs);
-          result = carray_new(4);
-          for(i = 0 ; i < count ; i ++) {
-              SecCertificateRef cert = (SecCertificateRef) CFArrayGetValueAtIndex(certs, i);
-              CFDataRef data = SecCertificateCopyData(cert);
-              if (data == NULL) {
-                carray_free(result);
-                CFRelease(certs);
-                return NULL;
-              }
-              CFIndex length = CFDataGetLength(data);
-              const UInt8 * bytes = CFDataGetBytePtr(data);
-              MMAPString * str = mmap_string_sized_new(length);
-              mmap_string_append_len(str, (char*) bytes, length);
-              carray_add(result, str, NULL);
-              CFRelease(data);
-          }
-          CFRelease(certs);
-      }
-      else {
-          return NULL;
-      }
+      return NULL;
   }
     
   return result;

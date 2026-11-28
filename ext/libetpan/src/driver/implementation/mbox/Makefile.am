@@ -29,13 +29,7 @@
 
 include $(top_srcdir)/rules.mk
 
-etpaninclude_HEADERS = \
-	mboxdriver.h \
-	mboxdriver_cached.h \
-	mboxdriver_cached_message.h \
-	mboxdriver_message.h \
-	mboxdriver_types.h \
-	mboxstorage.h
+etpaninclude_HEADERS = mboxstorage.h
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
 	-I$(top_srcdir)/src/driver/interface \
@@ -54,3 +48,10 @@ libmbox_la_SOURCES = \
 	mboxdriver_message.c \
 	mboxdriver_tools.h mboxdriver_tools.c \
 	mboxstorage.c
+
+noinst_HEADERS = \
+	mboxdriver.h \
+	mboxdriver_cached.h \
+	mboxdriver_cached_message.h \
+	mboxdriver_message.h \
+	mboxdriver_types.h

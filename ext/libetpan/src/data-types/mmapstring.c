@@ -89,7 +89,7 @@ static size_t mmap_string_ceil = MMAP_STRING_DEFAULT_CEIL;
 #	define MUTEX_LOCK(x) 
 #	define MUTEX_UNLOCK(x)
 #endif
-static chash * mmapstring_hashtable = NULL;
+static chash /* char ** -> MMAPString * */ * mmapstring_hashtable = NULL;
 
 void mmapstring_init_lock(void)
 {
@@ -119,7 +119,7 @@ void mmap_string_set_tmpdir(const char * directory)
 
 int mmap_string_ref(MMAPString * string)
 {
-  chash * ht;
+  chash /* char ** -> MMAPString * */ * ht;
   int r;
   chashdatum key;
   chashdatum data;
@@ -155,7 +155,7 @@ int mmap_string_ref(MMAPString * string)
 int mmap_string_unref(char * str)
 {
   MMAPString * string;
-  chash * ht;
+  chash /* char ** -> MMAPString * */ * ht;
   chashdatum key;
   chashdatum data;
   int r;
@@ -313,6 +313,13 @@ static MMAPString *
 mmap_string_maybe_expand (MMAPString* string,
 			  size_t len) 
 {
+  size_t needed_size;
+
+  if (len > MY_MAXSIZE - string->len - 1)
+    return NULL;
+
+  needed_size = string->len + len + 1;
+
   if (string->len + len >= string->allocated_len)
     {
       size_t old_size;
@@ -320,7 +327,11 @@ mmap_string_maybe_expand (MMAPString* string,
 
       old_size = string->allocated_len;
 
-      string->allocated_len = nearest_power (1, string->len + len + 1);
+      string->allocated_len = nearest_power (1, needed_size);
+      if (string->allocated_len < needed_size) {
+        string->allocated_len = old_size;
+        return NULL;
+      }
       
 #ifndef MMAP_UNAVAILABLE
       if (string->allocated_len > mmap_string_ceil)
@@ -485,6 +496,15 @@ mmap_string_insert_len (MMAPString     *string,
 			const char *val,
 			size_t       len)    
 {
+  if (pos > string->len)
+    return NULL;
+
+  if (string->len >= MY_MAXSIZE)
+    return NULL;
+
+  if (len > MY_MAXSIZE - string->len - 1)
+    return NULL;
+
   if (mmap_string_maybe_expand (string, len) == NULL)
     return NULL;
     
@@ -558,6 +578,12 @@ mmap_string_insert_c (MMAPString *string,
 		      size_t   pos,    
 		      char    c)
 {
+  if (pos > string->len)
+    return NULL;
+
+  if (string->len == MY_MAXSIZE)
+    return NULL;
+
   if (mmap_string_maybe_expand (string, 1) == NULL)
     return NULL;
   
@@ -579,6 +605,12 @@ mmap_string_erase (MMAPString *string,
 		   size_t    pos,    
 		   size_t    len)    
 {
+  if (pos > string->len)
+    return NULL;
+
+  if (len > string->len - pos)
+    return NULL;
+
   if ((pos + len) < string->len)
     memmove (string->str + pos, string->str + pos + len,
 	     string->len - (pos + len));

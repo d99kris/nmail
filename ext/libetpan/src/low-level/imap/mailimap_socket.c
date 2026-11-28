@@ -57,21 +57,18 @@
 #define SERVICE_NAME_IMAP "imap2"
 #define SERVICE_TYPE_TCP "tcp"
 
-#if HAVE_CFNETWORK
-static int mailimap_cfsocket_connect_voip(mailimap * f, const char * server, uint16_t port, int voip_enabled);
-#endif
-
 LIBETPAN_EXPORT
 int mailimap_socket_connect_voip(mailimap * f, const char * server, uint16_t port, int voip_enabled)
 {
-    int s;
-    mailstream * stream;
+  (void) voip_enabled;
+  return mailimap_socket_connect(f, server, port);
+}
 
-  #if HAVE_CFNETWORK
-    if (mailstream_cfstream_enabled) {
-      return mailimap_cfsocket_connect_voip(f, server, port, voip_enabled);
-    }
-  #endif
+LIBETPAN_EXPORT
+int mailimap_socket_connect(mailimap * f, const char * server, uint16_t port)
+{
+    enum mailstream_socket_connect_error connect_error;
+    mailstream * stream;
 
     if (port == 0) {
       port = mail_get_service_port(SERVICE_NAME_IMAP, SERVICE_TYPE_TCP);
@@ -79,29 +76,15 @@ int mailimap_socket_connect_voip(mailimap * f, const char * server, uint16_t por
         port = DEFAULT_IMAP_PORT;
     }
 
-    /* Connection */
-
-    s = mail_tcp_connect_timeout(server, port, f->imap_timeout);
-    if (s == -1)
-      return MAILIMAP_ERROR_CONNECTION_REFUSED;
-
-    stream = mailstream_socket_open_timeout(s, f->imap_timeout);
+    stream = mailstream_socket_connect_timeout(server, port, f->imap_timeout,
+        &connect_error);
     if (stream == NULL) {
-  #ifdef WIN32
-  	closesocket(s);
-  #else
-      close(s);
-  #endif
-      return MAILIMAP_ERROR_MEMORY;
+      if (connect_error == MAILSTREAM_SOCKET_CONNECT_ERROR_MEMORY)
+        return MAILIMAP_ERROR_MEMORY;
+      return MAILIMAP_ERROR_CONNECTION_REFUSED;
     }
 
     return mailimap_connect(f, stream);
-}
-
-LIBETPAN_EXPORT
-int mailimap_socket_connect(mailimap * f, const char * server, uint16_t port)
-{
-  return mailimap_socket_connect_voip(f, server, port, mailstream_cfstream_voip_enabled);
 }
 
 
@@ -110,9 +93,22 @@ int mailimap_socket_starttls(mailimap * f)
   return mailimap_socket_starttls_with_callback(f, NULL, NULL);
 }
 
-static int mailimap_cfsocket_starttls(mailimap * f);
+static int mailimap_cfsocket_starttls(mailimap * f, const char * server_name);
 
 int mailimap_socket_starttls_with_callback(mailimap * f,
+    void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
+{
+  return mailimap_socket_starttls_with_server_name_callback(f, NULL, callback, data);
+}
+
+int mailimap_socket_starttls_with_server_name(mailimap * f,
+    const char * server_name)
+{
+  return mailimap_socket_starttls_with_server_name_callback(f, server_name, NULL, NULL);
+}
+
+int mailimap_socket_starttls_with_server_name_callback(mailimap * f,
+    const char * server_name,
     void (* callback)(struct mailstream_ssl_context * ssl_context, void * data), void * data)
 {
   mailstream_low * low;
@@ -123,7 +119,7 @@ int mailimap_socket_starttls_with_callback(mailimap * f,
   low = mailstream_get_low(f->imap_stream);
   if (low->driver == mailstream_cfstream_driver) {
     // won't use callback
-    return mailimap_cfsocket_starttls(f);
+    return mailimap_cfsocket_starttls(f, server_name);
   }
   
   r = mailimap_starttls(f);
@@ -139,8 +135,8 @@ int mailimap_socket_starttls_with_callback(mailimap * f,
   if (fd == -1)
     return MAILIMAP_ERROR_STREAM;
   
-  new_low = mailstream_low_tls_open_with_callback_timeout(fd, f->imap_timeout,
-    callback, data);
+  new_low = mailstream_low_tls_open_with_server_name_callback_timeout(fd, f->imap_timeout,
+    server_name, callback, data);
   if (new_low == NULL)
     return MAILIMAP_ERROR_STREAM;
   
@@ -150,21 +146,7 @@ int mailimap_socket_starttls_with_callback(mailimap * f,
   return MAILIMAP_NO_ERROR;
 }
 
-#if HAVE_CFNETWORK
-static int mailimap_cfsocket_connect_voip(mailimap * f, const char * server, uint16_t port, int voip_enabled)
-{
-  mailstream * stream;
-  
-  stream = mailstream_cfstream_open_voip_timeout(server, port, voip_enabled, f->imap_timeout);
-  if (stream == NULL) {
-    return MAILIMAP_ERROR_CONNECTION_REFUSED;
-  }
-  
-  return mailimap_connect(f, stream);
-}
-#endif
-
-static int mailimap_cfsocket_starttls(mailimap * f)
+static int mailimap_cfsocket_starttls(mailimap * f, const char * server_name)
 {
   int r;
   
@@ -176,6 +158,8 @@ static int mailimap_cfsocket_starttls(mailimap * f)
       return r;
   }
   
+  if (server_name != NULL)
+    mailstream_cfstream_set_ssl_peer_name(f->imap_stream, server_name);
   mailstream_cfstream_set_ssl_verification_mask(f->imap_stream, MAILSTREAM_CFSTREAM_SSL_NO_VERIFICATION);
   r = mailstream_cfstream_set_ssl_enabled(f->imap_stream, 1);
   if (r < 0) {

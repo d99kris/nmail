@@ -22,9 +22,6 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
-/* Define to use expat */
-/* #undef HAVE_EXPAT */
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
@@ -162,13 +159,13 @@
 #define UNSTRICT_SYNTAX 1
 
 /* Define to use GnuTLS */
-/* #undef USE_GNUTLS */
+/* #undef HAVE_GNUTLS */
 
 /* Define to use SASL */
 #define USE_SASL 1
 
 /* Define to use OpenSSL */
-#define USE_SSL 1
+#define HAVE_OPENSSL 1
 
 /* Version number of package */
 #define VERSION "1.2"

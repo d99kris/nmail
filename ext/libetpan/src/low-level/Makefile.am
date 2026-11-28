@@ -29,11 +29,38 @@
 
 include $(top_srcdir)/rules.mk
 
-SUBDIRS = imap imf maildir mbox mh mime nntp pop3 smtp feed
+if HAVE_JMAP
+jmap_subdir = jmap
+jmap_lib = jmap/libjmap.la
+else
+jmap_subdir =
+jmap_lib =
+endif
+
+if HAVE_JSON
+gmail_subdir = gmail
+gmail_lib = gmail/libgmail.la
+else
+gmail_subdir =
+gmail_lib =
+endif
+
+if HAVE_FEED
+feed_subdir = feed
+feed_lib = feed/libfeed.la
+else
+feed_subdir =
+feed_lib =
+endif
+
+SUBDIRS = activesync $(gmail_subdir) $(jmap_subdir) imap imf maildir mbox mh mime nntp pop3 smtp $(feed_subdir) smime pgp
 
 noinst_LTLIBRARIES = liblow-level.la
 liblow_level_la_SOURCES = 
 liblow_level_la_LIBADD = \
+	activesync/libactivesync.la \
+	$(gmail_lib) \
+	$(jmap_lib) \
 	imap/libimap.la \
 	imf/libimf.la \
 	maildir/libmaildir.la \
@@ -43,4 +70,6 @@ liblow_level_la_LIBADD = \
 	nntp/libnntp.la \
 	pop3/libpop3.la \
 	smtp/libsmtp.la \
-	feed/libfeed.la
+	$(feed_lib) \
+	smime/libsmime.la \
+	pgp/libpgp.la

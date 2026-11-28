@@ -14,6 +14,9 @@
 #include <inttypes.h>
 #define MAIL_DIR_SEPARATOR '/'
 #define MAIL_DIR_SEPARATOR_S "/"
+#define LIBETPAN_HAS_FEED 0
+#define LIBETPAN_HAS_JSON 0
+#define LIBETPAN_HAS_JMAP 0
 #ifdef _MSC_VER
 # ifdef LIBETPAN_DLL
 # define LIBETPAN_EXPORT __declspec(dllexport)

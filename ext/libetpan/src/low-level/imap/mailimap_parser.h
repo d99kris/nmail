@@ -43,6 +43,21 @@ extern "C" {
 
 #include "mailimap_types.h"
 
+struct mailimap_parser_context {
+  int is_rambler_workaround_enabled;
+  int is_qip_workaround_enabled;
+  int is_skip_malformed_fetch_response_enabled;
+
+  mailimap_msg_body_handler * msg_body_handler;
+  void * msg_body_handler_context;
+  struct mailimap_msg_att_body_section * msg_body_section;
+  int msg_body_att_type;
+  bool msg_body_parse_in_progress;
+
+  /* Active BODY and body-extension parser calls; shared nesting budget. */
+  unsigned int body_parse_depth;
+};
+
 int mailimap_greeting_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
 			    size_t * indx,
 			    struct mailimap_greeting ** result,
@@ -63,7 +78,7 @@ mailimap_response_parse_with_context(mailstream * fd, MMAPString * buffer, struc
                                      void * context,
                                      mailimap_msg_att_handler * msg_att_handler,
                                      void * msg_att_context);
-  
+
 int
 mailimap_continue_req_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
 			    size_t * indx,
@@ -96,7 +111,7 @@ mailimap_mailbox_list_parse(mailstream * fd, MMAPString * buffer, struct mailima
                             struct mailimap_mailbox_list ** result,
                             size_t progr_rate,
                             progress_function * progr_fun);
-  
+
 int mailimap_nstring_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
 				  size_t * indx, char ** result,
 				  size_t * result_len,
@@ -112,7 +127,7 @@ mailimap_string_parse(mailstream * fd, MMAPString * buffer, struct mailimap_pars
 
 int
 mailimap_struct_spaced_list_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
-				  size_t * indx, clist ** result,
+				  size_t * indx, clist /* parser result */ ** result,
 				  mailimap_struct_parser * parser,
 				  mailimap_struct_destructor * destructor,
 				  size_t progr_rate,
@@ -146,7 +161,7 @@ mailimap_nz_number_parse(mailstream * fd, MMAPString * buffer, struct mailimap_p
 
 int
 mailimap_struct_list_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
-    size_t * indx, clist ** result,
+    size_t * indx, clist /* parser result */ ** result,
     char symbol,
     mailimap_struct_parser * parser,
     mailimap_struct_destructor * destructor,
@@ -165,13 +180,13 @@ int mailimap_dquote_parse(mailstream * fd, MMAPString * buffer, struct mailimap_
 int
 mailimap_quoted_char_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
                            size_t * indx, char * result);
-  
+
 int mailimap_nil_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
                        size_t * indx);
 
 int
 mailimap_struct_multiple_parse(mailstream * fd, MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
-			       size_t * indx, clist ** result,
+			       size_t * indx, clist /* parser result */ ** result,
 			       mailimap_struct_parser * parser,
 			       mailimap_struct_destructor * destructor,
 			       size_t progr_rate,
@@ -186,7 +201,7 @@ int mailimap_capability_data_parse(mailstream * fd, MMAPString * buffer, struct 
 int mailimap_capability_list_parse(mailstream * fd,
   MMAPString * buffer, struct mailimap_parser_context * parser_ctx,
   size_t * indx,
-  clist ** result,
+  clist /* struct mailimap_capability * */ ** result,
   size_t progr_rate,
   progress_function * progr_fun);
 
@@ -207,12 +222,6 @@ int mailimap_uint64_parse(mailstream * fd, MMAPString * buffer, struct mailimap_
 
 int mailimap_set_parse(mailstream * fd,
   MMAPString * buffer, struct mailimap_parser_context * parser_ctx, size_t * indx, struct mailimap_set ** result);
-
-LIBETPAN_EXPORT
-int mailimap_hack_date_time_parse(char * str,
-                                  struct mailimap_date_time ** result,
-                                  size_t progr_rate,
-                                  progress_function * progr_fun);
 
 #ifdef __cplusplus
 }

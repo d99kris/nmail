@@ -12,7 +12,7 @@
 # See utils/dist/build-linux.sh for usage.
 #
 # Most dependencies come straight from Alpine's own *-static packages. Only the
-# four libraries Alpine cannot static-link cleanly are source-built, using the
+# three libraries Alpine cannot static-link cleanly are source-built, using the
 # same versions and configure flags as Dockerfile.manylinux so the musl and
 # glibc builds carry identical dependency versions and auth/protocol behaviour:
 #   - ncurses     : Alpine's ncurses-static has no compiled-in terminfo
@@ -22,10 +22,6 @@
 #                   images. We build ncurses with the same fallbacks + search
 #                   path as the glibc build so the TUI renders everywhere.
 #   - xapian-core : Alpine ships no static archive for it at all.
-#   - libcurl     : Alpine's curl-static drags c-ares (which has no static
-#                   package) plus a large TLS/HTTP closure; we build a minimal
-#                   openssl-backed curl instead (libetpan only reaches curl via
-#                   its http/https RSS path).
 #   - cyrus-sasl  : Alpine's libsasl2.a bakes in DIGEST-MD5/SCRAM, which pull
 #                   libcrypto — and nmail's single-pass static link line places
 #                   libcrypto *before* libsasl2, so those references would not
@@ -41,8 +37,9 @@ SHELL ["/bin/sh", "-c"]
 # Build tooling + every leaf dependency Alpine ships a usable static archive
 # for. samurai provides ninja; the *-static subpackages install the .a archives
 # that find_library resolves under CMAKE_FIND_LIBRARY_SUFFIXES=.a; curl is the
-# fetch tool for the source-built deps below; perl is required by curl's
-# configure (docs/manual/CA-embed probe). libmagic's compression backends
+# fetch tool for the source-built deps below; perl was required by the former
+# libcurl source build's configure and is kept until verified unneeded by the
+# remaining source builds. libmagic's compression backends
 # (z/bz2/lzma/zstd) are appended to the link line by the top-level CMakeLists
 # HAS_STATIC_EXTLIBS block, so their static archives must be present even though
 # Alpine's libmagic.a does not itself reference them. libuuid.a + its headers
@@ -59,7 +56,6 @@ RUN apk add --no-cache \
       openssl-dev openssl-libs-static \
       sqlite-dev sqlite-static \
       zlib-dev zlib-static \
-      expat-dev expat-static \
       file-dev libmagic-static \
       util-linux-dev util-linux-static \
       bzip2-static xz-static zstd-static
@@ -125,25 +121,6 @@ RUN set -eu; \
     make -j"$(nproc)"; make install; \
     cd ..; rm -rf "xapian-core-${XAPIAN_VERSION}"
 
-# libcurl: libetpan (HAVE_CURL=1) reaches curl only through its RSS/newsfeed
-# http/https path, so build a minimal openssl-backed curl and disable every
-# other protocol/feature to keep the static closure small and avoid dragging in
-# ldap/gssapi/ssh/etc. --with-openssl/--with-zlib use Alpine's own static libs.
-ARG CURL_VERSION=8.11.1
-RUN set -eu; \
-    curl -fsSL --retry 3 --retry-delay 2 "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz; \
-    cd "curl-${CURL_VERSION}"; \
-    ./configure --prefix=/usr --disable-shared --enable-static \
-      --with-openssl --with-zlib \
-      --without-libpsl --without-brotli --without-zstd --without-libidn2 \
-      --without-nghttp2 --without-ngtcp2 --without-libssh2 --without-librtmp \
-      --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet \
-      --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher \
-      --disable-smb --disable-mqtt --disable-ftp --disable-file \
-      --disable-manual --disable-ntlm --disable-unix-sockets; \
-    make -j"$(nproc)"; make install; \
-    cd ..; rm -rf "curl-${CURL_VERSION}"
-
 # cyrus-sasl (libsasl2): SMTP password auth goes through libetpan's SASL path;
 # nmail also enumerates the client mechanisms at startup via
 # sasl_global_listmech() (src/sasl.cpp). In a normal build the mechanisms are
@@ -187,7 +164,7 @@ RUN set -eu; \
     cd ..; rm -rf "cyrus-sasl-${CYRUS_SASL_VERSION}"
 
 # Strip DWARF from the static dependency archives (same rationale as
-# Dockerfile.manylinux). The source-built ncurses/xapian/curl/cyrus-sasl above
+# Dockerfile.manylinux). The source-built ncurses/xapian/cyrus-sasl above
 # compile at autotools' default "-g -O2" and install into /usr/lib, so their .a
 # carry full debug info that the static link folds into nmail and
 # `objcopy --only-keep-debug` would then harvest into nmail.debug. Done here, as

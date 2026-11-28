@@ -115,7 +115,7 @@ static int mailimap_namespace_info_parse(mailstream * fd,
   char * prefix;
   size_t prefix_len;
   clistiter * cur;
-  clist * ext_list;
+  clist /* struct mailimap_namespace_response_extension * */ * ext_list;
   char delimiter;
   struct mailimap_namespace_info * info;
   
@@ -151,7 +151,10 @@ static int mailimap_namespace_info_parse(mailstream * fd,
     if (r == MAILIMAP_ERROR_PARSE) {
       // could not parse, use delimiter as fallback
       // this is an issue on Courier-IMAP
-      delimiter = prefix[strlen(prefix) - 1];
+      if (prefix_len > 0)
+        delimiter = prefix[prefix_len - 1];
+      else
+        delimiter = 0;
     }
     
     r = mailimap_dquote_parse(fd, buffer, parser_ctx, &cur_token);
@@ -225,7 +228,7 @@ static int mailimap_namespace_item_parse(mailstream * fd,
   size_t cur_token = * indx;
   int r;
   int res;
-  clist * info_list;
+  clist /* struct mailimap_namespace_info * */ * info_list;
   clistiter * cur;
   struct mailimap_namespace_item * item;
   
@@ -310,7 +313,7 @@ static int mailimap_namespace_response_extension_parse(mailstream * fd,
   size_t cur_token;
   char * name;
   size_t name_len;
-  clist * value_list;
+  clist /* char * */ * value_list;
   struct mailimap_namespace_response_extension * ext;
   clistiter * cur;
   

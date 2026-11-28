@@ -163,7 +163,7 @@ private:
   void Process();
   bool AuthRefreshNeeded();
   bool PerformAuthRefresh();
-  bool CheckConnectivity();
+  bool CheckConnectivity(bool* p_Desync = nullptr);
   void CheckConnectivityAndReconnect(bool p_SkipCheck);
   void CacheProcess();
   void SearchProcess();

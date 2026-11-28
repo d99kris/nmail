@@ -29,13 +29,7 @@
 
 include $(top_srcdir)/rules.mk
 
-etpaninclude_HEADERS = \
-	mhdriver.h \
-	mhdriver_cached.h \
-	mhdriver_cached_message.h \
-	mhdriver_message.h \
-	mhdriver_types.h \
-	mhstorage.h
+etpaninclude_HEADERS = mhstorage.h
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
 	-I$(top_srcdir)/src/driver/interface \
@@ -54,3 +48,10 @@ libmh_la_SOURCES = \
 	mhdriver_message.c \
 	mhdriver_tools.h mhdriver_tools.c \
 	mhstorage.c
+
+noinst_HEADERS = \
+	mhdriver.h \
+	mhdriver_cached.h \
+	mhdriver_cached_message.h \
+	mhdriver_message.h \
+	mhdriver_types.h

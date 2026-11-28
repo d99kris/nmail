@@ -651,12 +651,18 @@ void ImapManager::Process()
           bool retry = false;
           if (!result)
           {
-            if (!CheckConnectivity())
+            bool desync = false;
+            if (!CheckConnectivity(&desync))
             {
               LOG_WARNING("request failed due to connection lost");
               SetStatus(Status::FlagConnecting);
               isConnected = false;
-              retry = true;
+              // session desync recurs on retry, thus limit tries
+              retry = !desync || (request.m_TryCount++ < 2);
+              if (!retry)
+              {
+                LOG_WARNING("request dropped");
+              }
             }
             else if (request.m_TryCount < 2)
             {
@@ -716,12 +722,18 @@ void ImapManager::Process()
           bool retry = false;
           if (!result)
           {
-            if (!CheckConnectivity())
+            bool desync = false;
+            if (!CheckConnectivity(&desync))
             {
               LOG_WARNING("prefetch request failed due to connection lost");
               SetStatus(Status::FlagConnecting);
               isConnected = false;
-              retry = true;
+              // session desync recurs on retry, thus limit tries
+              retry = !desync || (request.m_TryCount++ < 2);
+              if (!retry)
+              {
+                LOG_WARNING("prefetch request dropped");
+              }
             }
             else if (request.m_TryCount < 2)
             {
@@ -826,10 +838,10 @@ bool ImapManager::PerformAuthRefresh()
   return rv;
 }
 
-bool ImapManager::CheckConnectivity()
+bool ImapManager::CheckConnectivity(bool* p_Desync /* = nullptr */)
 {
   SetStatus(Status::FlagChecking);
-  bool rv = m_Imap.CheckConnection();
+  bool rv = m_Imap.CheckConnection(p_Desync);
   ClearStatus(Status::FlagChecking);
   return rv;
 }

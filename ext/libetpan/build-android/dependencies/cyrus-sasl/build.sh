@@ -1,9 +1,13 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-version=2.1.26
-build_version=4
+set -euo pipefail
+
+# 2.1.28 (vs the old 2.1.26) ships upstream support for the OpenSSL 1.1.x
+# opaque HMAC_CTX/EVP_MD_CTX/EVP_CIPHER_CTX API. 2.1.26 predates it and fails
+# to compile against the OpenSSL 1.1.1 we build below. This matches the version
+# already used by the iOS build.
+version=2.1.28
 ARCHIVE=cyrus-sasl-$version
-openssl_build_version=3
 package_name=cyrus-sasl-android
 
 if test "x$ANDROID_NDK" = x ; then
@@ -13,49 +17,88 @@ fi
 
 ARCHIVE_NAME=$ARCHIVE.tar.gz
 ARCHIVE_PATCH=$ARCHIVE.patch
-current_dir="`pwd`"
+current_dir="$(cd "$(dirname "$0")" && pwd)"
+cd "$current_dir"
+repo_root="$(cd "$current_dir/../../.." && pwd)"
+submodule_dir="$repo_root/dependencies/submodules/cyrus-sasl"
 package_dir="$current_dir/../../../build-mac/dependencies/packages"
+output_dir="$current_dir/../build/$package_name"
+openssl_root="$current_dir/../build/openssl-android"
 
-if [ ! -e "$package_dir/$ARCHIVE_NAME" ]; then
+use_submodule=false
+if [ -f "$submodule_dir/configure.ac" ] &&
+    [ -f "$submodule_dir/plugins/anonymous_init.c" ]; then
+  use_submodule=true
+fi
+
+if ! "$use_submodule" && [ ! -e "$package_dir/$ARCHIVE_NAME" ]; then
+  echo "Downloading $ARCHIVE_NAME"
+  mkdir -p "$package_dir"
+  curl -L -o "$package_dir/$ARCHIVE_NAME" \
+    "https://github.com/cyrusimap/cyrus-sasl/releases/download/$ARCHIVE/$ARCHIVE_NAME"
+fi
+
+if ! "$use_submodule" && [ ! -e "$package_dir/$ARCHIVE_NAME" ]; then
   echo "Missing archive $ARCHIVE"
   exit 1
 fi
 
-if test ! -f "$current_dir/../openssl/openssl-android-$openssl_build_version.zip" ; then
+if test ! -d "$openssl_root" ; then
   echo Building OpenSSL first
   cd "$current_dir/../openssl"
   ./build.sh
 fi
+if test ! -d "$openssl_root/include" ; then
+  echo "Missing OpenSSL build at $openssl_root"
+  exit 1
+fi
+
+rm -rf "$output_dir"
 
 function build {
   rm -rf "$current_dir/src"
   
   mkdir -p "$current_dir/src"
   cd "$current_dir/src"
-  tar xzf "$package_dir/$ARCHIVE_NAME"
-  if [ $? != 0 ]; then
-    echo "Unable to decompress $ARCHIVE_NAME"
-    exit 1
+  if "$use_submodule"; then
+    mkdir -p "$ARCHIVE"
+    (
+      cd "$submodule_dir"
+      tar --exclude=.git -cf - .
+    ) | (
+      cd "$ARCHIVE"
+      tar -xf -
+    )
+  else
+    tar xzf "$package_dir/$ARCHIVE_NAME"
+    if [ $? != 0 ]; then
+      echo "Unable to decompress $ARCHIVE_NAME"
+      exit 1
+    fi
   fi
-  
-  if test ! -f "$current_dir/$package_name-$build_version/include/sasl/sasl.h" ; then
-    mkdir -p "$current_dir/$package_name-$build_version"
-    mkdir -p "$current_dir/$package_name-$build_version/include/sasl"
-    public_headers="hmac-md5.h md5.h md5global.h sasl.h saslplug.h saslutil.h prop.h"
-    cd "$current_dir/src/$ARCHIVE/include"
-    cp -R $public_headers "$current_dir/$package_name-$build_version/include/sasl"
+  if test ! -f "$current_dir/src/$ARCHIVE/include/md5global.h" &&
+      test -f "$current_dir/src/$ARCHIVE/win32/include/md5global.h" ; then
+    cp "$current_dir/src/$ARCHIVE/win32/include/md5global.h" \
+      "$current_dir/src/$ARCHIVE/include/md5global.h"
   fi
 
-  cd "$current_dir/src"
-  unzip -q "$current_dir/../openssl/openssl-android-$openssl_build_version.zip"
+  if test ! -f "$output_dir/include/sasl/sasl.h" ; then
+    mkdir -p "$output_dir"
+    mkdir -p "$output_dir/include/sasl"
+    # 2.1.28 no longer ships md5.h / md5global.h under include/; libetpan only
+    # needs sasl.h and saslutil.h, so copy the headers that actually exist.
+    public_headers="hmac-md5.h sasl.h saslplug.h saslutil.h prop.h"
+    cd "$current_dir/src/$ARCHIVE/include"
+    cp -R $public_headers "$output_dir/include/sasl"
+  fi
 
   cp -R "$current_dir/build-android" "$current_dir/src/$ARCHIVE"
   cd "$current_dir/src/$ARCHIVE/build-android/jni"
-  $ANDROID_NDK/ndk-build TARGET_PLATFORM=$ANDROID_PLATFORM TARGET_ARCH_ABI=$TARGET_ARCH_ABI \
-    OPENSSL_PATH="$current_dir/src/openssl-android-$openssl_build_version"
+  $ANDROID_NDK/ndk-build APP_PLATFORM=$ANDROID_PLATFORM TARGET_ARCH_ABI=$TARGET_ARCH_ABI \
+    OPENSSL_PATH="$openssl_root"
 
-  mkdir -p "$current_dir/$package_name-$build_version/libs/$TARGET_ARCH_ABI"
-  cp "$current_dir/src/$ARCHIVE/build-android/obj/local/$TARGET_ARCH_ABI/libsasl2.a" "$current_dir/$package_name-$build_version/libs/$TARGET_ARCH_ABI"
+  mkdir -p "$output_dir/libs/$TARGET_ARCH_ABI"
+  cp "$current_dir/src/$ARCHIVE/build-android/obj/local/$TARGET_ARCH_ABI/libsasl2.a" "$output_dir/libs/$TARGET_ARCH_ABI"
   rm -rf "$current_dir/src"
 }
 
@@ -68,5 +111,4 @@ for arch in $archs ; do
 done
 
 cd "$current_dir"
-zip -qry "$package_name-$build_version.zip" "$package_name-$build_version"
-rm -rf "$package_name-$build_version"
+echo "Created $output_dir"

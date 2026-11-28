@@ -166,6 +166,8 @@ static int pop3driver_initialize(mailsession * session)
 
   data->pop3_session = pop3;
   data->pop3_auth_type = POP3DRIVER_AUTH_TYPE_PLAIN;
+  data->pop3_ssl_callback = NULL;
+  data->pop3_ssl_cb_data = NULL;
 
   session->sess_data = data;
 
@@ -211,7 +213,9 @@ static int pop3driver_starttls(mailsession * session)
 
   pop3 = get_pop3_session(session);
 
-  r = mailpop3_socket_starttls(pop3);
+  r = mailpop3_socket_starttls_with_callback(pop3,
+      get_data(session)->pop3_ssl_callback,
+      get_data(session)->pop3_ssl_cb_data);
   return pop3driver_pop3_error_to_mail_error(r);
 }
 
@@ -235,10 +239,10 @@ static int pop3driver_parameters(mailsession * session,
     break; 
   case POP3DRIVER_CACHED_SET_SSL_CALLBACK:
     data->pop3_ssl_callback = value;
-    break;
+    return MAIL_NO_ERROR;
   case POP3DRIVER_CACHED_SET_SSL_CALLBACK_DATA:
     data->pop3_ssl_cb_data = value;
-    break;
+    return MAIL_NO_ERROR;
   }
   
   return MAIL_ERROR_INVAL;
@@ -248,7 +252,7 @@ static int pop3driver_login(mailsession * session,
 			    const char * userid, const char * password)
 {
   int r;
-  carray * msg_tab;
+  carray /* struct mailpop3_msg_info * */ * msg_tab;
   struct pop3_session_state_data * data;
 
   data = get_data(session);
@@ -319,7 +323,7 @@ static int pop3driver_status_folder(mailsession * session, const char * mb,
 static int pop3driver_messages_number(mailsession * session, const char * mb,
 				      uint32_t * result)
 {
-  carray * msg_tab;
+  carray /* struct mailpop3_msg_info * */ * msg_tab;
   int r;
 
   r = mailpop3_list(get_pop3_session(session), &msg_tab);

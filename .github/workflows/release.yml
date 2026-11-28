@@ -78,7 +78,7 @@ jobs:
       # compile dominates each Linux job -- so cache the built images and rebuild
       # only when the matching Dockerfile changes. The manylinux (glibc) image
       # builds ~a dozen deps (~15-20 min); the alpine (musl) image builds the
-      # four Alpine has no usable static package for -- ncurses, xapian, curl,
+      # three Alpine has no usable static package for -- ncurses, xapian,
       # cyrus-sasl (~4-6 min). Neither dep set benefits from ccache: it is only
       # bind-mounted for the nmail app compile at `docker run`, not during
       # `docker build`, so uncached the deps recompile from source every run. The

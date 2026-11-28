@@ -123,6 +123,9 @@ void Imap::CleanupImap()
 
 static void SslContextCallback(struct mailstream_ssl_context* p_SslContext, void* p_Data)
 {
+  // clear sni set by libetpan >= 2.0 from connect address
+  mailstream_ssl_set_server_name(p_SslContext, NULL);
+
   if (p_Data != nullptr)
   {
     char* host = (char*)p_Data;
@@ -1209,15 +1212,20 @@ bool Imap::DeleteMessages(const std::string& p_Folder, const std::set<uint32_t>&
   return rv;
 }
 
-bool Imap::CheckConnection()
+bool Imap::CheckConnection(bool* p_Desync /* = nullptr */)
 {
   LOG_DEBUG_FUNC(STR());
 
   std::lock_guard<std::mutex> imapLock(m_ImapMutex);
 
-  bool rv = true;
-  rv &= (LOG_IF_IMAP_ERR(mailimap_noop(m_Imap)) == MAILIMAP_NO_ERROR);
-  return rv;
+  const int rv = LOG_IF_IMAP_ERR(mailimap_noop(m_Imap));
+  if (p_Desync != nullptr)
+  {
+    // parse error indicates session out of sync, as opposed to network error
+    *p_Desync = (rv == MAILIMAP_ERROR_PARSE);
+  }
+
+  return (rv == MAILIMAP_NO_ERROR);
 }
 
 bool Imap::GetConnected()

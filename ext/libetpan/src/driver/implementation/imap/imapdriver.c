@@ -224,6 +224,8 @@ static int imapdriver_initialize(mailsession * session)
   data->imap_mailbox = NULL;
   data->imap_session = imap;
   data->imap_flags_store = flags_store;
+  data->imap_ssl_callback = NULL;
+  data->imap_ssl_cb_data = NULL;
 
   session->sess_data = data;
 
@@ -345,7 +347,7 @@ static int imapdriver_build_folder_name(mailsession * session, const char * mb,
   mailimap * imap;
   struct mailimap_mailbox_list * mb_list;
   int r;
-  clist * imap_list;
+  clist /* struct mailimap_mailbox_list * */ * imap_list;
 
   imap = get_imap_session(session);
 
@@ -353,11 +355,14 @@ static int imapdriver_build_folder_name(mailsession * session, const char * mb,
   if (r != MAILIMAP_NO_ERROR)
     return r;
 
-  if (clist_begin(imap_list) == NULL)
+  if (clist_begin(imap_list) == NULL) {
+    mailimap_list_result_free(imap_list);
     return MAIL_ERROR_LIST;
+  }
 
   mb_list = clist_begin(imap_list)->data;
   delimiter[0] = mb_list->mb_delimiter;
+  mailimap_list_result_free(imap_list);
 
   folder_name = malloc(strlen(mb) + strlen(delimiter) + strlen(name) + 1);
   if (folder_name == NULL)
@@ -482,7 +487,7 @@ static int status_selected_folder(mailsession * session, const char * mb,
   uint32_t unseen;
   uint32_t recent;
   struct mailimap_search_key * search_key;
-  clist * search_result;
+  clist /* uint32_t * */ * search_result;
   
   imap = get_imap_session(session);
   
@@ -706,7 +711,7 @@ static int imapdriver_list_lsub_folders(mailsession * session, int type,
 					const char * mb,
 					struct mail_list ** result)
 {
-  clist * imap_list;
+  clist /* struct mailimap_mailbox_list * */ * imap_list;
   struct mail_list * resp;
   int r;
   int res;
@@ -864,10 +869,10 @@ imapdriver_get_envelopes_list(mailsession * session,
   struct mailimap_fetch_att * fetch_att;
   struct mailimap_fetch_type * fetch_type;
   int res;
-  clist * fetch_result;
+  clist /* struct mailimap_msg_att * */ * fetch_result;
   int r;
   uint32_t exists;
-  clist * msg_list;
+  clist /* uint32_t * */ * msg_list;
   clistiter * set_iter;
   
   if (get_imap_session(session)->imap_selection_info == NULL) {
@@ -1051,8 +1056,8 @@ static int imapdriver_search_messages(mailsession * session, const char * charse
 {
   struct mailimap_search_key * imap_key;
   int r;
-  clist * imap_result;
-  clist * result_list;
+  clist /* uint32_t * */ * imap_result;
+  clist /* uint32_t * */ * result_list;
   struct mail_search_result * search_result;
   clistiter * cur;
 
@@ -1158,7 +1163,9 @@ static int imapdriver_starttls(mailsession * session)
   if (!starttls)
     return MAIL_ERROR_NO_TLS;
   
-  r = mailimap_socket_starttls(imap);
+  r = mailimap_socket_starttls_with_callback(imap,
+      get_data(session)->imap_ssl_callback,
+      get_data(session)->imap_ssl_cb_data);
   return imap_error_to_mail_error(r);
 }
 
@@ -1280,10 +1287,10 @@ static int imapdriver_parameters(mailsession * session,
   switch (id) {
   case IMAPDRIVER_CACHED_SET_SSL_CALLBACK:
     data->imap_ssl_callback = value;
-    break;
+    return MAIL_NO_ERROR;
   case IMAPDRIVER_CACHED_SET_SSL_CALLBACK_DATA:
     data->imap_ssl_cb_data = value;
-    break;
+    return MAIL_NO_ERROR;
   }
   
   return MAIL_ERROR_INVAL;

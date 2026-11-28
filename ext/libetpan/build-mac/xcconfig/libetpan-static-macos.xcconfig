@@ -1,0 +1,8 @@
+#include "libetpan-macos.xcconfig"
+
+INSTALL_PATH = /usr/local/lib
+PRODUCT_NAME = etpan
+SKIP_INSTALL = YES
+
+COPY_PHASE_STRIP[config=Release] = YES
+DEBUG_INFORMATION_FORMAT[config=Release] = dwarf-with-dsym
