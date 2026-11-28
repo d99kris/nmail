@@ -130,6 +130,13 @@ if [[ "${BUILD}" == "1" ]] || [[ "${DEBUG}" == "1" ]]; then
   if [[ -n "${NMAIL_PREFIX:-}" ]]; then
     CMAKEARGS="${CMAKEARGS} -DCMAKE_INSTALL_PREFIX=${NMAIL_PREFIX%/}"
   fi
+
+  # tests are only built when requested
+  if [[ "${TESTS}" == "1" ]]; then
+    CMAKEARGS="-DHAS_TESTS=ON ${CMAKEARGS}"
+  else
+    CMAKEARGS="-DHAS_TESTS=OFF ${CMAKEARGS}"
+  fi
 fi
 
 # deps
@@ -173,7 +180,7 @@ fi
 
 # src
 if [[ "${SRC}" == "1" ]]; then
-  uncrustify -c etc/uncrustify.cfg --replace --no-backup src/*.cpp src/*.h || \
+  uncrustify -c etc/uncrustify.cfg --replace --no-backup src/*.cpp src/*.h tests/*.cpp tests/*.h || \
     exiterr "unrustify failed, exiting."
 fi
 
@@ -245,7 +252,7 @@ fi
 
 # tests
 if [[ "${TESTS}" == "1" ]]; then
-  true # currently this project has no tests
+  cd build && ctest --output-on-failure && cd .. || exiterr "tests failed, exiting."
 fi
 
 # doc

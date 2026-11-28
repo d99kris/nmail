@@ -661,3 +661,11 @@ add_custom_target(uninstall
   COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/doc/nmail/LICENSE"
   COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/doc/nmail"
 )
+
+# Tests
+option(HAS_TESTS "Build tests" OFF)
+message(STATUS "Tests: ${HAS_TESTS}")
+if(HAS_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
