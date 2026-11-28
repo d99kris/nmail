@@ -9,9 +9,9 @@
 
 #include <vector>
 
+#include "apputil.h"
 #include "auth.h"
 #include "loghelp.h"
-#include "util.h"
 
 ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
                          const std::string& p_Host, const uint16_t p_Port,

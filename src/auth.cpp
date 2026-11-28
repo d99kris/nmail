@@ -14,13 +14,16 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 
+#include "apputil.h"
 #include "cacheutil.h"
 #include "config.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "log.h"
 #include "loghelp.h"
 #include "oauth2nmailscript.h"
-#include "util.h"
+#include "strutil.h"
+#include "sysutil.h"
 
 std::mutex Auth::m_Mutex;
 std::string Auth::m_Auth;
@@ -42,7 +45,7 @@ bool Auth::InitConfig()
       { "oauth2_client_id", "" },
       { "oauth2_client_secret", "" },
     };
-    const std::string configPath(Util::GetApplicationDir() + std::string("auth.conf"));
+    const std::string configPath(AppUtil::GetApplicationDir() + std::string("auth.conf"));
     Config config(configPath, defaultConfig);
     config.LogParamsExcept({ "oauth2_client_id", "oauth2_client_secret" });
 
@@ -89,7 +92,7 @@ void Auth::Cleanup()
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   SaveCache();
-  Util::RmDir(GetAuthTempDir());
+  FileUtil::RmDir(GetAuthTempDir());
 }
 
 bool Auth::ChangePass(const bool p_CacheEncrypt,
@@ -112,8 +115,8 @@ bool Auth::GenerateToken(const std::string& p_Auth)
 
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Auth = p_Auth;
-  Util::RmDir(GetAuthTempDir());
-  Util::MkDir(GetAuthTempDir());
+  FileUtil::RmDir(GetAuthTempDir());
+  FileUtil::MkDir(GetAuthTempDir());
 
   m_OAuthEnabled = (m_Auth == "gmail-oauth2") || (m_Auth == "outlook-oauth2");
 
@@ -197,26 +200,26 @@ std::string Auth::GetAuthCacheDir()
 
 std::string Auth::GetAuthTempDir()
 {
-  return Util::GetTempDir() + std::string("auth/");
+  return FileUtil::GetTempDir() + std::string("auth/");
 }
 
 void Auth::LoadCache()
 {
-  Util::RmDir(GetAuthTempDir());
-  Util::MkDir(GetAuthTempDir());
+  FileUtil::RmDir(GetAuthTempDir());
+  FileUtil::MkDir(GetAuthTempDir());
   if (m_AuthEncrypt)
   {
     CacheUtil::DecryptCacheDir(m_Pass, GetAuthCacheDir(), GetAuthTempDir());
   }
   else
   {
-    Util::CopyFiles(GetAuthCacheDir(), GetAuthTempDir());
+    FileUtil::CopyFiles(GetAuthCacheDir(), GetAuthTempDir());
   }
 }
 
 void Auth::SaveCache()
 {
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   if (m_AuthEncrypt)
   {
@@ -224,7 +227,7 @@ void Auth::SaveCache()
   }
   else
   {
-    Util::CopyFiles(GetAuthTempDir(), GetAuthCacheDir());
+    FileUtil::CopyFiles(GetAuthTempDir(), GetAuthCacheDir());
   }
 }
 
@@ -241,14 +244,14 @@ std::string Auth::GetClientId()
   }
   else if (m_Auth == "gmail-oauth2")
   {
-    return Util::FromHex("3639393831313539393539322D6338697569646B743963663773347034"
-                         "646376726B636A747136687269346F702E617070732E676F6F676C6575"
-                         "736572636F6E74656E742E636F6D");
+    return StrUtil::FromHex("3639393831313539393539322D6338697569646B743963663773347034"
+                            "646376726B636A747136687269346F702E617070732E676F6F676C6575"
+                            "736572636F6E74656E742E636F6D");
   }
   else if (m_Auth == "outlook-oauth2")
   {
-    return Util::FromHex("66373837663138382D643839622D343163342D613939612D3566363963"
-                         "61313863313166");
+    return StrUtil::FromHex("66373837663138382D643839622D343163342D613939612D3566363963"
+                            "61313863313166");
   }
   else
   {
@@ -264,12 +267,12 @@ std::string Auth::GetClientSecret()
   }
   else if (m_Auth == "gmail-oauth2")
   {
-    return Util::FromHex("6A79664B785F67683536537377486A5952764A4C32564A77");
+    return StrUtil::FromHex("6A79664B785F67683536537377486A5952764A4C32564A77");
   }
   else if (m_Auth == "outlook-oauth2")
   {
-    return Util::FromHex("59414538517E656747595937344551527436496248757232"
-                         "613739554E73676A5669743577634538");
+    return StrUtil::FromHex("59414538517E656747595937344551527436496248757232"
+                            "613739554E73676A5669743577634538");
   }
   else
   {
@@ -373,26 +376,26 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
   // Use the bundled oauth2nmail helper, extracted to the temp dir and invoked
   // via python3 (no exec bit needed, portable across Linux/macOS/Termux).
   const std::string scriptPath =
-    Util::ExtractEmbeddedScript("oauth2nmail", Oauth2nmailScript, sizeof(Oauth2nmailScript));
+    SysUtil::ExtractEmbeddedScript("oauth2nmail", Oauth2nmailScript, sizeof(Oauth2nmailScript));
 
   setenv("OAUTH2_TYPE", type.c_str(), 1);
   setenv("OAUTH2_CLIENT_ID", clientId.c_str(), 1);
   setenv("OAUTH2_CLIENT_SECRET", clientSecret.c_str(), 1);
   setenv("OAUTH2_TOKEN_STORE", tokenStore.c_str(), 1);
 
-  std::string outPath = Util::GetTempFilename(".txt");
+  std::string outPath = FileUtil::GetTempFilename(".txt");
   std::string command =
     "python3 '" + scriptPath + "' " + ((p_AuthAction == Generate) ? "-g" : "-r") +
     " > " + outPath + " 2>&1";
 
   struct timeval actionStart;
   gettimeofday(&actionStart, NULL);
-  int status = Util::System(command);
+  int status = SysUtil::System(command);
   struct timeval actionEnd;
   gettimeofday(&actionEnd, NULL);
   const long long actionDurMs = ((actionEnd.tv_sec - actionStart.tv_sec) * 1000LL) +
     ((actionEnd.tv_usec - actionStart.tv_usec) / 1000LL);
-  const std::string output = Util::ReadFile(outPath);
+  const std::string output = FileUtil::ReadFile(outPath);
   UpdateLastErrorHint(output);
   if (WIFEXITED(status) && (WEXITSTATUS(status) == 0))
   {
@@ -418,7 +421,7 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
 
     if (WEXITSTATUS(status) == 7)
     {
-      std::string msg = "try setup: nmail -d " + Util::GetApplicationDir() + " -s " + m_Auth;
+      std::string msg = "try setup: nmail -d " + AppUtil::GetApplicationDir() + " -s " + m_Auth;
       LOG_WARNING("%s", msg.c_str());
     }
   }
@@ -447,7 +450,7 @@ int Auth::PerformAction(const AuthAction p_AuthAction)
     std::cerr << output;
   }
 
-  Util::DeleteFile(outPath);
+  FileUtil::DeleteFile(outPath);
 
   return status;
 }

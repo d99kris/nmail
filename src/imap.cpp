@@ -18,9 +18,11 @@
 #include "imaputil.h"
 #include "log.h"
 #include "loghelp.h"
+#include "mailutil.h"
 #include "maphelp.h"
 #include "sethelp.h"
-#include "util.h"
+#include "strutil.h"
+#include "sysutil.h"
 
 Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
            const uint16_t p_Port, const int64_t p_Timeout,
@@ -143,7 +145,7 @@ int Imap::ImapConnect(const std::string& p_Address)
   int rv = 0;
   if (isSSL)
   {
-    char* sni = (m_SniEnabled && !Util::IsIpAddress(m_Host)) ? strdup(m_Host.c_str()) : nullptr;
+    char* sni = (m_SniEnabled && !SysUtil::IsIpAddress(m_Host)) ? strdup(m_Host.c_str()) : nullptr;
     rv = LOG_IF_IMAP_ERR(mailimap_ssl_connect_with_callback(m_Imap, p_Address.c_str(), m_Port,
                                                             SslContextCallback, sni));
     if (sni != nullptr)
@@ -464,7 +466,7 @@ bool Imap::LoginRetryAlternateIp(const std::string& p_FailedPeerIp,
 
   LOG_WARNING("login retry: start count=%d failedpeer=[%s] dns=[%s] %s",
               (int)retryIps.size(), p_FailedPeerIp.c_str(),
-              Util::Join(candidates, ", ").c_str(), resolveErr.c_str());
+              StrUtil::Join(candidates, ", ").c_str(), resolveErr.c_str());
 
   bool connected = false;
   int num = 0;
@@ -779,8 +781,8 @@ bool Imap::GetHeaders(const std::string& p_Folder, const std::set<uint32_t>& p_U
               if (datetime != NULL)
               {
                 struct mailimf_date_time imftime;
-                Util::MailimapTimeToMailimfTime(datetime, &imftime);
-                time = Util::MailtimeToTimet(&imftime);
+                MailUtil::MailimapTimeToMailimfTime(datetime, &imftime);
+                time = MailUtil::MailtimeToTimet(&imftime);
               }
             }
             else if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_BODYSTRUCTURE)
@@ -1611,7 +1613,7 @@ std::string Imap::EncodeFolderName(const std::string& p_Folder)
 std::vector<std::string> Imap::SplitQuery(const std::string& p_QueryStr)
 {
   // @todo: handle quoted text
-  return Util::Split(p_QueryStr, ' ');
+  return StrUtil::Split(p_QueryStr, ' ');
 }
 
 std::vector<struct mailimap_search_key*> Imap::SearchKeysFromQuery(const std::string& p_QueryStr)
@@ -1625,26 +1627,26 @@ std::vector<struct mailimap_search_key*> Imap::SearchKeysFromQuery(const std::st
     static const std::string fromPrefix = "from:";
     static const std::string toPrefix = "to:";
 
-    const std::string queryTermLower = Util::ToLower(queryTerm);
-    if (Util::StartsWith(queryTermLower, bodyPrefix))
+    const std::string queryTermLower = StrUtil::ToLower(queryTerm);
+    if (StrUtil::StartsWith(queryTermLower, bodyPrefix))
     {
       const std::string queryTermValue = queryTerm.substr(bodyPrefix.size());
       struct mailimap_search_key* queryKey = mailimap_search_key_new_body(strdup(queryTermValue.c_str()));
       queryKeys.push_back(queryKey);
     }
-    else if (Util::StartsWith(queryTermLower, subjectPrefix))
+    else if (StrUtil::StartsWith(queryTermLower, subjectPrefix))
     {
       const std::string queryTermValue = queryTerm.substr(subjectPrefix.size());
       struct mailimap_search_key* queryKey = mailimap_search_key_new_subject(strdup(queryTermValue.c_str()));
       queryKeys.push_back(queryKey);
     }
-    else if (Util::StartsWith(queryTermLower, fromPrefix))
+    else if (StrUtil::StartsWith(queryTermLower, fromPrefix))
     {
       const std::string queryTermValue = queryTerm.substr(fromPrefix.size());
       struct mailimap_search_key* queryKey = mailimap_search_key_new_from(strdup(queryTermValue.c_str()));
       queryKeys.push_back(queryKey);
     }
-    else if (Util::StartsWith(queryTermLower, toPrefix))
+    else if (StrUtil::StartsWith(queryTermLower, toPrefix))
     {
       const std::string queryTermValue = queryTerm.substr(toPrefix.size());
       struct mailimap_search_key* queryKey = mailimap_search_key_new_to(strdup(queryTermValue.c_str()));
@@ -1675,7 +1677,7 @@ void Imap::Logger(struct mailimap* p_Imap, int p_LogType, const char* p_Buffer, 
   char* buffer = (char*)malloc(p_Size + 1);
   memcpy(buffer, p_Buffer, p_Size);
   buffer[p_Size] = 0;
-  std::string str = Util::TrimRight(Util::Strip(std::string(buffer), '\r'), "\n");
+  std::string str = StrUtil::TrimRight(StrUtil::Strip(std::string(buffer), '\r'), "\n");
   LOG_TRACE("imap %i: %s", p_LogType, str.c_str());
   free(buffer);
 }

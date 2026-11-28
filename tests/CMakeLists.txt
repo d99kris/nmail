@@ -10,10 +10,15 @@
 
 # Sources needed by tests
 set(NMAILTEST_SOURCES
+  ../src/apputil.cpp
   ../src/config.cpp
+  ../src/extutil.cpp
+  ../src/fileutil.cpp
   ../src/log.cpp
+  ../src/strutil.cpp
+  ../src/sysutil.cpp
+  ../src/textutil.cpp
   ../src/textwrap.cpp
-  ../src/util.cpp
   ../src/version.cpp
 )
 

@@ -1,6 +1,6 @@
 // crypto.cpp
 //
-// Copyright (c) 2019-2022 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -19,7 +19,7 @@
 #include <openssl/ssl.h>
 
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
 
 void Crypto::Init()
 {
@@ -153,7 +153,7 @@ std::string Crypto::SHA256(const std::string& p_Str)
         if ((EVP_DigestFinal_ex(mdctx, (unsigned char*)digest.data(), &resultLen) == 1) &&
             (resultLen == digestLen))
         {
-          hexDigest = Util::ToHex(std::string(digest.begin(), digest.end()));
+          hexDigest = StrUtil::ToHex(std::string(digest.begin(), digest.end()));
         }
       }
     }

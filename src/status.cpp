@@ -1,6 +1,6 @@
 // status.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -11,8 +11,9 @@
 
 #include <sys/time.h>
 
+#include "apputil.h"
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
 
 Status::Status()
 {
@@ -130,7 +131,7 @@ std::string Status::ToString()
     lastStr = str;
   }
 
-  static std::string readOnlySuffix = Util::GetReadOnly() ? " ~" : "";
+  static std::string readOnlySuffix = AppUtil::GetReadOnly() ? " ~" : "";
   str += readOnlySuffix;
 
   return str;
@@ -189,7 +190,7 @@ std::string Status::GetProgressString()
         }
 
         static const int maxPrecision = 4;
-        newPrecision = Util::Bound(0, newPrecision, maxPrecision);
+        newPrecision = StrUtil::Bound(0, newPrecision, maxPrecision);
         if (newPrecision != precision)
         {
           precision = newPrecision;

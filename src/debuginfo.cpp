@@ -1,6 +1,6 @@
 // debuginfo.cpp
 //
-// Copyright (c) 2025 Kristofer Berggren
+// Copyright (c) 2025-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -9,7 +9,7 @@
 
 #include <map>
 
-#include "util.h"
+#include "apputil.h"
 
 std::shared_ptr<Config> DebugInfo::m_Config;
 
@@ -20,7 +20,7 @@ void DebugInfo::Init()
     { "version_used", "" },
   };
 
-  const std::string configPath(Util::GetApplicationDir() + std::string("/debug.info"));
+  const std::string configPath(AppUtil::GetApplicationDir() + std::string("/debug.info"));
   m_Config.reset(new Config(configPath, defaultConfig));
 }
 

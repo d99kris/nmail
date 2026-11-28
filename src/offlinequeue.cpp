@@ -1,6 +1,6 @@
 // offlinequeue.cpp
 //
-// Copyright (c) 2021-2025 Kristofer Berggren
+// Copyright (c) 2021-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -11,10 +11,13 @@
 
 #include <unistd.h>
 
+#include "apputil.h"
 #include "cacheutil.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
+#include "sysutil.h"
 
 std::mutex OfflineQueue::m_Mutex;
 bool OfflineQueue::m_Encrypt = true;
@@ -30,7 +33,7 @@ void OfflineQueue::Init(const bool p_Encrypt, const std::string& p_Pass)
   InitOutboxQueueDir();
   InitComposeQueueDir();
 
-  if (!Util::GetReadOnly())
+  if (!AppUtil::GetReadOnly())
   {
     std::vector<std::string> composeMsgs = PopComposeMessages();
     for (const auto& composeMsg : composeMsgs)
@@ -63,20 +66,20 @@ std::string OfflineQueue::GetQueueFileName(int p_Index)
 
 bool OfflineQueue::CanProcessFileName(const std::string& p_FileName)
 {
-  const std::string fileExt = Util::GetFileExt(p_FileName);
+  const std::string fileExt = FileUtil::GetFileExt(p_FileName);
   if (fileExt != ".eml") return false;
 
-  const std::string baseName = Util::RemoveFileExt(Util::BaseName(p_FileName));
-  const std::vector<std::string> parts = Util::Split(baseName, '.');
+  const std::string baseName = FileUtil::RemoveFileExt(FileUtil::BaseName(p_FileName));
+  const std::vector<std::string> parts = StrUtil::Split(baseName, '.');
   const std::string pidStr = !parts.empty() ? parts.at(0) : "";
-  if (!Util::IsInteger(pidStr))
+  if (!StrUtil::IsInteger(pidStr))
   {
     LOG_DEBUG("unsupported filename %s", p_FileName.c_str());
     return false;
   }
 
-  const pid_t pid = Util::ToInteger(pidStr);
-  if (!Util::IsSelfProcess(pid) && Util::IsProcessRunning(pid))
+  const pid_t pid = StrUtil::ToInteger(pidStr);
+  if (!SysUtil::IsSelfProcess(pid) && SysUtil::IsProcessRunning(pid))
   {
     LOG_DEBUG("skip other active instance file %s", p_FileName.c_str());
     return false;
@@ -91,7 +94,7 @@ void OfflineQueue::PushDraftMessage(const std::string& p_Str)
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   int i = 0;
-  while (Util::Exists(GetDraftQueueDir() + GetQueueFileName(i)))
+  while (FileUtil::Exists(GetDraftQueueDir() + GetQueueFileName(i)))
   {
     ++i;
   }
@@ -105,7 +108,7 @@ void OfflineQueue::PushOutboxMessage(const std::string& p_Str)
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   int i = 0;
-  while (Util::Exists(GetOutboxQueueDir() + GetQueueFileName(i)))
+  while (FileUtil::Exists(GetOutboxQueueDir() + GetQueueFileName(i)))
   {
     ++i;
   }
@@ -118,19 +121,19 @@ void OfflineQueue::PushComposeMessage(const std::string& p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  std::string tmpPath = Util::GetTempDir() + "compose.eml";
+  std::string tmpPath = FileUtil::GetTempDir() + "compose.eml";
   WriteCacheFile(tmpPath, p_Str);
 
   int i = 0; // should only exist one active compose per process instance
   std::string msgPath = GetComposeQueueDir() + GetQueueFileName(i);
-  Util::Move(tmpPath, msgPath);
+  FileUtil::Move(tmpPath, msgPath);
 }
 
 bool OfflineQueue::HasDraftMessages()
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  const std::vector<std::string>& fileNames = Util::ListDir(GetDraftQueueDir());
+  const std::vector<std::string>& fileNames = FileUtil::ListDir(GetDraftQueueDir());
   for (auto& fileName : fileNames)
   {
     if (CanProcessFileName(fileName)) return true;
@@ -144,7 +147,7 @@ std::vector<std::string> OfflineQueue::PopDraftMessages()
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::vector<std::string> msgs;
-  const std::vector<std::string>& fileNames = Util::ListDir(GetDraftQueueDir());
+  const std::vector<std::string>& fileNames = FileUtil::ListDir(GetDraftQueueDir());
   for (auto& fileName : fileNames)
   {
     if (!CanProcessFileName(fileName)) continue;
@@ -152,7 +155,7 @@ std::vector<std::string> OfflineQueue::PopDraftMessages()
     std::string filePath = GetDraftQueueDir() + fileName;
     std::string msg = ReadCacheFile(filePath);
     msgs.push_back(msg);
-    Util::DeleteFile(filePath);
+    FileUtil::DeleteFile(filePath);
   }
 
   return msgs;
@@ -163,7 +166,7 @@ std::vector<std::string> OfflineQueue::PopOutboxMessages()
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::vector<std::string> msgs;
-  const std::vector<std::string>& fileNames = Util::ListDir(GetOutboxQueueDir());
+  const std::vector<std::string>& fileNames = FileUtil::ListDir(GetOutboxQueueDir());
   for (auto& fileName : fileNames)
   {
     if (!CanProcessFileName(fileName)) continue;
@@ -171,7 +174,7 @@ std::vector<std::string> OfflineQueue::PopOutboxMessages()
     std::string filePath = GetOutboxQueueDir() + fileName;
     std::string msg = ReadCacheFile(filePath);
     msgs.push_back(msg);
-    Util::DeleteFile(filePath);
+    FileUtil::DeleteFile(filePath);
   }
 
   return msgs;
@@ -182,7 +185,7 @@ std::vector<std::string> OfflineQueue::PopComposeMessages()
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::vector<std::string> msgs;
-  const std::vector<std::string>& fileNames = Util::ListDir(GetComposeQueueDir());
+  const std::vector<std::string>& fileNames = FileUtil::ListDir(GetComposeQueueDir());
   for (auto& fileName : fileNames)
   {
     if (!CanProcessFileName(fileName)) continue;
@@ -190,7 +193,7 @@ std::vector<std::string> OfflineQueue::PopComposeMessages()
     std::string filePath = GetComposeQueueDir() + fileName;
     std::string msg = ReadCacheFile(filePath);
     msgs.push_back(msg);
-    Util::DeleteFile(filePath);
+    FileUtil::DeleteFile(filePath);
   }
 
   return msgs;
@@ -248,11 +251,11 @@ std::string OfflineQueue::ReadCacheFile(const std::string& p_Path)
 {
   if (m_Encrypt)
   {
-    return Crypto::AESDecrypt(Util::ReadFile(p_Path), m_Pass);
+    return Crypto::AESDecrypt(FileUtil::ReadFile(p_Path), m_Pass);
   }
   else
   {
-    return Util::ReadFile(p_Path);
+    return FileUtil::ReadFile(p_Path);
   }
 }
 
@@ -260,10 +263,10 @@ void OfflineQueue::WriteCacheFile(const std::string& p_Path, const std::string& 
 {
   if (m_Encrypt)
   {
-    Util::WriteFile(p_Path, Crypto::AESEncrypt(p_Str, m_Pass));
+    FileUtil::WriteFile(p_Path, Crypto::AESEncrypt(p_Str, m_Pass));
   }
   else
   {
-    Util::WriteFile(p_Path, p_Str);
+    FileUtil::WriteFile(p_Path, p_Str);
   }
 }

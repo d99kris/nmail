@@ -1,6 +1,6 @@
 // log.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -22,7 +22,9 @@
 
 #include <sys/time.h>
 
-#include "util.h"
+#include "apputil.h"
+#include "fileutil.h"
+#include "sysutil.h"
 
 std::string Log::m_Path;
 int Log::m_VerboseLevel = 0;
@@ -32,7 +34,7 @@ bool Log::m_HadWarnErr = false;
 
 void Log::SetPath(const std::string& p_Path)
 {
-  if (Util::GetReadOnly())
+  if (AppUtil::GetReadOnly())
   {
     m_Path = p_Path + "." + std::to_string(getpid());
   }
@@ -78,16 +80,16 @@ void Log::Cleanup(bool p_IsLogdumpEnabled)
   if (p_IsLogdumpEnabled && m_HadWarnErr)
   {
     const std::string cmd = "grep -e '| ERROR |' -e '| WARN  |' " + m_Path;
-    const int rv = Util::System(cmd);
+    const int rv = SysUtil::System(cmd);
     if (rv != 0)
     {
       printf("log dump command failed: %s\n", cmd.c_str());
     }
   }
 
-  if (Util::GetReadOnly())
+  if (AppUtil::GetReadOnly())
   {
-    const std::string archivePath = Util::RemoveFileExt(m_Path) + ".1";
+    const std::string archivePath = FileUtil::RemoveFileExt(m_Path) + ".1";
     remove(archivePath.c_str());
     rename(m_Path.c_str(), archivePath.c_str());
   }
@@ -190,7 +192,7 @@ void Log::WriteCallstackToFd(int p_Fd, void* const* p_Callstack, int p_Size)
   }
 #else
   // Other execinfo-less platforms (Termux/Android, OpenBSD, ...): the frame-pointer
-  // walk in Util::GetCallstack is scoped to musl only, so no callstack is captured
+  // walk in AppUtil::GetCallstack is scoped to musl only, so no callstack is captured
   // here. Emit an explicit marker so the empty output is self-explanatory.
   UNUSED(p_Callstack);
   UNUSED(p_Size);

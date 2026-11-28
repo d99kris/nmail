@@ -15,7 +15,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "strutil.h"
 
 #define KEY_CTRLA 1
 #define KEY_CTRLB 2
@@ -51,7 +51,7 @@ bool LineEdit::ReadPlain(const std::string& p_Prompt, std::string& p_Value)
     return false;
   }
 
-  line = Util::Trim(line);
+  line = StrUtil::Trim(line);
   if (!line.empty())
   {
     p_Value = line;
@@ -76,7 +76,7 @@ bool LineEdit::ReadEdit(const std::string& p_Prompt, std::string& p_Value, bool 
   const std::string oldLocale = setlocale(LC_CTYPE, nullptr);
   setlocale(LC_CTYPE, "");
 
-  std::wstring text = Util::ToWString(p_Value);
+  std::wstring text = StrUtil::ToWString(p_Value);
   size_t cursor = text.size();
   bool done = false;
   bool cancel = false;
@@ -213,7 +213,7 @@ bool LineEdit::ReadEdit(const std::string& p_Prompt, std::string& p_Value, bool 
             cursor = 0;
           }
 
-          const std::wstring wstr = Util::ToWString(bytes);
+          const std::wstring wstr = StrUtil::ToWString(bytes);
           text.insert(cursor, wstr);
           cursor += wstr.size();
         }
@@ -233,7 +233,7 @@ bool LineEdit::ReadEdit(const std::string& p_Prompt, std::string& p_Value, bool 
 
   if (cancel) return false;
 
-  p_Value = Util::Trim(Util::ToString(text));
+  p_Value = StrUtil::Trim(StrUtil::ToString(text));
   return true;
 }
 
@@ -259,8 +259,8 @@ int LineEdit::ReadByte(int p_TimeoutMs)
 
 void LineEdit::Redraw(const std::string& p_Prompt, const std::wstring& p_Text, size_t p_Cursor)
 {
-  std::string line = "\r" + p_Prompt + Util::ToString(p_Text) + "\033[K";
-  const int back = Util::WStringWidth(p_Text.substr(p_Cursor));
+  std::string line = "\r" + p_Prompt + StrUtil::ToString(p_Text) + "\033[K";
+  const int back = StrUtil::WStringWidth(p_Text.substr(p_Cursor));
   if (back > 0)
   {
     line += "\033[" + std::to_string(back) + "D";

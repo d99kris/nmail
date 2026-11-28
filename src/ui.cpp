@@ -1,6 +1,6 @@
 // ui.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -17,14 +17,22 @@
 #include <unistd.h>
 
 #include "addressbook.h"
+#include "apputil.h"
+#include "colorutil.h"
+#include "extutil.h"
+#include "fileutil.h"
 #include "flag.h"
 #include "loghelp.h"
+#include "mailutil.h"
 #include "maphelp.h"
 #include "offlinequeue.h"
 #include "sethelp.h"
 #include "sleepdetect.h"
 #include "status.h"
+#include "strutil.h"
+#include "sysutil.h"
 #include "textstyle.h"
+#include "textutil.h"
 #include "textwrap.h"
 #include "uikeyconfig.h"
 #include "uikeyinput.h"
@@ -103,7 +111,7 @@ void Ui::Init()
   {
     { "compose_backup_interval", "compose_backup_interval_sec" },
   };
-  const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
+  const std::string configPath(AppUtil::GetApplicationDir() + std::string("ui.conf"));
   m_Config = Config(configPath, defaultConfig, false, renamedConfig);
   m_Config.LogParams();
 
@@ -116,7 +124,7 @@ void Ui::Init()
 
   UiKeyInput::EnableMetaSendsEsc();
 
-  Util::InitLocale();
+  AppUtil::InitLocale();
   initscr();
   noecho();
   cbreak();
@@ -126,13 +134,13 @@ void Ui::Init()
 
   UiKeyConfig::Init(true);
 
-  m_ComposeLineWrap = Util::ToInteger(m_Config.Get("compose_line_wrap"));
+  m_ComposeLineWrap = StrUtil::ToInteger(m_Config.Get("compose_line_wrap"));
   m_RespectFormatFlowed = m_Config.Get("respect_format_flowed") == "1";
   m_RewrapQuotedLines = m_Config.Get("rewrap_quoted_lines") == "1";
   m_HelpEnabled = m_Config.Get("help_enabled") == "1";
   {
     // fraction (0.618 or 61.8%), columns (2 or more), or 0 for classic layout
-    std::string pickerWidthStr = Util::Trim(m_Config.Get("picker_width"));
+    std::string pickerWidthStr = StrUtil::Trim(m_Config.Get("picker_width"));
     const bool isPercent = !pickerWidthStr.empty() && (pickerWidthStr.back() == '%');
     if (isPercent)
     {
@@ -171,7 +179,7 @@ void Ui::Init()
   m_MarkdownHtmlCompose = m_Config.Get("markdown_html_compose") == "1";
   m_MarkdownView = m_Config.Get("markdown_view") == "1";
   m_MarkdownViewLinks = m_MarkdownView && (m_Config.Get("markdown_view_links") == "1");
-  Util::SetHtmlToTextLinks(m_MarkdownViewLinks);
+  ExtUtil::SetHtmlToTextLinks(m_MarkdownViewLinks);
   m_PlainViewLinks = m_Config.Get("plain_view_links") == "1";
   m_AlignHeaderLabels = m_Config.Get("align_header_labels") == "1";
   m_KeyPrevMsg = UiKeyConfig::GetKey("key_prev_msg");
@@ -265,7 +273,7 @@ void Ui::Init()
   m_KeyTab = UiKeyConfig::GetKey("key_tab");
   m_KeyTerminalResize = UiKeyConfig::GetKey("key_terminal_resize");
 
-  m_ShowProgress = Util::ToInteger(m_Config.Get("show_progress"));
+  m_ShowProgress = StrUtil::ToInteger(m_Config.Get("show_progress"));
   m_NewMsgBell = m_Config.Get("new_msg_bell") == "1";
   m_QuitWithoutConfirm = m_Config.Get("quit_without_confirm") == "1";
   m_SendWithoutConfirm = m_Config.Get("send_without_confirm") == "1";
@@ -351,7 +359,7 @@ void Ui::Init()
       { "color_top_bar_bg", "reverse" },
       { "color_top_bar_fg", "reverse" },
     };
-    const std::string colorsConfigPath(Util::GetApplicationDir() + std::string("colors.conf"));
+    const std::string colorsConfigPath(AppUtil::GetApplicationDir() + std::string("colors.conf"));
     Config colorsConfig = Config(colorsConfigPath, defaultColorsConfig);
     colorsConfig.LogParams();
 
@@ -361,16 +369,16 @@ void Ui::Init()
     const std::string regularBg = colorsConfig.Get("color_regular_text_bg");
     auto getColorAttrs = [&](const std::string& p_Fg, const std::string& p_Bg)
     {
-      return Util::GetColorAttrs(p_Fg.empty() ? regularFg : p_Fg, p_Bg.empty() ? regularBg : p_Bg);
+      return ColorUtil::GetColorAttrs(p_Fg.empty() ? regularFg : p_Fg, p_Bg.empty() ? regularBg : p_Bg);
     };
 
     auto getAttrs = [&](const std::string& p_Item)
     {
       return getColorAttrs(colorsConfig.Get(p_Item + "_fg"), colorsConfig.Get(p_Item + "_bg")) |
-             Util::GetAttrs(colorsConfig.Get(p_Item + "_attr"));
+             ColorUtil::GetAttrs(colorsConfig.Get(p_Item + "_attr"));
     };
 
-    m_AttrsRegularText = Util::GetColorAttrs(regularFg, regularBg);
+    m_AttrsRegularText = ColorUtil::GetColorAttrs(regularFg, regularBg);
     m_AttrsDialog = getAttrs("color_dialog");
     m_AttrsHelpDesc = getAttrs("color_help_desc");
     m_AttrsHelpKeys = getAttrs("color_help_keys");
@@ -398,8 +406,8 @@ void Ui::Init()
     {
       m_AttrsSelectedHighlighted =
         getColorAttrs(colorsConfig.Get("color_selected_item_fg"), colorsConfig.Get("color_highlighted_text_bg")) |
-        Util::GetAttrs(colorsConfig.Get("color_selected_item_attr")) |
-        Util::GetAttrs(colorsConfig.Get("color_highlighted_text_attr"));
+        ColorUtil::GetAttrs(colorsConfig.Get("color_selected_item_attr")) |
+        ColorUtil::GetAttrs(colorsConfig.Get("color_highlighted_text_attr"));
     }
 
     colorsConfig.Save();
@@ -415,11 +423,11 @@ void Ui::Init()
   m_FullHeaderIncludeLocal = m_Config.Get("full_header_include_local") == "1";
   m_KeyToggleCompactHeader = UiKeyConfig::GetKey("key_toggle_compact_header");
   m_ShowCompactHeader = m_Config.Get("show_compact_header") == "1";
-  m_TabSize = Util::Bound(1, (int)Util::ToInteger(m_Config.Get("tab_size")), 80);
+  m_TabSize = StrUtil::Bound(1, (int)StrUtil::ToInteger(m_Config.Get("tab_size")), 80);
   m_KeySelectItem = UiKeyConfig::GetKey("key_select_item");
   m_KeySelectAll = UiKeyConfig::GetKey("key_select_all");
   m_SearchShowFolder = m_Config.Get("search_show_folder") == "1";
-  Util::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
+  MailUtil::SetLocalizedSubjectPrefixes(m_Config.Get("localized_subject_prefixes"));
   m_Signature = m_Config.Get("signature") == "1";
   m_TopBarShowVersion = m_Config.Get("top_bar_show_version") == "1";
   m_UnwrapQuotedLines = m_Config.Get("unwrap_quoted_lines") == "1";
@@ -667,12 +675,12 @@ void Ui::DrawTop()
   wattron(m_TopWin, m_AttrsTopBar);
 
   static const std::string appName = "  " + Version::GetAppName(m_TopBarShowVersion);
-  std::string topLeft = Util::TrimPadString(appName, (m_ScreenWidth - 13) / 2);
+  std::string topLeft = StrUtil::TrimPadString(appName, (m_ScreenWidth - 13) / 2);
   std::string status = GetStatusStr();
   std::string topRight = status + "  ";
   int centerWidth = m_ScreenWidth - (int)topLeft.size() - (int)topRight.size() - 2;
-  std::wstring wtopCenter = Util::TrimPadWString(Util::ToWString(GetStateStr()), centerWidth) + L"  ";
-  std::string topCenter = Util::ToString(wtopCenter);
+  std::wstring wtopCenter = StrUtil::TrimPadWString(StrUtil::ToWString(GetStateStr()), centerWidth) + L"  ";
+  std::string topCenter = StrUtil::ToString(wtopCenter);
   std::string topCombined = topLeft + topCenter + topRight;
 
   mvwprintw(m_TopWin, 0, 0, "%s", topCombined.c_str());
@@ -727,7 +735,7 @@ void Ui::DrawSearchDialog()
   }
 
   werase(m_DialogWin);
-  const std::string& dispStr = Util::ToString(filterStr);
+  const std::string& dispStr = StrUtil::ToString(filterStr);
   mvwprintw(m_DialogWin, 0, 0, "   Search: %s", dispStr.c_str());
 
   leaveok(m_DialogWin, false);
@@ -747,7 +755,7 @@ void Ui::DrawDefaultDialog()
     std::chrono::duration<double> elapsed = nowTime - m_DialogMessageTime;
     if ((elapsed.count() < 0.5f) && !m_DialogMessage.empty())
     {
-      std::wstring wmsg = Util::ToWString(m_DialogMessage);
+      std::wstring wmsg = StrUtil::ToWString(m_DialogMessage);
       const int maxWidth = std::max(m_ScreenWidth - 2, 0);
       if ((int)wmsg.size() > maxWidth)
       {
@@ -757,7 +765,7 @@ void Ui::DrawDefaultDialog()
           : wmsg.substr(0, maxWidth);
       }
 
-      const std::string dispStr = Util::ToString(wmsg);
+      const std::string dispStr = StrUtil::ToString(wmsg);
       int x = std::max((m_ScreenWidth - (int)wmsg.size() - 1) / 2, 0);
       wattron(m_DialogWin, m_AttrsDialog);
       mvwprintw(m_DialogWin, 0, x, " %s ", dispStr.c_str());
@@ -775,7 +783,7 @@ void Ui::SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn /*= fa
   m_DialogMessageTime = std::chrono::system_clock::now();
   if (!p_DialogMessage.empty())
   {
-    const std::string& logMessage = Util::ToLower(p_DialogMessage);
+    const std::string& logMessage = StrUtil::ToLower(p_DialogMessage);
     if (p_Warn)
     {
       LOG_WARNING("%s", logMessage.c_str());
@@ -1052,11 +1060,11 @@ void Ui::DrawHelpText(const std::vector<std::vector<std::string>>& p_HelpText, i
     int x = 0;
     for (int colIdx = 0; colIdx < (int)rowIt->size(); colIdx += 2)
     {
-      std::wstring wcmd = Util::ToWString(rowIt->at(colIdx));
-      std::wstring wdesc = Util::ToWString(rowIt->at(colIdx + 1));
+      std::wstring wcmd = StrUtil::ToWString(rowIt->at(colIdx));
+      std::wstring wdesc = StrUtil::ToWString(rowIt->at(colIdx + 1));
 
       // right-align key to min width
-      const int cmdWidth = Util::WStringWidth(wcmd);
+      const int cmdWidth = StrUtil::WStringWidth(wcmd);
       const int cmdPad = std::max(0, p_KeyWidth - cmdWidth);
       const int cmdX = x + cmdPad;
 
@@ -1104,7 +1112,7 @@ void Ui::DrawFolderList()
     hasFolders = !m_Folders.empty();
     for (const auto& folder : m_Folders)
     {
-      if (Util::ToFold(folder).find(Util::ToFold(Util::ToString(m_FolderListFilterStr)))
+      if (StrUtil::ToFold(folder).find(StrUtil::ToFold(StrUtil::ToString(m_FolderListFilterStr)))
           != std::string::npos)
       {
         folders.insert(folder);
@@ -1121,12 +1129,12 @@ void Ui::DrawFolderList()
       std::lock_guard<std::mutex> lock(m_Mutex);
       for (const auto& folder : m_Folders)
       {
-        maxNameWidth = std::max(maxNameWidth, Util::WStringWidth(Util::ToWString(folder)));
+        maxNameWidth = std::max(maxNameWidth, StrUtil::WStringWidth(StrUtil::ToWString(folder)));
       }
     }
 
     const int fitWidth = std::max(((maxNameWidth * 5) + 3) / 4, maxNameWidth + 4);
-    width = Util::Bound(std::min(14, width), fitWidth, width);
+    width = StrUtil::Bound(std::min(14, width), fitWidth, width);
   }
 
   int count = folders.size();
@@ -1144,11 +1152,11 @@ void Ui::DrawFolderList()
       }
     }
 
-    m_FolderListCurrentIndex = Util::Bound(0, m_FolderListCurrentIndex, (int)folders.size() - 1);
+    m_FolderListCurrentIndex = StrUtil::Bound(0, m_FolderListCurrentIndex, (int)folders.size() - 1);
 
     int itemsMax = m_MainWinHeight - 1;
-    int idxOffs = Util::Bound(0, (int)(m_FolderListCurrentIndex - ((itemsMax - 1) / 2)),
-                              std::max(0, (int)folders.size() - (int)itemsMax));
+    int idxOffs = StrUtil::Bound(0, (int)(m_FolderListCurrentIndex - ((itemsMax - 1) / 2)),
+                                 std::max(0, (int)folders.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)folders.size());
 
     for (int i = idxOffs; i < idxMax; ++i)
@@ -1161,10 +1169,10 @@ void Ui::DrawFolderList()
         m_FolderListCurrentFolder = folder;
       }
 
-      std::wstring wfolder = Util::TrimEllipsisWString(Util::ToWString(folder), width);
+      std::wstring wfolder = StrUtil::TrimEllipsisWString(StrUtil::ToWString(folder), width);
       if (m_PickerWidth != 0)
       {
-        wfolder = Util::TrimPadWString(wfolder, width);
+        wfolder = StrUtil::TrimPadWString(wfolder, width);
       }
 
       mvwaddnwstr(m_MainWin, i - idxOffs, 2, wfolder.c_str(), wfolder.size());
@@ -1193,7 +1201,7 @@ void Ui::DrawAddressList()
   static std::wstring lastAddressListFilterStr = m_AddressListFilterStr;
   if (m_AddressListFilterStr != lastAddressListFilterStr)
   {
-    std::string filter = Util::ToString(m_AddressListFilterStr);
+    std::string filter = StrUtil::ToString(m_AddressListFilterStr);
     m_Addresses = (m_State == StateAddressList) ? AddressBook::Get(filter)
                                                 : AddressBook::GetFrom(filter);
     lastAddressListFilterStr = m_AddressListFilterStr;
@@ -1203,11 +1211,11 @@ void Ui::DrawAddressList()
   int count = m_Addresses.size();
   if (count > 0)
   {
-    m_AddressListCurrentIndex = Util::Bound(0, m_AddressListCurrentIndex, (int)m_Addresses.size() - 1);
+    m_AddressListCurrentIndex = StrUtil::Bound(0, m_AddressListCurrentIndex, (int)m_Addresses.size() - 1);
 
     int itemsMax = m_MainWinHeight - 1;
-    int idxOffs = Util::Bound(0, (int)(m_AddressListCurrentIndex - ((itemsMax - 1) / 2)),
-                              std::max(0, (int)m_Addresses.size() - (int)itemsMax));
+    int idxOffs = StrUtil::Bound(0, (int)(m_AddressListCurrentIndex - ((itemsMax - 1) / 2)),
+                                 std::max(0, (int)m_Addresses.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)m_Addresses.size());
 
     for (int i = idxOffs; i < idxMax; ++i)
@@ -1225,7 +1233,7 @@ void Ui::DrawAddressList()
       const bool isCurrent = (i == m_AddressListCurrentIndex);
       if (isCurrent && (m_PickerWidth != 0))
       {
-        waddress = Util::TrimPadWString(waddress, width);
+        waddress = StrUtil::TrimPadWString(waddress, width);
       }
 
       if (isCurrent || (dimPos >= waddress.size()))
@@ -1264,7 +1272,7 @@ void Ui::DrawFileList()
   {
     for (const auto& file : m_Files)
     {
-      if (Util::ToFold(file.m_Name).find(Util::ToFold(Util::ToString(m_FileListFilterStr)))
+      if (StrUtil::ToFold(file.m_Name).find(StrUtil::ToFold(StrUtil::ToString(m_FileListFilterStr)))
           != std::string::npos)
       {
         files.insert(file);
@@ -1275,7 +1283,7 @@ void Ui::DrawFileList()
   int maxWidth = GetPickerWidth();
   std::wstring dirLabel = L"Dir: ";
   int maxDirLen = maxWidth - dirLabel.size();
-  std::wstring dirPath = Util::ToWString(m_CurrentDir);
+  std::wstring dirPath = StrUtil::ToWString(m_CurrentDir);
   int dirPathRight = ((int)dirPath.size() < maxDirLen) ? 0 : (dirPath.size() - maxDirLen);
   dirLabel += dirPath.substr(dirPathRight);
   mvwaddnwstr(m_MainWin, 0, 2, dirLabel.c_str(), dirLabel.size());
@@ -1283,12 +1291,12 @@ void Ui::DrawFileList()
   int count = files.size();
   if (count > 0)
   {
-    m_FileListCurrentIndex = Util::Bound(0, m_FileListCurrentIndex, (int)files.size() - 1);
+    m_FileListCurrentIndex = StrUtil::Bound(0, m_FileListCurrentIndex, (int)files.size() - 1);
 
     int posOffs = 2;
     int itemsMax = m_MainWinHeight - 1 - posOffs;
-    int idxOffs = Util::Bound(0, (int)(m_FileListCurrentIndex - ((itemsMax - 1) / 2)),
-                              std::max(0, (int)files.size() - (int)itemsMax));
+    int idxOffs = StrUtil::Bound(0, (int)(m_FileListCurrentIndex - ((itemsMax - 1) / 2)),
+                                 std::max(0, (int)files.size() - (int)itemsMax));
     int idxMax = idxOffs + std::min(itemsMax, (int)files.size());
 
     for (int i = idxOffs; i < idxMax; ++i)
@@ -1296,8 +1304,8 @@ void Ui::DrawFileList()
       const Fileinfo& fileinfo = *std::next(files.begin(), i);
 
       int maxNameLen = maxWidth - 2 - 7; // two spaces and (dir) / 1023 KB
-      std::wstring name = Util::ToWString(fileinfo.m_Name);
-      name = Util::TrimPadWString(name, maxNameLen);
+      std::wstring name = StrUtil::ToWString(fileinfo.m_Name);
+      name = StrUtil::TrimPadWString(name, maxNameLen);
 
       if (fileinfo.IsDir())
       {
@@ -1306,9 +1314,9 @@ void Ui::DrawFileList()
       else
       {
         // max 7 - ex: "1023 KB"
-        std::string size = Util::GetPrefixedSize(fileinfo.m_Size);
+        std::string size = FileUtil::GetPrefixedSize(fileinfo.m_Size);
         size = std::string(7 - size.size(), ' ') + size;
-        name += L"  " + Util::ToWString(size);
+        name += L"  " + StrUtil::ToWString(size);
       }
 
       const bool isHidden = fileinfo.IsHidden();
@@ -1354,41 +1362,41 @@ int Ui::GetPickerWidth()
     width = (int)m_PickerWidth;
   }
 
-  return Util::Bound(std::min(20, maxWidth), width, maxWidth);
+  return StrUtil::Bound(std::min(20, maxWidth), width, maxWidth);
 }
 
 std::wstring Ui::GetAddressListEntry(const std::string& p_Address, int p_Width, size_t& p_DimPos)
 {
   // classic layout shows address as stored
   p_DimPos = std::wstring::npos;
-  if (m_PickerWidth == 0) return Util::TrimEllipsisWString(Util::ToWString(p_Address), p_Width);
+  if (m_PickerWidth == 0) return StrUtil::TrimEllipsisWString(StrUtil::ToWString(p_Address), p_Width);
 
   // name followed by dimmed address, or address only if no name or name is address
-  std::wstring entry = Util::ToWString(p_Address);
+  std::wstring entry = StrUtil::ToWString(p_Address);
   const size_t ltPos = p_Address.rfind('<');
   if ((ltPos != std::string::npos) && (p_Address.back() == '>'))
   {
-    std::string name = Util::Trim(p_Address.substr(0, ltPos));
+    std::string name = StrUtil::Trim(p_Address.substr(0, ltPos));
     if ((name.size() >= 2) && (name.front() == '"') && (name.back() == '"'))
     {
       name = name.substr(1, name.size() - 2);
-      Util::ReplaceString(name, "\\\"", "\"");
+      StrUtil::ReplaceString(name, "\\\"", "\"");
     }
 
     const std::string addr = p_Address.substr(ltPos + 1, p_Address.size() - ltPos - 2);
-    if (name.empty() || (Util::ToLower(name) == Util::ToLower(addr)))
+    if (name.empty() || (StrUtil::ToLower(name) == StrUtil::ToLower(addr)))
     {
-      entry = Util::ToWString(addr);
+      entry = StrUtil::ToWString(addr);
     }
     else
     {
-      const std::wstring wname = Util::ToWString(name) + L" ";
-      entry = wname + L"<" + Util::ToWString(addr) + L">";
+      const std::wstring wname = StrUtil::ToWString(name) + L" ";
+      entry = wname + L"<" + StrUtil::ToWString(addr) + L">";
       p_DimPos = wname.size();
     }
   }
 
-  return Util::TrimEllipsisWString(entry, p_Width);
+  return StrUtil::TrimEllipsisWString(entry, p_Width);
 }
 
 void Ui::DrawMessageList()
@@ -1430,9 +1438,9 @@ void Ui::DrawMessageList()
     if (!m_PrefetchAllHeaders)
     {
       // get headers / flags for current view and next page
-      int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
-                                         ((m_MainWinHeight - 1) / 2)),
-                                std::max(0, (int)displayUids.size() - (int)m_MainWinHeight));
+      int idxOffs = StrUtil::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
+                                            ((m_MainWinHeight - 1) / 2)),
+                                   std::max(0, (int)displayUids.size() - (int)m_MainWinHeight));
       int idxMax = std::min(idxOffs + (m_MainWinHeight * 2), (int)displayUids.size());
       for (int i = idxOffs; i < idxMax; ++i)
       {
@@ -1458,9 +1466,9 @@ void Ui::DrawMessageList()
 
     werase(m_MainWin);
 
-    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
-                                       ((m_MainWinHeight - 1) / 2)),
-                              std::max(0, (int)displayUids.size() - (int)m_MainWinHeight));
+    int idxOffs = StrUtil::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] -
+                                          ((m_MainWinHeight - 1) / 2)),
+                                 std::max(0, (int)displayUids.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)displayUids.size());
 
     for (int i = idxOffs; i < idxMax; ++i)
@@ -1468,8 +1476,8 @@ void Ui::DrawMessageList()
       uint32_t uid = std::prev(displayUids.end(), i + 1)->second;
 
       bool isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
-      static const std::wstring wUnreadIndicator = Util::ToWString(m_UnreadIndicator);
-      static const int unreadIndicatorWidth = Util::WStringWidth(wUnreadIndicator);
+      static const std::wstring wUnreadIndicator = StrUtil::ToWString(m_UnreadIndicator);
+      static const int unreadIndicatorWidth = StrUtil::WStringWidth(wUnreadIndicator);
       std::string unreadFlag = isUnread ? std::string(m_UnreadIndicator)
                                         : std::string(unreadIndicatorWidth, ' ');
 
@@ -1482,20 +1490,20 @@ void Ui::DrawMessageList()
       {
         Header& header = headers.at(uid);
         shortDate = header.GetDateOrTime(currentDate);
-        subject = Util::RemoveInvisibleChars(header.GetSubject());
+        subject = StrUtil::RemoveInvisibleChars(header.GetSubject());
         if (m_CurrentFolder == m_SentFolder)
         {
-          shortFrom = Util::RemoveInvisibleChars(header.GetShortTo());
+          shortFrom = StrUtil::RemoveInvisibleChars(header.GetShortTo());
         }
         else
         {
-          shortFrom = Util::RemoveInvisibleChars(header.GetShortFrom());
+          shortFrom = StrUtil::RemoveInvisibleChars(header.GetShortFrom());
         }
 
         if (!m_AttachmentIndicator.empty())
         {
-          static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
-          static const int indicatorWidth = Util::WStringWidth(wIndicator);
+          static const std::wstring wIndicator = StrUtil::ToWString(m_AttachmentIndicator);
+          static const int indicatorWidth = StrUtil::WStringWidth(wIndicator);
           attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
                                                   : std::string(indicatorWidth, ' ');
         }
@@ -1504,11 +1512,11 @@ void Ui::DrawMessageList()
       bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
       std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
 
-      shortDate = Util::TrimPadString(shortDate, 10);
-      shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
+      shortDate = StrUtil::TrimPadString(shortDate, 10);
+      shortFrom = StrUtil::ToString(StrUtil::TrimPadWString(StrUtil::ToWString(shortFrom), 20));
       std::string headerLeft = selectFlag + unreadFlag + " " + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
-      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft)) - 1;
-      subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
+      int subjectWidth = m_ScreenWidth - StrUtil::WStringWidth(StrUtil::ToWString(headerLeft)) - 1;
+      subject = StrUtil::ToString(StrUtil::TrimPadWString(StrUtil::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + " ";
 
       bool isCurrent = (i == m_MessageListCurrentIndex[m_CurrentFolder]);
@@ -1523,7 +1531,7 @@ void Ui::DrawMessageList()
         wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
-      std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
+      std::wstring wheader = StrUtil::TrimPadWString(StrUtil::ToWString(header), m_ScreenWidth - 1) + L" ";;
       mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), (int)wheader.size());
 
       if (isSelected)
@@ -1679,8 +1687,8 @@ void Ui::DrawMessageListSearch()
   {
     std::lock_guard<std::mutex> searchLock(m_SearchMutex);
     std::vector<Header>& headers = m_MessageListSearchResultHeaders;
-    int idxOffs = Util::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
-                              std::max(0, (int)headers.size() - (int)m_MainWinHeight));
+    int idxOffs = StrUtil::Bound(0, (int)(m_MessageListCurrentIndex[m_CurrentFolder] - ((m_MainWinHeight - 1) / 2)),
+                                 std::max(0, (int)headers.size() - (int)m_MainWinHeight));
     int idxMax = idxOffs + std::min(m_MainWinHeight, (int)headers.size());
     const std::string& currentDate = Header::GetCurrentDate();
     bool hasAttrsSelected = (m_AttrsSelectedItem != A_NORMAL);
@@ -1708,8 +1716,8 @@ void Ui::DrawMessageListSearch()
         isUnread = ((flags.find(uid) != flags.end()) && (!Flag::GetSeen(flags.at(uid))));
       }
 
-      static const std::wstring wUnreadIndicator = Util::ToWString(m_UnreadIndicator);
-      static const int unreadIndicatorWidth = Util::WStringWidth(wUnreadIndicator);
+      static const std::wstring wUnreadIndicator = StrUtil::ToWString(m_UnreadIndicator);
+      static const int unreadIndicatorWidth = StrUtil::WStringWidth(wUnreadIndicator);
       std::string unreadFlag = isUnread ? std::string(m_UnreadIndicator)
                                         : std::string(unreadIndicatorWidth, ' ');
 
@@ -1720,13 +1728,13 @@ void Ui::DrawMessageListSearch()
       {
         Header& header = headers[i];
         shortDate = header.GetDateOrTime(currentDate);
-        shortFrom = Util::RemoveInvisibleChars(header.GetShortFrom());
-        subject = Util::RemoveInvisibleChars(header.GetSubject());
+        shortFrom = StrUtil::RemoveInvisibleChars(header.GetShortFrom());
+        subject = StrUtil::RemoveInvisibleChars(header.GetSubject());
 
         if (!m_AttachmentIndicator.empty())
         {
-          static const std::wstring wIndicator = Util::ToWString(m_AttachmentIndicator);
-          static const int indicatorWidth = Util::WStringWidth(wIndicator);
+          static const std::wstring wIndicator = StrUtil::ToWString(m_AttachmentIndicator);
+          static const int indicatorWidth = StrUtil::WStringWidth(wIndicator);
           attachFlag = header.GetHasAttachments() ? std::string(m_AttachmentIndicator)
                                                   : std::string(indicatorWidth, ' ');
         }
@@ -1739,13 +1747,13 @@ void Ui::DrawMessageListSearch()
       bool isSelected = (folderSelectedUids.find(uid) != folderSelectedUids.end());
       std::string selectFlag = (isSelected && !hasAttrsSelected) ? "X" : " ";
 
-      shortDate = Util::TrimPadString(shortDate, 10);
-      shortFrom = Util::ToString(Util::TrimPadWString(Util::ToWString(shortFrom), 20));
+      shortDate = StrUtil::TrimPadString(shortDate, 10);
+      shortFrom = StrUtil::ToString(StrUtil::TrimPadWString(StrUtil::ToWString(shortFrom), 20));
       std::string headerLeft = selectFlag + unreadFlag + " " + attachFlag + "  " + shortDate + "  " + shortFrom + "  ";
 
-      std::string folderTag = m_SearchShowFolder ? ("  [" + Util::BaseName(folder) + "]") : "";
-      int subjectWidth = m_ScreenWidth - Util::WStringWidth(Util::ToWString(headerLeft + folderTag)) - 1;
-      subject = Util::ToString(Util::TrimPadWString(Util::ToWString(subject), subjectWidth));
+      std::string folderTag = m_SearchShowFolder ? ("  [" + FileUtil::BaseName(folder) + "]") : "";
+      int subjectWidth = m_ScreenWidth - StrUtil::WStringWidth(StrUtil::ToWString(headerLeft + folderTag)) - 1;
+      subject = StrUtil::ToString(StrUtil::TrimPadWString(StrUtil::ToWString(subject), subjectWidth));
       std::string header = headerLeft + subject + folderTag + " ";
 
       bool isCurrent = (i == m_MessageListCurrentIndex[m_CurrentFolder]);
@@ -1760,7 +1768,7 @@ void Ui::DrawMessageListSearch()
         wattron(m_MainWin, isCurrent ? m_AttrsSelectedHighlighted : m_AttrsSelectedItem);
       }
 
-      std::wstring wheader = Util::TrimPadWString(Util::ToWString(header), m_ScreenWidth - 1) + L" ";;
+      std::wstring wheader = StrUtil::TrimPadWString(StrUtil::ToWString(header), m_ScreenWidth - 1) + L" ";;
       mvwaddnwstr(m_MainWin, i - idxOffs, 0, wheader.c_str(), (int)wheader.size());
 
       if (isSelected)
@@ -1975,7 +1983,7 @@ void Ui::DrawMessage()
         if (!attnames.empty())
         {
           ss << GetHeaderLabel(m_AlignHeaderLabels ? "Attchmnt" : "Attachments");
-          ss << Util::Join(attnames, ", ");
+          ss << StrUtil::Join(attnames, ", ");
           ss << "\n";
         }
       }
@@ -1996,8 +2004,8 @@ void Ui::DrawMessage()
       std::vector<std::wstring> wlines = GetCachedWordWrapLines(folder, bodyIt->first);
       int countLines = wlines.size();
 
-      m_MessageViewLineOffset = Util::Bound(0, m_MessageViewLineOffset,
-                                            countLines - m_MainWinHeight);
+      m_MessageViewLineOffset = StrUtil::Bound(0, m_MessageViewLineOffset,
+                                               countLines - m_MainWinHeight);
       for (int i = 0; ((i < m_MainWinHeight) && (i < countLines)); ++i)
       {
         const int lineIndex = i + m_MessageViewLineOffset;
@@ -2056,8 +2064,8 @@ void Ui::DrawMessage()
       if (displayUids.size() > 0)
       {
         int32_t maxIndex = (int)GetDisplayUids(m_CurrentFolder).size() - 1;
-        int32_t nextIndex = Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] + 1, maxIndex);
-        int32_t prevIndex = Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] - 1, maxIndex);
+        int32_t nextIndex = StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] + 1, maxIndex);
+        int32_t prevIndex = StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder] - 1, maxIndex);
         uint32_t nextUid = std::prev(displayUids.end(), nextIndex + 1)->second;
         uint32_t prevUid = std::prev(displayUids.end(), prevIndex + 1)->second;
 
@@ -2121,10 +2129,10 @@ void Ui::DrawComposeMessage()
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = false; // only wrap quoted lines when viewing message
   const int expandTabSize = 0; // disabled
-  m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                         processFlowed, outputFlowed, quoteWrap, expandTabSize,
-                                         m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                         m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
+  m_ComposeMessageLines = TextUtil::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                             processFlowed, outputFlowed, quoteWrap, expandTabSize,
+                                             m_ComposeMessagePos, m_ComposeMessageWrapLine,
+                                             m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
 
   std::vector<std::wstring> headerLines;
   if (m_ShowRichHeader)
@@ -2176,7 +2184,7 @@ void Ui::DrawComposeMessage()
       // scroll field horizontally, based on display width, to keep cursor within screen
       const int labelWidth = TextWrap::GetWidth(headerLabel);
       const int maxWidth = std::max(m_ScreenWidth - 1 - labelWidth, 0);
-      const size_t headerPos = Util::Bound(0, m_ComposeHeaderPos, (int)headerStr.size());
+      const size_t headerPos = StrUtil::Bound(0, m_ComposeHeaderPos, (int)headerStr.size());
       size_t startPos = 0;
       int width = TextWrap::GetWidth(headerStr.substr(0, headerPos));
       while ((width > maxWidth) && (startPos < headerPos))
@@ -2190,7 +2198,7 @@ void Ui::DrawComposeMessage()
       cursX = labelWidth + std::max(width, 0);
     }
 
-    composeLines.push_back(Util::TrimWString(headerLabel + headerStr, m_ScreenWidth));
+    composeLines.push_back(StrUtil::TrimWString(headerLabel + headerStr, m_ScreenWidth));
   }
 
   composeLines.push_back(L"");
@@ -2222,8 +2230,8 @@ void Ui::DrawComposeMessage()
     {
       // header name incl colon, and value
       const size_t nameLen = std::min(headerLines.at(idx).find(L':') + 1, line->size());
-      const std::string& name = Util::ToString(line->substr(0, nameLen));
-      const std::string& value = Util::ToString(line->substr(nameLen));
+      const std::string& name = StrUtil::ToString(line->substr(0, nameLen));
+      const std::string& value = StrUtil::ToString(line->substr(nameLen));
       wattron(m_MainWin, m_AttrsHeaderName);
       mvwprintw(m_MainWin, messageY, 0, "%s", name.c_str());
       wattroff(m_MainWin, m_AttrsHeaderName);
@@ -2232,7 +2240,7 @@ void Ui::DrawComposeMessage()
       continue;
     }
 
-    const std::string& dispStr = Util::ToString(*line);
+    const std::string& dispStr = StrUtil::ToString(*line);
     const bool isQuote = (dispStr.rfind(">", 0) == 0);
 
     if (isQuote)
@@ -2275,11 +2283,11 @@ void Ui::DrawPartList()
     int count = parts.size();
     if (count > 0)
     {
-      m_PartListCurrentIndex = Util::Bound(0, m_PartListCurrentIndex, (int)parts.size() - 1);
+      m_PartListCurrentIndex = StrUtil::Bound(0, m_PartListCurrentIndex, (int)parts.size() - 1);
 
       int itemsMax = m_MainWinHeight - 1;
-      int idxOffs = Util::Bound(0, (int)(m_PartListCurrentIndex - ((itemsMax - 1) / 2)),
-                                std::max(0, (int)parts.size() - (int)itemsMax));
+      int idxOffs = StrUtil::Bound(0, (int)(m_PartListCurrentIndex - ((itemsMax - 1) / 2)),
+                                   std::max(0, (int)parts.size() - (int)itemsMax));
       int idxMax = idxOffs + std::min(itemsMax, (int)parts.size());
 
       for (int i = idxOffs; i < idxMax; ++i)
@@ -2295,12 +2303,12 @@ void Ui::DrawPartList()
 
         std::string leftPad = "    ";
         std::string sizeStr = std::to_string(part.m_Size) + " bytes";
-        std::string sizeStrPadded = Util::TrimPadString(sizeStr, 17) + " ";
-        std::string mimeTypePadded = Util::TrimPadString(part.m_MimeType, 29) + " ";
-        std::wstring wline = Util::ToWString(leftPad + sizeStrPadded + mimeTypePadded);
-        std::wstring wfilename = Util::ToWString(part.m_Filename);
+        std::string sizeStrPadded = StrUtil::TrimPadString(sizeStr, 17) + " ";
+        std::string mimeTypePadded = StrUtil::TrimPadString(part.m_MimeType, 29) + " ";
+        std::wstring wline = StrUtil::ToWString(leftPad + sizeStrPadded + mimeTypePadded);
+        std::wstring wfilename = StrUtil::ToWString(part.m_Filename);
         int filenameMaxLen = m_ScreenWidth - (int)wline.size();
-        std::wstring wfilenamePadded = Util::TrimPadWString(wfilename, filenameMaxLen - 1) + L" ";
+        std::wstring wfilenamePadded = StrUtil::TrimPadWString(wfilename, filenameMaxLen - 1) + L" ";
         wline = wline + wfilenamePadded;
 
         mvwaddnwstr(m_MainWin, i - idxOffs, 0, wline.c_str(),
@@ -2358,10 +2366,10 @@ void Ui::Run()
   DrawAll();
   int64_t uiIdleTime = 0;
   LOG_INFO("entering ui loop");
-  Util::InitUiSignalHandlers();
+  AppUtil::InitUiSignalHandlers();
   raw();
 
-  while (s_Running && !Util::IsTerminateRequested())
+  while (s_Running && !AppUtil::IsTerminateRequested())
   {
     fd_set fds;
     FD_ZERO(&fds);
@@ -2464,10 +2472,10 @@ void Ui::Run()
 
   }
 
-  if (Util::IsTerminateRequested())
+  if (AppUtil::IsTerminateRequested())
   {
-    const int sig = Util::GetTerminateSignal();
-    LOG_WARNING("termination requested by signal %d (%s)", sig, Util::GetSigName(sig).c_str());
+    const int sig = AppUtil::GetTerminateSignal();
+    LOG_WARNING("termination requested by signal %d (%s)", sig, AppUtil::GetSigName(sig).c_str());
     SetRunning(false);
 
     if (m_ComposeBackupRunning)
@@ -2479,7 +2487,7 @@ void Ui::Run()
   }
 
   noraw();
-  Util::CleanupUiSignalHandlers();
+  AppUtil::CleanupUiSignalHandlers();
   LOG_INFO("exiting ui loop");
 
   return;
@@ -2593,14 +2601,14 @@ void Ui::ViewFileListKeyHandler(int p_Key)
     {
       m_FileListFilterPos = 0;
       m_FileListFilterStr.clear();
-      m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
-      m_Files = Util::ListPaths(m_CurrentDir);
+      m_CurrentDir = FileUtil::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
+      m_Files = FileUtil::ListPaths(m_CurrentDir);
       m_FileListCurrentIndex = 0;
       m_FileListCurrentFile.m_Name = "";
     }
     else
     {
-      std::string newFilePath = Util::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
+      std::string newFilePath = FileUtil::AbsolutePath(m_CurrentDir + "/" + m_FileListCurrentFile.m_Name);
       AddAttachmentPath(newFilePath);
       SetState(m_LastMessageState);
     }
@@ -2609,9 +2617,9 @@ void Ui::ViewFileListKeyHandler(int p_Key)
   {
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
-    std::string lastDirName = Util::BaseName(m_CurrentDir);
-    m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
-    m_Files = Util::ListPaths(m_CurrentDir);
+    std::string lastDirName = FileUtil::BaseName(m_CurrentDir);
+    m_CurrentDir = FileUtil::AbsolutePath(m_CurrentDir + "/..");
+    m_Files = FileUtil::ListPaths(m_CurrentDir);
     if (lastDirName != "/")
     {
       Fileinfo lastDirFileinfo(lastDirName, -1);
@@ -2633,8 +2641,8 @@ void Ui::ViewFileListKeyHandler(int p_Key)
     // backspace with empty filter goes up one directory level
     m_FileListFilterPos = 0;
     m_FileListFilterStr.clear();
-    m_CurrentDir = Util::AbsolutePath(m_CurrentDir + "/..");
-    m_Files = Util::ListPaths(m_CurrentDir);
+    m_CurrentDir = FileUtil::AbsolutePath(m_CurrentDir + "/..");
+    m_Files = FileUtil::ListPaths(m_CurrentDir);
     m_FileListCurrentIndex = 0;
     m_FileListCurrentFile.m_Name = "";
   }
@@ -2664,7 +2672,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   {
     // Refresh is allowed online, and also in shadow read-only sessions
     // catering for getting main instance cache updates.
-    if (IsConnected() || Util::GetReadOnly())
+    if (IsConnected() || AppUtil::GetReadOnly())
     {
       InvalidateUiCache(m_CurrentFolder);
     }
@@ -2717,8 +2725,8 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
         m_MessageFindQuery = m_MessageListSearchQuery;
 
         // remove chars not supported by find in document
-        Util::RemoveChar(m_MessageFindQuery, '"');
-        Util::RemoveChar(m_MessageFindQuery, '*');
+        StrUtil::RemoveChar(m_MessageFindQuery, '"');
+        StrUtil::RemoveChar(m_MessageFindQuery, '*');
       }
 
       SetState(StateViewMessage);
@@ -3123,7 +3131,7 @@ void Ui::ViewMessageListKeyHandler(int p_Key)
   }
   else if (m_InvalidInputNotify)
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
+    SetDialogMessage("Invalid input (" + StrUtil::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -3364,7 +3372,7 @@ void Ui::ViewMessageKeyHandler(int p_Key)
   }
   else if (m_InvalidInputNotify)
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
+    SetDialogMessage("Invalid input (" + StrUtil::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -3386,19 +3394,19 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeHeaderPos = 0;
       }
 
-      m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
-                                        (int)m_ComposeHeaderStr.size() - 1);
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                       (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      m_ComposeHeaderLine = StrUtil::Bound(0, m_ComposeHeaderLine,
+                                           (int)m_ComposeHeaderStr.size() - 1);
+      m_ComposeHeaderPos = StrUtil::Bound(0, m_ComposeHeaderPos,
+                                          (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
     }
     else if ((p_Key == m_KeyDown) || (p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyTab))
     {
       if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
       {
-        m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine + 1,
-                                          (int)m_ComposeHeaderStr.size() - 1);
-        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+        m_ComposeHeaderLine = StrUtil::Bound(0, m_ComposeHeaderLine + 1,
+                                             (int)m_ComposeHeaderStr.size() - 1);
+        m_ComposeHeaderPos = StrUtil::Bound(0, m_ComposeHeaderPos,
+                                            (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
       }
       else
       {
@@ -3442,10 +3450,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeHeaderPos = std::numeric_limits<int>::max();
       }
 
-      m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine,
-                                        (int)m_ComposeHeaderStr.size() - 1);
-      m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                       (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+      m_ComposeHeaderLine = StrUtil::Bound(0, m_ComposeHeaderLine,
+                                           (int)m_ComposeHeaderStr.size() - 1);
+      m_ComposeHeaderPos = StrUtil::Bound(0, m_ComposeHeaderPos,
+                                          (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
     }
     else if ((p_Key == m_KeyRight) && (m_ComposeHeaderPos == (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size()))
     {
@@ -3453,10 +3461,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
 
       if (m_ComposeHeaderLine < ((int)m_ComposeHeaderStr.size() - 1))
       {
-        m_ComposeHeaderLine = Util::Bound(0, m_ComposeHeaderLine + 1,
-                                          (int)m_ComposeHeaderStr.size() - 1);
-        m_ComposeHeaderPos = Util::Bound(0, m_ComposeHeaderPos,
-                                         (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
+        m_ComposeHeaderLine = StrUtil::Bound(0, m_ComposeHeaderLine + 1,
+                                             (int)m_ComposeHeaderStr.size() - 1);
+        m_ComposeHeaderPos = StrUtil::Bound(0, m_ComposeHeaderPos,
+                                            (int)m_ComposeHeaderStr.at(m_ComposeHeaderLine).size());
       }
       else
       {
@@ -3500,10 +3508,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessagePrevLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                               processFlowed, outputFlowed, quoteWrap, expandTabSize,
-                                               m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                               m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
+        m_ComposeMessageLines = TextUtil::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                                   processFlowed, outputFlowed, quoteWrap, expandTabSize,
+                                                   m_ComposeMessagePos, m_ComposeMessageWrapLine,
+                                                   m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
       }
     }
     else if (p_Key == m_KeyNextPageCompose)
@@ -3515,10 +3523,10 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
       for (int i = 0; i < (m_MainWinHeight / 2); ++i)
       {
         ComposeMessageNextLine();
-        m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
-                                               processFlowed, outputFlowed, quoteWrap, expandTabSize,
-                                               m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                               m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
+        m_ComposeMessageLines = TextUtil::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
+                                                   processFlowed, outputFlowed, quoteWrap, expandTabSize,
+                                                   m_ComposeMessagePos, m_ComposeMessageWrapLine,
+                                                   m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
       }
     }
     else if ((p_Key == m_KeyLeft) && (m_ComposeMessagePos == 0))
@@ -3574,7 +3582,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     }
     else if (m_InvalidInputNotify)
     {
-      SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
+      SetDialogMessage("Invalid input (" + StrUtil::ToHexString(p_Key) + ")");
     }
   }
 
@@ -3596,9 +3604,9 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt) || (p_Key == m_KeyBack) || (p_Key == m_KeyLeft))
   {
-    const std::string& attachmentsTempDir = Util::GetAttachmentsTempDir();
+    const std::string& attachmentsTempDir = FileUtil::GetAttachmentsTempDir();
     LOG_DEBUG("deleting %s", attachmentsTempDir.c_str());
-    Util::CleanupAttachmentsTempDir();
+    FileUtil::CleanupAttachmentsTempDir();
     SetState(StateViewMessage);
   }
   else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) || (p_Key == m_KeyOpen) || (p_Key == m_KeyRight) ||
@@ -3610,7 +3618,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     bool isUnamedTextHtml = false;
     if (!m_PartListCurrentPartInfo.m_Filename.empty())
     {
-      ext = Util::GetFileExt(m_PartListCurrentPartInfo.m_Filename);
+      ext = FileUtil::GetFileExt(m_PartListCurrentPartInfo.m_Filename);
       fileName = m_PartListCurrentPartInfo.m_Filename;
       if (ext.empty())
       {
@@ -3619,7 +3627,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
     }
     else
     {
-      ext = Util::ExtensionForMimeType(m_PartListCurrentPartInfo.m_MimeType);
+      ext = FileUtil::ExtensionForMimeType(m_PartListCurrentPartInfo.m_MimeType);
       fileName = std::to_string(m_PartListCurrentIndex) + ext;
       isUnamedTextHtml = (m_PartListCurrentPartInfo.m_MimeType == "text/html");
       if (ext.empty())
@@ -3650,9 +3658,9 @@ void Ui::ViewPartListKeyHandler(int p_Key)
           {
             if (!part.second.m_ContentId.empty())
             {
-              const std::string& tempPartFilePath = Util::GetAttachmentsTempDir() + part.second.m_ContentId;
+              const std::string& tempPartFilePath = FileUtil::GetAttachmentsTempDir() + part.second.m_ContentId;
               LOG_DEBUG("writing \"%s\"", tempPartFilePath.c_str());
-              Util::WriteFile(tempPartFilePath, partDatas.at(part.first));
+              FileUtil::WriteFile(tempPartFilePath, partDatas.at(part.first));
             }
           }
         }
@@ -3660,17 +3668,17 @@ void Ui::ViewPartListKeyHandler(int p_Key)
 
       if (m_ShowEmbeddedImages && isUnamedTextHtml)
       {
-        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
-        Util::ReplaceString(partData, "src=cid:", "src=file://" + Util::GetAttachmentsTempDir());
-        Util::ReplaceString(partData, "src=\"cid:", "src=\"file://" + Util::GetAttachmentsTempDir());
+        tempFilePath = FileUtil::GetAttachmentsTempDir() + fileName;
+        StrUtil::ReplaceString(partData, "src=cid:", "src=file://" + FileUtil::GetAttachmentsTempDir());
+        StrUtil::ReplaceString(partData, "src=\"cid:", "src=\"file://" + FileUtil::GetAttachmentsTempDir());
         LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-        Util::WriteFile(tempFilePath, partData);
+        FileUtil::WriteFile(tempFilePath, partData);
       }
       else
       {
-        tempFilePath = Util::GetAttachmentsTempDir() + fileName;
+        tempFilePath = FileUtil::GetAttachmentsTempDir() + fileName;
         LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
-        Util::WriteFile(tempFilePath, partData);
+        FileUtil::WriteFile(tempFilePath, partData);
       }
     }
 
@@ -3700,12 +3708,12 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeySaveFile)
   {
-    std::string filename = Util::GetDownloadsDir() + m_PartListCurrentPartInfo.m_Filename;
+    std::string filename = FileUtil::GetDownloadsDir() + m_PartListCurrentPartInfo.m_Filename;
     if (PromptString("Save Filename: ", "Save", filename))
     {
       if (!filename.empty())
       {
-        filename = Util::ExpandPath(filename);
+        filename = FileUtil::ExpandPath(filename);
 
         std::string partData;
         {
@@ -3722,7 +3730,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
           }
         }
 
-        Util::WriteFile(filename, partData);
+        FileUtil::WriteFile(filename, partData);
         SetDialogMessage("File saved");
       }
       else
@@ -3737,13 +3745,13 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if (p_Key == m_KeySaveAllFiles)
   {
-    std::string directory = Util::GetDownloadsDir();
+    std::string directory = FileUtil::GetDownloadsDir();
     if (PromptString("Save Directory: ", "Save", directory))
     {
-      directory = Util::ExpandPath(directory);
+      directory = FileUtil::ExpandPath(directory);
       directory = directory.empty() ? "." : directory;
 
-      if (Util::IsDir(directory))
+      if (FileUtil::IsDir(directory))
       {
         bool savedOne = false;
 
@@ -3761,12 +3769,12 @@ void Ui::ViewPartListKeyHandler(int p_Key)
             {
               if (!part.second.m_Filename.empty())
               {
-                std::string filename = Util::GetNonExistentPath(directory + "/" + part.second.m_Filename);
+                std::string filename = FileUtil::GetNonExistentPath(directory + "/" + part.second.m_Filename);
                 if (!filename.empty())
                 {
                   savedOne = true;
                   std::string partData = partDatas.at(part.first);
-                  Util::WriteFile(filename, partData);
+                  FileUtil::WriteFile(filename, partData);
                 }
                 else
                 {
@@ -3814,7 +3822,7 @@ void Ui::ViewPartListKeyHandler(int p_Key)
   }
   else if (m_InvalidInputNotify)
   {
-    SetDialogMessage("Invalid input (" + Util::ToHexString(p_Key) + ")");
+    SetDialogMessage("Invalid input (" + StrUtil::ToHexString(p_Key) + ")");
   }
 
   DrawAll();
@@ -3901,7 +3909,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
     m_ComposeHeaderPos = 0;
@@ -3939,15 +3947,15 @@ void Ui::SetState(Ui::State p_State)
           bodyText = bodyText.substr(0, bodyText.size() - 1);
         }
 
-        m_ComposeMessageStr = Util::ToWString(bodyText);
-        Util::StripCR(m_ComposeMessageStr);
+        m_ComposeMessageStr = StrUtil::ToWString(bodyText);
+        StrUtil::StripCR(m_ComposeMessageStr);
 
-        SetComposeStr(HeaderFrom, Util::ToWString(header.GetFrom()));
-        SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
-        SetComposeStr(HeaderCc, Util::ToWString(header.GetCc()));
-        SetComposeStr(HeaderBcc, Util::ToWString(header.GetBcc()));
+        SetComposeStr(HeaderFrom, StrUtil::ToWString(header.GetFrom()));
+        SetComposeStr(HeaderTo, StrUtil::ToWString(header.GetTo()));
+        SetComposeStr(HeaderCc, StrUtil::ToWString(header.GetCc()));
+        SetComposeStr(HeaderBcc, StrUtil::ToWString(header.GetBcc()));
         SetComposeStr(HeaderAtt, L"");
-        SetComposeStr(HeaderSub, Util::ToWString(header.GetSubject()));
+        SetComposeStr(HeaderSub, StrUtil::ToWString(header.GetSubject()));
 
         if (!GetComposeStr(HeaderBcc).empty())
         {
@@ -3955,25 +3963,25 @@ void Ui::SetState(Ui::State p_State)
         }
 
         int idx = 0;
-        std::string tmppath = Util::GetTempDirectory();
+        std::string tmppath = FileUtil::GetTempDirectory();
         const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
         for (auto& part : body.GetPartInfos())
         {
           if (!part.second.m_Filename.empty())
           {
             std::string tmpfiledir = tmppath + "/" + std::to_string(idx++) + "/";
-            Util::MkDir(tmpfiledir);
+            FileUtil::MkDir(tmpfiledir);
             std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
-            Util::WriteFile(tmpfilepath, partDatas.at(part.first));
-            tmpfilepath = Util::EscapePath(tmpfilepath);
+            FileUtil::WriteFile(tmpfilepath, partDatas.at(part.first));
+            tmpfilepath = FileUtil::EscapePath(tmpfilepath);
             if (GetComposeStr(HeaderAtt).empty())
             {
-              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
+              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + StrUtil::ToWString(tmpfilepath));
             }
             else
             {
-              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + L", " + Util::ToWString(tmpfilepath));
+              SetComposeStr(HeaderAtt, GetComposeStr(HeaderAtt) + L", " + StrUtil::ToWString(tmpfilepath));
             }
           }
         }
@@ -3997,7 +4005,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = m_ShowRichHeader ? 5 : 3;
     m_ComposeHeaderPos = 0;
@@ -4028,12 +4036,12 @@ void Ui::SetState(Ui::State p_State)
         bodyText = bodyText.substr(0, bodyText.size() - 1);
       }
 
-      std::string indentBodyText = Util::AddIndent(bodyText, "> ");
+      std::string indentBodyText = TextUtil::AddIndent(bodyText, "> ");
       const int quotedMaxLen = 78;
 
       if (m_UnwrapQuotedLines)
       {
-        indentBodyText = Util::UnwrapQuotedLines(indentBodyText, quotedMaxLen);
+        indentBodyText = TextUtil::UnwrapQuotedLines(indentBodyText, quotedMaxLen);
       }
 
       std::string indentBody;
@@ -4048,25 +4056,25 @@ void Ui::SetState(Ui::State p_State)
         const bool quoteWrap = m_RewrapQuotedLines;
         const int expandTabSize = m_TabSize; // enabled
         std::vector<std::wstring> indentBodyLines =
-          Util::WordWrap(Util::ToWString(indentBodyText), quotedMaxLen, processFlowed,
-                         outputFlowed, quoteWrap, expandTabSize);
-        indentBody = Util::ToString(Util::Join(indentBodyLines));
+          TextUtil::WordWrap(StrUtil::ToWString(indentBodyText), quotedMaxLen, processFlowed,
+                             outputFlowed, quoteWrap, expandTabSize);
+        indentBody = StrUtil::ToString(StrUtil::Join(indentBodyLines));
       }
 
       m_ComposeQuotedStart = "On " + header.GetDateTime() + " " + header.GetFrom() + " wrote:\n\n";
       if (!m_BottomReply)
       {
         m_ComposeMessageStr = GetSignatureStr() +
-          Util::ToWString("\n\n" + m_ComposeQuotedStart + indentBody);
-        Util::StripCR(m_ComposeMessageStr);
+          StrUtil::ToWString("\n\n" + m_ComposeQuotedStart + indentBody);
+        StrUtil::StripCR(m_ComposeMessageStr);
       }
       else
       {
         m_ComposeMessageStr =
-          Util::ToWString(m_ComposeQuotedStart + indentBody + "\n\n\n");
-        Util::StripCR(m_ComposeMessageStr);
+          StrUtil::ToWString(m_ComposeQuotedStart + indentBody + "\n\n\n");
+        StrUtil::StripCR(m_ComposeMessageStr);
         m_ComposeMessagePos = (int)m_ComposeMessageStr.size() - 1;
-        int lineCount = Util::Split(Util::ToString(m_ComposeMessageStr), '\n').size();
+        int lineCount = StrUtil::Split(StrUtil::ToString(m_ComposeMessageStr), '\n').size();
         m_ComposeMessageOffsetY = std::max(lineCount - (m_MainWinHeight / 2), 0);
         m_ComposeMessageStr += GetSignatureStr();
       }
@@ -4074,24 +4082,24 @@ void Ui::SetState(Ui::State p_State)
       {
         if (folder == m_SentFolder)
         {
-          SetComposeStr(HeaderTo, Util::ToWString(header.GetTo()));
+          SetComposeStr(HeaderTo, StrUtil::ToWString(header.GetTo()));
         }
         else
         {
           if (!header.GetReplyTo().empty())
           {
-            SetComposeStr(HeaderTo, Util::ToWString(header.GetReplyTo()));
+            SetComposeStr(HeaderTo, StrUtil::ToWString(header.GetReplyTo()));
           }
           else
           {
-            SetComposeStr(HeaderTo, Util::ToWString(header.GetFrom()));
+            SetComposeStr(HeaderTo, StrUtil::ToWString(header.GetFrom()));
           }
         }
 
         if (m_State == StateReplyAllMessage)
         {
-          std::vector<std::string> tos = Util::SplitAddrs(header.GetTo());
-          std::vector<std::string> ccs = Util::SplitAddrs(header.GetCc());
+          std::vector<std::string> tos = MailUtil::SplitAddrs(header.GetTo());
+          std::vector<std::string> ccs = MailUtil::SplitAddrs(header.GetCc());
 
           if (folder != m_SentFolder)
           {
@@ -4105,13 +4113,13 @@ void Ui::SetState(Ui::State p_State)
                   (it->find(header.GetFrom()) == std::string::npos)) ? std::next(it) : ccs.erase(it);
           }
 
-          SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
+          SetComposeStr(HeaderCc, StrUtil::ToWString(StrUtil::Join(ccs, ", ")));
         }
       }
 
       SetComposeStr(HeaderBcc, L"");
       SetComposeStr(HeaderAtt, L"");
-      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeReplySubject(header.GetSubject())));
+      SetComposeStr(HeaderSub, StrUtil::ToWString(MailUtil::MakeReplySubject(header.GetSubject())));
 
       m_ComposeHeaderRef = header.GetMessageId();
     }
@@ -4122,7 +4130,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
     m_ComposeHeaderPos = 0;
@@ -4148,27 +4156,27 @@ void Ui::SetState(Ui::State p_State)
       Body& body = bit->second;
 
       int idx = 0;
-      std::string tmppath = Util::GetTempDirectory();
+      std::string tmppath = FileUtil::GetTempDirectory();
       const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
       for (auto& part : body.GetPartInfos())
       {
         if (!part.second.m_Filename.empty())
         {
           std::string tmpfiledir = tmppath + "/" + std::to_string(idx++) + "/";
-          Util::MkDir(tmpfiledir);
+          FileUtil::MkDir(tmpfiledir);
           std::string tmpfilepath = tmpfiledir + part.second.m_Filename;
 
-          Util::WriteFile(tmpfilepath, partDatas.at(part.first));
-          tmpfilepath = Util::EscapePath(tmpfilepath);
+          FileUtil::WriteFile(tmpfilepath, partDatas.at(part.first));
+          tmpfilepath = FileUtil::EscapePath(tmpfilepath);
           if (GetComposeStr(HeaderAtt).empty())
           {
             SetComposeStr(HeaderAtt,
-                          GetComposeStr(HeaderAtt) + Util::ToWString(tmpfilepath));
+                          GetComposeStr(HeaderAtt) + StrUtil::ToWString(tmpfilepath));
           }
           else
           {
             SetComposeStr(HeaderAtt,
-                          GetComposeStr(HeaderAtt) + L", " + Util::ToWString(tmpfilepath));
+                          GetComposeStr(HeaderAtt) + L", " + StrUtil::ToWString(tmpfilepath));
           }
         }
       }
@@ -4176,21 +4184,21 @@ void Ui::SetState(Ui::State p_State)
       m_ComposeQuotedStart = "\n\n---------- Forwarded message ---------\n";
       m_ComposeMessageStr =
         GetSignatureStr() +
-        Util::ToWString(m_ComposeQuotedStart +
-                        "From: " + header.GetFrom() + "\n"
-                        "Date: " + header.GetDateTime() + "\n"
-                        "Subject: " + header.GetSubject() + "\n"
-                        "To: " + header.GetTo() + "\n");
+        StrUtil::ToWString(m_ComposeQuotedStart +
+                           "From: " + header.GetFrom() + "\n"
+                           "Date: " + header.GetDateTime() + "\n"
+                           "Subject: " + header.GetSubject() + "\n"
+                           "To: " + header.GetTo() + "\n");
       if (!header.GetReplyTo().empty())
       {
         m_ComposeMessageStr +=
-          Util::ToWString("Reply-To: " + header.GetReplyTo() + "\n");
+          StrUtil::ToWString("Reply-To: " + header.GetReplyTo() + "\n");
       }
 
       if (!header.GetCc().empty())
       {
         m_ComposeMessageStr +=
-          Util::ToWString("Cc: " + header.GetCc() + "\n");
+          StrUtil::ToWString("Cc: " + header.GetCc() + "\n");
       }
 
       std::string bodyText = GetBodyText(body);
@@ -4199,10 +4207,10 @@ void Ui::SetState(Ui::State p_State)
         bodyText = bodyText.substr(0, bodyText.size() - 1);
       }
 
-      m_ComposeMessageStr += Util::ToWString("\n" + bodyText);
-      Util::StripCR(m_ComposeMessageStr);
+      m_ComposeMessageStr += StrUtil::ToWString("\n" + bodyText);
+      StrUtil::StripCR(m_ComposeMessageStr);
 
-      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeForwardSubject(header.GetSubject())));
+      SetComposeStr(HeaderSub, StrUtil::ToWString(MailUtil::MakeForwardSubject(header.GetSubject())));
 
       m_ComposeHeaderRef = header.GetMessageId();
       m_ComposeTempDirectory = tmppath;
@@ -4214,7 +4222,7 @@ void Ui::SetState(Ui::State p_State)
   {
     curs_set(1);
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     StartComposeBackup();
     m_ComposeHeaderLine = m_ShowRichHeader ? 1 : 0;
     m_ComposeHeaderPos = 0;
@@ -4239,18 +4247,18 @@ void Ui::SetState(Ui::State p_State)
       Header& header = hit->second;
       Body& body = bit->second;
 
-      std::string tmppath = Util::GetTempDirectory();
+      std::string tmppath = FileUtil::GetTempDirectory();
       std::string filename = header.GetSubject();
-      Util::RemoveNonAlphaNumSpace(filename);
-      Util::ReplaceString(filename, " ", "_");
+      StrUtil::RemoveNonAlphaNumSpace(filename);
+      StrUtil::ReplaceString(filename, " ", "_");
       std::string filepath = tmppath + "/" + filename + ".eml";
       LOG_INFO("write to %s size %d", filepath.c_str(), body.GetData().size());
-      Util::WriteFile(filepath, body.GetData());
+      FileUtil::WriteFile(filepath, body.GetData());
 
       SetComposeStr(HeaderAtt,
-                    GetComposeStr(HeaderAtt) + Util::ToWString(filepath));
+                    GetComposeStr(HeaderAtt) + StrUtil::ToWString(filepath));
 
-      SetComposeStr(HeaderSub, Util::ToWString(Util::MakeForwardSubject(header.GetSubject())));
+      SetComposeStr(HeaderSub, StrUtil::ToWString(MailUtil::MakeForwardSubject(header.GetSubject())));
 
       m_ComposeHeaderRef = header.GetMessageId();
       m_ComposeTempDirectory = tmppath;
@@ -4274,10 +4282,10 @@ void Ui::SetState(Ui::State p_State)
     m_FileListFilterStr.clear();
     if (m_CurrentDir.empty() || !m_PersistFileSelectionDir)
     {
-      m_CurrentDir = Util::GetCurrentWorkingDir();
+      m_CurrentDir = FileUtil::GetCurrentWorkingDir();
     }
 
-    m_Files = Util::ListPaths(m_CurrentDir);
+    m_Files = FileUtil::ListPaths(m_CurrentDir);
     m_FileListCurrentIndex = 0;
     m_FileListCurrentFile.m_Name = "";
   }
@@ -4813,9 +4821,9 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     }
 
     const SmtpManager::Action& action = p_Result.m_Action;
-    const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrs(action.m_To));
-    const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrs(action.m_Cc));
-    const std::vector<Contact> bcc = Contact::FromStrings(Util::SplitAddrs(action.m_Bcc));
+    const std::vector<Contact> to = Contact::FromStrings(MailUtil::SplitAddrs(action.m_To));
+    const std::vector<Contact> cc = Contact::FromStrings(MailUtil::SplitAddrs(action.m_Cc));
+    const std::vector<Contact> bcc = Contact::FromStrings(MailUtil::SplitAddrs(action.m_Bcc));
 
     std::vector<Contact> contacts;
     std::move(to.begin(), to.end(), std::back_inserter(contacts));
@@ -4873,7 +4881,7 @@ void Ui::SmtpResultHandler(const SmtpManager::Result& p_Result)
     }
   }
 
-  Util::RmDir(p_Result.m_Action.m_ComposeTempDirectory);
+  FileUtil::RmDir(p_Result.m_Action.m_ComposeTempDirectory);
 }
 
 void Ui::StatusHandler(const StatusUpdate& p_StatusUpdate)
@@ -5211,19 +5219,19 @@ bool Ui::IsValidTextKey(int p_Key)
 bool Ui::ComposedMessageIsValid(bool p_ForSend)
 {
   std::string addrs =
-    Util::ToString(GetComposeStr(HeaderTo)) +
-    Util::ToString(GetComposeStr(HeaderCc)) +
-    Util::ToString(GetComposeStr(HeaderBcc));
+    StrUtil::ToString(GetComposeStr(HeaderTo)) +
+    StrUtil::ToString(GetComposeStr(HeaderCc)) +
+    StrUtil::ToString(GetComposeStr(HeaderBcc));
   if (p_ForSend && (addrs.find("@") == std::string::npos))
   {
     SetDialogMessage("No recipients specified");
     return false;
   }
 
-  std::vector<std::string> atts = Util::SplitPaths(Util::ToString(GetComposeStr(HeaderAtt)));
+  std::vector<std::string> atts = FileUtil::SplitPaths(StrUtil::ToString(GetComposeStr(HeaderAtt)));
   for (auto& att : atts)
   {
-    if (!Util::IsReadableFile(att))
+    if (!FileUtil::IsReadableFile(att))
     {
       std::string path = att;
       int maxPath = (m_ScreenWidth - 26);
@@ -5239,7 +5247,7 @@ bool Ui::ComposedMessageIsValid(bool p_ForSend)
     }
   }
 
-  std::string subject = Util::ToString(GetComposeStr(HeaderSub));
+  std::string subject = StrUtil::ToString(GetComposeStr(HeaderSub));
   if (p_ForSend && subject.empty())
   {
     if (!Ui::PromptYesNo("No subject specified, continue (y/n)?"))
@@ -5254,14 +5262,14 @@ bool Ui::ComposedMessageIsValid(bool p_ForSend)
 void Ui::SendComposedMessage()
 {
   SmtpManager::Action smtpAction;
-  smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
-  smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
-  smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
-  smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
-  smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
-  smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-  smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
-  smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+  smtpAction.m_From = StrUtil::ToString(GetComposeStr(HeaderFrom));
+  smtpAction.m_To = StrUtil::ToString(GetComposeStr(HeaderTo));
+  smtpAction.m_Cc = StrUtil::ToString(GetComposeStr(HeaderCc));
+  smtpAction.m_Bcc = StrUtil::ToString(GetComposeStr(HeaderBcc));
+  smtpAction.m_Att = StrUtil::ToString(GetComposeStr(HeaderAtt));
+  smtpAction.m_Subject = StrUtil::ToString(GetComposeStr(HeaderSub));
+  smtpAction.m_Body = StrUtil::ToString(GetComposeBodyForSend());
+  smtpAction.m_HtmlBody = MakeHtmlPart(StrUtil::ToString(m_ComposeMessageStr));
   smtpAction.m_RefMsgId = m_ComposeHeaderRef;
   smtpAction.m_ComposeTempDirectory = m_ComposeTempDirectory;
   smtpAction.m_ComposeDraftUid = m_ComposeDraftUid;
@@ -5294,14 +5302,14 @@ void Ui::UploadDraftMessage()
   {
     SmtpManager::Action smtpAction;
     smtpAction.m_IsCreateMessage = true;
-    smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
-    smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
-    smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
-    smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
-    smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
-    smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-    smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
-    smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+    smtpAction.m_From = StrUtil::ToString(GetComposeStr(HeaderFrom));
+    smtpAction.m_To = StrUtil::ToString(GetComposeStr(HeaderTo));
+    smtpAction.m_Cc = StrUtil::ToString(GetComposeStr(HeaderCc));
+    smtpAction.m_Bcc = StrUtil::ToString(GetComposeStr(HeaderBcc));
+    smtpAction.m_Att = StrUtil::ToString(GetComposeStr(HeaderAtt));
+    smtpAction.m_Subject = StrUtil::ToString(GetComposeStr(HeaderSub));
+    smtpAction.m_Body = StrUtil::ToString(GetComposeBodyForSend());
+    smtpAction.m_HtmlBody = MakeHtmlPart(StrUtil::ToString(m_ComposeMessageStr));
     smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
     SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
@@ -5439,7 +5447,7 @@ void Ui::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Fro
   action.m_Folder = p_From;
   action.m_Uids = p_Uids;
 
-  static bool copyToTrash = Util::GetCopyToTrash();
+  static bool copyToTrash = AppUtil::GetCopyToTrash();
   bool isToTrash = false;
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -5647,7 +5655,7 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
     std::lock_guard<std::mutex> lock(m_SearchMutex);
     const std::vector<Header>& headers = m_MessageListSearchResultHeaders;
     m_MessageListCurrentIndex[m_CurrentFolder] =
-      Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)headers.size() - 1);
+      StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)headers.size() - 1);
 
     const int32_t idx = m_MessageListCurrentIndex[m_CurrentFolder];
     if (idx < (int)m_MessageListSearchResultFolderUids.size())
@@ -5681,7 +5689,7 @@ void Ui::UpdateUidFromIndex(bool p_UserTriggered)
   const std::map<std::string, uint32_t>& displayUids = GetDisplayUids(m_CurrentFolder);
 
   m_MessageListCurrentIndex[m_CurrentFolder] =
-    Util::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)displayUids.size() - 1);
+    StrUtil::Bound(0, m_MessageListCurrentIndex[m_CurrentFolder], (int)displayUids.size() - 1);
   if (displayUids.size() > 0)
   {
     m_MessageListCurrentUid[m_CurrentFolder] =
@@ -5770,7 +5778,7 @@ void Ui::SetComposeMessagePos(int p_WrapLine, int p_Column)
     m_ComposeMessagePos = (int)m_ComposeMessageStr.size();
   }
 
-  m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
+  m_ComposeMessagePos = StrUtil::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
 }
 
 void Ui::ComposeMessagePrevLine()
@@ -5797,7 +5805,7 @@ int Ui::ReadKeyBlocking()
 {
   while (true)
   {
-    if (Util::IsTerminateRequested()) return m_KeyCancel;
+    if (AppUtil::IsTerminateRequested()) return m_KeyCancel;
 
     fd_set fds;
     FD_ZERO(&fds);
@@ -5858,7 +5866,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
 
   curs_set(1);
 
-  m_FilenameEntryString = Util::ToWString(p_Entry);
+  m_FilenameEntryString = StrUtil::ToWString(p_Entry);
   m_FilenameEntryStringPos = m_FilenameEntryString.size();
 
   bool rv = false;
@@ -5866,11 +5874,11 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
   {
     werase(m_DialogWin);
 
-    const std::string& dispStr = p_Prompt + Util::ToString(m_FilenameEntryString);
+    const std::string& dispStr = p_Prompt + StrUtil::ToString(m_FilenameEntryString);
     mvwprintw(m_DialogWin, 0, 3, "%s", dispStr.c_str());
 
     leaveok(m_DialogWin, false);
-    const int promptWidth = TextWrap::GetWidth(Util::ToWString(p_Prompt));
+    const int promptWidth = TextWrap::GetWidth(StrUtil::ToWString(p_Prompt));
     const int entryWidth = TextWrap::GetWidth(m_FilenameEntryString.substr(0, m_FilenameEntryStringPos));
     wmove(m_DialogWin, 0, 3 + promptWidth + entryWidth);
     wrefresh(m_DialogWin);
@@ -5884,7 +5892,7 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
     }
     else if ((key == m_KeyReturn) || (key == m_KeyEnter))
     {
-      p_Entry = Util::ToString(m_FilenameEntryString);
+      p_Entry = StrUtil::ToString(m_FilenameEntryString);
       rv = true;
       break;
     }
@@ -5945,36 +5953,36 @@ void Ui::InvalidateUidCache(const std::string& p_Folder)
 void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessageStr, int& p_ComposeMessagePos)
 {
   TerminalControlPause();
-  const std::string& tempPath = Util::GetTempFilename(".txt");
-  Util::WriteWFile(tempPath, p_ComposeMessageStr);
-  const std::string& cmd = Util::MakeCmd(p_EditorCmd, tempPath);
+  const std::string& tempPath = FileUtil::GetTempFilename(".txt");
+  FileUtil::WriteWFile(tempPath, p_ComposeMessageStr);
+  const std::string& cmd = ExtUtil::MakeCmd(p_EditorCmd, tempPath);
   LOG_DEBUG("launching external editor: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external editor exited successfully");
-    p_ComposeMessageStr = Util::ReadWFile(tempPath);
+    p_ComposeMessageStr = FileUtil::ReadWFile(tempPath);
     p_ComposeMessagePos = 0;
   }
   else
   {
     LOG_WARNING("external editor exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
-  Util::DeleteFile(tempPath);
+  FileUtil::DeleteFile(tempPath);
   TerminalControlResume();
 }
 
 void Ui::ExtPager()
 {
   TerminalControlPause();
-  const std::string& tempPath = Util::GetTempFilename(".txt");
-  Util::WriteFile(tempPath, m_CurrentMessageViewText);
-  const std::string& pager = Util::GetPagerCmd();
-  const std::string& cmd = Util::MakeCmd(pager, tempPath);
+  const std::string& tempPath = FileUtil::GetTempFilename(".txt");
+  FileUtil::WriteFile(tempPath, m_CurrentMessageViewText);
+  const std::string& pager = ExtUtil::GetPagerCmd();
+  const std::string& cmd = ExtUtil::MakeCmd(pager, tempPath);
   LOG_DEBUG("launching external pager: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external pager exited successfully");
@@ -5982,26 +5990,26 @@ void Ui::ExtPager()
   else
   {
     LOG_WARNING("external pager exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
-  Util::DeleteFile(tempPath);
+  FileUtil::DeleteFile(tempPath);
   TerminalControlResume();
 }
 
 int Ui::ExtPartsViewer(const std::string& p_Path)
 {
-  const bool isDefaultPartsViewerCmd = Util::IsDefaultPartsViewerCmd();
+  const bool isDefaultPartsViewerCmd = ExtUtil::IsDefaultPartsViewerCmd();
   if (!isDefaultPartsViewerCmd)
   {
     TerminalControlPause();
   }
 
-  const std::string& viewer = Util::GetPartsViewerCmd();
+  const std::string& viewer = ExtUtil::GetPartsViewerCmd();
 
-  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
+  const std::string& cmd = ExtUtil::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("external viewer exited successfully");
@@ -6009,7 +6017,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
   else
   {
     LOG_WARNING("external viewer exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
   if (!isDefaultPartsViewerCmd)
@@ -6022,8 +6030,8 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
 
 void Ui::ExtHtmlViewer()
 {
-  static const std::string& tempPath = Util::GetTempDir() + std::string("htmlview/tmp.html");
-  Util::DeleteFile(tempPath);
+  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("htmlview/tmp.html");
+  FileUtil::DeleteFile(tempPath);
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -6035,11 +6043,11 @@ void Ui::ExtHtmlViewer()
     {
       Body& body = bodyIt->second;
       const std::string& html = body.GetHtml(); // falls back to text/plain if no html
-      Util::WriteFile(tempPath, html);
+      FileUtil::WriteFile(tempPath, html);
     }
   }
 
-  if (Util::Exists(tempPath))
+  if (FileUtil::Exists(tempPath))
   {
     int rv = ExtHtmlViewer(tempPath);
     if (rv == 0)
@@ -6055,16 +6063,16 @@ void Ui::ExtHtmlViewer()
 
 int Ui::ExtHtmlViewer(const std::string& p_Path)
 {
-  const bool isDefaultHtmlViewerCmd = Util::IsHtmlViewerSystemOpenCmd();
+  const bool isDefaultHtmlViewerCmd = ExtUtil::IsHtmlViewerSystemOpenCmd();
   if (!isDefaultHtmlViewerCmd)
   {
     TerminalControlPause();
   }
 
-  const std::string& viewer = Util::GetHtmlViewerCmd();
-  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
+  const std::string& viewer = ExtUtil::GetHtmlViewerCmd();
+  const std::string& cmd = ExtUtil::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("html viewer exited successfully");
@@ -6072,7 +6080,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   else
   {
     LOG_WARNING("html viewer exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
   if (!isDefaultHtmlViewerCmd)
@@ -6085,16 +6093,16 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
 
 int Ui::ExtHtmlPreview(const std::string& p_Path)
 {
-  const bool isDefaultHtmlPreviewCmd = Util::IsDefaultHtmlPreviewCmd();
+  const bool isDefaultHtmlPreviewCmd = ExtUtil::IsDefaultHtmlPreviewCmd();
   if (!isDefaultHtmlPreviewCmd)
   {
     TerminalControlPause();
   }
 
-  const std::string& viewer = Util::GetHtmlPreviewCmd();
-  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
+  const std::string& viewer = ExtUtil::GetHtmlPreviewCmd();
+  const std::string& cmd = ExtUtil::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("html viewer exited successfully");
@@ -6102,7 +6110,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   else
   {
     LOG_WARNING("html viewer exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
   if (!isDefaultHtmlPreviewCmd)
@@ -6152,7 +6160,7 @@ void Ui::SelectLink(bool p_Next)
   }
   else if (pastEnd)
   {
-    index = Util::Bound(-1, m_MessageViewLinkIndex, count) + (p_Next ? 1 : -1);
+    index = StrUtil::Bound(-1, m_MessageViewLinkIndex, count) + (p_Next ? 1 : -1);
   }
   else if (p_Next)
   {
@@ -6193,33 +6201,33 @@ void Ui::SelectLink(bool p_Next)
     m_MessageViewLineOffset = line - m_MainWinHeight + 1;
   }
 
-  SetDialogMessage(Util::ToString(m_MessageViewLinks.at(index).m_Url));
+  SetDialogMessage(StrUtil::ToString(m_MessageViewLinks.at(index).m_Url));
 }
 
 void Ui::OpenLink()
 {
   if (!IsLinkSelected()) return;
 
-  const std::string url = Util::ToString(m_MessageViewLinks.at(m_MessageViewLinkIndex).m_Url);
+  const std::string url = StrUtil::ToString(m_MessageViewLinks.at(m_MessageViewLinkIndex).m_Url);
   if (url.empty()) return;
 
-  if (Util::ToLower(url.substr(0, 7)) == "mailto:")
+  if (StrUtil::ToLower(url.substr(0, 7)) == "mailto:")
   {
     m_ComposeMailto = url;
     SetState(StateComposeMessage);
     return;
   }
 
-  const bool isDefaultLinkOpenCmd = Util::IsDefaultLinkOpenCmd();
+  const bool isDefaultLinkOpenCmd = ExtUtil::IsDefaultLinkOpenCmd();
   if (!isDefaultLinkOpenCmd)
   {
     TerminalControlPause();
   }
 
   // single quoted, as url is from message
-  const std::string& cmd = Util::MakeCmd(Util::GetLinkOpenCmd(), url);
+  const std::string& cmd = ExtUtil::MakeCmd(ExtUtil::GetLinkOpenCmd(), url);
   LOG_DEBUG("launching link open: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("link open exited successfully");
@@ -6227,7 +6235,7 @@ void Ui::OpenLink()
   else
   {
     LOG_WARNING("link open exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
   if (!isDefaultLinkOpenCmd)
@@ -6242,7 +6250,7 @@ void Ui::SetComposeMailto(const std::string& p_Url)
   // header values without ascii control chars, like newlines, keeping utf-8 bytes
   auto decodeHeader = [](const std::string& p_Str)
   {
-    std::string str = Util::DecodeUrl(p_Str);
+    std::string str = MailUtil::DecodeUrl(p_Str);
     str.erase(std::remove_if(str.begin(), str.end(),
                              [](char p_Ch) { return ((unsigned char)p_Ch < 0x20) || (p_Ch == 0x7f); }),
               str.end());
@@ -6264,12 +6272,12 @@ void Ui::SetComposeMailto(const std::string& p_Url)
 
   if (queryPos != std::string::npos)
   {
-    for (const auto& field : Util::Split(mailto.substr(queryPos + 1), '&'))
+    for (const auto& field : StrUtil::Split(mailto.substr(queryPos + 1), '&'))
     {
       const size_t eqPos = field.find('=');
       if (eqPos == std::string::npos) continue;
 
-      const std::string name = Util::ToLower(field.substr(0, eqPos));
+      const std::string name = StrUtil::ToLower(field.substr(0, eqPos));
       const std::string value = field.substr(eqPos + 1);
       if (name == "to")
       {
@@ -6289,7 +6297,7 @@ void Ui::SetComposeMailto(const std::string& p_Url)
       }
       else if (name == "body")
       {
-        body = Util::DecodeUrl(value);
+        body = MailUtil::DecodeUrl(value);
       }
     }
   }
@@ -6299,18 +6307,18 @@ void Ui::SetComposeMailto(const std::string& p_Url)
   {
     m_ShowRichHeader = true;
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     m_ComposeHeaderLine = 1;
   }
 
-  SetComposeStr(HeaderTo, Util::ToWString(Util::Join(tos, ", ")));
-  SetComposeStr(HeaderCc, Util::ToWString(Util::Join(ccs, ", ")));
-  SetComposeStr(HeaderBcc, Util::ToWString(Util::Join(bccs, ", ")));
-  SetComposeStr(HeaderSub, Util::ToWString(subject));
+  SetComposeStr(HeaderTo, StrUtil::ToWString(StrUtil::Join(tos, ", ")));
+  SetComposeStr(HeaderCc, StrUtil::ToWString(StrUtil::Join(ccs, ", ")));
+  SetComposeStr(HeaderBcc, StrUtil::ToWString(StrUtil::Join(bccs, ", ")));
+  SetComposeStr(HeaderSub, StrUtil::ToWString(subject));
   if (!body.empty())
   {
-    std::wstring wbody = Util::ToWString(body);
-    Util::StripCR(wbody);
+    std::wstring wbody = StrUtil::ToWString(body);
+    StrUtil::StripCR(wbody);
     m_ComposeMessageStr = wbody + L"\n" + m_ComposeMessageStr;
   }
 
@@ -6327,8 +6335,8 @@ void Ui::SetComposeMailto(const std::string& p_Url)
 
 void Ui::ExtMsgViewer()
 {
-  static const std::string& tempPath = Util::GetTempDir() + std::string("msgview/tmp.eml");
-  Util::DeleteFile(tempPath);
+  static const std::string& tempPath = FileUtil::GetTempDir() + std::string("msgview/tmp.eml");
+  FileUtil::DeleteFile(tempPath);
 
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -6340,11 +6348,11 @@ void Ui::ExtMsgViewer()
     {
       Body& body = bodyIt->second;
       const std::string& data = body.GetData(); // falls back to text/plain if no html
-      Util::WriteFile(tempPath, data);
+      FileUtil::WriteFile(tempPath, data);
     }
   }
 
-  if (Util::Exists(tempPath))
+  if (FileUtil::Exists(tempPath))
   {
     int rv = ExtMsgViewer(tempPath);
     if (rv == 0)
@@ -6360,16 +6368,16 @@ void Ui::ExtMsgViewer()
 
 int Ui::ExtMsgViewer(const std::string& p_Path)
 {
-  const bool isDefaultMsgViewerCmd = Util::IsDefaultMsgViewerCmd();
+  const bool isDefaultMsgViewerCmd = ExtUtil::IsDefaultMsgViewerCmd();
   if (!isDefaultMsgViewerCmd)
   {
     TerminalControlPause();
   }
 
-  const std::string& viewer = Util::GetMsgViewerCmd();
-  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
+  const std::string& viewer = ExtUtil::GetMsgViewerCmd();
+  const std::string& cmd = ExtUtil::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching message viewer: %s", cmd.c_str());
-  int rv = Util::System(cmd);
+  int rv = SysUtil::System(cmd);
   if (rv == 0)
   {
     LOG_DEBUG("message viewer exited successfully");
@@ -6377,7 +6385,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
   else
   {
     LOG_WARNING("message viewer exited with %d", rv);
-    Util::DetectCommandNotPresent(cmd);
+    SysUtil::DetectCommandNotPresent(cmd);
   }
 
   if (!isDefaultMsgViewerCmd)
@@ -6417,17 +6425,17 @@ void Ui::ExportMessage()
 {
   const std::string& folder = m_CurrentFolderUid.first;
   const int uid = m_CurrentFolderUid.second;
-  std::string filename = Util::GetDownloadsDir() + std::to_string(uid) + ".eml";
+  std::string filename = FileUtil::GetDownloadsDir() + std::to_string(uid) + ".eml";
   if (PromptString("Export Filename: ", "Save", filename))
   {
     if (!filename.empty())
     {
-      filename = Util::ExpandPath(filename);
+      filename = FileUtil::ExpandPath(filename);
       std::unique_lock<std::mutex> lock(m_Mutex);
       const std::map<uint32_t, Body>& bodys = m_Bodys[folder];
       if (bodys.find(uid) != bodys.end())
       {
-        Util::WriteFile(filename, m_Bodys[folder][uid].GetData());
+        FileUtil::WriteFile(filename, m_Bodys[folder][uid].GetData());
         lock.unlock();
         SetDialogMessage("Message exported");
       }
@@ -6451,7 +6459,7 @@ void Ui::ExportMessage()
 void Ui::SaveMessageView(bool p_Markdown)
 {
   // markdown only from built-in html converter
-  const bool hasMarkdown = m_CurrentMessageFromHtml && Util::GetHtmlToTextConvertCmd().empty();
+  const bool hasMarkdown = m_CurrentMessageFromHtml && ExtUtil::GetHtmlToTextConvertCmd().empty();
   if (p_Markdown && !hasMarkdown)
   {
     SetDialogMessage("Markdown not available");
@@ -6474,7 +6482,7 @@ void Ui::SaveMessageView(bool p_Markdown)
   // default filename <uid>-subject, with subject non-alphanumerics replaced and max 40 chars
   static const size_t maxSubjectLen = 40;
   std::wstring wsubject;
-  for (wchar_t ch : Util::ToWString(subject))
+  for (wchar_t ch : StrUtil::ToWString(subject))
   {
     if (wsubject.size() >= maxSubjectLen) break;
 
@@ -6493,8 +6501,8 @@ void Ui::SaveMessageView(bool p_Markdown)
     wsubject.pop_back();
   }
 
-  std::string filename = Util::GetDownloadsDir() + std::to_string(uid) +
-    (wsubject.empty() ? "" : ("-" + Util::ToString(wsubject))) + (p_Markdown ? ".md" : ".txt");
+  std::string filename = FileUtil::GetDownloadsDir() + std::to_string(uid) +
+    (wsubject.empty() ? "" : ("-" + StrUtil::ToString(wsubject))) + (p_Markdown ? ".md" : ".txt");
   if (!PromptString("Save Filename: ", "Save", filename))
   {
     SetDialogMessage("Save cancelled");
@@ -6507,7 +6515,7 @@ void Ui::SaveMessageView(bool p_Markdown)
     return;
   }
 
-  filename = Util::ExpandPath(filename);
+  filename = FileUtil::ExpandPath(filename);
 
   // view text is header block, blank line, body
   const std::string& viewText = m_CurrentMessageViewText;
@@ -6517,24 +6525,24 @@ void Ui::SaveMessageView(bool p_Markdown)
   std::string body = viewText.substr(bodyBegin);
   if (hasMarkdown && !p_Markdown)
   {
-    body = Util::ToString(TextStyle::MarkdownToPlain(Util::ToWString(body), m_MarkdownViewLinks));
+    body = StrUtil::ToString(TextStyle::MarkdownToPlain(StrUtil::ToWString(body), m_MarkdownViewLinks));
   }
 
-  Util::WriteFile(filename, header + body);
+  FileUtil::WriteFile(filename, header + body);
   SetDialogMessage(p_Markdown ? "Markdown saved" : "Text saved");
 }
 
 void Ui::ImportMessage()
 {
-  std::string filename = Util::GetDownloadsDir();
+  std::string filename = FileUtil::GetDownloadsDir();
   if (PromptString("Import Filename: ", "Load", filename))
   {
     if (!filename.empty())
     {
-      filename = Util::ExpandPath(filename);
-      if (Util::NotEmpty(filename))
+      filename = FileUtil::ExpandPath(filename);
+      if (FileUtil::NotEmpty(filename))
       {
-        const std::string& msg = Util::ReadFile(filename);
+        const std::string& msg = FileUtil::ReadFile(filename);
 
         ImapManager::Action imapAction;
         imapAction.m_UploadMessage = true;
@@ -6593,14 +6601,14 @@ void Ui::SearchMessageBasedOnCurrent(bool p_Subject)
 
   if (found)
   {
-    current = Util::Trim(current);
+    current = StrUtil::Trim(current);
     if (p_Subject)
     {
-      Util::NormalizeSubject(current, true /*p_ToLower*/);
+      MailUtil::NormalizeSubject(current, true /*p_ToLower*/);
     }
     else
     {
-      Util::NormalizeName(current);
+      MailUtil::NormalizeName(current);
     }
     std::string query = p_Subject ? ("subject:\"" + current + "\"")
                                   : ("from:\"" + current + "\"");
@@ -6688,7 +6696,7 @@ void Ui::MessageFind()
 void Ui::MessageFindNext()
 {
   int findFromLine = m_MessageFindMatchLine + 1;
-  const std::wstring wquery = Util::ToFold(Util::ToWString(m_MessageFindQuery));
+  const std::wstring wquery = StrUtil::ToFold(StrUtil::ToWString(m_MessageFindQuery));
   std::vector<std::wstring> wlines = Ui::GetCachedWordWrapLines("", 0);
   int countLines = wlines.size();
 
@@ -6696,14 +6704,14 @@ void Ui::MessageFindNext()
   for (int i = findFromLine; i < countLines; ++i)
   {
     std::vector<size_t> positions;
-    std::wstring wline = Util::ToFold(wlines.at(i), &positions);
+    std::wstring wline = StrUtil::ToFold(wlines.at(i), &positions);
     size_t pos = wline.find(wquery);
     if (!wquery.empty() && (pos != std::string::npos))
     {
       // map match in folded line back to original line
       const size_t matchFirst = positions.at(pos);
       const size_t matchLast = positions.at(pos + wquery.size() - 1);
-      m_MessageViewLineOffset = Util::Bound(0, i, countLines - m_MainWinHeight);
+      m_MessageViewLineOffset = StrUtil::Bound(0, i, countLines - m_MainWinHeight);
       m_MessageFindMatchLine = i;
       m_MessageFindMatchPos = matchFirst;
       m_MessageFindMatchLen = matchLast - matchFirst + 1;
@@ -6822,12 +6830,12 @@ std::wstring Ui::GetComposeBodyForSend()
     const bool quoteWrap = m_RewrapQuotedLines;
     const int expandTabSize = 0; // disabled
     std::vector<std::wstring> indentBodyLines =
-      Util::WordWrap(m_ComposeMessageStr, 72, processFlowed, outputFlowed, quoteWrap, expandTabSize);
-    return Util::Join(indentBodyLines);
+      TextUtil::WordWrap(m_ComposeMessageStr, 72, processFlowed, outputFlowed, quoteWrap, expandTabSize);
+    return StrUtil::Join(indentBodyLines);
   }
   else if (m_ComposeLineWrap == LineWrapHardWrap)
   {
-    return Util::Join(m_ComposeMessageLines);
+    return StrUtil::Join(m_ComposeMessageLines);
   }
   else
   {
@@ -6890,7 +6898,7 @@ void Ui::StartSync()
     return;
   }
 
-  if (Util::GetReadOnly())
+  if (AppUtil::GetReadOnly())
   {
     SetDialogMessage("Cannot sync in read-only mode");
     return;
@@ -6920,19 +6928,19 @@ std::string Ui::MakeHtmlPart(const std::string& p_Text)
     }
   }
 
-  return Util::ConvertTextToHtml(p_Text);
+  return ExtUtil::ConvertTextToHtml(p_Text);
 }
 
 std::string Ui::MakeHtmlPartCustomSig(const std::string& p_Text)
 {
-  std::string signatureStr = Util::ToString(GetSignatureStr(true /* p_NoPrefix */));
-  static const std::string sigHtmlPath = Util::GetApplicationDir() + "signature.html";
-  if (!Util::IsReadableFile(sigHtmlPath))
+  std::string signatureStr = StrUtil::ToString(GetSignatureStr(true /* p_NoPrefix */));
+  static const std::string sigHtmlPath = AppUtil::GetApplicationDir() + "signature.html";
+  if (!FileUtil::IsReadableFile(sigHtmlPath))
   {
     return std::string();
   }
 
-  std::string signatureHtmlStr = Util::ReadFile(sigHtmlPath);
+  std::string signatureHtmlStr = FileUtil::ReadFile(sigHtmlPath);
   if (signatureHtmlStr.empty())
   {
     LOG_WARNING("html signature file is empty");
@@ -6945,15 +6953,15 @@ std::string Ui::MakeHtmlPartCustomSig(const std::string& p_Text)
   const std::string placeholderStr = std::string(randhex);
 
   std::string tmpText = p_Text;
-  if (!Util::ReplaceStringFirst(tmpText, signatureStr, "  \n" + placeholderStr))
+  if (!StrUtil::ReplaceStringFirst(tmpText, signatureStr, "  \n" + placeholderStr))
   {
     LOG_WARNING("plain text signature not found in message, cannot use custom html signature");
     return std::string();
   }
 
-  tmpText = Util::ConvertTextToHtml(tmpText);
+  tmpText = ExtUtil::ConvertTextToHtml(tmpText);
   const std::string placeholderHtmlStr = "<p>" + placeholderStr + "</p>";
-  if (Util::ReplaceStringCount(tmpText, placeholderHtmlStr, signatureHtmlStr) != 1)
+  if (StrUtil::ReplaceStringCount(tmpText, placeholderHtmlStr, signatureHtmlStr) != 1)
   {
     LOG_WARNING("unique custom html signature placeholder not found");
     return std::string();
@@ -6969,7 +6977,7 @@ void Ui::SetRunning(bool p_Running)
 
 void Ui::HandleConnected()
 {
-  if (IsConnected() && !Util::GetReadOnly())
+  if (IsConnected() && !AppUtil::GetReadOnly())
   {
     if (!m_DraftsFolder.empty())
     {
@@ -7057,14 +7065,14 @@ void Ui::ComposeBackupProcess()
     {
       SmtpManager::Action smtpAction;
       smtpAction.m_IsCreateMessage = true;
-      smtpAction.m_From = Util::ToString(GetComposeStr(HeaderFrom));
-      smtpAction.m_To = Util::ToString(GetComposeStr(HeaderTo));
-      smtpAction.m_Cc = Util::ToString(GetComposeStr(HeaderCc));
-      smtpAction.m_Bcc = Util::ToString(GetComposeStr(HeaderBcc));
-      smtpAction.m_Att = Util::ToString(GetComposeStr(HeaderAtt));
-      smtpAction.m_Subject = Util::ToString(GetComposeStr(HeaderSub));
-      smtpAction.m_Body = Util::ToString(GetComposeBodyForSend());
-      smtpAction.m_HtmlBody = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
+      smtpAction.m_From = StrUtil::ToString(GetComposeStr(HeaderFrom));
+      smtpAction.m_To = StrUtil::ToString(GetComposeStr(HeaderTo));
+      smtpAction.m_Cc = StrUtil::ToString(GetComposeStr(HeaderCc));
+      smtpAction.m_Bcc = StrUtil::ToString(GetComposeStr(HeaderBcc));
+      smtpAction.m_Att = StrUtil::ToString(GetComposeStr(HeaderAtt));
+      smtpAction.m_Subject = StrUtil::ToString(GetComposeStr(HeaderSub));
+      smtpAction.m_Body = StrUtil::ToString(GetComposeBodyForSend());
+      smtpAction.m_HtmlBody = MakeHtmlPart(StrUtil::ToString(m_ComposeMessageStr));
       smtpAction.m_RefMsgId = m_ComposeHeaderRef;
 
       SmtpManager::Result smtpResult = m_SmtpManager->SyncAction(smtpAction);
@@ -7109,7 +7117,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
   std::string priKey;
   std::map<uint32_t, Header>::iterator hit = headers.find(p_Uid);
   std::string dateUidKey =
-    ((hit != headers.end()) ? hit->second.GetDateTime() : "") + " " + Util::ZeroPad(p_Uid, 7);
+    ((hit != headers.end()) ? hit->second.GetDateTime() : "") + " " + StrUtil::ZeroPad(p_Uid, 7);
   std::map<uint32_t, uint32_t>::const_iterator fit;
   switch (p_SortFilter)
   {
@@ -7120,7 +7128,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
 
     case SortDateAsc:
       key = dateUidKey;
-      Util::BitInvertString(key);
+      StrUtil::BitInvertString(key);
       break;
 
     case SortUnseenOnly:
@@ -7140,7 +7148,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       if (hit != headers.end())
       {
         std::string name = (m_CurrentFolder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
-        Util::NormalizeName(name);
+        MailUtil::NormalizeName(name);
         key = (name == m_FilterCustomStr) ? dateUidKey : "";
       }
       else
@@ -7153,7 +7161,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       if (hit != headers.end())
       {
         std::string subj = hit->second.GetSubject();
-        Util::NormalizeSubject(subj, true /*p_ToLower*/);
+        MailUtil::NormalizeSubject(subj, true /*p_ToLower*/);
         key = (subj == m_FilterCustomStr) ? dateUidKey : "";
       }
       else
@@ -7171,7 +7179,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       {
         priKey = "";
       }
-      Util::NormalizeName(priKey);
+      MailUtil::NormalizeName(priKey);
       key = priKey + " " + dateUidKey;
       break;
 
@@ -7184,22 +7192,22 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       {
         priKey = "";
       }
-      Util::NormalizeName(priKey);
+      MailUtil::NormalizeName(priKey);
       key = priKey + " " + dateUidKey;
-      Util::BitInvertString(key);
+      StrUtil::BitInvertString(key);
       break;
 
     case SortSubjDesc:
       priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
-      Util::NormalizeSubject(priKey, true /*p_ToLower*/);
+      MailUtil::NormalizeSubject(priKey, true /*p_ToLower*/);
       key = priKey + " " + dateUidKey;
       break;
 
     case SortSubjAsc:
       priKey = ((hit != headers.end()) ? hit->second.GetSubject() : "");
-      Util::NormalizeSubject(priKey, true /*p_ToLower*/);
+      MailUtil::NormalizeSubject(priKey, true /*p_ToLower*/);
       key = priKey + " " + dateUidKey;
-      Util::BitInvertString(key);
+      StrUtil::BitInvertString(key);
       break;
 
     case SortUnseenDesc:
@@ -7212,7 +7220,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
       fit = flags.find(p_Uid);
       priKey = ((fit != flags.end()) && !Flag::GetSeen(fit->second)) ? "1" : "0";
       key = priKey + " " + dateUidKey;
-      Util::BitInvertString(key);
+      StrUtil::BitInvertString(key);
       break;
 
     case SortAttchDesc:
@@ -7223,7 +7231,7 @@ std::string Ui::GetDisplayUidsKey(const std::string& p_Folder, uint32_t p_Uid, S
     case SortAttchAsc:
       priKey = ((hit != headers.end()) && hit->second.GetHasAttachments()) ? "1" : "0";
       key = priKey + " " + dateUidKey;
-      Util::BitInvertString(key);
+      StrUtil::BitInvertString(key);
       break;
 
     default:
@@ -7371,12 +7379,12 @@ void Ui::ToggleFilter(SortFilter p_SortFilter)
 
       case SortCurrNameOnly:
         m_FilterCustomStr = (m_CurrentFolder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo();
-        Util::NormalizeName(m_FilterCustomStr);
+        MailUtil::NormalizeName(m_FilterCustomStr);
         break;
 
       case SortCurrSubjOnly:
         m_FilterCustomStr = hit->second.GetSubject();
-        Util::NormalizeSubject(m_FilterCustomStr, true /*p_ToLower*/);
+        MailUtil::NormalizeSubject(m_FilterCustomStr, true /*p_ToLower*/);
         break;
 
       default:
@@ -7431,7 +7439,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   prevMaxViewLineLength = m_MaxViewLineLength;
   prevTextLen = m_CurrentMessageViewText.size(); // cater for search results async header load
 
-  const std::wstring wtext = Util::ToWString(m_CurrentMessageViewText);
+  const std::wstring wtext = StrUtil::ToWString(m_CurrentMessageViewText);
   const bool outputFlowed = false; // only generate when sending after compose
   const bool quoteWrap = m_RewrapQuotedLines;
   const int expandTabSize = m_TabSize; // enabled
@@ -7451,7 +7459,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
     while (std::getline(headerss, line))
     {
       std::replace(line.begin(), line.end(), L'\t', L' ');
-      wlines.push_back(Util::TrimEllipsisWString(line, m_MaxViewLineLength));
+      wlines.push_back(StrUtil::TrimEllipsisWString(line, m_MaxViewLineLength));
     }
 
     bodyStart = headerEnd + 1; // keep blank line separating header and body
@@ -7469,7 +7477,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
       const std::wstring prefix = hasLabel ? line.substr(0, HEADER_VALUE_COL) : indent;
       const std::wstring value = hasLabel ? line.substr(HEADER_VALUE_COL) : line;
       const std::vector<std::wstring> valueLines =
-        Util::WordWrap(value, valueWidth, false, outputFlowed, false, expandTabSize);
+        TextUtil::WordWrap(value, valueWidth, false, outputFlowed, false, expandTabSize);
       if (valueLines.empty())
       {
         wlines.push_back(prefix);
@@ -7486,8 +7494,8 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   }
 
   const std::vector<std::wstring> bodyLines =
-    Util::WordWrap(wtext.substr(bodyStart), m_MaxViewLineLength, m_CurrentMessageProcessFlowed,
-                   outputFlowed, quoteWrap, expandTabSize);
+    TextUtil::WordWrap(wtext.substr(bodyStart), m_MaxViewLineLength, m_CurrentMessageProcessFlowed,
+                       outputFlowed, quoteWrap, expandTabSize);
   wlines.insert(wlines.end(), bodyLines.begin(), bodyLines.end());
   wlines.push_back(L"");
 
@@ -7513,7 +7521,7 @@ const std::vector<std::wstring>& Ui::GetCachedWordWrapLines(const std::string& p
   }
 
   // markdown only from built-in html converter, otherwise plain text urls
-  if (m_MarkdownView && m_CurrentMessageFromHtml && Util::GetHtmlToTextConvertCmd().empty())
+  if (m_MarkdownView && m_CurrentMessageFromHtml && ExtUtil::GetHtmlToTextConvertCmd().empty())
   {
     TextStyle::MarkdownAttrs attrs;
     attrs.m_Bold = m_AttrsBoldText;
@@ -7655,7 +7663,7 @@ std::string Ui::GetBodyText(Body& p_Body)
 
 void Ui::FilePickerOrStateFileList()
 {
-  std::string filePickerCmd = Util::GetFilePickerCmd();
+  std::string filePickerCmd = ExtUtil::GetFilePickerCmd();
   if (filePickerCmd.empty())
   {
     SetState(StateFileList);
@@ -7664,14 +7672,14 @@ void Ui::FilePickerOrStateFileList()
   {
     TerminalControlPause();
 
-    std::string outPath = Util::GetTempFilename(".txt");
+    std::string outPath = FileUtil::GetTempFilename(".txt");
     std::string command = filePickerCmd + " > " + outPath;
-    if (Util::System(command) == 0)
+    if (SysUtil::System(command) == 0)
     {
-      std::string filesStr = Util::ReadFile(outPath);
+      std::string filesStr = FileUtil::ReadFile(outPath);
       if (!filesStr.empty())
       {
-        std::vector<std::string> files = Util::Split(filesStr, '\n');
+        std::vector<std::string> files = StrUtil::Split(filesStr, '\n');
         for (const auto& file : files)
         {
           AddAttachmentPath(file);
@@ -7683,7 +7691,7 @@ void Ui::FilePickerOrStateFileList()
       LOG_WARNING("external command failed: %s", command.c_str());
     }
 
-    Util::DeleteFile(outPath);
+    FileUtil::DeleteFile(outPath);
     TerminalControlResume();
   }
 }
@@ -7693,9 +7701,9 @@ void Ui::AddAttachmentPath(const std::string& p_Path)
   if (p_Path.empty()) return;
 
   std::string filepaths;
-  const std::string& oldFilepaths = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
+  const std::string& oldFilepaths = StrUtil::Trim(StrUtil::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
 
-  const std::string newPath = Util::EscapePath(p_Path);
+  const std::string newPath = FileUtil::EscapePath(p_Path);
   if (oldFilepaths.empty())
   {
     filepaths = newPath;
@@ -7709,14 +7717,14 @@ void Ui::AddAttachmentPath(const std::string& p_Path)
     filepaths = " " + newPath;
   }
 
-  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldFilepaths + filepaths);
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = StrUtil::ToWString(oldFilepaths + filepaths);
   m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
 }
 
 void Ui::AddAddress(const std::string& p_Address)
 {
   std::string addAddress;
-  const std::string& oldAddress = Util::Trim(Util::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
+  const std::string& oldAddress = StrUtil::Trim(StrUtil::ToString(m_ComposeHeaderStr[m_ComposeHeaderLine]));
   if (oldAddress.empty())
   {
     addAddress = p_Address;
@@ -7730,13 +7738,13 @@ void Ui::AddAddress(const std::string& p_Address)
     addAddress = " " + p_Address;
   }
 
-  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(oldAddress + addAddress);
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = StrUtil::ToWString(oldAddress + addAddress);
   m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
 }
 
 void Ui::SetAddress(const std::string& p_Address)
 {
-  m_ComposeHeaderStr[m_ComposeHeaderLine] = Util::ToWString(p_Address);
+  m_ComposeHeaderStr[m_ComposeHeaderLine] = StrUtil::ToWString(p_Address);
   m_ComposeHeaderPos = m_ComposeHeaderStr[m_ComposeHeaderLine].size();
 }
 
@@ -7754,15 +7762,15 @@ std::wstring Ui::GetSignatureStr(bool p_NoPrefix /*= false*/)
   }
 
   std::string signatureStr;
-  static const std::string sigPriPath = Util::GetApplicationDir() + "signature.txt";
+  static const std::string sigPriPath = AppUtil::GetApplicationDir() + "signature.txt";
   static const std::string sigSecPath = std::string(getenv("HOME")) + "/.signature";
-  if (Util::IsReadableFile(sigPriPath))
+  if (FileUtil::IsReadableFile(sigPriPath))
   {
-    signatureStr = Util::ReadFile(sigPriPath);
+    signatureStr = FileUtil::ReadFile(sigPriPath);
   }
-  else if (Util::IsReadableFile(sigSecPath))
+  else if (FileUtil::IsReadableFile(sigSecPath))
   {
-    signatureStr = Util::ReadFile(sigSecPath);
+    signatureStr = FileUtil::ReadFile(sigSecPath);
   }
   else
   {
@@ -7781,8 +7789,8 @@ std::wstring Ui::GetSignatureStr(bool p_NoPrefix /*= false*/)
     signatureStr = "\n\n" + signatureStr; // prefix with line breaks
   }
 
-  std::wstring signatureWStr = Util::ToWString(signatureStr);
-  Util::StripCR(signatureWStr);
+  std::wstring signatureWStr = StrUtil::ToWString(signatureStr);
+  StrUtil::StripCR(signatureWStr);
 
   return signatureWStr;
 }
@@ -7824,7 +7832,7 @@ bool Ui::HandleListKey(int p_Key, int& p_Index)
 bool Ui::HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos)
 {
   // move and delete by character cluster, to not split emoji sequences or combining marks
-  p_Pos = Util::Bound(0, p_Pos, (int)p_Str.size());
+  p_Pos = StrUtil::Bound(0, p_Pos, (int)p_Str.size());
   if (p_Key == m_KeyLeft)
   {
     if (p_Pos > 0)
@@ -7855,35 +7863,35 @@ bool Ui::HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos)
   }
   else if (p_Key == m_KeyDeleteLineAfterCursor)
   {
-    Util::DeleteToNextMatch(p_Str, p_Pos, 0, L"\n");
+    TextUtil::DeleteToNextMatch(p_Str, p_Pos, 0, L"\n");
   }
   else if (p_Key == m_KeyDeleteLineBeforeCursor)
   {
-    Util::DeleteToPrevMatch(p_Str, p_Pos, -1, L"\n");
+    TextUtil::DeleteToPrevMatch(p_Str, p_Pos, -1, L"\n");
   }
   else if (p_Key == m_KeyBeginLine)
   {
-    Util::JumpToPrevMatch(p_Str, p_Pos, -1, L"\n");
+    TextUtil::JumpToPrevMatch(p_Str, p_Pos, -1, L"\n");
   }
   else if (p_Key == m_KeyEndLine)
   {
-    Util::JumpToNextMatch(p_Str, p_Pos, 0, L"\n");
+    TextUtil::JumpToNextMatch(p_Str, p_Pos, 0, L"\n");
   }
   else if (p_Key == m_KeyBackwardWord)
   {
-    Util::JumpToPrevMatch(p_Str, p_Pos, -2, L" \n");
+    TextUtil::JumpToPrevMatch(p_Str, p_Pos, -2, L" \n");
   }
   else if (p_Key == m_KeyForwardWord)
   {
-    Util::JumpToNextMatch(p_Str, p_Pos, 1, L" \n");
+    TextUtil::JumpToNextMatch(p_Str, p_Pos, 1, L" \n");
   }
   else if (p_Key == m_KeyBackwardKillWord)
   {
-    Util::DeleteToPrevMatch(p_Str, p_Pos, -1, L" \n");
+    TextUtil::DeleteToPrevMatch(p_Str, p_Pos, -1, L" \n");
   }
   else if (p_Key == m_KeyKillWord)
   {
-    Util::DeleteToNextMatch(p_Str, p_Pos, 0, L" \n");
+    TextUtil::DeleteToNextMatch(p_Str, p_Pos, 0, L" \n");
   }
   else
   {
@@ -7931,10 +7939,10 @@ bool Ui::HandleComposeKey(int p_Key)
   {
     if (m_CancelWithoutConfirm || Ui::PromptYesNo("Cancel message (y/n)?"))
     {
-      Util::RmDir(Util::GetPreviewTempDir());
+      FileUtil::RmDir(FileUtil::GetPreviewTempDir());
       UpdateUidFromIndex(true /* p_UserTriggered */);
       SetLastStateOrMessageList();
-      Util::RmDir(m_ComposeTempDirectory);
+      FileUtil::RmDir(m_ComposeTempDirectory);
       StopComposeBackup();
     }
   }
@@ -7943,7 +7951,7 @@ bool Ui::HandleComposeKey(int p_Key)
     if (ComposedMessageIsValid(true /* p_ForSend */) &&
         (m_SendWithoutConfirm || Ui::PromptYesNo("Send message (y/n)?")))
     {
-      Util::RmDir(Util::GetPreviewTempDir());
+      FileUtil::RmDir(FileUtil::GetPreviewTempDir());
       SendComposedMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
       if (m_ComposeDraftUid != 0)
@@ -7963,7 +7971,7 @@ bool Ui::HandleComposeKey(int p_Key)
     if (ComposedMessageIsValid(false /* p_ForSend */) &&
         (m_PostponeWithoutConfirm || Ui::PromptYesNo("Postpone message (y/n)?")))
     {
-      Util::RmDir(Util::GetPreviewTempDir());
+      FileUtil::RmDir(FileUtil::GetPreviewTempDir());
       UploadDraftMessage();
       UpdateUidFromIndex(true /* p_UserTriggered */);
       if (m_ComposeDraftUid != 0)
@@ -7980,7 +7988,7 @@ bool Ui::HandleComposeKey(int p_Key)
   }
   else if (p_Key == m_KeyExtEditor)
   {
-    const std::string editorCmd = Util::GetEditorCmd();
+    const std::string editorCmd = ExtUtil::GetEditorCmd();
     ExtEditor(editorCmd, m_ComposeMessageStr, m_ComposeMessagePos);
   }
   else if (p_Key == m_KeyRichHeader)
@@ -7995,7 +8003,7 @@ bool Ui::HandleComposeKey(int p_Key)
     m_ShowRichHeader = !m_ShowRichHeader;
 
     SetComposeStr(HeaderAll, L"");
-    SetComposeStr(HeaderFrom, Util::ToWString(GetDefaultFrom()));
+    SetComposeStr(HeaderFrom, StrUtil::ToWString(GetDefaultFrom()));
     SetComposeStr(HeaderTo, to);
     SetComposeStr(HeaderCc, cc);
     SetComposeStr(HeaderBcc, bcc);
@@ -8006,9 +8014,9 @@ bool Ui::HandleComposeKey(int p_Key)
   {
     if (m_CurrentMarkdownHtmlCompose)
     {
-      std::string tempFilePath = Util::GetPreviewTempDir() + "msg.html";
-      std::string htmlStr = MakeHtmlPart(Util::ToString(m_ComposeMessageStr));
-      Util::WriteFile(tempFilePath, htmlStr);
+      std::string tempFilePath = FileUtil::GetPreviewTempDir() + "msg.html";
+      std::string htmlStr = MakeHtmlPart(StrUtil::ToString(m_ComposeMessageStr));
+      FileUtil::WriteFile(tempFilePath, htmlStr);
       ExtHtmlPreview(tempFilePath);
     }
     else
@@ -8022,11 +8030,11 @@ bool Ui::HandleComposeKey(int p_Key)
   }
   else if (p_Key == m_KeySpell)
   {
-    const std::string spellCmd = Util::GetSpellCmd();
+    const std::string spellCmd = ExtUtil::GetSpellCmd();
     if (!spellCmd.empty())
     {
       size_t quoteStartPos =
-        !m_ComposeQuotedStart.empty() ? m_ComposeMessageStr.find(Util::ToWString(m_ComposeQuotedStart))
+        !m_ComposeQuotedStart.empty() ? m_ComposeMessageStr.find(StrUtil::ToWString(m_ComposeQuotedStart))
                                       : std::string::npos;
       if (quoteStartPos == std::string::npos)
       {
@@ -8094,14 +8102,14 @@ void Ui::AutoMoveSelectFolder()
     std::map<uint32_t, Header>::iterator hit = headers.find(uid);
     if (hit != headers.end())
     {
-      subject = Util::Trim(hit->second.GetSubject());
-      sender = Util::Trim(((folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo()));
+      subject = StrUtil::Trim(hit->second.GetSubject());
+      sender = StrUtil::Trim(((folder != m_SentFolder) ? hit->second.GetShortFrom() : hit->second.GetShortTo()));
     }
   }
 
-  Util::NormalizeSubject(subject, true /*p_ToLower*/);
-  Util::NormalizeName(sender);
-  Util::NormalizeName(selfSender);
+  MailUtil::NormalizeSubject(subject, true /*p_ToLower*/);
+  MailUtil::NormalizeName(sender);
+  MailUtil::NormalizeName(selfSender);
   const std::string subjectPrefix = subject.substr(0, subject.find(" ", minLengthPrefix));
 
   const std::string queryNotCurrent = (!folder.empty() ? " AND NOT folder:\"" + folder + "\"" : "");

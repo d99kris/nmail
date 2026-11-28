@@ -18,7 +18,8 @@
 #include "lineedit.h"
 #include "loghelp.h"
 #include "provider.h"
-#include "util.h"
+#include "strutil.h"
+#include "sysutil.h"
 
 // value column for aligned labels
 static const size_t valueColumn = 15;
@@ -70,7 +71,7 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
   std::string name;
   if (!Prompt("Name", name)) return false;
 
-  const std::string domain = Util::ToLower(email.substr(atPos + 1));
+  const std::string domain = StrUtil::ToLower(email.substr(atPos + 1));
   std::string detection = "arg";
   Provider::MxResult mxResult = Provider::MxResultMatch;
   if (providerId.empty())
@@ -105,7 +106,7 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
     {
       auto authIt = params.find("auth");
       const std::vector<std::string> auths =
-        Util::Trim(Util::Split((authIt != params.end()) ? authIt->second : "pass"));
+        StrUtil::Trim(StrUtil::Split((authIt != params.end()) ? authIt->second : "pass"));
       auth = auths.empty() ? "pass" : auths.front();
       if (auths.size() > 1)
       {
@@ -203,7 +204,7 @@ bool SetupWizard::PromptYesNo(const std::string& p_Name, bool& p_Value)
     std::string value = p_Value ? "y" : "n";
     if (!LineEdit::Read(Label(p_Name), value, true /* p_ReplaceOnType */)) return false;
 
-    value = Util::ToLower(value);
+    value = StrUtil::ToLower(value);
     if ((value == "y") || (value == "yes") || (value == "n") || (value == "no"))
     {
       p_Value = (value[0] == 'y');
@@ -232,7 +233,7 @@ bool SetupWizard::PromptPassword(const std::string& p_Name, std::shared_ptr<Conf
   for (int attempt = 1; attempt <= maxAttempts; ++attempt)
   {
     std::cout << Label(p_Name) << std::flush;
-    p_Pass = Util::GetPass();
+    p_Pass = SysUtil::GetPass();
     if (p_Pass.empty())
     {
       std::cout << Label("Error") << "password not specified\n";
@@ -310,7 +311,7 @@ bool SetupWizard::ResolveSetupArg(const std::string& p_Setup, std::string& p_Pro
     auto authIt = params.find("auth");
     if (authIt == params.end()) continue;
 
-    for (const auto& auth : Util::Trim(Util::Split(authIt->second)))
+    for (const auto& auth : StrUtil::Trim(StrUtil::Split(authIt->second)))
     {
       if ((auth != "pass") && (auth == p_Setup))
       {

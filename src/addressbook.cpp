@@ -1,6 +1,6 @@
 // addressbook.cpp
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -13,13 +13,15 @@
 
 #include <sqlite_modern_cpp.h>
 
+#include "apputil.h"
 #include "cacheutil.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "log.h"
 #include "loghelp.h"
 #include "maphelp.h"
 #include "sqlitehelp.h"
-#include "util.h"
+#include "strutil.h"
 
 std::mutex AddressBook::m_Mutex;
 std::string AddressBook::m_DbPath;
@@ -38,8 +40,8 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
 
   if (m_AddressBookEncrypt)
   {
-    Util::RmDir(GetAddressBookTempDbDir());
-    Util::MkDir(GetAddressBookTempDbDir());
+    FileUtil::RmDir(GetAddressBookTempDbDir());
+    FileUtil::MkDir(GetAddressBookTempDbDir());
     CacheUtil::DecryptCacheDir(m_Pass, GetAddressBookCacheDbDir(), GetAddressBookTempDbDir());
     m_DbPath = GetAddressBookTempDbDir() + "addresses.sqlite";
   }
@@ -60,7 +62,7 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
   catch (const sqlite::sqlite_exception& ex)
   {
     const int code = ex.get_code();
-    if (Util::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB)))
+    if (AppUtil::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB)))
     {
       HANDLE_SQLITE_EXCEPTION(ex);
     }
@@ -70,7 +72,7 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
     LOG_WARNING("addressbook db corrupt (%d: \"%s\"), renaming to %s", code, ex.what(), corruptDbPath.c_str());
     CloseDb();
     rename(m_DbPath.c_str(), corruptDbPath.c_str());
-    Util::DeleteFile(m_DbPath + "-journal");
+    FileUtil::DeleteFile(m_DbPath + "-journal");
     OpenDb();
   }
 
@@ -98,10 +100,10 @@ void AddressBook::Cleanup()
 
   if (m_AddressBookEncrypt && m_Dirty)
   {
-    if (!Util::GetReadOnly())
+    if (!AppUtil::GetReadOnly())
     {
-      Util::RmDir(GetAddressBookCacheDbDir());
-      Util::MkDir(GetAddressBookCacheDbDir());
+      FileUtil::RmDir(GetAddressBookCacheDbDir());
+      FileUtil::MkDir(GetAddressBookCacheDbDir());
       CacheUtil::EncryptCacheDir(m_Pass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir());
       m_Dirty = false;
     }
@@ -114,7 +116,7 @@ void AddressBook::Cleanup()
 
 void AddressBook::OpenDb()
 {
-  if (Util::GetReadOnly())
+  if (AppUtil::GetReadOnly())
   {
     sqlite::sqlite_config config;
     config.flags = sqlite::OpenFlags::READONLY;
@@ -128,7 +130,7 @@ void AddressBook::OpenDb()
   // custom function used by address filter, as sqlite's built-in like / lower() only handle ascii
   m_Db->define("nmfold", [](std::string p_Str) -> std::string
   {
-    return Util::ToFold(p_Str);
+    return StrUtil::ToFold(p_Str);
   });
 }
 
@@ -142,12 +144,12 @@ bool AddressBook::ChangePass(const bool p_CacheEncrypt,
 {
   if (!p_CacheEncrypt) return true;
 
-  Util::RmDir(GetAddressBookTempDbDir());
-  Util::MkDir(GetAddressBookTempDbDir());
+  FileUtil::RmDir(GetAddressBookTempDbDir());
+  FileUtil::MkDir(GetAddressBookTempDbDir());
   if (!CacheUtil::DecryptCacheDir(p_OldPass, GetAddressBookCacheDbDir(), GetAddressBookTempDbDir())) return false;
 
-  Util::RmDir(GetAddressBookCacheDbDir());
-  Util::MkDir(GetAddressBookCacheDbDir());
+  FileUtil::RmDir(GetAddressBookCacheDbDir());
+  FileUtil::MkDir(GetAddressBookCacheDbDir());
   if (!CacheUtil::EncryptCacheDir(p_NewPass, GetAddressBookTempDbDir(), GetAddressBookCacheDbDir())) return false;
 
   return true;
@@ -157,7 +159,7 @@ void AddressBook::Add(const std::string& p_MsgId, const std::set<std::string>& p
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  if (!m_Db || Util::GetReadOnly()) return;
+  if (!m_Db || AppUtil::GetReadOnly()) return;
 
   try
   {
@@ -205,7 +207,7 @@ void AddressBook::AddFrom(const std::string& p_Address)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  if (!m_Db || Util::GetReadOnly()) return;
+  if (!m_Db || AppUtil::GetReadOnly()) return;
 
   try
   {
@@ -295,7 +297,7 @@ void AddressBook::InitCacheDir()
   static const int version = 8; // note: keep synchronized with ImapIndex (for now)
   const std::string cacheDir = GetAddressBookCacheDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_AddressBookEncrypt);
-  Util::MkDir(GetAddressBookCacheDbDir());
+  FileUtil::MkDir(GetAddressBookCacheDbDir());
 }
 
 std::string AddressBook::GetAddressBookCacheDir()
@@ -310,5 +312,5 @@ std::string AddressBook::GetAddressBookCacheDbDir()
 
 std::string AddressBook::GetAddressBookTempDbDir()
 {
-  return Util::GetTempDir() + std::string("addressbookdb/");
+  return FileUtil::GetTempDir() + std::string("addressbookdb/");
 }

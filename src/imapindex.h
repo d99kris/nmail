@@ -1,6 +1,6 @@
 // imapcacheindex.h
 //
-// Copyright (c) 2020-2021 Kristofer Berggren
+// Copyright (c) 2020-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -19,7 +19,6 @@
 #include "log.h"
 #include "searchengine.h"
 #include "status.h"
-#include "util.h"
 
 class ImapIndex
 {

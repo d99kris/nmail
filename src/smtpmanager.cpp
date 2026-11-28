@@ -1,6 +1,6 @@
 // smtpmanager.cpp
 //
-// Copyright (c) 2019-2024 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,7 +10,10 @@
 #include <sys/ioctl.h>
 #include <sys/select.h>
 
+#include "apputil.h"
+#include "fileutil.h"
 #include "loghelp.h"
+#include "mailutil.h"
 #include "smtp.h"
 
 SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
@@ -170,11 +173,11 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
     from = Contact(m_Address, m_Name);
   }
 
-  const std::vector<Contact> to = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_To));
-  const std::vector<Contact> cc = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_Cc));
-  const std::vector<Contact> bcc = Contact::FromStrings(Util::SplitAddrsUnquote(p_Action.m_Bcc));
+  const std::vector<Contact> to = Contact::FromStrings(MailUtil::SplitAddrsUnquote(p_Action.m_To));
+  const std::vector<Contact> cc = Contact::FromStrings(MailUtil::SplitAddrsUnquote(p_Action.m_Cc));
+  const std::vector<Contact> bcc = Contact::FromStrings(MailUtil::SplitAddrsUnquote(p_Action.m_Bcc));
   const std::string& ref = p_Action.m_RefMsgId;
-  const std::vector<std::string> att = Util::SplitPaths(p_Action.m_Att);
+  const std::vector<std::string> att = FileUtil::SplitPaths(p_Action.m_Att);
   const bool flow = p_Action.m_FormatFlowed;
 
   Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Address, m_Timeout);

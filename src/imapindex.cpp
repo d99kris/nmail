@@ -1,6 +1,6 @@
 // imapindex.cpp
 //
-// Copyright (c) 2020-2024 Kristofer Berggren
+// Copyright (c) 2020-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,9 +10,11 @@
 #include <unistd.h>
 
 #include "addressbook.h"
+#include "apputil.h"
 #include "body.h"
 #include "cacheutil.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "header.h"
 #include "imapcache.h"
 #include "lockfile.h"
@@ -63,8 +65,8 @@ bool ImapIndex::ChangePass(const bool p_CacheEncrypt,
   InitCacheTempDir();
   if (!CacheUtil::DecryptCacheDir(p_OldPass, GetCacheIndexDbDir(), GetCacheIndexDbTempDir())) return false;
 
-  Util::RmDir(GetCacheIndexDbDir());
-  Util::MkDir(GetCacheIndexDbDir());
+  FileUtil::RmDir(GetCacheIndexDbDir());
+  FileUtil::MkDir(GetCacheIndexDbDir());
   if (!CacheUtil::EncryptCacheDir(p_NewPass, GetCacheIndexDbTempDir(), GetCacheIndexDbDir())) return false;
 
   CleanupCacheTempDir();
@@ -167,7 +169,7 @@ void ImapIndex::Process()
 {
   LOG_DEBUG("start process");
 
-  AddressBook::Init(Util::GetAddressBookEncrypt(), m_Pass);
+  AddressBook::Init(AppUtil::GetAddressBookEncrypt(), m_Pass);
 
   InitCacheIndexDir();
   if (m_CacheIndexEncrypt)
@@ -237,8 +239,8 @@ void ImapIndex::Process()
   m_SearchEngine.reset();
   if (m_CacheIndexEncrypt && m_Dirty)
   {
-    Util::RmDir(GetCacheIndexDbDir());
-    Util::MkDir(GetCacheIndexDbDir());
+    FileUtil::RmDir(GetCacheIndexDbDir());
+    FileUtil::MkDir(GetCacheIndexDbDir());
     CacheUtil::EncryptCacheDir(m_Pass, GetCacheIndexDbTempDir(), GetCacheIndexDbDir());
     CleanupCacheTempDir();
     m_Dirty = false;
@@ -455,7 +457,7 @@ std::string ImapIndex::GetCacheIndexDbDir()
 
 std::string ImapIndex::GetCacheIndexDbTempDir()
 {
-  return Util::GetTempDir() + std::string("searchindexdb/");
+  return FileUtil::GetTempDir() + std::string("searchindexdb/");
 }
 
 void ImapIndex::InitCacheIndexDir()
@@ -463,18 +465,18 @@ void ImapIndex::InitCacheIndexDir()
   static const int version = 8; // note: keep synchronized with AddressBook (for now)
   const std::string cacheDir = GetCacheIndexDir();
   CacheUtil::CommonInitCacheDir(cacheDir, version, m_CacheIndexEncrypt);
-  Util::MkDir(GetCacheIndexDbDir());
+  FileUtil::MkDir(GetCacheIndexDbDir());
 }
 
 void ImapIndex::InitCacheTempDir()
 {
-  Util::RmDir(GetCacheIndexDbTempDir());
-  Util::MkDir(GetCacheIndexDbTempDir());
+  FileUtil::RmDir(GetCacheIndexDbTempDir());
+  FileUtil::MkDir(GetCacheIndexDbTempDir());
 }
 
 void ImapIndex::CleanupCacheTempDir()
 {
-  Util::RmDir(GetCacheIndexDbTempDir());
+  FileUtil::RmDir(GetCacheIndexDbTempDir());
 }
 
 void ImapIndex::SetStatus(uint32_t p_Flags, float p_Progress /* = -1 */)

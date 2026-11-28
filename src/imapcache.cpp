@@ -1,6 +1,6 @@
 // imapcache.cpp
 //
-// Copyright (c) 2020-2025 Kristofer Berggren
+// Copyright (c) 2020-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -11,15 +11,17 @@
 
 #include <sqlite_modern_cpp.h>
 
+#include "apputil.h"
 #include "body.h"
 #include "cacheutil.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "flag.h"
 #include "header.h"
 #include "lockfile.h"
 #include "loghelp.h"
 #include "maphelp.h"
-#include "util.h"
+#include "strutil.h"
 #include "serialization.h"
 #include "sethelp.h"
 #include "sqlitehelp.h"
@@ -39,7 +41,7 @@ struct ImapCache::DbConnection
 
   void OpenDb()
   {
-    if (Util::GetReadOnly())
+    if (AppUtil::GetReadOnly())
     {
       sqlite::sqlite_config config;
       config.flags = sqlite::OpenFlags::READONLY;
@@ -85,7 +87,7 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
   if (!p_CacheEncrypt) return true;
 
   std::string headersDir = GetCacheDbDir(HeadersDb);
-  std::vector<std::string> headerFiles = Util::ListDir(headersDir);
+  std::vector<std::string> headerFiles = FileUtil::ListDir(headersDir);
   for (const auto& headerFile : headerFiles)
   {
     std::string path = headersDir + headerFile;
@@ -94,13 +96,13 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
 
     if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
 
-    Util::DeleteFile(tmpPath);
+    FileUtil::DeleteFile(tmpPath);
 
     std::cout << ".";
   }
 
   std::string bodysDir = GetCacheDbDir(BodysDb);
-  std::vector<std::string> bodyFiles = Util::ListDir(bodysDir);
+  std::vector<std::string> bodyFiles = FileUtil::ListDir(bodysDir);
   for (const auto& bodyFile : bodyFiles)
   {
     std::string path = bodysDir + bodyFile;
@@ -109,13 +111,13 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
 
     if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
 
-    Util::DeleteFile(tmpPath);
+    FileUtil::DeleteFile(tmpPath);
 
     std::cout << ".";
   }
 
   std::string uidFlagsDir = GetCacheDbDir(UidFlagsDb);
-  std::vector<std::string> uidFlagFiles = Util::ListDir(uidFlagsDir);
+  std::vector<std::string> uidFlagFiles = FileUtil::ListDir(uidFlagsDir);
   for (const auto& uidFlagFile : uidFlagFiles)
   {
     std::string path = uidFlagsDir + uidFlagFile;
@@ -124,13 +126,13 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
 
     if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
 
-    Util::DeleteFile(tmpPath);
+    FileUtil::DeleteFile(tmpPath);
 
     std::cout << ".";
   }
 
   std::string validityDir = GetCacheDbDir(ValidityDb);
-  std::vector<std::string> validityFiles = Util::ListDir(validityDir);
+  std::vector<std::string> validityFiles = FileUtil::ListDir(validityDir);
   for (const auto& validityFile : validityFiles)
   {
     std::string path = validityDir + validityFile;
@@ -139,14 +141,14 @@ bool ImapCache::ChangePass(const bool p_CacheEncrypt,
 
     if (!Crypto::AESEncryptFile(tmpPath, path, p_NewPass)) return false;
 
-    Util::DeleteFile(tmpPath);
+    FileUtil::DeleteFile(tmpPath);
 
     std::cout << ".";
   }
 
   std::string path = GetHeadersFoldersPath();
-  std::string data = Crypto::AESDecrypt(Util::ReadFile(path), p_OldPass);
-  Util::WriteFile(path, Crypto::AESEncrypt(data, p_NewPass));
+  std::string data = Crypto::AESDecrypt(FileUtil::ReadFile(path), p_OldPass);
+  FileUtil::WriteFile(path, Crypto::AESEncrypt(data, p_NewPass));
 
   std::cout << "\n";
   return true;
@@ -166,7 +168,7 @@ void ImapCache::SetFolders(const std::set<std::string>& p_Folders)
   LOG_DURATION();
   if (p_Folders.empty()) return; // sanity check
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::set<std::string> deletedFolders;
   {
@@ -213,7 +215,7 @@ void ImapCache::SetUids(const std::string& p_Folder, const std::set<uint32_t>& p
 {
   LOG_DURATION();
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
 
@@ -359,7 +361,7 @@ void ImapCache::SetHeaders(const std::string& p_Folder, const std::map<uint32_t,
   LOG_DURATION();
   if (p_Headers.empty()) return;
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
@@ -420,7 +422,7 @@ void ImapCache::SetFlags(const std::string& p_Folder, const std::map<uint32_t, u
 {
   LOG_DURATION();
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
@@ -506,7 +508,7 @@ void ImapCache::SetBodys(const std::string& p_Folder, const std::map<uint32_t, B
   LOG_DURATION();
   if (p_Bodys.empty()) return;
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
@@ -539,7 +541,7 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_Uid)
     int storedUid = -1;
 
     const std::string commonFolder = "common";
-    const std::string dbFolder = Util::ToHex(p_Folder);
+    const std::string dbFolder = StrUtil::ToHex(p_Folder);
     if (storedUid == -1)
     {
       std::shared_ptr<DbConnection> dbCon = GetDb(ValidityDb, commonFolder,
@@ -577,7 +579,7 @@ bool ImapCache::CheckUidValidity(const std::string& p_Folder, int p_Uid)
 
     if (isLegacy || (p_Uid != storedUid))
     {
-      if (Util::GetReadOnly())
+      if (AppUtil::GetReadOnly())
       {
         LOG_INFO("folder %s skip uidvalidity update %d", p_Folder.c_str(), p_Uid);
       }
@@ -628,7 +630,7 @@ void ImapCache::SetFlagSeen(const std::string& p_Folder, const std::set<uint32_t
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids, p_Value));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
@@ -654,7 +656,7 @@ void ImapCache::ClearFolder(const std::string& p_Folder)
 {
   LOG_DEBUG_FUNC(STR(p_Folder));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
 
@@ -707,7 +709,7 @@ void ImapCache::DeleteUids(const std::string& p_Folder, const std::set<uint32_t>
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
@@ -744,7 +746,7 @@ void ImapCache::DeleteFlags(const std::string& p_Folder, const std::set<uint32_t
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(UidFlagsDb, p_Folder, true /* p_Writable */);
@@ -770,7 +772,7 @@ void ImapCache::DeleteHeaders(const std::string& p_Folder, const std::set<uint32
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(HeadersDb, p_Folder, true /* p_Writable */);
@@ -796,7 +798,7 @@ void ImapCache::DeleteBodys(const std::string& p_Folder, const std::set<uint32_t
 {
   LOG_DEBUG_FUNC(STR(p_Folder, p_Uids));
 
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   std::shared_ptr<DbConnection> dbCon = GetDb(BodysDb, p_Folder, true /* p_Writable */);
@@ -820,21 +822,21 @@ void ImapCache::DeleteBodys(const std::string& p_Folder, const std::set<uint32_t
 bool ImapCache::Export(const std::string& p_Path)
 {
   // @todo: determine what is correct/portable MailDir format
-  Util::MkDir(p_Path);
-  Util::MkDir(p_Path + "/new");
-  Util::MkDir(p_Path + "/tmp");
-  Util::MkDir(p_Path + "/cur");
+  FileUtil::MkDir(p_Path);
+  FileUtil::MkDir(p_Path + "/new");
+  FileUtil::MkDir(p_Path + "/tmp");
+  FileUtil::MkDir(p_Path + "/cur");
 
   const std::set<std::string> folders = GetFolders();
   for (const auto& folder : folders)
   {
     std::string folderName = folder;
-    Util::ReplaceString(folderName, "/", "_");
+    StrUtil::ReplaceString(folderName, "/", "_");
     std::string folderPath = p_Path + "/" + folderName;
-    Util::MkDir(folderPath);
-    Util::MkDir(folderPath + "/new");
-    Util::MkDir(folderPath + "/tmp");
-    Util::MkDir(folderPath + "/cur");
+    FileUtil::MkDir(folderPath);
+    FileUtil::MkDir(folderPath + "/new");
+    FileUtil::MkDir(folderPath + "/tmp");
+    FileUtil::MkDir(folderPath + "/cur");
 
     const std::set<uint32_t> uids = GetUids(folder);
     if (uids.empty()) continue;
@@ -846,7 +848,7 @@ bool ImapCache::Export(const std::string& p_Path)
       const uint32_t uid = body.first;
       const std::string& data = body.second.GetData();
       const std::string path = folderPath + "/cur/" + std::to_string(uid) + ".eml";
-      Util::WriteFile(path, data);
+      FileUtil::WriteFile(path, data);
     }
   }
   return true;
@@ -857,11 +859,11 @@ void ImapCache::InitHeadersCache()
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   static const int version = 2;
   CacheUtil::CommonInitCacheDir(GetCacheDir(HeadersDb), version, m_CacheEncrypt);
-  Util::MkDir(GetCacheDbDir(HeadersDb));
+  FileUtil::MkDir(GetCacheDbDir(HeadersDb));
   if (m_CacheEncrypt)
   {
-    Util::RmDir(GetTempDbDir(HeadersDb));
-    Util::MkDir(GetTempDbDir(HeadersDb));
+    FileUtil::RmDir(GetTempDbDir(HeadersDb));
+    FileUtil::MkDir(GetTempDbDir(HeadersDb));
   }
 }
 
@@ -876,11 +878,11 @@ void ImapCache::InitBodysCache()
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   static const int version = 2;
   CacheUtil::CommonInitCacheDir(GetCacheDir(BodysDb), version, m_CacheEncrypt);
-  Util::MkDir(GetCacheDbDir(BodysDb));
+  FileUtil::MkDir(GetCacheDbDir(BodysDb));
   if (m_CacheEncrypt)
   {
-    Util::RmDir(GetTempDbDir(BodysDb));
-    Util::MkDir(GetTempDbDir(BodysDb));
+    FileUtil::RmDir(GetTempDbDir(BodysDb));
+    FileUtil::MkDir(GetTempDbDir(BodysDb));
   }
 }
 
@@ -895,11 +897,11 @@ void ImapCache::InitUidFlagsCache()
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   static const int version = 2;
   CacheUtil::CommonInitCacheDir(GetCacheDir(UidFlagsDb), version, m_CacheEncrypt);
-  Util::MkDir(GetCacheDbDir(UidFlagsDb));
+  FileUtil::MkDir(GetCacheDbDir(UidFlagsDb));
   if (m_CacheEncrypt)
   {
-    Util::RmDir(GetTempDbDir(UidFlagsDb));
-    Util::MkDir(GetTempDbDir(UidFlagsDb));
+    FileUtil::RmDir(GetTempDbDir(UidFlagsDb));
+    FileUtil::MkDir(GetTempDbDir(UidFlagsDb));
   }
 }
 
@@ -914,11 +916,11 @@ void ImapCache::InitValidityCache()
   std::lock_guard<std::mutex> cacheLock(m_CacheMutex);
   static const int version = 1;
   CacheUtil::CommonInitCacheDir(GetCacheDir(ValidityDb), version, m_CacheEncrypt);
-  Util::MkDir(GetCacheDbDir(ValidityDb));
+  FileUtil::MkDir(GetCacheDbDir(ValidityDb));
   if (m_CacheEncrypt)
   {
-    Util::RmDir(GetTempDbDir(ValidityDb));
-    Util::MkDir(GetTempDbDir(ValidityDb));
+    FileUtil::RmDir(GetTempDbDir(ValidityDb));
+    FileUtil::MkDir(GetTempDbDir(ValidityDb));
   }
 }
 
@@ -952,7 +954,7 @@ std::string ImapCache::GetCacheDbDir(ImapCache::DbType p_DbType)
 
 std::string ImapCache::GetTempDbDir(ImapCache::DbType p_DbType)
 {
-  return Util::GetTempDir() + GetDbTypeName(p_DbType) + std::string("/");
+  return FileUtil::GetTempDir() + GetDbTypeName(p_DbType) + std::string("/");
 }
 
 std::string ImapCache::GetHeadersFoldersPath()
@@ -962,7 +964,7 @@ std::string ImapCache::GetHeadersFoldersPath()
 
 std::string ImapCache::GetDbName(const std::string& p_Folder)
 {
-  return (m_CacheEncrypt ? Crypto::SHA256(p_Folder) : Util::ToHex(p_Folder)) + ".sqlite";
+  return (m_CacheEncrypt ? Crypto::SHA256(p_Folder) : StrUtil::ToHex(p_Folder)) + ".sqlite";
 }
 
 std::string ImapCache::GetDbPath(ImapCache::DbType p_DbType, const std::string& p_Folder)
@@ -975,13 +977,13 @@ std::string ImapCache::GetDbPath(ImapCache::DbType p_DbType, const std::string& 
   {
     dbPath = GetTempDbDir(p_DbType) + dbName;
     std::string cacheDbPath = GetCacheDbDir(p_DbType) + dbName;
-    if (!Util::Exists(dbPath))
+    if (!FileUtil::Exists(dbPath))
     {
-      if (Util::Exists(cacheDbPath))
+      if (FileUtil::Exists(cacheDbPath))
       {
         if (!Crypto::AESDecryptFile(cacheDbPath, dbPath, m_Pass))
         {
-          Util::DeleteFile(dbPath);
+          FileUtil::DeleteFile(dbPath);
         }
       }
     }
@@ -1005,7 +1007,7 @@ void ImapCache::WriteDb(ImapCache::DbType p_DbType, const std::string& p_Folder)
     std::string cacheDbPath = GetCacheDbDir(p_DbType) + dbName;
     if (!Crypto::AESEncryptFile(dbPath, cacheDbPath, m_Pass))
     {
-      Util::DeleteFile(cacheDbPath);
+      FileUtil::DeleteFile(cacheDbPath);
     }
   }
 }
@@ -1059,7 +1061,7 @@ std::shared_ptr<ImapCache::DbConnection> ImapCache::GetDb(ImapCache::DbType p_Db
   {
     // open new connection
     const std::string& dbPath = GetDbPath(p_DbType, p_Folder);
-    if (!Util::Exists(dbPath))
+    if (!FileUtil::Exists(dbPath))
     {
       CreateDb(p_DbType, dbPath);
     }
@@ -1073,16 +1075,16 @@ std::shared_ptr<ImapCache::DbConnection> ImapCache::GetDb(ImapCache::DbType p_Db
     catch (const sqlite::sqlite_exception& ex)
     {
       const int code = ex.get_code();
-      if (Util::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB))) throw;
+      if (AppUtil::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB))) throw;
 
       // discard corrupt db and start over with an empty one, cache is fetched anew from server
       LOG_WARNING("cache db corrupt (%d: \"%s\"), recreating %s", code, ex.what(), dbPath.c_str());
       dbConnection.reset();
-      Util::DeleteFile(dbPath);
-      Util::DeleteFile(dbPath + "-journal");
+      FileUtil::DeleteFile(dbPath);
+      FileUtil::DeleteFile(dbPath + "-journal");
       if (m_CacheEncrypt)
       {
-        Util::DeleteFile(GetCacheDbDir(p_DbType) + GetDbName(p_Folder));
+        FileUtil::DeleteFile(GetCacheDbDir(p_DbType) + GetDbName(p_Folder));
       }
 
       CreateDb(p_DbType, dbPath);
@@ -1146,10 +1148,10 @@ void ImapCache::CloseDbs(ImapCache::DbType p_DbType)
 
 std::string ImapCache::ReadCacheFile(const std::string& p_Path)
 {
-  return m_CacheEncrypt ? Crypto::AESDecrypt(Util::ReadFile(p_Path), m_Pass) : Util::ReadFile(p_Path);
+  return m_CacheEncrypt ? Crypto::AESDecrypt(FileUtil::ReadFile(p_Path), m_Pass) : FileUtil::ReadFile(p_Path);
 }
 
 void ImapCache::WriteCacheFile(const std::string& p_Path, const std::string& p_Str)
 {
-  Util::WriteFile(p_Path, m_CacheEncrypt ? Crypto::AESEncrypt(p_Str, m_Pass) : p_Str);
+  FileUtil::WriteFile(p_Path, m_CacheEncrypt ? Crypto::AESEncrypt(p_Str, m_Pass) : p_Str);
 }

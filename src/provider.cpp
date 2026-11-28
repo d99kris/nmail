@@ -20,7 +20,7 @@
 #include "config.h"
 #include "loghelp.h"
 #include "providers.h"
-#include "util.h"
+#include "strutil.h"
 
 static const size_t providerCount = sizeof(EmbeddedProviders) / sizeof(EmbeddedProviders[0]);
 
@@ -50,9 +50,9 @@ static std::vector<std::string> GetList(const std::map<std::string, std::string>
   auto it = p_Params.find(p_Key);
   if (it == p_Params.end()) return list;
 
-  for (const auto& item : Util::Split(it->second, ','))
+  for (const auto& item : StrUtil::Split(it->second, ','))
   {
-    const std::string value = Util::ToLower(Util::Trim(item));
+    const std::string value = StrUtil::ToLower(StrUtil::Trim(item));
     if (!value.empty())
     {
       list.push_back(value);
@@ -86,7 +86,7 @@ std::map<std::string, std::string> Provider::GetParams(const std::string& p_Id)
 
 std::string Provider::FindByDomain(const std::string& p_Domain)
 {
-  const std::string domain = Util::ToLower(p_Domain);
+  const std::string domain = StrUtil::ToLower(p_Domain);
   for (const auto& provider : GetProviders())
   {
     const std::vector<std::string> domains = GetList(provider.second, "domains");
@@ -207,7 +207,7 @@ bool Provider::GetMxHosts(const std::string& p_Domain, std::vector<std::string>&
       const int pref = (pos[0] << 8) | pos[1];
       if (dn_expand(buf, end, pos + 2, name, sizeof(name)) >= 0)
       {
-        prefHosts.push_back(std::make_pair(pref, Util::ToLower(name)));
+        prefHosts.push_back(std::make_pair(pref, StrUtil::ToLower(name)));
       }
     }
 

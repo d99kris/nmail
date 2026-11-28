@@ -118,12 +118,12 @@ set(THEMES_HEADER "${GENERATED_DIR}/themes.h")
 set(PROVIDERS_HEADER "${GENERATED_DIR}/providers.h")
 
 # Volatile build metadata (origin, git sha, git branch) is written to a
-# generated buildinfo.h and included only from the two source files that consume
-# it (src/util.cpp, src/version.cpp), rather than passed target-wide via
+# generated buildinfo.h and included only from the source file that consumes
+# it (src/version.cpp), rather than passed target-wide via
 # target_compile_definitions() below. The git sha/branch change on every commit,
 # and a target-wide define would recompile all of src/ each time; configure_file
 # only rewrites the header when a value actually changes, so an unchanged sha
-# is a no-op and a changed one recompiles just those two files.
+# is a no-op and a changed one recompiles just that file.
 set(BUILDINFO_HEADER "${GENERATED_DIR}/buildinfo.h")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/buildinfo.h.in"
                "${BUILDINFO_HEADER}" @ONLY)
@@ -187,12 +187,16 @@ add_executable(nmail
   ext/sqlite_modern_cpp/hdr/sqlite_modern_cpp.h
   src/addressbook.cpp
   src/addressbook.h
+  src/apputil.cpp
+  src/apputil.h
   src/auth.cpp
   src/auth.h
   src/body.cpp
   src/body.h
   src/cacheutil.cpp
   src/cacheutil.h
+  src/colorutil.cpp
+  src/colorutil.h
   src/config.cpp
   src/config.h
   src/contact.cpp
@@ -203,6 +207,10 @@ add_executable(nmail
   src/debuginfo.h
   src/encoding.cpp
   src/encoding.h
+  src/extutil.cpp
+  src/extutil.h
+  src/fileutil.cpp
+  src/fileutil.h
   src/flag.cpp
   src/flag.h
   src/header.cpp
@@ -225,9 +233,13 @@ add_executable(nmail
   src/log.h
   src/loghelp.cpp
   src/loghelp.h
+  src/mailutil.cpp
+  src/mailutil.h
   src/main.cpp
   src/offlinequeue.cpp
   src/offlinequeue.h
+  src/passutil.cpp
+  src/passutil.h
   src/provider.cpp
   src/provider.h
   src/sasl.cpp
@@ -247,8 +259,14 @@ add_executable(nmail
   src/sqlitehelp.h
   src/status.cpp
   src/status.h
+  src/strutil.cpp
+  src/strutil.h
+  src/sysutil.cpp
+  src/sysutil.h
   src/textstyle.cpp
   src/textstyle.h
+  src/textutil.cpp
+  src/textutil.h
   src/textwrap.cpp
   src/textwrap.h
   src/theme.cpp
@@ -257,10 +275,12 @@ add_executable(nmail
   src/ui.h
   src/uikeyconfig.cpp
   src/uikeyconfig.h
+  src/uikeydump.cpp
+  src/uikeydump.h
   src/uikeyinput.cpp
   src/uikeyinput.h
-  src/util.cpp
-  src/util.h
+  src/upgrade.cpp
+  src/upgrade.h
   src/uuid.cpp
   src/uuid.h
   src/version.cpp
@@ -371,8 +391,8 @@ if(TARGET_TRIPLE MATCHES "musl")
   target_compile_definitions(nmail PRIVATE NMAIL_BUILD_MUSL=1)
   # musl has no execinfo/backtrace() and libgcc's _Unwind_Backtrace cannot step
   # past musl's signal trampoline, so the crash handler walks the frame-pointer
-  # chain seeded from the signal ucontext (see Util::SignalCrashHandler /
-  # FramePointerBacktrace in src/util.cpp). That walk needs a maintained frame
+  # chain seeded from the signal ucontext (see AppUtil::SignalCrashHandler /
+  # FramePointerBacktrace in src/apputil.cpp). That walk needs a maintained frame
   # pointer in nmail's own frames, which -O2 otherwise omits. Scoped to the nmail
   # target (not the static deps) and to musl only -- the glibc/macOS builds use
   # backtrace() and are unaffected. Paired with -no-pie on the musl link line

@@ -5,10 +5,7 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
-#include <cerrno>
-#include <climits>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <memory>
 
@@ -17,56 +14,46 @@
 
 #include "apathy/path.hpp"
 
-#include "addressbook.h"
+#include "apputil.h"
 #include "auth.h"
 #include "cacheutil.h"
 #include "config.h"
 #include "crypto.h"
 #include "debuginfo.h"
+#include "extutil.h"
+#include "fileutil.h"
 #include "imapmanager.h"
 #include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
 #include "offlinequeue.h"
+#include "passutil.h"
 #include "sasl.h"
 #include "sethelp.h"
 #include "setupwizard.h"
 #include "smtpmanager.h"
+#include "strutil.h"
+#include "sysutil.h"
 #include "theme.h"
 #include "ui.h"
-#include "uikeyconfig.h"
-#include "uikeyinput.h"
-#include "util.h"
+#include "uikeydump.h"
+#include "upgrade.h"
 #include "version.h"
 
 static bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
                            const uint16_t p_Imapport, const std::string& p_Smtphost,
                            const uint16_t p_Smtpport);
-static bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix);
-static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
-                                std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
-                                std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
-static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
-                                       bool p_SetupAllowCacheEncrypt,
-                                       std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
-                                       std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig);
 static bool ReportConfigError(const std::string& p_Param);
 static void ShowHelp();
 static void ShowVersion();
-static int Upgrade(const std::string& p_Version, mode_t p_Umask);
 static void LogSystemInfo();
-static bool ChangePasswords(std::shared_ptr<Config> p_MainConfig,
-                            std::shared_ptr<Config> p_SecretConfig);
-static bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
-                                 const std::string& p_OldPass, const std::string& p_NewPass);
-static void KeyDump();
 static std::string GetDisplayPath(const std::string& p_Path);
 
 int main(int argc, char* argv[])
 {
   // Defaults
   const mode_t origUmask = umask(S_IRWXG | S_IRWXO);
-  Util::SetApplicationDir(Util::GetDefaultApplicationDir());
+  AppUtil::SetApplicationDir(AppUtil::GetDefaultApplicationDir());
   Log::SetVerboseLevel(Log::INFO_LEVEL);
   bool online = true;
   bool changePass = false;
@@ -91,7 +78,7 @@ int main(int argc, char* argv[])
     else if (((*it == "-d") || (*it == "--confdir")) && (std::distance(it + 1, args.end()) > 0))
     {
       ++it;
-      Util::SetApplicationDir(*it);
+      AppUtil::SetApplicationDir(*it);
     }
     else if ((*it == "-e") || (*it == "--verbose"))
     {
@@ -176,16 +163,16 @@ int main(int argc, char* argv[])
 
   if (upgrade)
   {
-    return Upgrade(upgradeVersion, origUmask);
+    return Upgrade::Run(upgradeVersion, origUmask);
   }
 
   // start setup wizard on first run
-  const std::string mainConfigFile = Util::GetApplicationDir() + std::string("main.conf");
+  const std::string mainConfigFile = AppUtil::GetApplicationDir() + std::string("main.conf");
   const bool hasMainConfig = apathy::Path(mainConfigFile).exists();
   if (setup.empty() && !readOnly && !changePass && !keyDump && exportDir.empty() && !hasMainConfig &&
       isatty(STDIN_FILENO))
   {
-    std::cout << "No config found in " << GetDisplayPath(Util::GetApplicationDir()) << "\n\n";
+    std::cout << "No config found in " << GetDisplayPath(AppUtil::GetApplicationDir()) << "\n\n";
     setup = "auto";
   }
 
@@ -194,12 +181,12 @@ int main(int argc, char* argv[])
   std::shared_ptr<ScopedDirLock> dirLock;
   if (!readOnly)
   {
-    if (!apathy::Path(Util::GetApplicationDir()).exists())
+    if (!apathy::Path(AppUtil::GetApplicationDir()).exists())
     {
-      apathy::Path::makedirs(Util::GetApplicationDir());
+      apathy::Path::makedirs(AppUtil::GetApplicationDir());
     }
 
-    dirLock.reset(new ScopedDirLock(Util::GetApplicationDir()));
+    dirLock.reset(new ScopedDirLock(AppUtil::GetApplicationDir()));
     if (!dirLock->IsLocked())
     {
       readOnly = true;
@@ -210,27 +197,27 @@ int main(int argc, char* argv[])
   {
     std::cerr <<
       "error: setup and password change require exclusive access to config dir\n"
-      "       " << Util::GetApplicationDir() << "\n" <<
+      "       " << AppUtil::GetApplicationDir() << "\n" <<
       "       ensure no other nmail instance is running, and -ro is not specified.\n";
     return 1;
   }
 
   // Note: must be set before any Config is constructed, as Config write access depends on it
-  Util::SetReadOnly(readOnly);
+  AppUtil::SetReadOnly(readOnly);
 
-  const std::string& logPath = Util::GetApplicationDir() + std::string("log.txt");
+  const std::string& logPath = AppUtil::GetApplicationDir() + std::string("log.txt");
   Log::SetPath(logPath);
 
   THREAD_REGISTER();
-  Util::InitAppSignalHandlers();
+  AppUtil::InitAppSignalHandlers();
 
   const std::string appVersion = Version::GetAppName(true /*p_WithVersion*/, true /*p_WithBranch*/);
   LOG_INFO("%s", appVersion.c_str());
-  std::string osArch = Util::GetOsArch(false /*p_Verbose*/);
+  std::string osArch = SysUtil::GetOsArch(false /*p_Verbose*/);
   LOG_INFO("%s", osArch.c_str());
-  std::string buildInfo = Util::GetBuildInfo();
+  std::string buildInfo = SysUtil::GetBuildInfo();
   LOG_INFO("%s", buildInfo.c_str());
-  std::string compiler = Util::GetCompiler(false /*p_Verbose*/);
+  std::string compiler = SysUtil::GetCompiler(false /*p_Verbose*/);
   LOG_INFO("%s", compiler.c_str());
 
   if (readOnly)
@@ -238,9 +225,9 @@ int main(int argc, char* argv[])
     LOG_INFO("read-only mode");
   }
 
-  Util::CheckEnvironment();
+  AppUtil::CheckEnvironment();
 
-  Util::InitTempDir();
+  FileUtil::InitTempDir();
   CacheUtil::InitCacheDir();
 
   const std::map<std::string, std::string> defaultMainConfig =
@@ -300,16 +287,16 @@ int main(int argc, char* argv[])
     { "idle_timeout", "idle_timeout_min" },
     { "network_timeout", "network_timeout_sec" },
   };
-  const std::string mainConfigPath(Util::GetApplicationDir() + std::string("main.conf"));
+  const std::string mainConfigPath(AppUtil::GetApplicationDir() + std::string("main.conf"));
   std::shared_ptr<Config> mainConfig =
     std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
 
-  const std::string secretConfigPath(Util::GetApplicationDir() + std::string("secret.conf"));
+  const std::string secretConfigPath(AppUtil::GetApplicationDir() + std::string("secret.conf"));
 
   if (keyDump)
   {
     LOG_INFO("start keydump");
-    KeyDump();
+    UiKeyDump::Run();
     return 0;
   }
 
@@ -322,7 +309,7 @@ int main(int argc, char* argv[])
   }
 
   // Read params needed for setup
-  Util::SetBrowserCmd(mainConfig->Get("browser_cmd"));
+  ExtUtil::SetBrowserCmd(mainConfig->Get("browser_cmd"));
 
   if (isSetup)
   {
@@ -342,7 +329,7 @@ int main(int argc, char* argv[])
 
     remove(mainConfigPath.c_str());
     remove(secretConfigPath.c_str());
-    Util::RmDir(Util::GetApplicationDir() + std::string("cache"));
+    FileUtil::RmDir(AppUtil::GetApplicationDir() + std::string("cache"));
     CacheUtil::InitCacheDir();
 
     mainConfig->Save();
@@ -366,29 +353,29 @@ int main(int argc, char* argv[])
   std::string sent = mainConfig->Get("sent");
   const bool clientStoreSent = (mainConfig->Get("client_store_sent") == "1");
   const bool idleInbox = (mainConfig->Get("idle_inbox") == "1");
-  Util::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
-  Util::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
-  Util::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
-  Util::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
-  Util::SetHtmlPreviewCmd(mainConfig->Get("html_preview_cmd"));
-  Util::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
-  Util::SetLinkOpenCmd(mainConfig->Get("link_open_cmd"));
-  Util::SetPagerCmd(mainConfig->Get("pager_cmd"));
-  Util::SetEditorCmd(mainConfig->Get("editor_cmd"));
-  Util::SetSpellCmd(mainConfig->Get("spell_cmd"));
-  std::set<std::string> foldersExclude = ToSet(Util::SplitQuoted(mainConfig->Get("folders_exclude"), true));
-  Util::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
+  ExtUtil::SetHtmlToTextConvertCmd(mainConfig->Get("html_to_text_cmd"));
+  ExtUtil::SetTextToHtmlConvertCmd(mainConfig->Get("text_to_html_cmd"));
+  ExtUtil::SetPartsViewerCmd(mainConfig->Get("parts_viewer_cmd"));
+  ExtUtil::SetHtmlViewerCmd(mainConfig->Get("html_viewer_cmd"));
+  ExtUtil::SetHtmlPreviewCmd(mainConfig->Get("html_preview_cmd"));
+  ExtUtil::SetMsgViewerCmd(mainConfig->Get("msg_viewer_cmd"));
+  ExtUtil::SetLinkOpenCmd(mainConfig->Get("link_open_cmd"));
+  ExtUtil::SetPagerCmd(mainConfig->Get("pager_cmd"));
+  ExtUtil::SetEditorCmd(mainConfig->Get("editor_cmd"));
+  ExtUtil::SetSpellCmd(mainConfig->Get("spell_cmd"));
+  std::set<std::string> foldersExclude = ToSet(StrUtil::SplitQuoted(mainConfig->Get("folders_exclude"), true));
+  AppUtil::SetUseServerTimestamps(mainConfig->Get("server_timestamps") == "1");
   const std::string auth = mainConfig->Get("auth");
   const bool prefetchAllHeaders = (mainConfig->Get("prefetch_all_headers") == "1");
-  Util::SetSendIp(mainConfig->Get("send_ip") == "1");
-  Util::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
-  Util::SetDownloadsDir(mainConfig->Get("downloads_dir"));
+  AppUtil::SetSendIp(mainConfig->Get("send_ip") == "1");
+  ExtUtil::SetFilePickerCmd(mainConfig->Get("file_picker_cmd"));
+  FileUtil::SetDownloadsDir(mainConfig->Get("downloads_dir"));
   const bool isCoredumpEnabled = (mainConfig->Get("coredump_enabled") == "1");
   const bool sniEnabled = (mainConfig->Get("sni_enabled") == "1");
   const bool isLogdumpEnabled = (mainConfig->Get("logdump_enabled") == "1");
-  Util::SetCopyToTrash(mainConfig->Get("copy_to_trash"), mainConfig->Get("imap_host"));
-  mainConfig->Set("copy_to_trash", std::to_string(Util::GetCopyToTrash()));
-  Util::SetAssertAbort(mainConfig->Get("assert_abort") == "1");
+  AppUtil::SetCopyToTrash(mainConfig->Get("copy_to_trash"), mainConfig->Get("imap_host"));
+  mainConfig->Set("copy_to_trash", std::to_string(AppUtil::GetCopyToTrash()));
+  AppUtil::SetAssertAbort(mainConfig->Get("assert_abort") == "1");
 
   // Set logging verbosity level based on config, if not specified with command line arguments
   if (Log::GetVerboseLevel() == Log::INFO_LEVEL)
@@ -409,7 +396,7 @@ int main(int argc, char* argv[])
 #ifndef HAS_COREDUMP
     LOG_WARNING("core dump not supported");
 #else
-    Util::InitCoredump();
+    AppUtil::InitCoredump();
 #endif
   }
 
@@ -452,22 +439,22 @@ int main(int argc, char* argv[])
 
   if (changePass)
   {
-    return ChangePasswords(mainConfig, secretConfig) ? 0 : 1;
+    return PassUtil::ChangePasswords(mainConfig, secretConfig) ? 0 : 1;
   }
 
   std::string pass;
   std::string smtpPass;
   if (auth == "pass")
   {
-    if (!ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
+    if (!PassUtil::ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, mainConfig))
     {
       return 1;
     }
   }
   else
   {
-    if (!ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass, secretConfig,
-                                    mainConfig))
+    if (!PassUtil::ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass,
+                                              secretConfig, mainConfig))
     {
       return 1;
     }
@@ -494,9 +481,9 @@ int main(int argc, char* argv[])
     return exportRv ? 0 : 1;
   }
 
-  Util::InitStdErrRedirect(logPath);
+  AppUtil::InitStdErrRedirect(logPath);
 
-  Util::SetAddressBookEncrypt(addressBookEncrypt);
+  AppUtil::SetAddressBookEncrypt(addressBookEncrypt);
 
   Auth::Init(auth, authEncrypt, pass, isSetup);
 
@@ -567,9 +554,9 @@ int main(int argc, char* argv[])
 
   OfflineQueue::Cleanup();
 
-  Util::CleanupTempDir();
+  FileUtil::CleanupTempDir();
 
-  Util::CleanupStdErrRedirect();
+  AppUtil::CleanupStdErrRedirect();
 
   ui.reset();
   LOG_INFO("exit");
@@ -580,10 +567,10 @@ int main(int argc, char* argv[])
 
   Log::Cleanup(isLogdumpEnabled);
 
-  if (Util::IsTerminateRequested())
+  if (AppUtil::IsTerminateRequested())
   {
     // Re-raise so the parent sees termination by signal (shell message, exit status 128+N)
-    const int sig = Util::GetTerminateSignal();
+    const int sig = AppUtil::GetTerminateSignal();
     signal(sig, SIG_DFL);
     kill(getpid(), sig);
   }
@@ -664,263 +651,6 @@ static void ShowVersion()
     "Written by Kristofer Berggren.\n";
 }
 
-static int Upgrade(const std::string& p_Version, mode_t p_Umask)
-{
-  // exit status 0 upgraded, 3 up to date (from install.sh), 5 failed
-  static const int failed = 5;
-#if defined(NMAIL_BUILD_STATIC_EXTLIBS)
-  const bool isRelease = (Version::GetBuildOrigin() == "github");
-#else
-  const bool isRelease = false;
-#endif
-  if (!isRelease)
-  {
-    std::cerr <<
-      "error: upgrade is only supported for pre-built release binaries, upgrade\n"
-      "       using the package manager or method nmail was installed with.\n";
-    return failed;
-  }
-
-  // installed by install.sh as <prefix>/bin/nmail
-  char realPath[PATH_MAX];
-  const std::string selfPath = Util::GetSelfPath();
-  if (selfPath.empty() || (realpath(selfPath.c_str(), realPath) == nullptr))
-  {
-    std::cerr << "error: cannot determine nmail binary path\n";
-    return failed;
-  }
-
-  const std::string binPath = realPath;
-  const std::string binDir = binPath.substr(0, binPath.rfind('/'));
-  const size_t binDirPos = binDir.rfind('/');
-  if ((binDirPos == std::string::npos) || (binDir.substr(binDirPos + 1) != "bin"))
-  {
-    std::cerr <<
-      "error: nmail binary " << realPath << " is not in a bin dir,\n"
-      "       re-install using install.sh\n";
-    return failed;
-  }
-
-  if (access(binDir.c_str(), W_OK) != 0)
-  {
-    std::cerr <<
-      "error: install dir " << binDir << " is not writable by the current user,\n"
-      "       re-run with sudo, e.g.: sudo nmail -u\n";
-    return failed;
-  }
-
-  const std::string prefix = (binDirPos == 0) ? "/" : binDir.substr(0, binDirPos);
-
-  // NMAIL_INSTALL_URL allows testing a local install.sh, e.g. file://$PWD/utils/install.sh
-  const char* envUrl = getenv("NMAIL_INSTALL_URL");
-  const std::string url = ((envUrl != nullptr) && (*envUrl != '\0')) ? envUrl :
-    "https://raw.githubusercontent.com/d99kris/nmail/master/utils/install.sh";
-
-  // values passed as positional args to avoid shell quoting
-  static const std::string script =
-    "if command -v curl >/dev/null 2>&1; then s=\"$(curl -fsSL \"$1\")\"\n"
-    "elif command -v wget >/dev/null 2>&1; then s=\"$(wget -qO- \"$1\")\"\n"
-    "else echo \"error: need curl or wget to download\" >&2; exit 5; fi ||\n"
-    "  { echo \"error: failed to download $1\" >&2; exit 5; }\n"
-    "NMAIL_PREFIX=\"$2\" NMAIL_VERSION=\"$3\" NMAIL_CURRENT_VERSION=\"$4\" \\\n"
-    "  exec bash -c \"$s\" install.sh\n";
-
-  // exec so the running binary is not held during install, with user umask restored
-  const std::string curVersion = Version::GetAppVersion();
-  umask(p_Umask);
-  execlp("bash", "bash", "-c", script.c_str(), "nmail-upgrade", url.c_str(), prefix.c_str(),
-         p_Version.c_str(), curVersion.c_str(), (char*)nullptr);
-  std::cerr << "error: failed to run bash: " << strerror(errno) << "\n";
-  return failed;
-}
-
-static bool ObtainAuthPasswords(const bool p_IsSetup, const std::string& p_User,
-                                std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
-                                std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
-{
-  // Read secret config
-  std::string encPass;
-  if (p_SecretConfig->Exist("pass"))
-  {
-    encPass = p_SecretConfig->Get("pass");
-  }
-
-  std::string encSmtpPass;
-  if (p_SecretConfig->Exist("smtp_pass"))
-  {
-    encSmtpPass = p_SecretConfig->Get("smtp_pass");
-  }
-
-  if (encPass.empty())
-  {
-    const std::string label = p_SmtpUser.empty() ? "Password" : "IMAP Password";
-    if (p_IsSetup)
-    {
-      if (!SetupWizard::PromptPassword(label, p_MainConfig, p_Pass)) return false;
-    }
-    else
-    {
-      std::cout << label << ": " << std::flush;
-      p_Pass = Util::GetPass();
-    }
-
-    encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
-  }
-  else
-  {
-    p_Pass = Crypto::AESDecrypt(Util::FromHex(encPass), p_User);
-  }
-
-  if (!ValidatePass(p_Pass, p_SmtpUser.empty() ? "" : "IMAP "))
-  {
-    return false;
-  }
-
-  if (p_SmtpUser.empty())
-  {
-    p_SmtpUser = p_User;
-    p_SmtpPass = p_Pass;
-  }
-  else
-  {
-    if (encSmtpPass.empty())
-    {
-      std::cout << (p_IsSetup ? SetupWizard::Label("SMTP Password") : "SMTP Password: ") << std::flush;
-      p_SmtpPass = Util::GetPass();
-      encSmtpPass = Util::ToHex(Crypto::AESEncrypt(p_SmtpPass, p_SmtpUser));
-    }
-    else
-    {
-      p_SmtpPass = Crypto::AESDecrypt(Util::FromHex(encSmtpPass), p_SmtpUser);
-    }
-  }
-
-  if (!ValidatePass(p_SmtpPass, "SMTP "))
-  {
-    return false;
-  }
-
-  if (p_IsSetup)
-  {
-    std::cout << "\n";
-    bool isSavePass = true;
-    if (!SetupWizard::PromptYesNo("Save password", isSavePass)) return false;
-
-    p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
-    std::cout << "\n";
-  }
-
-  const bool isSavePass = (p_MainConfig->Get("save_pass") == "1");
-  if (isSavePass)
-  {
-    if (!encPass.empty())
-    {
-      p_SecretConfig->Set("pass", encPass);
-    }
-
-    if (!encSmtpPass.empty())
-    {
-      p_SecretConfig->Set("smtp_pass", encSmtpPass);
-    }
-  }
-
-  return true;
-}
-
-static bool ObtainCacheEncryptPassword(const bool p_IsSetup, const std::string& p_User,
-                                       bool p_SetupAllowCacheEncrypt,
-                                       std::string& p_Pass, std::string& p_SmtpUser, std::string& p_SmtpPass,
-                                       std::shared_ptr<Config> p_SecretConfig, std::shared_ptr<Config> p_MainConfig)
-{
-  if (p_IsSetup)
-  {
-    if (p_SetupAllowCacheEncrypt)
-    {
-      std::cout << SetupWizard::Label("Cache Encryption Password (optional)") << std::flush;
-      p_Pass = Util::GetPass();
-    }
-
-    if (p_Pass.empty())
-    {
-      // if no pass specified during setup, disable encryption
-      p_MainConfig->Set("cache_encrypt", "0");
-      p_MainConfig->Set("cache_index_encrypt", "0");
-      p_MainConfig->Set("addressbook_encrypt", "0");
-      p_MainConfig->Set("queue_encrypt", "0");
-      p_MainConfig->Set("auth_encrypt", "0");
-    }
-    else
-    {
-      // if pass specified, prompt user whether to store it
-      std::cout << "\n";
-      bool isSavePass = true;
-      if (!SetupWizard::PromptYesNo("Save password", isSavePass)) return false;
-
-      p_MainConfig->Set("save_pass", isSavePass ? "1" : "0");
-
-      if (isSavePass)
-      {
-        std::string encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
-        p_SecretConfig->Set("pass", encPass);
-      }
-    }
-
-    if (p_SetupAllowCacheEncrypt)
-    {
-      std::cout << "\n";
-    }
-
-    p_SecretConfig->Save();
-    p_MainConfig->Save();
-  }
-  else
-  {
-    const bool cacheEncrypt = (p_MainConfig->Get("cache_encrypt") == "1");
-    const bool cacheIndexEncrypt = (p_MainConfig->Get("cache_index_encrypt") == "1");
-    const bool addressBookEncrypt = (p_MainConfig->Get("addressbook_encrypt") == "1");
-    const bool queueEncrypt = (p_MainConfig->Get("queue_encrypt") == "1");
-    const bool authEncrypt = (p_MainConfig->Get("auth_encrypt") == "1");
-
-    if (!cacheEncrypt && !cacheIndexEncrypt && !addressBookEncrypt && !queueEncrypt && !authEncrypt)
-    {
-      p_Pass = "";
-    }
-    else
-    {
-      std::string encPass;
-      if (p_SecretConfig->Exist("pass"))
-      {
-        encPass = p_SecretConfig->Get("pass");
-      }
-
-      if (encPass.empty())
-      {
-        std::cout << "Cache Encryption Password: ";
-        p_Pass = Util::GetPass();
-        encPass = Util::ToHex(Crypto::AESEncrypt(p_Pass, p_User));
-      }
-      else
-      {
-        p_Pass = Crypto::AESDecrypt(Util::FromHex(encPass), p_User);
-      }
-
-      if (!ValidatePass(p_Pass, "Cache Encryption "))
-      {
-        return false;
-      }
-    }
-  }
-
-  if (p_SmtpUser.empty())
-  {
-    p_SmtpUser = p_User;
-  }
-
-  p_SmtpPass = p_Pass;
-
-  return true;
-}
-
 bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
                     const uint16_t p_Imapport, const std::string& p_Smtphost,
                     const uint16_t p_Smtpport)
@@ -934,20 +664,9 @@ bool ValidateConfig(const std::string& p_User, const std::string& p_Imaphost,
   return true;
 }
 
-bool ValidatePass(const std::string& p_Pass, const std::string& p_ErrorPrefix)
-{
-  if (p_Pass.empty())
-  {
-    std::cerr << "error: " << p_ErrorPrefix << "pass not specified.\n\n";
-    return false;
-  }
-
-  return true;
-}
-
 bool ReportConfigError(const std::string& p_Param)
 {
-  const std::string configPath(Util::GetApplicationDir() + std::string("main.conf"));
+  const std::string configPath(AppUtil::GetApplicationDir() + std::string("main.conf"));
   std::cerr << "error: " << p_Param << " not specified in config file (" << configPath
             << ").\n\n";
   return false;
@@ -961,17 +680,17 @@ void LogSystemInfo()
   const std::string compiler = Version::GetCompiler();
   LOG_DEBUG("compiler:  %s", compiler.c_str());
 
-  const std::string systemOs = Util::GetSystemOs();
+  const std::string systemOs = SysUtil::GetSystemOs();
   LOG_DEBUG("system os: %s", systemOs.c_str());
 
-  const std::string unameStr = Util::GetUname();
+  const std::string unameStr = SysUtil::GetUname();
   if (!unameStr.empty())
   {
     LOG_DEBUG("uname:   ");
     LOG_DUMP(unameStr.c_str());
   }
 
-  const std::string libetpanVersion = Util::GetLibetpanVersion();
+  const std::string libetpanVersion = SysUtil::GetLibetpanVersion();
   LOG_DEBUG("libetpan:  %s", libetpanVersion.c_str());
 
   const std::string saslMechs = Sasl::GetMechanismsStr();
@@ -983,174 +702,19 @@ void LogSystemInfo()
   const std::string openSSLVersion = Crypto::GetVersion();
   LOG_DEBUG("openssl:   %s", openSSLVersion.c_str());
 
-  const std::string sqliteVersion = Util::GetSQLiteVersion();
+  const std::string sqliteVersion = SysUtil::GetSQLiteVersion();
   LOG_DEBUG("sqlite:    %s", sqliteVersion.c_str());
 
-  const std::string selfPath = Util::GetSelfPath();
+  const std::string selfPath = SysUtil::GetSelfPath();
   if (!selfPath.empty())
   {
-    const std::string linkedLibs = Util::GetLinkedLibs(selfPath);
+    const std::string linkedLibs = SysUtil::GetLinkedLibs(selfPath);
     if (!linkedLibs.empty())
     {
       LOG_DEBUG("libs:    ");
       LOG_DUMP(linkedLibs.c_str());
     }
   }
-}
-
-bool ChangePasswords(std::shared_ptr<Config> p_MainConfig, std::shared_ptr<Config> p_SecretConfig)
-{
-  std::string user = p_MainConfig->Get("user");
-  std::string smtpUser = p_MainConfig->Get("smtp_user");
-
-  std::string oldPass;
-  if (p_SecretConfig->Exist("pass"))
-  {
-    std::string oldEncPass = p_SecretConfig->Get("pass");
-    oldPass = Crypto::AESDecrypt(Util::FromHex(oldEncPass), user);
-  }
-  else
-  {
-    std::cout << std::string("Old ") + (smtpUser.empty() ? "Password: " : "IMAP Password: ");
-    oldPass = Util::GetPass();
-  }
-
-  std::cout << std::string("New ") + (smtpUser.empty() ? "Password: " : "IMAP Password: ");
-  std::string newPass = Util::GetPass();
-
-  std::string newSmtpPass;
-  if (!smtpUser.empty())
-  {
-    std::cout << "SMTP Password: ";
-    newSmtpPass = Util::GetPass();
-  }
-
-  if (ChangeCachePasswords(p_MainConfig, oldPass, newPass))
-  {
-    std::string encPass = Util::ToHex(Crypto::AESEncrypt(newPass, user));
-    p_SecretConfig->Set("pass", encPass);
-
-    if (!smtpUser.empty())
-    {
-      std::string encSmtpPass = Util::ToHex(Crypto::AESEncrypt(newSmtpPass, smtpUser));
-      p_SecretConfig->Set("smtp_pass", encSmtpPass);
-    }
-
-    p_SecretConfig->Save();
-
-    std::cout << "Changing password complete.\n";
-    return true;
-  }
-  else
-  {
-    std::cout << "Changing cache password failed, exiting.\n";
-    return false;
-  }
-}
-
-bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
-                          const std::string& p_OldPass, const std::string& p_NewPass)
-{
-  const bool cacheEncrypt = (p_MainConfig->Get("cache_encrypt") == "1");
-  if (!ImapCache::ChangePass(cacheEncrypt, p_OldPass, p_NewPass)) return false;
-
-  const bool cacheIndexEncrypt = (p_MainConfig->Get("cache_index_encrypt") == "1");
-  if (!ImapIndex::ChangePass(cacheIndexEncrypt, p_OldPass, p_NewPass)) return false;
-
-  const bool addressBookEncrypt = (p_MainConfig->Get("addressbook_encrypt") == "1");
-  if (!AddressBook::ChangePass(addressBookEncrypt, p_OldPass, p_NewPass)) return false;
-
-  const bool queueEncrypt = (p_MainConfig->Get("queue_encrypt") == "1");
-  if (!OfflineQueue::ChangePass(queueEncrypt, p_OldPass, p_NewPass)) return false;
-
-  const bool authEncrypt = (p_MainConfig->Get("auth_encrypt") == "1");
-  if (!Auth::ChangePass(authEncrypt, p_OldPass, p_NewPass)) return false;
-
-  return true;
-}
-
-static void KeyDump()
-{
-  UiKeyInput::EnableMetaSendsEsc();
-  Util::InitLocale();
-  initscr();
-  noecho();
-  cbreak();
-  raw();
-  keypad(stdscr, TRUE);
-  curs_set(0);
-  timeout(0);
-
-  printw("key code dump mode - press ctrl-c or 'q' to exit\n");
-  refresh();
-
-  UiKeyConfig::Init(false);
-
-  bool running = true;
-  while (running)
-  {
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(0, &fds);
-    int maxfd = STDIN_FILENO;
-    struct timeval tv = { 1, 0 };
-    select(maxfd + 1, &fds, NULL, NULL, &tv);
-    if (FD_ISSET(STDIN_FILENO, &fds))
-    {
-      int y = 0;
-      int x = 0;
-      int maxy = 0;
-      int maxx = 0;
-      getyx(stdscr, y, x);
-      getmaxyx(stdscr, maxy, maxx);
-      if (y == (maxy - 1))
-      {
-        clear();
-        refresh();
-      }
-
-      int count = 0;
-      wint_t key = 0;
-      wint_t keyOk = 0;
-      while (UiKeyInput::GetWch(&key) != ERR)
-      {
-        keyOk = key;
-        ++count;
-        printw("\\%o", key);
-
-        if ((key == 3) || (key == 'q'))
-        {
-          running = false;
-          break;
-        }
-      }
-
-      if ((keyOk != 0) && (count == 1))
-      {
-        std::string keyName = UiKeyConfig::GetKeyName(keyOk);
-        if (!keyName.empty())
-        {
-          printw(" %s", keyName.c_str());
-        }
-
-        // output terminal key code sequence, which unlike the key code above
-        // is not dependent on terminfo, and thus preferred for use in key.conf
-        std::string keySequence = UiKeyConfig::GetKeySequence(keyOk);
-        if (!keySequence.empty())
-        {
-          printw(" (%s)", keySequence.c_str());
-        }
-      }
-
-      printw("\n");
-      refresh();
-    }
-  }
-
-  UiKeyConfig::Cleanup();
-  wclear(stdscr);
-  endwin();
-  UiKeyInput::RestoreMetaSendsEsc();
 }
 
 std::string GetDisplayPath(const std::string& p_Path)
@@ -1164,7 +728,7 @@ std::string GetDisplayPath(const std::string& p_Path)
 
   const char* homeEnv = getenv("HOME");
   const std::string home = (homeEnv != nullptr) ? homeEnv : "";
-  if (!home.empty() && ((path == home) || Util::StartsWith(path, home + "/")))
+  if (!home.empty() && ((path == home) || StrUtil::StartsWith(path, home + "/")))
   {
     path = "~" + path.substr(home.size());
   }

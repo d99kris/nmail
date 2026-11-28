@@ -1,6 +1,6 @@
 // ui.h
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -16,6 +16,7 @@
 #include <ncurses.h>
 
 #include "config.h"
+#include "fileutil.h"
 #include "imapmanager.h"
 #include "smtpmanager.h"
 #include "textstyle.h"

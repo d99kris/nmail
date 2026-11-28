@@ -9,7 +9,7 @@
 
 #include "buildinfo.h"
 
-#define NMAIL_VERSION "5.18.18"
+#define NMAIL_VERSION "5.18.19"
 
 std::string Version::GetBuildOs()
 {
@@ -76,8 +76,8 @@ std::string Version::GetAppVersion()
 }
 
 // Build origin/sha are read from the generated buildinfo.h here (rather than in
-// util.cpp) so the volatile buildinfo.h only ever recompiles this trivial file,
-// not the heavy util.cpp. See buildinfo.h.in / CMakeLists.txt.
+// sysutil.cpp) so the volatile buildinfo.h only ever recompiles this trivial file,
+// not the heavy sysutil.cpp. See buildinfo.h.in / CMakeLists.txt.
 std::string Version::GetBuildOrigin()
 {
 #if defined(NMAIL_BUILD_ORIGIN)

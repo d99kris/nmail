@@ -1,15 +1,17 @@
 // cacheutil.cpp
 //
-// Copyright (c) 2020-2022 Kristofer Berggren
+// Copyright (c) 2020-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
 #include "cacheutil.h"
 
+#include "apputil.h"
 #include "crypto.h"
+#include "fileutil.h"
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
 
 void CacheUtil::InitCacheDir()
 {
@@ -20,14 +22,14 @@ void CacheUtil::InitCacheDir()
 
 std::string CacheUtil::GetCacheDir()
 {
-  return Util::GetApplicationDir() + std::string("cache/");
+  return AppUtil::GetApplicationDir() + std::string("cache/");
 }
 
 bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool p_Encrypted)
 {
   const std::string& versionPath = p_Dir + "version";
   const int currentVersion = (p_Version * 10) + (p_Encrypted ? 1 : 0);
-  if (Util::Exists(p_Dir))
+  if (FileUtil::Exists(p_Dir))
   {
     int storedVersion = -1;
     try
@@ -43,8 +45,8 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
     if (storedVersion != currentVersion)
     {
       LOG_DEBUG("re-init %s", p_Dir.c_str());
-      Util::RmDir(p_Dir);
-      Util::MkDir(p_Dir);
+      FileUtil::RmDir(p_Dir);
+      FileUtil::MkDir(p_Dir);
       WriteVersionToFile(versionPath, currentVersion);
       return false;
     }
@@ -52,7 +54,7 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
   else
   {
     LOG_DEBUG("init %s", p_Dir.c_str());
-    Util::MkDir(p_Dir);
+    FileUtil::MkDir(p_Dir);
     WriteVersionToFile(versionPath, currentVersion);
   }
 
@@ -61,12 +63,12 @@ bool CacheUtil::CommonInitCacheDir(const std::string& p_Dir, int p_Version, bool
 
 bool CacheUtil::DecryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
 {
-  const std::vector<std::string>& files = Util::ListDir(p_SrcDir);
+  const std::vector<std::string>& files = FileUtil::ListDir(p_SrcDir);
   for (auto& file : files)
   {
     if (!Crypto::AESDecryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass))
     {
-      Util::DeleteFile(p_DstDir + "/" + file);
+      FileUtil::DeleteFile(p_DstDir + "/" + file);
       return false;
     }
   }
@@ -76,12 +78,12 @@ bool CacheUtil::DecryptCacheDir(const std::string& p_Pass, const std::string& p_
 
 bool CacheUtil::EncryptCacheDir(const std::string& p_Pass, const std::string& p_SrcDir, const std::string& p_DstDir)
 {
-  const std::vector<std::string>& files = Util::ListDir(p_SrcDir);
+  const std::vector<std::string>& files = FileUtil::ListDir(p_SrcDir);
   for (auto& file : files)
   {
     if (!Crypto::AESEncryptFile(p_SrcDir + "/" + file, p_DstDir + "/" + file, p_Pass))
     {
-      Util::DeleteFile(p_DstDir + "/" + file);
+      FileUtil::DeleteFile(p_DstDir + "/" + file);
       return false;
     }
   }
@@ -91,14 +93,14 @@ bool CacheUtil::EncryptCacheDir(const std::string& p_Pass, const std::string& p_
 
 void CacheUtil::ReadVersionFromFile(const std::string& p_Path, int& p_Version)
 {
-  std::string str = Util::FromHex(Util::ReadFile(p_Path));
-  if (Util::IsInteger(str))
+  std::string str = StrUtil::FromHex(FileUtil::ReadFile(p_Path));
+  if (StrUtil::IsInteger(str))
   {
-    p_Version = Util::ToInteger(str);
+    p_Version = StrUtil::ToInteger(str);
   }
 }
 
 void CacheUtil::WriteVersionToFile(const std::string& p_Path, const int p_Version)
 {
-  Util::WriteFile(p_Path, Util::ToHex(std::to_string(p_Version)));
+  FileUtil::WriteFile(p_Path, StrUtil::ToHex(std::to_string(p_Version)));
 }

@@ -12,8 +12,9 @@
 
 #include "apathy/path.hpp"
 
+#include "apputil.h"
+#include "strutil.h"
 #include "themes.h"
-#include "util.h"
 
 static const size_t themeCount = sizeof(EmbeddedThemes) / sizeof(EmbeddedThemes[0]);
 
@@ -31,7 +32,7 @@ bool Theme::Install(const std::string& p_Name)
     return false;
   }
 
-  const std::string appDir = Util::GetApplicationDir();
+  const std::string appDir = AppUtil::GetApplicationDir();
   if (!apathy::Path(appDir).exists())
   {
     apathy::Path::makedirs(appDir);
@@ -69,7 +70,7 @@ bool Theme::Select(size_t& p_Index)
     return false;
   }
 
-  line = Util::Trim(line);
+  line = StrUtil::Trim(line);
   if (line.empty())
   {
     p_Index = 0;

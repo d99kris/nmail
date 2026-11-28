@@ -1,6 +1,6 @@
 // contact.cpp
 //
-// Copyright (c) 2019-2021 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -8,6 +8,8 @@
 #include "contact.h"
 
 #include <iostream>
+
+#include "strutil.h"
 
 Contact::Contact()
 {
@@ -51,8 +53,8 @@ Contact Contact::FromString(const std::string& p_Str)
     if (endBracket != std::string::npos)
     {
       const std::string& addr =
-        Util::Trim(p_Str.substr(startAddress, endBracket - startAddress));
-      const std::string& name = Util::Trim(p_Str.substr(0, std::max((int)startBracket - 1, 0)));
+        StrUtil::Trim(p_Str.substr(startAddress, endBracket - startAddress));
+      const std::string& name = StrUtil::Trim(p_Str.substr(0, std::max((int)startBracket - 1, 0)));
 
       return Contact(addr, name);
     }

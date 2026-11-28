@@ -1,6 +1,6 @@
 // header.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -12,12 +12,14 @@
 
 #include <libetpan/mailmime.h>
 
+#include "apputil.h"
 #include "body.h"
 #include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
+#include "mailutil.h"
 #include "sethelp.h"
-#include "util.h"
+#include "strutil.h"
 
 static const std::string labelServerTime("X-Nmail-ServerTime: ");
 
@@ -229,30 +231,30 @@ void Header::Parse()
               case MAILIMF_FIELD_ORIG_DATE:
                 {
                   struct mailimf_date_time* dt = field->fld_data.fld_orig_date->dt_date_time;
-                  headerTimeStamp = Util::MailtimeToTimet(dt);
+                  headerTimeStamp = MailUtil::MailtimeToTimet(dt);
                 }
                 break;
 
               case MAILIMF_FIELD_FROM:
                 addrs = MailboxListToStrings(field->fld_data.fld_from->frm_mb_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                m_From = Util::Join(addrs, ", ");
+                m_From = StrUtil::Join(addrs, ", ");
                 addrs = MailboxListToStrings(field->fld_data.fld_from->frm_mb_list, true);
-                m_ShortFrom = Util::Join(addrs, ", ");
+                m_ShortFrom = StrUtil::Join(addrs, ", ");
                 break;
 
               case MAILIMF_FIELD_TO:
                 addrs = AddressListToStrings(field->fld_data.fld_to->to_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                m_To = Util::Join(addrs, ", ");
+                m_To = StrUtil::Join(addrs, ", ");
                 addrs = AddressListToStrings(field->fld_data.fld_to->to_addr_list, true);
-                m_ShortTo = Util::Join(addrs, ", ");
+                m_ShortTo = StrUtil::Join(addrs, ", ");
                 break;
 
               case MAILIMF_FIELD_CC:
                 addrs = AddressListToStrings(field->fld_data.fld_cc->cc_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                m_Cc = Util::Join(addrs, ", ");
+                m_Cc = StrUtil::Join(addrs, ", ");
                 break;
 
               case MAILIMF_FIELD_BCC:
@@ -260,12 +262,12 @@ void Header::Parse()
                 {
                   addrs = AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list);
                   m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                  m_Bcc = Util::Join(addrs, ", ");
+                  m_Bcc = StrUtil::Join(addrs, ", ");
                 }
                 break;
 
               case MAILIMF_FIELD_SUBJECT:
-                m_Subject = Util::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
+                m_Subject = MailUtil::MimeToUtf8(std::string(field->fld_data.fld_subject->sbj_value));
                 break;
 
               case MAILIMF_FIELD_MESSAGE_ID:
@@ -275,7 +277,7 @@ void Header::Parse()
               case MAILIMF_FIELD_REPLY_TO:
                 addrs = AddressListToStrings(field->fld_data.fld_reply_to->rt_addr_list);
                 m_Addresses = m_Addresses + std::set<std::string>(addrs.begin(), addrs.end());
-                m_ReplyTo = Util::Join(addrs, ", ");
+                m_ReplyTo = StrUtil::Join(addrs, ", ");
                 break;
 
               default:
@@ -291,7 +293,7 @@ void Header::Parse()
     mailmime_free(mime);
   }
 
-  static const bool useServerTime = Util::GetUseServerTimestamps();
+  static const bool useServerTime = AppUtil::GetUseServerTimestamps();
   time_t timeStamp = useServerTime ? serverTimeStamp : headerTimeStamp;
   if (timeStamp == 0)
   {
@@ -339,11 +341,11 @@ void Header::ParseShortCcBcc()
       struct mailimf_field* field = (struct mailimf_field*)clist_content(it);
       if (field->fld_type == MAILIMF_FIELD_CC)
       {
-        m_ShortCc = Util::Join(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list, true), ", ");
+        m_ShortCc = StrUtil::Join(AddressListToStrings(field->fld_data.fld_cc->cc_addr_list, true), ", ");
       }
       else if ((field->fld_type == MAILIMF_FIELD_BCC) && (field->fld_data.fld_bcc->bcc_addr_list != nullptr))
       {
-        m_ShortBcc = Util::Join(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list, true), ", ");
+        m_ShortBcc = StrUtil::Join(AddressListToStrings(field->fld_data.fld_bcc->bcc_addr_list, true), ", ");
       }
     }
   }
@@ -397,7 +399,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   {
     if ((p_Mailbox->mb_display_name != NULL) && (strlen(p_Mailbox->mb_display_name) > 0))
     {
-      str = Util::MimeToUtf8(std::string(p_Mailbox->mb_display_name));
+      str = MailUtil::MimeToUtf8(std::string(p_Mailbox->mb_display_name));
     }
     else
     {
@@ -413,7 +415,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
   {
     if ((p_Mailbox->mb_display_name != NULL) && (strlen(p_Mailbox->mb_display_name) > 0))
     {
-      str = Util::EscapeName(Util::MimeToUtf8(std::string(p_Mailbox->mb_display_name)));
+      str = MailUtil::EscapeName(MailUtil::MimeToUtf8(std::string(p_Mailbox->mb_display_name)));
       str += std::string(" <") + std::string(p_Mailbox->mb_addr_spec) + std::string(">");
     }
     else
@@ -428,7 +430,7 @@ std::string Header::MailboxToString(mailimf_mailbox* p_Mailbox, const bool p_Sho
 std::string Header::GroupToString(mailimf_group* p_Group, const bool p_Short)
 {
   std::string str;
-  str += Util::MimeToUtf8(std::string(p_Group->grp_display_name)) + std::string(": ");
+  str += MailUtil::MimeToUtf8(std::string(p_Group->grp_display_name)) + std::string(": ");
 
   for (clistiter* it = clist_begin(p_Group->grp_mb_list->mb_list); it != NULL;
        it = clist_next(it))

@@ -1,6 +1,6 @@
 // uikeyconfig.cpp
 //
-// Copyright (c) 2025 Kristofer Berggren
+// Copyright (c) 2025-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -14,9 +14,11 @@
 
 #include <ncurses.h>
 
+#include "apputil.h"
 #include "config.h"
+#include "fileutil.h"
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
 
 Config UiKeyConfig::m_Config;
 std::map<std::string, int> UiKeyConfig::m_KeyCodes;
@@ -287,13 +289,13 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_terminal_resize", "KEY_RESIZE" },
   };
 
-  const std::string keyConfigPath(Util::GetApplicationDir() + std::string("key.conf"));
+  const std::string keyConfigPath(AppUtil::GetApplicationDir() + std::string("key.conf"));
 
   // @todo: remove legacy migration of old config after one year ~Jan 2026
-  if (!Util::Exists(keyConfigPath))
+  if (!FileUtil::Exists(keyConfigPath))
   {
-    const std::string configPath(Util::GetApplicationDir() + std::string("ui.conf"));
-    if (Util::Exists(configPath))
+    const std::string configPath(AppUtil::GetApplicationDir() + std::string("ui.conf"));
+    if (FileUtil::Exists(configPath))
     {
       MigrateFromUiConfig(configPath, keyConfigPath);
     }
@@ -392,9 +394,9 @@ std::vector<std::string> UiKeyConfig::SplitKeyList(const std::string& p_KeyList)
   if (p_KeyList.size() <= 1) return { p_KeyList };
 
   std::vector<std::string> keyNames;
-  for (const std::string& keyStr : Util::Split(p_KeyList, ','))
+  for (const std::string& keyStr : StrUtil::Split(p_KeyList, ','))
   {
-    const std::string keyName = Util::Trim(keyStr);
+    const std::string keyName = StrUtil::Trim(keyStr);
     if (!keyName.empty())
     {
       keyNames.push_back(keyName);
@@ -495,7 +497,7 @@ int UiKeyConfig::GetVirtualKeyCodeFromOct(const std::string& p_KeyOct, int p_Key
   {
     // use specified key code if provided, otherwise reserve a new one
     int keyCode = (p_KeyCode != -1) ? p_KeyCode : ReserveVirtualKeyCode();
-    std::string keyStr = Util::StrFromOct(p_KeyOct);
+    std::string keyStr = StrUtil::StrFromOct(p_KeyOct);
     if (define_key(keyStr.c_str(), keyCode) == OK)
     {
       LOG_TRACE("define '%s' code 0x%x", p_KeyOct.c_str(), keyCode);
@@ -564,7 +566,7 @@ void UiKeyConfig::DetectConflicts()
   {
     const std::string& keyCode = *it;
     const std::vector<std::string>& keyMapping = keyMappings[keyCode];
-    const std::string keyFunctions = Util::Join(keyMapping, ", ");
+    const std::string keyFunctions = StrUtil::Join(keyMapping, ", ");
     LOG_WARNING("key \"%s\" has duplicate mappings: %s", keyCode.c_str(), keyFunctions.c_str());
   }
 }

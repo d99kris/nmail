@@ -20,7 +20,7 @@
 #include <libetpan/mailimap.h>
 
 #include "crypto.h"
-#include "util.h"
+#include "strutil.h"
 
 std::string ImapUtil::GetConnectionAddresses(struct mailimap* p_Imap)
 {
@@ -57,7 +57,7 @@ std::string ImapUtil::GetHostAddresses(const std::string& p_Host)
 {
   std::string err;
   const std::vector<std::string> ips = ResolveHostIps(p_Host, err);
-  return err.empty() ? Util::Join(ips, ", ") : err;
+  return err.empty() ? StrUtil::Join(ips, ", ") : err;
 }
 
 std::string ImapUtil::GetImapResponseStr(struct mailimap* p_Imap)
@@ -311,7 +311,7 @@ std::string ImapUtil::GetSpecialNameRole(const std::string& p_Folder, char p_Del
   if (p_Delim != '\0')
   {
     const std::string inboxPrefix = std::string("inbox") + p_Delim;
-    if (Util::StartsWith(AsciiToLower(name), inboxPrefix))
+    if (StrUtil::StartsWith(AsciiToLower(name), inboxPrefix))
     {
       name = name.substr(inboxPrefix.size());
     }

@@ -14,8 +14,9 @@
 
 #include <sys/stat.h>
 
+#include "apputil.h"
 #include "loghelp.h"
-#include "util.h"
+#include "strutil.h"
 
 static int64_t GetFileModTimeMs(const std::string& p_Path)
 {
@@ -90,7 +91,7 @@ void Config::Parse(std::istream& p_Stream)
 
     std::string value;
     std::getline(linestream, value);
-    param = Util::Trim(param);
+    param = StrUtil::Trim(param);
 
     auto renamedIt = m_Renamed.find(param);
     if (renamedIt != m_Renamed.end())
@@ -107,13 +108,13 @@ void Config::Parse(std::istream& p_Stream)
       continue;
     }
 
-    m_Map[param] = Util::Trim(value);
+    m_Map[param] = StrUtil::Trim(value);
   }
 }
 
 void Config::Save() const
 {
-  if (Util::GetReadOnly()) return;
+  if (AppUtil::GetReadOnly()) return;
 
   Save(m_Path);
 }

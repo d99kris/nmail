@@ -1,6 +1,6 @@
 // body.cpp
 //
-// Copyright (c) 2019-2023 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -10,10 +10,13 @@
 #include <libetpan/mailmime.h>
 
 #include "encoding.h"
+#include "extutil.h"
+#include "fileutil.h"
 #include "header.h"
 #include "log.h"
 #include "loghelp.h"
-#include "util.h"
+#include "mailutil.h"
+#include "strutil.h"
 
 void Body::FromMime(mailmime* p_Mime)
 {
@@ -85,7 +88,7 @@ std::string Body::GetHtml() const
   }
   else
   {
-    const std::string htmlFromText = Util::ConvertTextToHtml(m_TextPlain);
+    const std::string htmlFromText = ExtUtil::ConvertTextToHtml(m_TextPlain);
     if (!htmlFromText.empty())
     {
       return htmlFromText;
@@ -218,7 +221,7 @@ void Body::ParseHtml()
     std::string partEnc = partInfo.m_Charset;
     std::string partHtml = m_Html;
     Encoding::ConvertToUtf8(partEnc, partHtml);
-    m_TextHtml = Util::ConvertHtmlToText(partHtml);
+    m_TextHtml = ExtUtil::ConvertHtmlToText(partHtml);
   }
 
   m_HtmlParsed = true;
@@ -293,7 +296,7 @@ void Body::ParseMime(mailmime* p_Mime, int p_Depth)
   }
 
   mimeType = mimeType + std::string("/") + std::string(content_type->ct_subtype);
-  mimeType = Util::ToLower(mimeType);
+  mimeType = StrUtil::ToLower(mimeType);
 
   if (Log::GetTraceEnabled())
   {
@@ -340,7 +343,7 @@ void Body::ParseMime(mailmime* p_Mime, int p_Depth)
                 subject = "unnamed";
               }
 
-              const std::string filename = Util::SanitizeFilename(subject + ".eml");
+              const std::string filename = FileUtil::SanitizeFilename(subject + ".eml");
 
               PartInfo partInfo;
               partInfo.m_MimeType = mimeType;
@@ -383,13 +386,13 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   ParseMimeFields(p_Mime, filename, contentId, charset, isAttachment);
 
   // filename and content id are used in local paths
-  contentId = Util::SanitizeFilename(contentId);
+  contentId = FileUtil::SanitizeFilename(contentId);
   if (!filename.empty())
   {
-    filename = Util::SanitizeFilename(Util::MimeToUtf8(filename));
+    filename = FileUtil::SanitizeFilename(MailUtil::MimeToUtf8(filename));
     if (filename.empty())
     {
-      filename = std::to_string(m_NumParts) + Util::ExtensionForMimeType(p_MimeType);
+      filename = std::to_string(m_NumParts) + FileUtil::ExtensionForMimeType(p_MimeType);
     }
   }
 
@@ -488,7 +491,7 @@ void Body::ParseMimeFields(mailmime* p_Mime, std::string& p_Filename, std::strin
 
     if (fields.fld_content_charset != NULL)
     {
-      p_Charset = Util::ToLower(std::string(fields.fld_content_charset));
+      p_Charset = StrUtil::ToLower(std::string(fields.fld_content_charset));
     }
 
     p_IsAttachment = (!p_Filename.empty());
@@ -528,7 +531,7 @@ void Body::RemoveInvalidHeaders()
 
 size_t Body::GetCurrentParseVersion()
 {
-  static size_t htmlToTextCmdHash = Util::GetHtmlToTextConvertCmdHash();
+  static size_t htmlToTextCmdHash = ExtUtil::GetHtmlToTextConvertCmdHash();
   static size_t parseVersionOffset = 2; // bump version offset when parsing changes
   static size_t parseVersion = parseVersionOffset + htmlToTextCmdHash;
   return parseVersion;

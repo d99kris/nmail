@@ -13,8 +13,9 @@
 
 #include <wchar.h>
 
+#include "strutil.h"
+#include "textutil.h"
 #include "textwrap.h"
-#include "util.h"
 
 #include "unittest.h"
 
@@ -25,31 +26,31 @@ static void TestGetQuotePrefix()
   std::wstring prefix;
   std::wstring line;
 
-  unittest::ExpectTrue(Util::GetQuotePrefix(L"> hello", prefix, line));
+  unittest::ExpectTrue(TextUtil::GetQuotePrefix(L"> hello", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L"> ");
   unittest::ExpectEqual(std::wstring, line, L"hello");
 
-  unittest::ExpectTrue(Util::GetQuotePrefix(L">> hello", prefix, line));
+  unittest::ExpectTrue(TextUtil::GetQuotePrefix(L">> hello", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L">> ");
   unittest::ExpectEqual(std::wstring, line, L"hello");
 
-  unittest::ExpectTrue(Util::GetQuotePrefix(L"> > hello", prefix, line));
+  unittest::ExpectTrue(TextUtil::GetQuotePrefix(L"> > hello", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L"> > ");
   unittest::ExpectEqual(std::wstring, line, L"hello");
 
-  unittest::ExpectTrue(Util::GetQuotePrefix(L"  > x", prefix, line));
+  unittest::ExpectTrue(TextUtil::GetQuotePrefix(L"  > x", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L"  > ");
   unittest::ExpectEqual(std::wstring, line, L"x");
 
-  unittest::ExpectTrue(Util::GetQuotePrefix(L">", prefix, line));
+  unittest::ExpectTrue(TextUtil::GetQuotePrefix(L">", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L">");
   unittest::ExpectEqual(std::wstring, line, L"");
 
-  unittest::ExpectFalse(Util::GetQuotePrefix(L"hello", prefix, line));
+  unittest::ExpectFalse(TextUtil::GetQuotePrefix(L"hello", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L"");
   unittest::ExpectEqual(std::wstring, line, L"hello");
 
-  unittest::ExpectFalse(Util::GetQuotePrefix(L"", prefix, line));
+  unittest::ExpectFalse(TextUtil::GetQuotePrefix(L"", prefix, line));
   unittest::ExpectEqual(std::wstring, prefix, L"");
   unittest::ExpectEqual(std::wstring, line, L"");
 }
@@ -59,32 +60,32 @@ static void TestWordWrap()
   // plain text wraps at spaces
   const WLines plain = { L"the quick brown fox", L"jumps over the lazy", L"dog" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
-                                          false, false, false, 2), plain);
+                        TextUtil::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
+                                           false, false, false, 2), plain);
 
   // text without spaces is hard wrapped
   const WLines longWord = { L"abcdefghij", L"klmnopqrst", L"uvwxyz" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcdefghijklmnopqrstuvwxyz", 10,
-                                          false, false, false, 2), longWord);
+                        TextUtil::WordWrap(L"abcdefghijklmnopqrstuvwxyz", 10,
+                                           false, false, false, 2), longWord);
 
   // empty text and empty lines
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"", 20, false, false, false, 2), WLines());
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"", 20, false, false, false, 2), WLines());
   const WLines emptyLines = { L"a", L"", L"b" };
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"a\n\nb", 20, false, false, false, 2), emptyLines);
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"a\n\nb", 20, false, false, false, 2), emptyLines);
 
   // tabs are expanded to next tab stop
   const WLines tabs = { L"ab   cd  e" };
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"ab\tcd\te", 40, false, false, false, 4), tabs);
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"ab\tcd\te", 40, false, false, false, 4), tabs);
 
   // format flowed input is reflowed before wrapping
   const WLines flowed = { L"one two three four", L"five" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"one two \nthree four\nfive", 20,
-                                          true, false, false, 2), flowed);
+                        TextUtil::WordWrap(L"one two \nthree four\nfive", 20,
+                                           true, false, false, 2), flowed);
 
   // empty format flowed input
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"", 20, true, false, false, 2), WLines());
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"", 20, true, false, false, 2), WLines());
 }
 
 static void TestWordWrapQuoted()
@@ -92,20 +93,20 @@ static void TestWordWrapQuoted()
   // quote prefix is repeated on each wrapped line
   const WLines quoted = { L"> the quick brown fox jumps over the", L"> lazy dog" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"> the quick brown fox jumps over the lazy dog", 40,
-                                          false, false, true, 2), quoted);
+                        TextUtil::WordWrap(L"> the quick brown fox jumps over the lazy dog", 40,
+                                           false, false, true, 2), quoted);
 
   // without quote wrap the prefix is treated as regular text
   const WLines unquoted = { L"> the quick brown fox jumps over the", L"lazy dog" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"> the quick brown fox jumps over the lazy dog", 40,
-                                          false, false, false, 2), unquoted);
+                        TextUtil::WordWrap(L"> the quick brown fox jumps over the lazy dog", 40,
+                                           false, false, false, 2), unquoted);
 
   // nested quote prefix is normalized and repeated
   const WLines nested = { L">> deeply quoted text that", L">> needs wrapping here" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"> > deeply quoted text that needs wrapping here", 30,
-                                          false, false, true, 2), nested);
+                        TextUtil::WordWrap(L"> > deeply quoted text that needs wrapping here", 30,
+                                           false, false, true, 2), nested);
 
   // quoted text without spaces must hard wrap, and not wrap at the prefix space
   // (which previously caused an infinite loop, hanging export)
@@ -115,7 +116,7 @@ static void TestWordWrapQuoted()
     L"> 5678"
   };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(
+                        TextUtil::WordWrap(
                           L"> https://open.spotify.com/artist/1NwpmqCXeqQ4xrE6WEP4np?si=abcdefgh12345678", 72,
                           false, false, true, 2), quotedUrl);
 }
@@ -127,8 +128,8 @@ static void TestWordWrapPos()
   int wrapPos = -1;
   const WLines lines = { L"the quick brown fox", L"jumps over the lazy", L"dog" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
-                                          false, false, false, 2, 25, wrapLine, wrapPos), lines);
+                        TextUtil::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
+                                           false, false, false, 2, 25, wrapLine, wrapPos), lines);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 5);
 }
@@ -140,15 +141,15 @@ static void TestWordWrapOffsets()
   int wrapPos = -1;
   std::vector<int> lineOffsets;
   const std::vector<int> offsets = { 0, 20, 40 };
-  Util::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
-                 false, false, false, 0, 0, wrapLine, wrapPos, &lineOffsets);
+  TextUtil::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
+                     false, false, false, 0, 0, wrapLine, wrapPos, &lineOffsets);
   unittest::ExpectTrue(lineOffsets == offsets);
   unittest::ExpectEqual(int, wrapLine, 0);
   unittest::ExpectEqual(int, wrapPos, 0);
 
   // position at the space where the line was wrapped is at the end of that line
-  Util::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
-                 false, false, false, 0, 19, wrapLine, wrapPos);
+  TextUtil::WordWrap(L"the quick brown fox jumps over the lazy dog", 20,
+                     false, false, false, 0, 19, wrapLine, wrapPos);
   unittest::ExpectEqual(int, wrapLine, 0);
   unittest::ExpectEqual(int, wrapPos, 19);
 
@@ -157,45 +158,45 @@ static void TestWordWrapOffsets()
   const WLines fullWidth = { L"abcdefghij", L"" };
   const std::vector<int> fullWidthOffsets = { 0, 10 };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcdefghij", 10, false, false, false, 0, 10,
-                                       wrapLine, wrapPos, &lineOffsets), fullWidth);
+                        TextUtil::WordWrap(L"abcdefghij", 10, false, false, false, 0, 10,
+                                           wrapLine, wrapPos, &lineOffsets), fullWidth);
   unittest::ExpectTrue(lineOffsets == fullWidthOffsets);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 0);
 
   // the empty line is only present when wrapping for an editor, i.e. with position
   const WLines fullWidthDisplay = { L"abcdefghij" };
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcdefghij", 10, false, false, false, 0), fullWidthDisplay);
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"abcdefghij", 10, false, false, false, 0), fullWidthDisplay);
   const WLines twoFullWidthDisplay = { L"abcdefghij", L"klmnopqrst" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcdefghijklmnopqrst", 10, false, false, false, 0), twoFullWidthDisplay);
+                        TextUtil::WordWrap(L"abcdefghijklmnopqrst", 10, false, false, false, 0), twoFullWidthDisplay);
   const WLines emptyLinesDisplay = { L"abcdefghij", L"", L"b" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcdefghij\n\nb", 10, false, false, false, 0), emptyLinesDisplay);
+                        TextUtil::WordWrap(L"abcdefghij\n\nb", 10, false, false, false, 0), emptyLinesDisplay);
 
   // carriage return of text with crlf line breaks takes up no column, and is kept with
   // the line it ends
   const WLines crlfDisplay = { L"abcdefghij\r", L"\r", L"after" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcdefghij\r\n\r\nafter", 10, false, false, false, 0), crlfDisplay);
+                        TextUtil::WordWrap(L"abcdefghij\r\n\r\nafter", 10, false, false, false, 0), crlfDisplay);
   const WLines crlfSpaces = { L"abcd efgh", L"ijkl\r", L"after" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcd efgh ijkl\r\nafter", 10, false, false, false, 0), crlfSpaces);
+                        TextUtil::WordWrap(L"abcd efgh ijkl\r\nafter", 10, false, false, false, 0), crlfSpaces);
   unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab\r"), 2);
 
   // likewise for a line ending with the space it was wrapped at
   const WLines trailingSpace = { L"abcd", L"" };
   const WLines trailingSpaceDisplay = { L"abcd" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abcd ", 5, false, false, false, 0, 5, wrapLine, wrapPos), trailingSpace);
+                        TextUtil::WordWrap(L"abcd ", 5, false, false, false, 0, 5, wrapLine, wrapPos), trailingSpace);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 0);
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcd ", 5, false, false, false, 0), trailingSpaceDisplay);
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"abcd ", 5, false, false, false, 0), trailingSpaceDisplay);
 
   // position after a trailing line break is on the line after the last
   const WLines trailing = { L"abc" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"abc\n", 10, false, false, false, 0, 4, wrapLine, wrapPos), trailing);
+                        TextUtil::WordWrap(L"abc\n", 10, false, false, false, 0, 4, wrapLine, wrapPos), trailing);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 0);
 }
@@ -206,44 +207,44 @@ static void TestWordWrapWide()
   // spaces may fill the full width.
   const WLines wide = { L"你好世界你", L"好世界" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"你好世界你好世界", 10,
-                                       false, false, false, 2), wide);
+                        TextUtil::WordWrap(L"你好世界你好世界", 10,
+                                           false, false, false, 2), wide);
 
   // text with spaces is wrapped at a space, leaving the last column free
   const WLines wideSpaces = { L"你好 世界", L"你好 世界" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"你好 世界 你好 世界", 10,
-                                       false, false, false, 2), wideSpaces);
+                        TextUtil::WordWrap(L"你好 世界 你好 世界", 10,
+                                           false, false, false, 2), wideSpaces);
   const WLines wideMixed = { L"hello 你好", L"world 世界" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"hello 你好 world 世界", 11,
-                                       false, false, false, 2), wideMixed);
+                        TextUtil::WordWrap(L"hello 你好 world 世界", 11,
+                                           false, false, false, 2), wideMixed);
 
   // quote prefix is repeated, and included in the width
   const WLines wideQuoted = { L"> 你好世界", L"> 你好" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"> 你好世界你好", 10,
-                                       false, false, true, 2), wideQuoted);
+                        TextUtil::WordWrap(L"> 你好世界你好", 10,
+                                           false, false, true, 2), wideQuoted);
 
   // a double width character not fitting the last column is moved to the next line
   const WLines wideOdd = { L"a你好世界", L"你好" };
   unittest::ExpectEqual(WLines,
-                        Util::WordWrap(L"a你好世界你好", 10,
-                                       false, false, false, 2), wideOdd);
+                        TextUtil::WordWrap(L"a你好世界你好", 10,
+                                           false, false, false, 2), wideOdd);
 
   // position and line offsets refer to chars, also for double width characters
   int wrapLine = -1;
   int wrapPos = -1;
   std::vector<int> lineOffsets;
   const std::vector<int> offsets = { 0, 5 };
-  Util::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 4, wrapLine, wrapPos, &lineOffsets);
+  TextUtil::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 4, wrapLine, wrapPos, &lineOffsets);
   unittest::ExpectTrue(lineOffsets == offsets);
   unittest::ExpectEqual(int, wrapLine, 0);
   unittest::ExpectEqual(int, wrapPos, 4);
-  Util::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 5, wrapLine, wrapPos);
+  TextUtil::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 5, wrapLine, wrapPos);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 0);
-  Util::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 7, wrapLine, wrapPos);
+  TextUtil::WordWrap(L"你好世界你好世界", 10, false, false, false, 0, 7, wrapLine, wrapPos);
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 2);
 
@@ -253,7 +254,7 @@ static void TestWordWrapWide()
   for (unsigned lineLength = 1; lineLength <= 14; ++lineLength)
   {
     std::wstring joined;
-    for (const std::wstring& line : Util::WordWrap(flags, lineLength, false, false, false, 0))
+    for (const std::wstring& line : TextUtil::WordWrap(flags, lineLength, false, false, false, 0))
     {
       unittest::ExpectEqual(size_t, line.size() % flag.size(), (size_t)0);
       joined += line;
@@ -272,7 +273,7 @@ static void TestWordWrapNarrow()
     for (const bool quoteWrap : { false, true })
     {
       size_t count = 0;
-      for (const std::wstring& line : Util::WordWrap(L"> 你好世界 你好", lineLength, false, false, quoteWrap, 0))
+      for (const std::wstring& line : TextUtil::WordWrap(L"> 你好世界 你好", lineLength, false, false, quoteWrap, 0))
       {
         count += std::count(line.begin(), line.end(), L'你') + std::count(line.begin(), line.end(), L'好') +
           std::count(line.begin(), line.end(), L'世') + std::count(line.begin(), line.end(), L'界');
@@ -299,7 +300,7 @@ static void TestHooks()
   TextWrap::SetClusterWidthFunc(TestClusterWidth);
   unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab"), 6);
   const WLines customWidth = { L"abc", L"def" };
-  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcdef", 9, false, false, false, 0), customWidth);
+  unittest::ExpectEqual(WLines, TextUtil::WordWrap(L"abcdef", 9, false, false, false, 0), customWidth);
   TextWrap::SetClusterWidthFunc(nullptr);
   unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab"), 2);
 
@@ -334,12 +335,12 @@ static void TestClusters()
   const std::wstring biker = L"\U0001F6B4\U0001F3FF\u200D\u2642\uFE0F";
   const std::wstring keycap = L"1\uFE0F\u20E3";
   const std::wstring flag = L"\U0001F1F8\U0001F1EA";
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(heart + L"x", 0), heart.size());
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(biker + L"x", 0), biker.size());
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(keycap + L"x", 0), keycap.size());
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(flag + flag, 0), flag.size());
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(L"ab", 0), (size_t)1);
-  unittest::ExpectEqual(size_t, Util::GetClusterEnd(L"ab", 2), (size_t)2);
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(heart + L"x", 0), heart.size());
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(biker + L"x", 0), biker.size());
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(keycap + L"x", 0), keycap.size());
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(flag + flag, 0), flag.size());
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(L"ab", 0), (size_t)1);
+  unittest::ExpectEqual(size_t, StrUtil::GetClusterEnd(L"ab", 2), (size_t)2);
 
   // cluster start is found from any position within the cluster
   const std::wstring text = L"a" + flag + biker + L"\n" + flag + L"e\u0301";
@@ -357,16 +358,16 @@ static void TestClusters()
   unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(flag + flag + flag, 5), (size_t)4);
 
   // trimming never leaves a base character without its variation selector
-  const int heartWidth = Util::WStringWidth(heart);
-  unittest::ExpectEqual(std::wstring, Util::TrimWString(L"Bob" + heart, 3 + heartWidth), L"Bob" + heart);
-  unittest::ExpectEqual(std::wstring, Util::TrimWString(L"Bob" + heart, 3), L"Bob");
-  unittest::ExpectEqual(std::wstring, Util::TrimWString(biker + L" Bike", 1), L"");
+  const int heartWidth = StrUtil::WStringWidth(heart);
+  unittest::ExpectEqual(std::wstring, StrUtil::TrimWString(L"Bob" + heart, 3 + heartWidth), L"Bob" + heart);
+  unittest::ExpectEqual(std::wstring, StrUtil::TrimWString(L"Bob" + heart, 3), L"Bob");
+  unittest::ExpectEqual(std::wstring, StrUtil::TrimWString(biker + L" Bike", 1), L"");
 
   // trim/pad always returns the requested width
-  unittest::ExpectEqual(std::wstring, Util::TrimPadWString(L"Bob", 5), L"Bob  ");
-  unittest::ExpectEqual(std::wstring, Util::TrimPadWString(L"Bob" + heart, 3), L"Bob");
-  unittest::ExpectEqual(int, Util::WStringWidth(Util::TrimPadWString(biker + L" Bike Group", 6)), 6);
-  unittest::ExpectEqual(int, Util::WStringWidth(Util::TrimPadWString(L"\u4F60\u597D", 3)), 3);
+  unittest::ExpectEqual(std::wstring, StrUtil::TrimPadWString(L"Bob", 5), L"Bob  ");
+  unittest::ExpectEqual(std::wstring, StrUtil::TrimPadWString(L"Bob" + heart, 3), L"Bob");
+  unittest::ExpectEqual(int, StrUtil::WStringWidth(StrUtil::TrimPadWString(biker + L" Bike Group", 6)), 6);
+  unittest::ExpectEqual(int, StrUtil::WStringWidth(StrUtil::TrimPadWString(L"\u4F60\u597D", 3)), 3);
 }
 
 int main()

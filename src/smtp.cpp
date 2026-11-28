@@ -18,10 +18,14 @@
 #include <libetpan/mailimf.h>
 #include <libetpan/mailmime.h>
 #include <libetpan/mailsmtp.h>
+#include "apputil.h"
 #include "auth.h"
+#include "fileutil.h"
 #include "log.h"
 #include "loghelp.h"
+#include "mailutil.h"
 #include "sasl.h"
+#include "strutil.h"
 #include "uuid.h"
 
 Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
@@ -97,7 +101,7 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
 
   const bool isSSL = (m_Port == 465);
   const bool isStartTLS = (m_Port == 587);
-  const bool isUseIP = Util::GetSendIp();
+  const bool isUseIP = AppUtil::GetSendIp();
 
   mailsmtp* smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return SmtpStatusFailed;
@@ -404,7 +408,7 @@ std::string Smtp::GetBody(const std::string& p_Message, const std::string& p_Htm
 
     for (auto& path : p_AttachmentPaths)
     {
-      if (Util::Exists(path))
+      if (FileUtil::Exists(path))
       {
         const std::string fileMimeType = GetMimeType(path);
         struct mailmime* fileBodyPart = GetMimeFilePart(path, fileMimeType);
@@ -512,7 +516,7 @@ mailmime* Smtp::GetMimeTextPart(const char* p_MimeType, const std::string& p_Mes
 
 mailmime* Smtp::GetMimeFilePart(const std::string& p_Path, const std::string& p_MimeType)
 {
-  const std::string& filename = Util::BaseName(p_Path);
+  const std::string& filename = FileUtil::BaseName(p_Path);
   char* dispositionname = strdup(filename.c_str());
   bool isMessage = (p_MimeType == "message/rfc822");
   // Per RFC 2046, 5.2.1, message/rfc822 need to use 8-bit, 7-bit or binary.
@@ -532,8 +536,8 @@ mailmime* Smtp::GetMimeFilePart(const std::string& p_Path, const std::string& p_
 
 std::string Smtp::GetMimeType(const std::string& p_Path)
 {
-  std::string fileExt = Util::GetFileExt(p_Path);
-  std::string mimeType = Util::MimeTypeForExtension(fileExt);
+  std::string fileExt = FileUtil::GetFileExt(p_Path);
+  std::string mimeType = FileUtil::MimeTypeForExtension(fileExt);
   return mimeType;
 }
 
@@ -663,7 +667,7 @@ std::string Smtp::MimeEncodeStr(const std::string& p_In)
   MMAPString* mmstr = mmap_string_new(NULL);
   mailmime_quoted_printable_write_mem(mmstr, &col, 1, p_In.c_str(), p_In.size());
   std::string enc = std::string(mmstr->str, mmstr->len);
-  Util::ReplaceString(enc, "=\r\n", "");
+  StrUtil::ReplaceString(enc, "=\r\n", "");
   mmap_string_free(mmstr);
   return std::string("=?UTF-8?Q?") + enc + std::string("?=");
 }
@@ -711,7 +715,7 @@ std::string Smtp::MimeEncodeWrap(const std::string& p_In)
 {
   if (std::all_of(p_In.cbegin(), p_In.cend(), [](char c) { return isprint(c); }))
   {
-    return Util::Join(LineWrap(p_In, 76), "\r\n ");
+    return StrUtil::Join(LineWrap(p_In, 76), "\r\n ");
   }
 
   int col = 9; // needed for Subject:
@@ -719,7 +723,7 @@ std::string Smtp::MimeEncodeWrap(const std::string& p_In)
   mailmime_base64_write_mem(mmstr, &col, p_In.c_str(), p_In.size());
   std::string enc = std::string(mmstr->str, mmstr->len);
   enc = enc.substr(0, enc.size() - 2);
-  Util::ReplaceString(enc, "\r\n", "?=\r\n =?UTF-8?B?");
+  StrUtil::ReplaceString(enc, "\r\n", "?=\r\n =?UTF-8?B?");
   mmap_string_free(mmstr);
   return std::string("=?UTF-8?B?") + enc + std::string("?=");
 }
@@ -767,7 +771,7 @@ std::string Smtp::RemoveBccHeader(const std::string& p_Data)
 
 std::string Smtp::GenerateMessageId() const
 {
-  return Uuid::GenerateUuid() + "@" + Util::GetDomainName(m_Host);
+  return Uuid::GenerateUuid() + "@" + MailUtil::GetDomainName(m_Host);
 }
 
 void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t p_Size,
@@ -780,7 +784,7 @@ void Smtp::Logger(mailsmtp* p_Smtp, int p_LogType, const char* p_Buffer, size_t 
   char* buffer = (char*)malloc(p_Size + 1);
   memcpy(buffer, p_Buffer, p_Size);
   buffer[p_Size] = 0;
-  std::string str = Util::TrimRight(Util::Strip(std::string(buffer), '\r'), "\n");
+  std::string str = StrUtil::TrimRight(StrUtil::Strip(std::string(buffer), '\r'), "\n");
   LOG_TRACE("smtp %i: %s", p_LogType, str.c_str());
   free(buffer);
 }
