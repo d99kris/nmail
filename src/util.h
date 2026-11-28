@@ -222,7 +222,8 @@ public:
   static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                             bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
                                             bool p_QuoteWrap, int p_ExpandTabSize,
-                                            int p_Pos, int& p_WrapLine, int& p_WrapPos);
+                                            int p_Pos, int& p_WrapLine, int& p_WrapPos,
+                                            std::vector<int>* p_LineOffsets = nullptr);
   static std::string GetPass();
   static std::wstring Join(const std::vector<std::wstring>& p_Lines);
   static std::string Join(const std::vector<std::string>& p_Lines,

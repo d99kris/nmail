@@ -25,6 +25,7 @@
 #include "sleepdetect.h"
 #include "status.h"
 #include "textstyle.h"
+#include "textwrap.h"
 #include "uikeyconfig.h"
 #include "uikeyinput.h"
 #include "version.h"
@@ -2123,7 +2124,7 @@ void Ui::DrawComposeMessage()
   m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
                                          processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                          m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                         m_ComposeMessageWrapPos);
+                                         m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
 
   std::vector<std::wstring> headerLines;
   if (m_ShowRichHeader)
@@ -2155,12 +2156,11 @@ void Ui::DrawComposeMessage()
   {
     m_ComposeHeaderLine = std::min(m_ComposeHeaderLine, (int)m_ComposeHeaderStr.size() - 1);
     cursY = m_ComposeHeaderLine;
-    cursX = m_ComposeHeaderPos + 10;
   }
   else
   {
     cursY = headerLines.size() + 1 + m_ComposeMessageWrapLine;
-    cursX = m_ComposeMessageWrapPos;
+    cursX = GetComposeMessageColumn();
   }
 
   werase(m_MainWin);
@@ -2169,18 +2169,28 @@ void Ui::DrawComposeMessage()
 
   for (int i = 0; i < (int)headerLines.size(); ++i)
   {
-    if (m_IsComposeHeader && (i == m_ComposeHeaderLine) && (cursX >= m_ScreenWidth))
+    const std::wstring& headerLabel = headerLines.at(i);
+    std::wstring headerStr = m_ComposeHeaderStr.at(i);
+    if (m_IsComposeHeader && (i == m_ComposeHeaderLine))
     {
-      std::wstring line = headerLines.at(i) +
-        m_ComposeHeaderStr.at(i).substr(cursX - m_ScreenWidth + 1);
-      composeLines.push_back(line.substr(0, m_ScreenWidth));
-      cursX = m_ScreenWidth - 1;
+      // scroll field horizontally, based on display width, to keep cursor within screen
+      const int labelWidth = TextWrap::GetWidth(headerLabel);
+      const int maxWidth = std::max(m_ScreenWidth - 1 - labelWidth, 0);
+      const size_t headerPos = Util::Bound(0, m_ComposeHeaderPos, (int)headerStr.size());
+      size_t startPos = 0;
+      int width = TextWrap::GetWidth(headerStr.substr(0, headerPos));
+      while ((width > maxWidth) && (startPos < headerPos))
+      {
+        const size_t endPos = TextWrap::GetClusterEnd(headerStr, startPos);
+        width -= TextWrap::GetClusterWidth(headerStr, startPos, endPos);
+        startPos = endPos;
+      }
+
+      headerStr = headerStr.substr(startPos);
+      cursX = labelWidth + std::max(width, 0);
     }
-    else
-    {
-      std::wstring line = headerLines.at(i) + m_ComposeHeaderStr.at(i);
-      composeLines.push_back(line.substr(0, m_ScreenWidth));
-    }
+
+    composeLines.push_back(Util::TrimWString(headerLabel + headerStr, m_ScreenWidth));
   }
 
   composeLines.push_back(L"");
@@ -3493,7 +3503,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
                                                processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                               m_ComposeMessageWrapPos);
+                                               m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
       }
     }
     else if (p_Key == m_KeyNextPageCompose)
@@ -3508,7 +3518,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
         m_ComposeMessageLines = Util::WordWrap(m_ComposeMessageStr, m_MaxComposeLineLength,
                                                processFlowed, outputFlowed, quoteWrap, expandTabSize,
                                                m_ComposeMessagePos, m_ComposeMessageWrapLine,
-                                               m_ComposeMessageWrapPos);
+                                               m_ComposeMessageWrapPos, &m_ComposeMessageLineOffsets);
       }
     }
     else if ((p_Key == m_KeyLeft) && (m_ComposeMessagePos == 0))
@@ -5737,24 +5747,37 @@ void Ui::UpdateIndexFromUid()
             m_MessageListCurrentIndex[m_CurrentFolder]);
 }
 
+int Ui::GetComposeMessageColumn()
+{
+  // display column of current position, which differs from position in line for wide characters
+  if (m_ComposeMessageWrapLine >= (int)m_ComposeMessageLines.size()) return 0;
+
+  const std::wstring& line = m_ComposeMessageLines[m_ComposeMessageWrapLine];
+  return TextWrap::GetWidth(line.substr(0, m_ComposeMessageWrapPos));
+}
+
+void Ui::SetComposeMessagePos(int p_WrapLine, int p_Column)
+{
+  // set position to specified line and display column, or end of line if shorter
+  if ((p_WrapLine < (int)m_ComposeMessageLines.size()) &&
+      (p_WrapLine < (int)m_ComposeMessageLineOffsets.size()))
+  {
+    const std::wstring& line = m_ComposeMessageLines[p_WrapLine];
+    m_ComposeMessagePos = m_ComposeMessageLineOffsets[p_WrapLine] + (int)TextWrap::GetPosAtColumn(line, p_Column);
+  }
+  else
+  {
+    m_ComposeMessagePos = (int)m_ComposeMessageStr.size();
+  }
+
+  m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos, (int)m_ComposeMessageStr.size());
+}
+
 void Ui::ComposeMessagePrevLine()
 {
   if (m_ComposeMessageWrapLine > 0)
   {
-    int stepsBack = 0;
-    if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() >
-        m_ComposeMessageWrapPos)
-    {
-      stepsBack = m_ComposeMessageLines[m_ComposeMessageWrapLine - 1].size() + 1;
-    }
-    else
-    {
-      stepsBack = m_ComposeMessageWrapPos + 1;
-    }
-
-    stepsBack = std::min(stepsBack, m_MaxComposeLineLength);
-    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos - stepsBack,
-                                      (int)m_ComposeMessageStr.size());
+    SetComposeMessagePos(m_ComposeMessageWrapLine - 1, GetComposeMessageColumn());
   }
   else
   {
@@ -5766,24 +5789,7 @@ void Ui::ComposeMessageNextLine()
 {
   if (m_ComposeMessagePos < (int)m_ComposeMessageStr.size())
   {
-    int stepsForward = (int)m_ComposeMessageLines[m_ComposeMessageWrapLine].size() -
-      m_ComposeMessageWrapPos + 1;
-    if ((m_ComposeMessageWrapLine + 1) < (int)m_ComposeMessageLines.size())
-    {
-      if ((int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size() >
-          m_ComposeMessageWrapPos)
-      {
-        stepsForward += m_ComposeMessageWrapPos;
-      }
-      else
-      {
-        stepsForward += (int)m_ComposeMessageLines[m_ComposeMessageWrapLine + 1].size();
-      }
-    }
-
-    stepsForward = std::min(stepsForward, m_MaxComposeLineLength);
-    m_ComposeMessagePos = Util::Bound(0, m_ComposeMessagePos + stepsForward,
-                                      (int)m_ComposeMessageStr.size());
+    SetComposeMessagePos(m_ComposeMessageWrapLine + 1, GetComposeMessageColumn());
   }
 }
 

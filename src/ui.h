@@ -199,6 +199,8 @@ private:
   void UpdateIndexFromUid();
   void AddUidDate(const std::string& p_Folder, const std::map<uint32_t, Header>& p_UidHeaders);
   void RemoveUidDate(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+  int GetComposeMessageColumn();
+  void SetComposeMessagePos(int p_WrapLine, int p_Column);
   void ComposeMessagePrevLine();
   void ComposeMessageNextLine();
   int ReadKeyBlocking();
@@ -559,6 +561,7 @@ private:
   std::wstring m_ComposeMessageStr;
   int m_ComposeMessagePos = 0;
   std::vector<std::wstring> m_ComposeMessageLines;
+  std::vector<int> m_ComposeMessageLineOffsets;
   int m_ComposeMessageWrapLine = 0;
   int m_ComposeMessageWrapPos = 0;
   int m_ComposeMessageOffsetY = 0;

@@ -12,6 +12,7 @@
 set(NMAILTEST_SOURCES
   ../src/config.cpp
   ../src/log.cpp
+  ../src/textwrap.cpp
   ../src/util.cpp
   ../src/version.cpp
 )

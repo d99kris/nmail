@@ -249,6 +249,8 @@ add_executable(nmail
   src/status.h
   src/textstyle.cpp
   src/textstyle.h
+  src/textwrap.cpp
+  src/textwrap.h
   src/theme.cpp
   src/theme.h
   src/ui.cpp

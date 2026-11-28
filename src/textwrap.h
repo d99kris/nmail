@@ -1,0 +1,36 @@
+// textwrap.h
+//
+// Copyright (c) 2019-2026 Kristofer Berggren
+// All rights reserved.
+//
+// nmail is distributed under the MIT license, see LICENSE for details.
+
+#pragma once
+
+#include <string>
+#include <vector>
+
+// Text wrapping based on display width. Self-contained, for sharing with nchat.
+class TextWrap
+{
+public:
+  typedef int (* ClusterWidthFunc)(const std::wstring& p_Str, size_t p_Begin, size_t p_End);
+
+  static void SetClusterWidthFunc(ClusterWidthFunc p_ClusterWidthFunc);
+  static size_t GetClusterEnd(const std::wstring& p_Str, size_t p_Pos);
+  static int GetClusterWidth(const std::wstring& p_Str, size_t p_Begin, size_t p_End);
+  static int GetWidth(const std::wstring& p_Str);
+  static size_t GetPosAtColumn(const std::wstring& p_Str, int p_Column);
+  static bool GetQuotePrefix(const std::wstring& p_String, std::wstring& p_Prefix, std::wstring& p_Line);
+  static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                            bool p_QuoteWrap, int p_ExpandTabSize);
+  static std::vector<std::wstring> WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                            bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                            bool p_QuoteWrap, int p_ExpandTabSize,
+                                            int p_Pos, int& p_WrapLine, int& p_WrapPos,
+                                            std::vector<int>* p_LineOffsets = nullptr);
+
+private:
+  static ClusterWidthFunc m_ClusterWidthFunc;
+};
