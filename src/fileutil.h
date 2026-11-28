@@ -101,10 +101,8 @@ public:
   static std::string EscapePath(const std::string& p_Str);
   static std::string SanitizeFilename(const std::string& p_Str);
   static std::string GetDownloadsDir();
-  static void SetDownloadsDir(const std::string& p_DownloadsDir);
   static bool IsDir(const std::string& p_Path);
   static std::string GetNonExistentPath(const std::string& p_Path);
 
 private:
-  static std::string m_DownloadsDir;
 };

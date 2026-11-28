@@ -27,6 +27,10 @@ private:
   class Impl
   {
   public:
+    void RemoveSearchResults(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
+    void SetSeen(const std::string& p_Folder, uint32_t p_Uid, bool p_Seen);
+    void ApplyPendingSeen(const std::string& p_Folder, const std::map<uint32_t, uint32_t>& p_NewFlags);
+    void ClearPendingSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids);
     void InvalidateUidCache(const std::string& p_Folder);
     std::map<std::string, uint32_t>& GetDisplayUids(const std::string& p_Folder);
     std::set<uint32_t>& GetHeaderUids(const std::string& p_Folder);
@@ -50,6 +54,8 @@ private:
     std::map<std::string, std::set<uint32_t>> m_Uids;
     std::map<std::string, std::map<uint32_t, Header>> m_Headers;
     std::map<std::string, std::map<uint32_t, uint32_t>> m_Flags;
+    // seen state set locally with action result outstanding, as (seen, action count)
+    std::map<std::string, std::map<uint32_t, std::pair<bool, int>>> m_PendingSeen;
     std::map<std::string, std::map<uint32_t, Body>> m_Bodys;
     std::map<std::string, Ui::SortFilter> m_SortFilter;
     std::map<std::string, std::set<uint32_t>> m_HeaderUids;
@@ -105,7 +111,6 @@ public:
   };
 
   UiModel(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_DefaultFrom,
-          uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders,
           const std::function<void(char)>& p_UiRequestHandler,
           const std::function<void(const std::string&, bool)>& p_DialogMessageHandler);
   virtual ~UiModel();
@@ -118,10 +123,6 @@ public:
                      const ImapManager::SearchResult& p_SearchResult);
 
   void HandleSpecialFolders();
-  void SetTrashFolder(const std::string& p_TrashFolder);
-  void SetSpamFolder(const std::string& p_SpamFolder);
-  void SetDraftsFolder(const std::string& p_DraftsFolder);
-  void SetSentFolder(const std::string& p_SentFolder);
   std::string GetTrashFolder();
   std::string GetSpamFolder();
   std::string GetDraftsFolder();
@@ -131,14 +132,15 @@ public:
   void MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& p_From,
                     const std::string& p_To);
   void DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string& p_Folder);
-  void SetSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Seen);
+  void ToggleSeen(const std::map<std::string, std::set<uint32_t>>& p_FolderUids);
   void MarkSeen(const std::string& p_Folder, uint32_t p_Uid);
   void InvalidateUiCache(const std::string& p_Folder);
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
   void ResetImapManager();
   std::shared_ptr<ImapManager> GetImapManager();
-  void SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler);
-  void SetClientStoreSent(bool p_ClientStoreSent);
+  void AsyncRequest(const ImapManager::Request& p_Request);
+  void PrefetchRequest(const ImapManager::Request& p_Request);
+  void AsyncAction(const ImapManager::Action& p_Action);
   void SetNewMsgBell(bool p_NewMsgBell);
   std::string GetInbox();
   std::string GetAddress();
@@ -148,6 +150,7 @@ public:
 private:
   void AsyncUiRequest(char p_UiRequest);
   void SetDialogMessage(const std::string& p_DialogMessage, bool p_Warn = false);
+  std::string GetLastErrorHint();
 
 private:
   std::function<void(char)> m_UiRequestHandler;
@@ -156,8 +159,9 @@ private:
   Impl m_Impl;
   owned_mutex m_Mutex;
 
+  // leaf lock, guards the manager pointer
+  std::mutex m_ImapManagerMutex;
   std::shared_ptr<ImapManager> m_ImapManager;
-  std::function<void(const std::map<std::string, std::string>&)> m_SpecialFoldersHandler;
   bool m_ClientStoreSent = false;
 
   std::string m_Inbox;

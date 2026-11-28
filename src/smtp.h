@@ -1,6 +1,6 @@
 // smtp.h
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -27,11 +27,28 @@ enum SmtpStatus
   SmtpStatusImplFailed = 7,
 };
 
+struct SmtpConfig
+{
+  // reads all settings except pass and connect, which are set by caller
+  static SmtpConfig FromMainConfig();
+
+  std::string m_User;
+  std::string m_Pass;
+  std::string m_Host;
+  uint16_t m_Port = 0;
+  std::string m_Address;
+  int64_t m_Timeout = 0;
+  bool m_SendIp = true;
+
+  // used by smtp manager only
+  std::string m_Name;
+  bool m_Connect = true;
+};
+
 class Smtp
 {
 public:
-  Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-       const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout);
+  explicit Smtp(const SmtpConfig& p_Config);
   virtual ~Smtp();
 
   SmtpStatus Send(const std::string& p_Subject, const std::string& p_Message,
@@ -80,4 +97,5 @@ private:
   uint16_t m_Port = 0;
   std::string m_Address;
   int64_t m_Timeout = 0;
+  bool m_SendIp = true;
 };

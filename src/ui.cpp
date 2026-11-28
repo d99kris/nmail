@@ -45,8 +45,7 @@
 
 bool Ui::s_Running = false;
 
-Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name,
-       uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders)
+Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name)
   : m_Name(p_Name)
 {
   // dialog view is created in init
@@ -55,9 +54,8 @@ Ui::Ui(const std::string& p_Inbox, const std::string& p_Address, const std::stri
     m_DialogView->SetDialogMessage(p_DialogMessage, p_Warn);
   };
 
-  m_Model.reset(new UiModel(p_Inbox, p_Address, Contact(p_Address, p_Name).ToString(), p_PrefetchLevel,
-                            p_PrefetchAllHeaders, std::bind(&Ui::AsyncUiRequest, this, std::placeholders::_1),
-                            dialogMessageHandler));
+  m_Model.reset(new UiModel(p_Inbox, p_Address, Contact(p_Address, p_Name).ToString(),
+                            std::bind(&Ui::AsyncUiRequest, this, std::placeholders::_1), dialogMessageHandler));
   SetCurrentFolder(p_Inbox);
   Init();
   InitWindows();
@@ -627,36 +625,6 @@ void Ui::ResetSmtpManager()
   m_SmtpManager.reset();
 }
 
-void Ui::SetTrashFolder(const std::string& p_TrashFolder)
-{
-  m_Model->SetTrashFolder(p_TrashFolder);
-}
-
-void Ui::SetSpamFolder(const std::string& p_SpamFolder)
-{
-  m_Model->SetSpamFolder(p_SpamFolder);
-}
-
-void Ui::SetDraftsFolder(const std::string& p_DraftsFolder)
-{
-  m_Model->SetDraftsFolder(p_DraftsFolder);
-}
-
-void Ui::SetSentFolder(const std::string& p_SentFolder)
-{
-  m_Model->SetSentFolder(p_SentFolder);
-}
-
-void Ui::SetClientStoreSent(bool p_ClientStoreSent)
-{
-  m_Model->SetClientStoreSent(p_ClientStoreSent);
-}
-
-void Ui::SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler)
-{
-  m_Model->SetSpecialFoldersHandler(p_Handler);
-}
-
 void Ui::ResponseHandler(const ImapManager::Request& p_Request, const ImapManager::Response& p_Response)
 {
   m_Model->ResponseHandler(p_Request, p_Response);
@@ -836,7 +804,7 @@ void Ui::OnWakeUp()
   // Dummy request to trigger exit of idle
   ImapManager::Request request;
   LOG_DEBUG("async req none");
-  m_Model->GetImapManager()->AsyncRequest(request);
+  m_Model->AsyncRequest(request);
 }
 
 void Ui::SetCurrentFolder(const std::string& p_Folder)

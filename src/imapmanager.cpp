@@ -13,33 +13,23 @@
 #include "auth.h"
 #include "loghelp.h"
 
-ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
-                         const std::string& p_Host, const uint16_t p_Port,
-                         const bool p_Connect, const int64_t p_Timeout,
-                         const bool p_CacheEncrypt,
-                         const bool p_CacheIndexEncrypt,
-                         const uint32_t p_IdleTimeout,
-                         const uint32_t p_IdleDelay,
-                         const std::set<std::string>& p_FoldersExclude,
-                         const bool p_SniEnabled,
+ImapManager::ImapManager(const ImapConfig& p_Config,
                          const std::function<void(const ImapManager::Request&,
                                                   const ImapManager::Response&)>& p_ResponseHandler,
                          const std::function<void(const ImapManager::Action&,
                                                   const ImapManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler,
                          const std::function<void(const SearchQuery&,
-                                                  const SearchResult&)>& p_SearchHandler,
-                         const bool p_IdleInbox,
-                         const std::string& p_Inbox)
-  : m_Imap(p_User, p_Pass, p_Host, p_Port, p_Timeout,
-           p_CacheEncrypt, p_CacheIndexEncrypt, p_FoldersExclude, p_SniEnabled, p_StatusHandler)
-  , m_Connect(p_Connect)
+                                                  const SearchResult&)>& p_SearchHandler)
+  : m_Imap(p_Config, p_StatusHandler)
+  , m_Connect(p_Config.m_Connect)
   , m_ResponseHandler(p_ResponseHandler)
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_SearchHandler(p_SearchHandler)
-  , m_IdleInbox(p_IdleInbox)
-  , m_Inbox(p_Inbox)
+  , m_IdleInbox(p_Config.m_IdleInbox)
+  , m_DetectSpecialFolders(p_Config.m_DetectSpecialFolders)
+  , m_Inbox(p_Config.m_Inbox)
   , m_Connecting(false)
   , m_Running(false)
   , m_CacheRunning(false)
@@ -48,8 +38,8 @@ ImapManager::ImapManager(const std::string& p_User, const std::string& p_Pass,
   LOG_IF_NONZERO(pipe(m_Pipe));
   LOG_IF_NONZERO(pipe(m_CachePipe));
   m_Connecting = m_Connect;
-  m_IdleTimeout = std::max(1U, p_IdleTimeout);
-  m_IdleDelay = p_IdleDelay;
+  m_IdleTimeout = std::max(1U, p_Config.m_IdleTimeout);
+  m_IdleDelay = p_Config.m_IdleDelay;
 }
 
 ImapManager::~ImapManager()
@@ -135,11 +125,6 @@ ImapManager::~ImapManager()
   close(m_Pipe[1]);
   close(m_CachePipe[0]);
   close(m_CachePipe[1]);
-}
-
-void ImapManager::SetDetectSpecialFolders(bool p_DetectSpecialFolders)
-{
-  m_DetectSpecialFolders = p_DetectSpecialFolders;
 }
 
 void ImapManager::Start()

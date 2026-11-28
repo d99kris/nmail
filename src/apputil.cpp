@@ -44,10 +44,6 @@ int AppUtil::m_NewStdErr = -1;
 bool AppUtil::m_ReadOnly = false;
 volatile sig_atomic_t AppUtil::m_TerminateSignal = 0;
 bool AppUtil::m_AssertAbort = false;
-bool AppUtil::m_UseServerTimestamps = false;
-bool AppUtil::m_AddressBookEncrypt = false;
-bool AppUtil::m_SendIp = true;
-bool AppUtil::m_GetCopyToTrash = false;
 
 std::string AppUtil::GetApplicationDir()
 {
@@ -539,52 +535,4 @@ void AppUtil::AssertionFailed()
     const int size = GetCallstack(callstack, (int)(sizeof(callstack) / sizeof(callstack[0])), nullptr);
     Log::Callstack(callstack, size, logMsg);
   }
-}
-
-bool AppUtil::GetSendIp()
-{
-  return m_SendIp;
-}
-
-void AppUtil::SetSendIp(bool p_SendIp)
-{
-  m_SendIp = p_SendIp;
-}
-
-void AppUtil::SetUseServerTimestamps(bool p_Enable)
-{
-  m_UseServerTimestamps = p_Enable;
-}
-
-bool AppUtil::GetUseServerTimestamps()
-{
-  return m_UseServerTimestamps;
-}
-
-void AppUtil::SetAddressBookEncrypt(bool p_AddressBookEncrypt)
-{
-  m_AddressBookEncrypt = p_AddressBookEncrypt;
-}
-
-bool AppUtil::GetAddressBookEncrypt()
-{
-  return m_AddressBookEncrypt;
-}
-
-void AppUtil::SetCopyToTrash(const std::string& p_Value, const std::string& /*p_ImapHost*/)
-{
-  if (p_Value.empty())
-  {
-    // Default disabled
-    m_GetCopyToTrash = false;
-  }
-  else
-  {
-    m_GetCopyToTrash = (p_Value == "1");
-  }
-}
-
-bool AppUtil::GetCopyToTrash()
-{
-  return m_GetCopyToTrash;
 }

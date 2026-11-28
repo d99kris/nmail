@@ -159,10 +159,10 @@ void UiFolderListView::KeyHandler(int p_Key)
       }
       else if (m_State == Ui::StateMoveToFolder)
       {
-        const std::string& folder = m_CurrentFolderUid.first;
+        const std::string& folder = m_MoveFolderUid.first;
         if (m_FolderListCurrentFolder != folder)
         {
-          m_MessageListView->MoveSelectedMessages(m_FolderListCurrentFolder);
+          m_MessageListView->MoveSelectedMessages(m_FolderListCurrentFolder, m_MoveFolderUid);
           SetLastStateOrMessageList();
         }
         else
@@ -213,6 +213,8 @@ void UiFolderListView::OnEnter()
   else if (m_State == Ui::StateMoveToFolder)
   {
     curs_set(1);
+    // the cursor may be resynced while the list is shown, the message to move shall not change
+    m_MoveFolderUid = m_CurrentFolderUid;
     if (m_IsAutoMove)
     {
       m_FolderListFilterPos = 0;

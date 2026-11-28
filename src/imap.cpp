@@ -19,35 +19,57 @@
 #include "log.h"
 #include "loghelp.h"
 #include "mailutil.h"
+#include "mainconfig.h"
 #include "maphelp.h"
 #include "sethelp.h"
 #include "strutil.h"
 #include "sysutil.h"
 
-Imap::Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-           const uint16_t p_Port, const int64_t p_Timeout,
-           const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
-           const std::set<std::string>& p_FoldersExclude,
-           const bool p_SniEnabled,
-           const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+ImapConfig ImapConfig::FromMainConfig()
+{
+  ImapConfig config;
+  config.m_User = MainConfig::GetStr("user");
+  config.m_Host = MainConfig::GetStr("imap_host");
+  config.m_FoldersExclude = ToSet(StrUtil::SplitQuoted(MainConfig::GetStr("folders_exclude"), true));
+  config.m_SniEnabled = MainConfig::GetBool("sni_enabled");
+  config.m_IdleInbox = MainConfig::GetBool("idle_inbox");
+  config.m_Inbox = MainConfig::GetStr("inbox");
+  config.m_DetectSpecialFolders = MainConfig::GetStr("trash").empty() || MainConfig::GetStr("spam").empty() ||
+    MainConfig::GetStr("drafts").empty() || MainConfig::GetStr("sent").empty();
+
+  try
+  {
+    config.m_Port = std::stoi(MainConfig::GetStr("imap_port"));
+    config.m_Timeout = std::stoll(MainConfig::GetStr("network_timeout_sec"));
+    config.m_IdleTimeout = std::stoi(MainConfig::GetStr("idle_timeout_min"));
+    config.m_IdleDelay = std::stoi(MainConfig::GetStr("idle_delay_sec"));
+  }
+  catch (...)
+  {
+  }
+
+  return config;
+}
+
+Imap::Imap(const ImapConfig& p_Config, const std::function<void(const StatusUpdate&)>& p_StatusHandler,
            const bool p_CacheEnabled)
-  : m_User(p_User)
-  , m_Pass(p_Pass)
-  , m_Host(p_Host)
-  , m_Port(p_Port)
-  , m_Timeout(p_Timeout)
-  , m_CacheEncrypt(p_CacheEncrypt)
-  , m_CacheIndexEncrypt(p_CacheIndexEncrypt)
-  , m_FoldersExclude(p_FoldersExclude)
-  , m_SniEnabled(p_SniEnabled)
+  : m_User(p_Config.m_User)
+  , m_Pass(p_Config.m_Pass)
+  , m_Host(p_Config.m_Host)
+  , m_Port(p_Config.m_Port)
+  , m_Timeout(p_Config.m_Timeout)
+  , m_CacheEncrypt(p_Config.m_CacheEncrypt)
+  , m_CacheIndexEncrypt(p_Config.m_CacheIndexEncrypt)
+  , m_FoldersExclude(p_Config.m_FoldersExclude)
+  , m_SniEnabled(p_Config.m_SniEnabled)
 {
   if (Log::GetTraceEnabled())
   {
-    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
+    LOG_TRACE_FUNC(STR(m_User, "***" /*p_Pass*/, m_Host, m_Port, m_CacheEncrypt));
   }
   else
   {
-    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, p_Host, p_Port, p_CacheEncrypt));
+    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, m_Host, m_Port, m_CacheEncrypt));
   }
 
   InitImap();
@@ -64,9 +86,14 @@ Imap::LoginResult Imap::CheckLogin(const std::string& p_User, const std::string&
                                    std::string& p_Message)
 {
   // login without cache, e.g. to verify credentials during setup
-  Imap imap(p_User, p_Pass, p_Host, p_Port, p_Timeout, false /* p_CacheEncrypt */,
-            false /* p_CacheIndexEncrypt */, std::set<std::string>(), p_SniEnabled,
-            std::function<void(const StatusUpdate&)>(), false /* p_CacheEnabled */);
+  ImapConfig config;
+  config.m_User = p_User;
+  config.m_Pass = p_Pass;
+  config.m_Host = p_Host;
+  config.m_Port = p_Port;
+  config.m_Timeout = p_Timeout;
+  config.m_SniEnabled = p_SniEnabled;
+  Imap imap(config, std::function<void(const StatusUpdate&)>(), false /* p_CacheEnabled */);
   if (imap.Login())
   {
     imap.Logout();

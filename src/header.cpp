@@ -12,12 +12,12 @@
 
 #include <libetpan/mailmime.h>
 
-#include "apputil.h"
 #include "body.h"
 #include "crypto.h"
 #include "log.h"
 #include "loghelp.h"
 #include "mailutil.h"
+#include "mainconfig.h"
 #include "sethelp.h"
 #include "strutil.h"
 
@@ -293,7 +293,7 @@ void Header::Parse()
     mailmime_free(mime);
   }
 
-  static const bool useServerTime = AppUtil::GetUseServerTimestamps();
+  static const bool useServerTime = MainConfig::GetBool("server_timestamps");
   time_t timeStamp = useServerTime ? serverTimeStamp : headerTimeStamp;
   if (timeStamp == 0)
   {

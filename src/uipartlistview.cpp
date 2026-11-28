@@ -123,6 +123,7 @@ void UiPartListView::KeyHandler(int p_Key)
 
     std::string tempFilePath;
     std::string partData;
+    bool hasPartData = false;
 
     {
       UiModel::Lock model(m_Model);
@@ -135,9 +136,14 @@ void UiPartListView::KeyHandler(int p_Key)
         Body& body = bodyIt->second;
         const std::map<ssize_t, PartInfo>& parts = body.GetPartInfos();
         const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
-        partData = partDatas.at(m_PartListCurrentIndex);
+        auto partDataIt = partDatas.find(m_PartListCurrentIndex);
+        if (partDataIt != partDatas.end())
+        {
+          partData = partDataIt->second;
+          hasPartData = true;
+        }
 
-        if (m_ShowEmbeddedImages && isUnamedTextHtml)
+        if (hasPartData && m_ShowEmbeddedImages && isUnamedTextHtml)
         {
           for (auto& part : parts)
           {
@@ -151,7 +157,11 @@ void UiPartListView::KeyHandler(int p_Key)
         }
       }
 
-      if (m_ShowEmbeddedImages && isUnamedTextHtml)
+      if (!hasPartData)
+      {
+        // part not available, e.g. message removed by another client and cursor on its neighbour
+      }
+      else if (m_ShowEmbeddedImages && isUnamedTextHtml)
       {
         tempFilePath = FileUtil::GetAttachmentsTempDir() + fileName;
         StrUtil::ReplaceString(partData, "src=cid:", "src=file://" + FileUtil::GetAttachmentsTempDir());
@@ -165,6 +175,12 @@ void UiPartListView::KeyHandler(int p_Key)
         LOG_DEBUG("writing \"%s\"", tempFilePath.c_str());
         FileUtil::WriteFile(tempFilePath, partData);
       }
+    }
+
+    if (!hasPartData)
+    {
+      SetDialogMessage("Part not available", true /* p_Warn */);
+      return;
     }
 
     SetDialogMessage("Waiting for external viewer to exit");
@@ -201,6 +217,7 @@ void UiPartListView::KeyHandler(int p_Key)
         filename = FileUtil::ExpandPath(filename);
 
         std::string partData;
+        bool hasPartData = false;
         {
           UiModel::Lock model(m_Model);
           const std::string& folder = m_CurrentFolderUid.first;
@@ -211,12 +228,24 @@ void UiPartListView::KeyHandler(int p_Key)
           {
             Body& body = bodyIt->second;
             const std::map<ssize_t, std::string>& partDatas = body.GetPartDatas();
-            partData = partDatas.at(m_PartListCurrentIndex);
+            auto partDataIt = partDatas.find(m_PartListCurrentIndex);
+            if (partDataIt != partDatas.end())
+            {
+              partData = partDataIt->second;
+              hasPartData = true;
+            }
           }
         }
 
-        FileUtil::WriteFile(filename, partData);
-        SetDialogMessage("File saved");
+        if (hasPartData)
+        {
+          FileUtil::WriteFile(filename, partData);
+          SetDialogMessage("File saved");
+        }
+        else
+        {
+          SetDialogMessage("Save failed (part not available)", true /* p_Warn */);
+        }
       }
       else
       {

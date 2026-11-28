@@ -30,7 +30,6 @@
 #include "offlinequeue.h"
 #include "passutil.h"
 #include "sasl.h"
-#include "sethelp.h"
 #include "setupwizard.h"
 #include "smtpmanager.h"
 #include "strutil.h"
@@ -257,7 +256,7 @@ int main(int argc, char* argv[])
     LOG_INFO("start setup");
     MainConfig::Init();
 
-    if (!SetupWizard::Run(setup, MainConfig::GetConfig(), MainConfig::GetDefaultConfig()))
+    if (!SetupWizard::Run(setup))
     {
       if (!hasMainConfig)
       {
@@ -281,41 +280,13 @@ int main(int argc, char* argv[])
   std::shared_ptr<Config> secretConfig = std::make_shared<Config>(secretConfigPath, defaultSecretConfig);
 
   // Read main config
-  const std::string& name = MainConfig::GetStr("name");
-  const std::string& address = MainConfig::GetStr("address");
-  const std::string& user = MainConfig::GetStr("user");
-  const std::string& imapHost = MainConfig::GetStr("imap_host");
-  const std::string& smtpHost = MainConfig::GetStr("smtp_host");
-  std::string smtpUser = MainConfig::GetStr("smtp_user");
-  const std::string& inbox = MainConfig::GetStr("inbox");
-  std::string trash = MainConfig::GetStr("trash");
-  std::string spam = MainConfig::GetStr("spam");
-  std::string drafts = MainConfig::GetStr("drafts");
-  std::string sent = MainConfig::GetStr("sent");
-  const bool clientStoreSent = MainConfig::GetBool("client_store_sent");
-  const bool idleInbox = MainConfig::GetBool("idle_inbox");
-  ExtUtil::SetHtmlToTextConvertCmd(MainConfig::GetStr("html_to_text_cmd"));
-  ExtUtil::SetTextToHtmlConvertCmd(MainConfig::GetStr("text_to_html_cmd"));
-  ExtUtil::SetPartsViewerCmd(MainConfig::GetStr("parts_viewer_cmd"));
-  ExtUtil::SetHtmlViewerCmd(MainConfig::GetStr("html_viewer_cmd"));
-  ExtUtil::SetHtmlPreviewCmd(MainConfig::GetStr("html_preview_cmd"));
-  ExtUtil::SetMsgViewerCmd(MainConfig::GetStr("msg_viewer_cmd"));
-  ExtUtil::SetLinkOpenCmd(MainConfig::GetStr("link_open_cmd"));
-  ExtUtil::SetPagerCmd(MainConfig::GetStr("pager_cmd"));
-  ExtUtil::SetEditorCmd(MainConfig::GetStr("editor_cmd"));
-  ExtUtil::SetSpellCmd(MainConfig::GetStr("spell_cmd"));
-  std::set<std::string> foldersExclude = ToSet(StrUtil::SplitQuoted(MainConfig::GetStr("folders_exclude"), true));
-  AppUtil::SetUseServerTimestamps(MainConfig::GetBool("server_timestamps"));
+  ImapConfig imapConfig = ImapConfig::FromMainConfig();
+  SmtpConfig smtpConfig = SmtpConfig::FromMainConfig();
+  imapConfig.m_Connect = online;
+  smtpConfig.m_Connect = online;
   const std::string auth = MainConfig::GetStr("auth");
-  const bool prefetchAllHeaders = MainConfig::GetBool("prefetch_all_headers");
-  AppUtil::SetSendIp(MainConfig::GetBool("send_ip"));
-  ExtUtil::SetFilePickerCmd(MainConfig::GetStr("file_picker_cmd"));
-  FileUtil::SetDownloadsDir(MainConfig::GetStr("downloads_dir"));
   const bool isCoredumpEnabled = MainConfig::GetBool("coredump_enabled");
-  const bool sniEnabled = MainConfig::GetBool("sni_enabled");
   const bool isLogdumpEnabled = MainConfig::GetBool("logdump_enabled");
-  AppUtil::SetCopyToTrash(MainConfig::GetStr("copy_to_trash"), MainConfig::GetStr("imap_host"));
-  MainConfig::SetStr("copy_to_trash", std::to_string(AppUtil::GetCopyToTrash()));
   AppUtil::SetAssertAbort(MainConfig::GetBool("assert_abort"));
 
   // Set logging verbosity level based on config, if not specified with command line arguments
@@ -353,26 +324,7 @@ int main(int argc, char* argv[])
   // Log config
   MainConfig::LogParamsExcept(std::set<std::string>({ "name", "address", "user", "smtp_user" }));
 
-  uint16_t imapPort = 0;
-  uint16_t smtpPort = 0;
-  uint32_t prefetchLevel = 0;
-  uint64_t networkTimeout = 0;
-  uint32_t idleTimeout = 29;
-  uint32_t idleDelay = 15;
-  try
-  {
-    imapPort = std::stoi(MainConfig::GetStr("imap_port"));
-    smtpPort = std::stoi(MainConfig::GetStr("smtp_port"));
-    prefetchLevel = std::stoi(MainConfig::GetStr("prefetch_level"));
-    networkTimeout = std::stoll(MainConfig::GetStr("network_timeout_sec"));
-    idleTimeout = std::stoi(MainConfig::GetStr("idle_timeout_min"));
-    idleDelay = std::stoi(MainConfig::GetStr("idle_delay_sec"));
-  }
-  catch (...)
-  {
-  }
-
-  if (!ValidateConfig(user, imapHost, imapPort, smtpHost, smtpPort))
+  if (!ValidateConfig(imapConfig.m_User, imapConfig.m_Host, imapConfig.m_Port, smtpConfig.m_Host, smtpConfig.m_Port))
   {
     ShowHelp();
     return 1;
@@ -380,22 +332,22 @@ int main(int argc, char* argv[])
 
   if (changePass)
   {
-    return PassUtil::ChangePasswords(MainConfig::GetConfig(), secretConfig) ? 0 : 1;
+    return PassUtil::ChangePasswords(secretConfig) ? 0 : 1;
   }
 
-  std::string pass;
-  std::string smtpPass;
   if (auth == "pass")
   {
-    if (!PassUtil::ObtainAuthPasswords(isSetup, user, pass, smtpUser, smtpPass, secretConfig, MainConfig::GetConfig()))
+    if (!PassUtil::ObtainAuthPasswords(isSetup, imapConfig.m_User, imapConfig.m_Pass, smtpConfig.m_User,
+                                       smtpConfig.m_Pass, secretConfig))
     {
       return 1;
     }
   }
   else
   {
-    if (!PassUtil::ObtainCacheEncryptPassword(isSetup, user, setupAllowCacheEncrypt, pass, smtpUser, smtpPass,
-                                              secretConfig, MainConfig::GetConfig()))
+    if (!PassUtil::ObtainCacheEncryptPassword(isSetup, imapConfig.m_User, setupAllowCacheEncrypt, imapConfig.m_Pass,
+                                              smtpConfig.m_User, smtpConfig.m_Pass,
+                                              secretConfig))
     {
       return 1;
     }
@@ -407,16 +359,15 @@ int main(int argc, char* argv[])
   }
 
   // Read config that may be updated during authentication
-  const bool cacheEncrypt = MainConfig::GetBool("cache_encrypt");
-  const bool cacheIndexEncrypt = MainConfig::GetBool("cache_index_encrypt");
-  const bool addressBookEncrypt = MainConfig::GetBool("addressbook_encrypt");
+  imapConfig.m_CacheEncrypt = MainConfig::GetBool("cache_encrypt");
+  imapConfig.m_CacheIndexEncrypt = MainConfig::GetBool("cache_index_encrypt");
   const bool queueEncrypt = MainConfig::GetBool("queue_encrypt");
   const bool authEncrypt = MainConfig::GetBool("auth_encrypt");
 
   // Perform export if requested
   if (!exportDir.empty())
   {
-    ImapCache imapCache(cacheEncrypt, pass);
+    ImapCache imapCache(imapConfig.m_CacheEncrypt, imapConfig.m_Pass);
     bool exportRv = imapCache.Export(exportDir);
     std::cout << "Export " << (exportRv ? "success" : "failure") << "\n";
     return exportRv ? 0 : 1;
@@ -424,54 +375,28 @@ int main(int argc, char* argv[])
 
   AppUtil::InitStdErrRedirect(logPath);
 
-  AppUtil::SetAddressBookEncrypt(addressBookEncrypt);
+  Auth::Init(auth, authEncrypt, imapConfig.m_Pass, isSetup);
 
-  Auth::Init(auth, authEncrypt, pass, isSetup);
-
-  std::shared_ptr<Ui> ui = std::make_shared<Ui>(inbox, address, name, prefetchLevel, prefetchAllHeaders);
+  std::shared_ptr<Ui> ui = std::make_shared<Ui>(imapConfig.m_Inbox, smtpConfig.m_Address, smtpConfig.m_Name);
 
   std::shared_ptr<ImapManager> imapManager =
-    std::make_shared<ImapManager>(user, pass, imapHost, imapPort, online,
-                                  networkTimeout,
-                                  cacheEncrypt, cacheIndexEncrypt,
-                                  idleTimeout,
-                                  idleDelay,
-                                  foldersExclude,
-                                  sniEnabled,
+    std::make_shared<ImapManager>(imapConfig,
                                   std::bind(&Ui::ResponseHandler, ui.get(), std::placeholders::_1,
                                             std::placeholders::_2),
                                   std::bind(&Ui::ResultHandler, ui.get(), std::placeholders::_1,
                                             std::placeholders::_2),
                                   std::bind(&Ui::StatusHandler, ui.get(), std::placeholders::_1),
                                   std::bind(&Ui::SearchHandler, ui.get(), std::placeholders::_1,
-                                            std::placeholders::_2),
-                                  idleInbox, inbox);
+                                            std::placeholders::_2));
 
   std::shared_ptr<SmtpManager> smtpManager =
-    std::make_shared<SmtpManager>(smtpUser, smtpPass, smtpHost, smtpPort, name, address, online,
-                                  networkTimeout,
+    std::make_shared<SmtpManager>(smtpConfig,
                                   std::bind(&Ui::SmtpResultHandler, ui.get(), std::placeholders::_1),
                                   std::bind(&Ui::StatusHandler, ui.get(), std::placeholders::_1));
 
-  OfflineQueue::Init(queueEncrypt, pass);
+  OfflineQueue::Init(queueEncrypt, imapConfig.m_Pass);
 
   ui->SetImapManager(imapManager);
-  ui->SetTrashFolder(trash);
-  ui->SetSpamFolder(spam);
-  ui->SetDraftsFolder(drafts);
-  ui->SetSentFolder(sent);
-  ui->SetClientStoreSent(clientStoreSent);
-  ui->SetSpecialFoldersHandler([](const std::map<std::string, std::string>& p_SpecialFolders)
-  {
-    // persist detected special folders
-    for (const auto& specialFolder : p_SpecialFolders)
-    {
-      MainConfig::SetStr(specialFolder.first, specialFolder.second);
-    }
-
-    MainConfig::Save();
-  });
-  imapManager->SetDetectSpecialFolders(trash.empty() || spam.empty() || drafts.empty() || sent.empty());
   ui->SetSmtpManager(smtpManager);
 
   imapManager->Start();

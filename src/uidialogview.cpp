@@ -124,7 +124,7 @@ bool UiDialogView::PromptString(const std::string& p_Prompt, const std::string& 
   if (m_HelpEnabled)
   {
     werase(m_HelpWin);
-    static std::vector<std::vector<std::string>> savePartHelp =
+    const std::vector<std::vector<std::string>> promptHelp =
     {
       {
         m_HelpView->GetKeyDisplay(m_KeyReturn), p_Action,
@@ -134,7 +134,7 @@ bool UiDialogView::PromptString(const std::string& p_Prompt, const std::string& 
       }
     };
 
-    m_HelpView->DrawHelpText(savePartHelp, 2);
+    m_HelpView->DrawHelpText(promptHelp, 2);
 
     wrefresh(m_HelpWin);
   }

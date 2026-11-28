@@ -10,6 +10,7 @@
 #include "apputil.h"
 
 std::shared_ptr<Config> MainConfig::m_Config;
+std::mutex MainConfig::m_Mutex;
 
 void MainConfig::Init()
 {
@@ -18,11 +19,13 @@ void MainConfig::Init()
     { "idle_timeout", "idle_timeout_min" },
     { "network_timeout", "network_timeout_sec" },
   };
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Config = std::make_shared<Config>(GetPath(), GetDefaultConfig(), false, renamedConfig);
 }
 
 void MainConfig::Cleanup()
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Config->Save();
   m_Config.reset();
 }
@@ -83,38 +86,44 @@ const std::map<std::string, std::string>& MainConfig::GetDefaultConfig()
     { "idle_delay_sec", "15" },
     { "sni_enabled", "1" },
     { "logdump_enabled", "0" },
-    { "copy_to_trash", "" },
+    { "copy_to_trash", "0" },
     { "assert_abort", "0" },
   };
   return defaultConfig;
 }
 
-std::shared_ptr<Config> MainConfig::GetConfig()
+bool MainConfig::Exist(const std::string& p_Param)
 {
-  return m_Config;
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  return m_Config->Exist(p_Param);
 }
 
 bool MainConfig::GetBool(const std::string& p_Param)
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   return m_Config->Get(p_Param) == "1";
 }
 
 std::string MainConfig::GetStr(const std::string& p_Param)
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   return m_Config->Get(p_Param);
 }
 
 void MainConfig::SetStr(const std::string& p_Param, const std::string& p_Value)
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Config->Set(p_Param, p_Value);
 }
 
 void MainConfig::Save()
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Config->Save();
 }
 
 void MainConfig::LogParamsExcept(const std::set<std::string>& p_Exclude)
 {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Config->LogParamsExcept(p_Exclude);
 }

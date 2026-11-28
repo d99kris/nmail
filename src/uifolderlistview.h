@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 
 #include "uipickerview.h"
 
@@ -26,6 +27,7 @@ private:
 
   int m_FolderListCurrentIndex = 0;
   std::string m_FolderListCurrentFolder;
+  std::pair<std::string, int32_t> m_MoveFolderUid;
 
   int m_PersistedFolderListCurrentIndex = 0;
   std::string m_PersistedFolderListCurrentFolder;

@@ -13,10 +13,10 @@
 #include <unistd.h>
 
 #include "auth.h"
-#include "config.h"
 #include "imap.h"
 #include "lineedit.h"
 #include "loghelp.h"
+#include "mainconfig.h"
 #include "provider.h"
 #include "strutil.h"
 #include "sysutil.h"
@@ -24,8 +24,7 @@
 // value column for aligned labels
 static const size_t valueColumn = 15;
 
-bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Config,
-                      const std::map<std::string, std::string>& p_DefaultConfig)
+bool SetupWizard::Run(const std::string& p_Setup)
 {
   std::string providerId;
   std::string auth;
@@ -39,12 +38,13 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
     "name", "address", "user", "imap_host", "imap_port", "smtp_host", "smtp_port", "smtp_user",
     "inbox", "trash", "spam", "drafts", "sent", "client_store_sent", "folders_exclude", "auth",
   };
+  const std::map<std::string, std::string>& defaultConfig = MainConfig::GetDefaultConfig();
   for (const auto& param : accountParams)
   {
-    auto it = p_DefaultConfig.find(param);
-    if (it != p_DefaultConfig.end())
+    auto it = defaultConfig.find(param);
+    if (it != defaultConfig.end())
     {
-      p_Config->Set(param, it->second);
+      MainConfig::SetStr(param, it->second);
     }
   }
 
@@ -52,8 +52,8 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
   if (!auth.empty() && (auth != "pass"))
   {
     LOG_INFO("setup provider %s (arg)", providerId.c_str());
-    ApplyProvider(providerId, p_Config);
-    return SetupOAuth2(auth, GetParam(providerId, "oauth_note"), "", p_Config);
+    ApplyProvider(providerId);
+    return SetupOAuth2(auth, GetParam(providerId, "oauth_note"), "");
   }
 
   std::string email;
@@ -100,7 +100,7 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
     const std::map<std::string, std::string> params = Provider::GetParams(providerId);
     auto nameIt = params.find("name");
     std::cout << Label("Provider") << ((nameIt != params.end()) ? nameIt->second : providerId) << "\n";
-    ApplyProvider(providerId, p_Config);
+    ApplyProvider(providerId);
 
     if (auth.empty())
     {
@@ -131,7 +131,7 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
     std::cout << "\n";
     if (auth != "pass")
     {
-      return SetupOAuth2(auth, GetParam(providerId, "oauth_note"), name, p_Config);
+      return SetupOAuth2(auth, GetParam(providerId, "oauth_note"), name);
     }
 
     const std::string passNote = GetParam(providerId, "pass_note");
@@ -144,17 +144,17 @@ bool SetupWizard::Run(const std::string& p_Setup, std::shared_ptr<Config> p_Conf
   {
     const bool noMx = (mxResult == Provider::MxResultUnavailable);
     std::cout << Label("Provider") << "Unknown" << (noMx ? " (no MX lookup)" : "") << ", enter server details\n\n";
-    if (!PromptServers(domain, p_Config)) return false;
+    if (!PromptServers(domain)) return false;
 
     std::cout << "\n";
   }
 
-  p_Config->Set("name", name);
-  p_Config->Set("address", email);
+  MainConfig::SetStr("name", name);
+  MainConfig::SetStr("address", email);
   // some providers use username without domain, e.g. riseup
   const bool isLocalPart = !providerId.empty() && (GetParam(providerId, "user_format") == "localpart");
-  p_Config->Set("user", isLocalPart ? email.substr(0, atPos) : email);
-  p_Config->Set("auth", "pass");
+  MainConfig::SetStr("user", isLocalPart ? email.substr(0, atPos) : email);
+  MainConfig::SetStr("auth", "pass");
   return true;
 }
 
@@ -213,7 +213,7 @@ bool SetupWizard::PromptYesNo(const std::string& p_Name, bool& p_Value)
   }
 }
 
-bool SetupWizard::PromptPassword(const std::string& p_Name, std::shared_ptr<Config> p_Config, std::string& p_Pass)
+bool SetupWizard::PromptPassword(const std::string& p_Name, std::string& p_Pass)
 {
   // verify imap login, with limited attempts to avoid account lockout
   static const int maxAttempts = 3;
@@ -222,8 +222,8 @@ bool SetupWizard::PromptPassword(const std::string& p_Name, std::shared_ptr<Conf
   int64_t timeout = 30;
   try
   {
-    port = std::stoi(p_Config->Get("imap_port"));
-    timeout = std::stoll(p_Config->Get("network_timeout_sec"));
+    port = std::stoi(MainConfig::GetStr("imap_port"));
+    timeout = std::stoll(MainConfig::GetStr("network_timeout_sec"));
   }
   catch (...)
   {
@@ -250,8 +250,8 @@ bool SetupWizard::PromptPassword(const std::string& p_Name, std::shared_ptr<Conf
     isLoginAttempted = true;
     std::string message;
     const Imap::LoginResult result =
-      Imap::CheckLogin(p_Config->Get("user"), p_Pass, p_Config->Get("imap_host"), port, timeout,
-                       (p_Config->Get("sni_enabled") == "1"), message);
+      Imap::CheckLogin(MainConfig::GetStr("user"), p_Pass, MainConfig::GetStr("imap_host"), port, timeout,
+                       MainConfig::GetBool("sni_enabled"), message);
     if (isTty)
     {
       std::cout << "\r\033[K" << std::flush;
@@ -331,8 +331,7 @@ bool SetupWizard::ResolveSetupArg(const std::string& p_Setup, std::string& p_Pro
   return false;
 }
 
-bool SetupWizard::SetupOAuth2(const std::string& p_Auth, const std::string& p_Note, const std::string& p_Name,
-                              std::shared_ptr<Config> p_Config)
+bool SetupWizard::SetupOAuth2(const std::string& p_Auth, const std::string& p_Note, const std::string& p_Name)
 {
   if (!p_Note.empty())
   {
@@ -350,30 +349,30 @@ bool SetupWizard::SetupOAuth2(const std::string& p_Auth, const std::string& p_No
 
   const std::string email = Auth::GetEmail();
   // name entered by user takes precedence over name from oauth2 account
-  p_Config->Set("name", !p_Name.empty() ? p_Name : Auth::GetName());
-  p_Config->Set("address", email);
-  p_Config->Set("user", email);
-  p_Config->Set("auth", p_Auth);
+  MainConfig::SetStr("name", !p_Name.empty() ? p_Name : Auth::GetName());
+  MainConfig::SetStr("address", email);
+  MainConfig::SetStr("user", email);
+  MainConfig::SetStr("auth", p_Auth);
   return true;
 }
 
-bool SetupWizard::PromptServers(const std::string& p_Domain, std::shared_ptr<Config> p_Config)
+bool SetupWizard::PromptServers(const std::string& p_Domain)
 {
   std::string imapHost = "imap." + p_Domain;
-  std::string imapPort = p_Config->Get("imap_port");
+  std::string imapPort = MainConfig::GetStr("imap_port");
   std::string smtpHost = "smtp." + p_Domain;
-  std::string smtpPort = p_Config->Get("smtp_port");
+  std::string smtpPort = MainConfig::GetStr("smtp_port");
   if (!Prompt("IMAP host", imapHost) || !PromptPort("IMAP port", imapPort) ||
       !Prompt("SMTP host", smtpHost) || !PromptPort("SMTP port", smtpPort)) return false;
 
-  p_Config->Set("imap_host", imapHost);
-  p_Config->Set("imap_port", imapPort);
-  p_Config->Set("smtp_host", smtpHost);
-  p_Config->Set("smtp_port", smtpPort);
+  MainConfig::SetStr("imap_host", imapHost);
+  MainConfig::SetStr("imap_port", imapPort);
+  MainConfig::SetStr("smtp_host", smtpHost);
+  MainConfig::SetStr("smtp_port", smtpPort);
   return true;
 }
 
-void SetupWizard::ApplyProvider(const std::string& p_ProviderId, std::shared_ptr<Config> p_Config)
+void SetupWizard::ApplyProvider(const std::string& p_ProviderId)
 {
   // provider params not part of main config
   static const std::set<std::string> providerParams =
@@ -385,13 +384,13 @@ void SetupWizard::ApplyProvider(const std::string& p_ProviderId, std::shared_ptr
   {
     if (providerParams.count(param.first) > 0) continue;
 
-    if (!p_Config->Exist(param.first))
+    if (!MainConfig::Exist(param.first))
     {
       LOG_WARNING("provider %s unknown param \"%s\"", p_ProviderId.c_str(), param.first.c_str());
       continue;
     }
 
-    p_Config->Set(param.first, param.second);
+    MainConfig::SetStr(param.first, param.second);
   }
 }
 

@@ -26,9 +26,23 @@
 
 #include "apputil.h"
 #include "loghelp.h"
+#include "mainconfig.h"
 #include "strutil.h"
 
-std::string FileUtil::m_DownloadsDir;
+static std::string ConfigDownloadsDir()
+{
+  const std::string configDir = MainConfig::GetStr("downloads_dir");
+  if (!configDir.empty())
+  {
+    const std::string downloadsDir = FileUtil::ExpandPath(configDir);
+    if (FileUtil::IsDir(downloadsDir))
+    {
+      return downloadsDir + "/";
+    }
+  }
+
+  return "";
+}
 
 bool FileUtil::Exists(const std::string& p_Path)
 {
@@ -377,19 +391,9 @@ std::string FileUtil::SanitizeFilename(const std::string& p_Str)
 
 std::string FileUtil::GetDownloadsDir()
 {
-  return m_DownloadsDir;
-}
-
-void FileUtil::SetDownloadsDir(const std::string& p_DownloadsDir)
-{
-  if (!p_DownloadsDir.empty())
-  {
-    std::string downloadsDir = FileUtil::ExpandPath(p_DownloadsDir);
-    if (FileUtil::IsDir(downloadsDir))
-    {
-      m_DownloadsDir = downloadsDir + "/";
-    }
-  }
+  // setting is read from main config at first use
+  static const std::string downloadsDir = ConfigDownloadsDir();
+  return downloadsDir;
 }
 
 bool FileUtil::IsDir(const std::string& p_Path)

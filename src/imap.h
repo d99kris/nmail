@@ -18,6 +18,30 @@
 #include "imapcache.h"
 #include "imapindex.h"
 
+struct ImapConfig
+{
+  // reads all settings except pass, cache encrypt and connect, which are set by caller
+  static ImapConfig FromMainConfig();
+
+  std::string m_User;
+  std::string m_Pass;
+  std::string m_Host;
+  uint16_t m_Port = 0;
+  int64_t m_Timeout = 0;
+  bool m_CacheEncrypt = false;
+  bool m_CacheIndexEncrypt = false;
+  std::set<std::string> m_FoldersExclude;
+  bool m_SniEnabled = false;
+
+  // used by imap manager only
+  bool m_Connect = true;
+  uint32_t m_IdleTimeout = 29;
+  uint32_t m_IdleDelay = 15;
+  bool m_IdleInbox = false;
+  std::string m_Inbox;
+  bool m_DetectSpecialFolders = false;
+};
+
 class Imap
 {
 public:
@@ -51,12 +75,7 @@ public:
   };
 
 public:
-  Imap(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-       const uint16_t p_Port, const int64_t p_Timeout,
-       const bool p_CacheEncrypt, const bool p_CacheIndexEncrypt,
-       const std::set<std::string>& p_FoldersExclude,
-       const bool p_SniEnabled,
-       const std::function<void(const StatusUpdate&)>& p_StatusHandler,
+  Imap(const ImapConfig& p_Config, const std::function<void(const StatusUpdate&)>& p_StatusHandler,
        const bool p_CacheEnabled = true);
   virtual ~Imap();
 

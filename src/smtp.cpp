@@ -18,32 +18,53 @@
 #include <libetpan/mailimf.h>
 #include <libetpan/mailmime.h>
 #include <libetpan/mailsmtp.h>
-#include "apputil.h"
 #include "auth.h"
 #include "fileutil.h"
 #include "log.h"
 #include "loghelp.h"
 #include "mailutil.h"
+#include "mainconfig.h"
 #include "sasl.h"
 #include "strutil.h"
 #include "uuid.h"
 
-Smtp::Smtp(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-           const uint16_t p_Port, const std::string& p_Address, const int64_t p_Timeout)
-  : m_User(p_User)
-  , m_Pass(p_Pass)
-  , m_Host(p_Host)
-  , m_Port(p_Port)
-  , m_Address(p_Address)
-  , m_Timeout(p_Timeout)
+SmtpConfig SmtpConfig::FromMainConfig()
+{
+  SmtpConfig config;
+  config.m_User = MainConfig::GetStr("smtp_user");
+  config.m_Host = MainConfig::GetStr("smtp_host");
+  config.m_Address = MainConfig::GetStr("address");
+  config.m_Name = MainConfig::GetStr("name");
+  config.m_SendIp = MainConfig::GetBool("send_ip");
+
+  try
+  {
+    config.m_Port = std::stoi(MainConfig::GetStr("smtp_port"));
+    config.m_Timeout = std::stoll(MainConfig::GetStr("network_timeout_sec"));
+  }
+  catch (...)
+  {
+  }
+
+  return config;
+}
+
+Smtp::Smtp(const SmtpConfig& p_Config)
+  : m_User(p_Config.m_User)
+  , m_Pass(p_Config.m_Pass)
+  , m_Host(p_Config.m_Host)
+  , m_Port(p_Config.m_Port)
+  , m_Address(p_Config.m_Address)
+  , m_Timeout(p_Config.m_Timeout)
+  , m_SendIp(p_Config.m_SendIp)
 {
   if (Log::GetTraceEnabled())
   {
-    LOG_TRACE_FUNC(STR(p_User, "***" /*p_Pass*/, p_Host, p_Port, p_Address));
+    LOG_TRACE_FUNC(STR(m_User, "***" /*p_Pass*/, m_Host, m_Port, m_Address));
   }
   else
   {
-    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, p_Host, p_Port, "***", "***"));
+    LOG_DEBUG_FUNC(STR("***", "***" /*p_Pass*/, m_Host, m_Port, "***", "***"));
   }
 }
 
@@ -101,7 +122,7 @@ SmtpStatus Smtp::SendMessage(const std::string& p_Data, const std::vector<Contac
 
   const bool isSSL = (m_Port == 465);
   const bool isStartTLS = (m_Port == 587);
-  const bool isUseIP = AppUtil::GetSendIp();
+  const bool isUseIP = m_SendIp;
 
   mailsmtp* smtp = LOG_IF_NULL(mailsmtp_new(0, NULL));
   if (smtp == NULL) return SmtpStatusFailed;

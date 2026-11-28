@@ -607,6 +607,7 @@ void UiMessageListView::KeyHandler(int p_Key)
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
+      m_HelpView->ResetMessagesListOffset();
       SetCurrentFolder(m_PreviousFolder);
       m_PreviousFolder = "";
       UpdateIndexFromUid();
@@ -626,6 +627,7 @@ void UiMessageListView::KeyHandler(int p_Key)
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
+      m_HelpView->ResetMessagesListOffset();
       m_PreviousFolder = "";
     }
 
@@ -900,6 +902,7 @@ void UiMessageListView::KeyHandler(int p_Key)
     if (m_MessageListSearch)
     {
       m_MessageListSearch = false;
+      m_HelpView->ResetMessagesListOffset();
       SetCurrentFolder(m_CurrentFolderUid.first);
       const uint32_t uid = m_CurrentFolderUid.second;
 
@@ -1204,6 +1207,7 @@ void UiMessageListView::SearchMessage(bool p_IsLocal, const std::string& p_Query
     if (!query.empty())
     {
       m_MessageListSearch = true;
+      m_HelpView->ResetMessagesListOffset();
       if (m_CurrentFolder != "")
       {
         m_PreviousFolder = m_CurrentFolder;
@@ -1236,6 +1240,7 @@ void UiMessageListView::SearchMessage(bool p_IsLocal, const std::string& p_Query
     else
     {
       m_MessageListSearch = false;
+      m_HelpView->ResetMessagesListOffset();
       ClearSelection();
       if (m_PreviousFolder != "")
       {
@@ -1575,12 +1580,8 @@ bool UiMessageListView::DeleteMessage()
   const std::string trashFolder = m_Model->GetTrashFolder();
   if (!trashFolder.empty())
   {
-    static const std::set<std::string> foldersAllowPermanentDelete = [&]()
-    {
-      std::set<std::string> folders = { trashFolder, m_Model->GetSpamFolder() };
-      folders.erase("");
-      return folders;
-    }();
+    std::set<std::string> foldersAllowPermanentDelete = { trashFolder, m_Model->GetSpamFolder() };
+    foldersAllowPermanentDelete.erase("");
     const std::string& folder = m_CurrentFolderUid.first;
     const bool hasSelection = !m_SelectedUids.empty();
     const bool permanentDelete = hasSelection
@@ -1611,7 +1612,7 @@ bool UiMessageListView::DeleteMessage()
 
       if (m_DeleteWithoutConfirm || PromptYesNo(prompt))
       {
-        MoveSelectedMessages(trashFolder);
+        MoveSelectedMessages(trashFolder, m_CurrentFolderUid);
 
         if (count > 0)
         {
@@ -1643,7 +1644,8 @@ bool UiMessageListView::DeleteMessage()
   }
 }
 
-void UiMessageListView::MoveSelectedMessages(const std::string& p_To)
+void UiMessageListView::MoveSelectedMessages(const std::string& p_To,
+                                             const std::pair<std::string, int32_t>& p_FolderUid)
 {
   int selectCount = 0;
   for (auto& selectedFolder : m_SelectedUids)
@@ -1657,8 +1659,8 @@ void UiMessageListView::MoveSelectedMessages(const std::string& p_To)
 
   if (selectCount == 0)
   {
-    const std::string& folder = m_CurrentFolderUid.first;
-    const uint32_t uid = m_CurrentFolderUid.second;
+    const std::string& folder = p_FolderUid.first;
+    const uint32_t uid = p_FolderUid.second;
     m_Model->MoveMessages(std::set<uint32_t>({ uid }), folder, p_To);
   }
 
@@ -1691,45 +1693,13 @@ void UiMessageListView::ToggleSeen()
 {
   if (m_SelectedUids.empty())
   {
-    const std::string& folder = m_CurrentFolderUid.first;
-    const int uid = m_CurrentFolderUid.second;
-    std::map<uint32_t, uint32_t> flags;
-    {
-      UiModel::Lock model(m_Model);
-      flags = model->m_Flags[folder];
-    }
-    bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
-    bool newSeen = !oldSeen;
-    std::set<uint32_t> uids;
-    uids.insert(uid);
-
-    m_Model->SetSeen(folder, uids, newSeen);
+    std::map<std::string, std::set<uint32_t>> folderUids;
+    folderUids[m_CurrentFolderUid.first].insert(m_CurrentFolderUid.second);
+    m_Model->ToggleSeen(folderUids);
   }
   else
   {
-    bool newSeen = true;
-    bool newSeenSet = false;
-    for (auto& selectedFolder : m_SelectedUids)
-    {
-      if (!selectedFolder.second.empty())
-      {
-        if (!newSeenSet)
-        {
-          std::map<uint32_t, uint32_t> flags;
-          {
-            UiModel::Lock model(m_Model);
-            flags = model->m_Flags[selectedFolder.first];
-          }
-
-          uint32_t firstUid = *selectedFolder.second.rbegin();
-          bool oldSeen = ((flags.find(firstUid) != flags.end()) && (Flag::GetSeen(flags.at(firstUid))));
-          newSeen = !oldSeen;
-          newSeenSet = true;
-        }
-
-        m_Model->SetSeen(selectedFolder.first, selectedFolder.second, newSeen);
-      }
-    }
+    m_Model->ToggleSeen(m_SelectedUids);
   }
 }
 

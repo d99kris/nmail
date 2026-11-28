@@ -83,14 +83,6 @@ public:
   static bool GetReadOnly();
   static void SetAssertAbort(bool p_AssertAbort);
   static void AssertionFailed();
-  static bool GetSendIp();
-  static void SetSendIp(bool p_SendIp);
-  static void SetUseServerTimestamps(bool p_Enable);
-  static bool GetUseServerTimestamps();
-  static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
-  static bool GetAddressBookEncrypt();
-  static void SetCopyToTrash(const std::string& p_Value, const std::string& p_ImapHost);
-  static bool GetCopyToTrash();
 
 private:
   static std::string m_ApplicationDir;
@@ -99,8 +91,4 @@ private:
   static bool m_ReadOnly;
   static volatile sig_atomic_t m_TerminateSignal;
   static bool m_AssertAbort;
-  static bool m_UseServerTimestamps;
-  static bool m_AddressBookEncrypt;
-  static bool m_SendIp;
-  static bool m_GetCopyToTrash;
 };

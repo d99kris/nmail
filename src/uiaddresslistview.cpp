@@ -33,6 +33,7 @@ void UiAddressListView::Draw()
 
   const int width = GetPickerWidth();
   int count = m_Addresses.size();
+  m_AddressListCurrentAddress.clear();
   if (count > 0)
   {
     m_AddressListCurrentIndex = StrUtil::Bound(0, m_AddressListCurrentIndex, (int)m_Addresses.size() - 1);
@@ -125,7 +126,11 @@ void UiAddressListView::KeyHandler(int p_Key)
   else if ((p_Key == m_KeyReturn) || (p_Key == m_KeyEnter) ||
            ((p_Key == m_KeyRight) && (m_AddressListFilterPos == (int)m_AddressListFilterStr.size())))
   {
-    if (m_State == Ui::StateAddressList)
+    if (m_AddressListCurrentAddress.empty())
+    {
+      // no address shown, leave the field as is
+    }
+    else if (m_State == Ui::StateAddressList)
     {
       m_ComposeView->AddAddress(m_AddressListCurrentAddress);
     }

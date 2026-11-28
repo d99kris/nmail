@@ -119,18 +119,11 @@ public:
     SyncStateInProgress = 2,
   };
 
-  Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name,
-     uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders);
+  Ui(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_Name);
   virtual ~Ui();
 
   void SetImapManager(std::shared_ptr<ImapManager> p_ImapManager);
   void SetSmtpManager(std::shared_ptr<SmtpManager> p_SmtpManager);
-  void SetTrashFolder(const std::string& p_TrashFolder);
-  void SetSpamFolder(const std::string& p_SpamFolder);
-  void SetDraftsFolder(const std::string& p_DraftsFolder);
-  void SetSentFolder(const std::string& p_SentFolder);
-  void SetClientStoreSent(bool p_ClientStoreSent);
-  void SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler);
   void ResetImapManager();
   void ResetSmtpManager();
 

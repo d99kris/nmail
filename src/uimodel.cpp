@@ -11,11 +11,11 @@
 #include <cstdint>
 
 #include "addressbook.h"
-#include "apputil.h"
 #include "fileutil.h"
 #include "flag.h"
 #include "loghelp.h"
 #include "mailutil.h"
+#include "mainconfig.h"
 #include "maphelp.h"
 #include "offlinequeue.h"
 #include "sethelp.h"
@@ -23,7 +23,6 @@
 #include "strutil.h"
 
 UiModel::UiModel(const std::string& p_Inbox, const std::string& p_Address, const std::string& p_DefaultFrom,
-                 uint32_t p_PrefetchLevel, bool p_PrefetchAllHeaders,
                  const std::function<void(char)>& p_UiRequestHandler,
                  const std::function<void(const std::string&, bool)>& p_DialogMessageHandler)
   : m_UiRequestHandler(p_UiRequestHandler)
@@ -31,9 +30,25 @@ UiModel::UiModel(const std::string& p_Inbox, const std::string& p_Address, const
   , m_Inbox(p_Inbox)
   , m_Address(p_Address)
   , m_DefaultFrom(p_DefaultFrom)
-  , m_PrefetchLevel(p_PrefetchLevel)
-  , m_PrefetchAllHeaders(p_PrefetchAllHeaders)
 {
+  // read settings from main config
+  {
+    Lock model(this);
+    model->m_TrashFolder = MainConfig::GetStr("trash");
+    model->m_SpamFolder = MainConfig::GetStr("spam");
+    model->m_DraftsFolder = MainConfig::GetStr("drafts");
+    model->m_SentFolder = MainConfig::GetStr("sent");
+  }
+
+  m_ClientStoreSent = MainConfig::GetBool("client_store_sent");
+  m_PrefetchAllHeaders = MainConfig::GetBool("prefetch_all_headers");
+  try
+  {
+    m_PrefetchLevel = std::stoi(MainConfig::GetStr("prefetch_level"));
+  }
+  catch (...)
+  {
+  }
 }
 
 UiModel::~UiModel()
@@ -152,6 +167,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
         std::map<uint32_t, uint32_t> newFlags = p_Response.m_Flags;
         newFlags.insert(model->m_Flags[p_Response.m_Folder].begin(), model->m_Flags[p_Response.m_Folder].end());
         model->m_Flags[p_Response.m_Folder] = newFlags;
+        model->ApplyPendingSeen(p_Response.m_Folder, p_Response.m_Flags);
         uiRequest |= Ui::UiRequestDrawAll;
         LOG_DEBUG_VAR("new flags =", MapKey(p_Response.m_Flags));
       }
@@ -181,7 +197,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
           request.m_GetHeaders = subsetFetchHeaderUids;
 
           LOG_DEBUG_VAR("async req headers =", subsetFetchHeaderUids);
-          m_ImapManager->AsyncRequest(request);
+          AsyncRequest(request);
 
           subsetFetchHeaderUids.clear();
         }
@@ -203,7 +219,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
           request.m_GetFlags = subsetFetchFlagUids;
 
           LOG_DEBUG_VAR("async req flags =", subsetFetchFlagUids);
-          m_ImapManager->AsyncRequest(request);
+          AsyncRequest(request);
 
           subsetFetchFlagUids.clear();
         }
@@ -231,7 +247,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
           request.m_Folder = folder;
           request.m_GetUids = true;
           LOG_DEBUG_VAR("prefetch req uids =", folder);
-          m_ImapManager->PrefetchRequest(request);
+          PrefetchRequest(request);
         }
       }
     }
@@ -312,7 +328,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
             request.m_GetHeaders = subsetPrefetchHeaders;
 
             LOG_DEBUG_VAR("prefetch req headers =", subsetPrefetchHeaders);
-            m_ImapManager->PrefetchRequest(request);
+            PrefetchRequest(request);
 
             subsetPrefetchHeaders.clear();
           }
@@ -337,7 +353,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
             request.m_GetFlags = subsetPrefetchFlags;
 
             LOG_DEBUG_VAR("prefetch req flags =", subsetPrefetchFlags);
-            m_ImapManager->PrefetchRequest(request);
+            PrefetchRequest(request);
 
             subsetPrefetchFlags.clear();
           }
@@ -362,7 +378,7 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
             request.m_GetBodys = subsetPrefetchBodys;
 
             LOG_DEBUG_VAR("prefetch req bodys =", subsetPrefetchBodys);
-            m_ImapManager->PrefetchRequest(request);
+            PrefetchRequest(request);
 
             subsetPrefetchBodys.clear();
           }
@@ -395,14 +411,12 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusLoginFailed)
     {
-      const std::string hint = m_ImapManager ? m_ImapManager->GetLastErrorHint()
-                                             : std::string();
+      const std::string hint = GetLastErrorHint();
       SetDialogMessage("Login failed" + (hint.empty() ? "" : ": " + hint), true /* p_Warn */);
     }
     else if (p_Response.m_ResponseStatus & ImapManager::ResponseStatusReconnectFailed)
     {
-      const std::string hint = m_ImapManager ? m_ImapManager->GetLastErrorHint()
-                                             : std::string();
+      const std::string hint = GetLastErrorHint();
       SetDialogMessage("Reconnect failed" + (hint.empty() ? "" : ": " + hint), true /* p_Warn */);
     }
 
@@ -414,6 +428,12 @@ void UiModel::ResponseHandler(const ImapManager::Request& p_Request, const ImapM
 
 void UiModel::ResultHandler(const ImapManager::Action& p_Action, const ImapManager::Result& p_Result)
 {
+  if (p_Action.m_SetSeen || p_Action.m_SetUnseen)
+  {
+    Lock model(this);
+    model->ClearPendingSeen(p_Action.m_Folder, p_Action.m_Uids);
+  }
+
   if (!p_Result.m_Result)
   {
     if (!p_Action.m_MoveDestination.empty())
@@ -505,7 +525,7 @@ void UiModel::SmtpResultHandler(const SmtpManager::Result& p_Result)
         imapAction.m_UploadMessage = true;
         imapAction.m_Folder = sentFolder;
         imapAction.m_Msg = p_Result.m_Message;
-        m_ImapManager->AsyncAction(imapAction);
+        AsyncAction(imapAction);
       }
       else
       {
@@ -578,7 +598,7 @@ void UiModel::StatusHandler(const StatusUpdate& p_StatusUpdate)
     request.m_PrefetchLevel = Ui::PrefetchLevelFullSync;
     request.m_GetFolders = true;
     LOG_DEBUG("prefetch req folders");
-    m_ImapManager->PrefetchRequest(request);
+    PrefetchRequest(request);
   }
 
   char uiRequest = Ui::UiRequestDrawAll;
@@ -646,34 +666,16 @@ void UiModel::HandleSpecialFolders()
     model->m_DetectedSpecialFolders.clear();
   }
 
-  if (!applied.empty() && m_SpecialFoldersHandler)
+  if (!applied.empty())
   {
-    m_SpecialFoldersHandler(applied);
+    // persist detected special folders
+    for (const auto& specialFolder : applied)
+    {
+      MainConfig::SetStr(specialFolder.first, specialFolder.second);
+    }
+
+    MainConfig::Save();
   }
-}
-
-void UiModel::SetTrashFolder(const std::string& p_TrashFolder)
-{
-  Lock model(this);
-  model->m_TrashFolder = p_TrashFolder;
-}
-
-void UiModel::SetSpamFolder(const std::string& p_SpamFolder)
-{
-  Lock model(this);
-  model->m_SpamFolder = p_SpamFolder;
-}
-
-void UiModel::SetDraftsFolder(const std::string& p_DraftsFolder)
-{
-  Lock model(this);
-  model->m_DraftsFolder = p_DraftsFolder;
-}
-
-void UiModel::SetSentFolder(const std::string& p_SentFolder)
-{
-  Lock model(this);
-  model->m_SentFolder = p_SentFolder;
 }
 
 std::string UiModel::GetTrashFolder()
@@ -719,7 +721,7 @@ void UiModel::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& 
   action.m_Folder = p_From;
   action.m_Uids = p_Uids;
 
-  static bool copyToTrash = AppUtil::GetCopyToTrash();
+  static const bool copyToTrash = MainConfig::GetBool("copy_to_trash");
   bool isToTrash = false;
   {
     Lock model(this);
@@ -736,7 +738,7 @@ void UiModel::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& 
     action.m_MoveDestination = p_To;
   }
 
-  m_ImapManager->AsyncAction(action);
+  AsyncAction(action);
 
   const std::string& folder = p_From;
 
@@ -751,17 +753,7 @@ void UiModel::MoveMessages(const std::set<uint32_t>& p_Uids, const std::string& 
     model->m_HasRequestedUids[p_To] = false;
     model->m_UpdateIndexFromUid = true;
 
-    int resultCount = model->m_MessageListSearchResultHeaders.size();
-    for (int i = 0; i < resultCount; ++i)
-    {
-      auto& folderUid = model->m_MessageListSearchResultFolderUids.at(i);
-      if ((folderUid.first == folder) && (p_Uids.find(folderUid.second) != p_Uids.end()))
-      {
-        model->m_MessageListSearchResultFolderUids.erase(model->m_MessageListSearchResultFolderUids.begin() + i);
-        model->m_MessageListSearchResultHeaders.erase(model->m_MessageListSearchResultHeaders.begin() + i);
-        --resultCount;
-      }
-    }
+    model->RemoveSearchResults(folder, p_Uids);
   }
 }
 
@@ -771,7 +763,7 @@ void UiModel::DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string
   action.m_Folder = p_Folder;
   action.m_Uids = p_Uids;
   action.m_DeleteMessages = true;
-  m_ImapManager->AsyncAction(action);
+  AsyncAction(action);
 
   {
     Lock model(this);
@@ -782,66 +774,66 @@ void UiModel::DeleteMessages(const std::set<uint32_t>& p_Uids, const std::string
     model->m_HasRequestedUids[p_Folder] = false;
     model->m_UpdateIndexFromUid = true;
 
-    int resultCount = model->m_MessageListSearchResultHeaders.size();
-    for (int i = 0; i < resultCount; ++i)
-    {
-      auto& folderUid = model->m_MessageListSearchResultFolderUids.at(i);
-      if ((folderUid.first == p_Folder) && (p_Uids.find(folderUid.second) != p_Uids.end()))
-      {
-        model->m_MessageListSearchResultFolderUids.erase(model->m_MessageListSearchResultFolderUids.begin() + i);
-        model->m_MessageListSearchResultHeaders.erase(model->m_MessageListSearchResultHeaders.begin() + i);
-        --resultCount;
-      }
-    }
+    model->RemoveSearchResults(p_Folder, p_Uids);
   }
 }
 
-void UiModel::SetSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids, bool p_Seen)
+void UiModel::ToggleSeen(const std::map<std::string, std::set<uint32_t>>& p_FolderUids)
 {
-  ImapManager::Action action;
-  action.m_Folder = p_Folder;
-  action.m_Uids = p_Uids;
-  action.m_SetSeen = p_Seen;
-  action.m_SetUnseen = !p_Seen;
-  m_ImapManager->AsyncAction(action);
-
+  // new state is the opposite of the last message of the first folder, for all
+  bool newSeen = true;
+  bool newSeenSet = false;
   {
     Lock model(this);
-    for (auto& uid : p_Uids)
+    for (const auto& folderUids : p_FolderUids)
     {
-      Flag::SetSeen(model->m_Flags[p_Folder][uid], p_Seen);
+      if (folderUids.second.empty()) continue;
+
+      const std::map<uint32_t, uint32_t>& flags = model->m_Flags[folderUids.first];
+      if (!newSeenSet)
+      {
+        auto it = flags.find(*folderUids.second.rbegin());
+        newSeen = !((it != flags.end()) && Flag::GetSeen(it->second));
+        newSeenSet = true;
+      }
+
+      for (auto& uid : folderUids.second)
+      {
+        model->SetSeen(folderUids.first, uid, newSeen);
+      }
     }
+  }
+
+  for (const auto& folderUids : p_FolderUids)
+  {
+    if (folderUids.second.empty()) continue;
+
+    ImapManager::Action action;
+    action.m_Folder = folderUids.first;
+    action.m_Uids = folderUids.second;
+    action.m_SetSeen = newSeen;
+    action.m_SetUnseen = !newSeen;
+    AsyncAction(action);
   }
 }
 
 void UiModel::MarkSeen(const std::string& p_Folder, uint32_t p_Uid)
 {
-  std::map<uint32_t, uint32_t> flags;
-  const std::string& folder = p_Folder;
-  const int uid = p_Uid;
-
   {
     Lock model(this);
-    flags = model->m_Flags[folder];
+    const std::map<uint32_t, uint32_t>& flags = model->m_Flags[p_Folder];
+    auto it = flags.find(p_Uid);
+    if ((it != flags.end()) && Flag::GetSeen(it->second)) return;
+
+    model->SetSeen(p_Folder, p_Uid, true);
   }
-
-  bool oldSeen = ((flags.find(uid) != flags.end()) && (Flag::GetSeen(flags.at(uid))));
-
-  if (oldSeen) return;
-
-  bool newSeen = true;
 
   ImapManager::Action action;
-  action.m_Folder = folder;
-  action.m_Uids.insert(uid);
-  action.m_SetSeen = newSeen;
-  action.m_SetUnseen = !newSeen;
-  m_ImapManager->AsyncAction(action);
-
-  {
-    Lock model(this);
-    Flag::SetSeen(model->m_Flags[folder][uid], newSeen);
-  }
+  action.m_Folder = p_Folder;
+  action.m_Uids.insert(p_Uid);
+  action.m_SetSeen = true;
+  action.m_SetUnseen = false;
+  AsyncAction(action);
 }
 
 void UiModel::InvalidateUiCache(const std::string& p_Folder)
@@ -854,27 +846,55 @@ void UiModel::InvalidateUiCache(const std::string& p_Folder)
 
 void UiModel::SetImapManager(std::shared_ptr<ImapManager> p_ImapManager)
 {
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
   m_ImapManager = p_ImapManager;
 }
 
 void UiModel::ResetImapManager()
 {
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
   m_ImapManager.reset();
 }
 
 std::shared_ptr<ImapManager> UiModel::GetImapManager()
 {
+  // for the ui thread only, other threads use the calls below
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
   return m_ImapManager;
 }
 
-void UiModel::SetSpecialFoldersHandler(const std::function<void(const std::map<std::string, std::string>&)>& p_Handler)
+void UiModel::AsyncRequest(const ImapManager::Request& p_Request)
 {
-  m_SpecialFoldersHandler = p_Handler;
+  // lock held during the call, so that the manager is not reset meanwhile
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
+  if (m_ImapManager)
+  {
+    m_ImapManager->AsyncRequest(p_Request);
+  }
 }
 
-void UiModel::SetClientStoreSent(bool p_ClientStoreSent)
+void UiModel::PrefetchRequest(const ImapManager::Request& p_Request)
 {
-  m_ClientStoreSent = p_ClientStoreSent;
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
+  if (m_ImapManager)
+  {
+    m_ImapManager->PrefetchRequest(p_Request);
+  }
+}
+
+void UiModel::AsyncAction(const ImapManager::Action& p_Action)
+{
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
+  if (m_ImapManager)
+  {
+    m_ImapManager->AsyncAction(p_Action);
+  }
+}
+
+std::string UiModel::GetLastErrorHint()
+{
+  std::lock_guard<std::mutex> lock(m_ImapManagerMutex);
+  return m_ImapManager ? m_ImapManager->GetLastErrorHint() : std::string();
 }
 
 void UiModel::SetNewMsgBell(bool p_NewMsgBell)
@@ -900,6 +920,64 @@ uint32_t UiModel::GetPrefetchLevel()
 bool UiModel::GetPrefetchAllHeaders()
 {
   return m_PrefetchAllHeaders;
+}
+
+void UiModel::Impl::RemoveSearchResults(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  // from the end, as erasing shifts the following elements
+  for (int i = (int)m_MessageListSearchResultFolderUids.size() - 1; i >= 0; --i)
+  {
+    const std::pair<std::string, uint32_t>& folderUid = m_MessageListSearchResultFolderUids.at(i);
+    if ((folderUid.first == p_Folder) && (p_Uids.find(folderUid.second) != p_Uids.end()))
+    {
+      m_MessageListSearchResultFolderUids.erase(m_MessageListSearchResultFolderUids.begin() + i);
+      m_MessageListSearchResultHeaders.erase(m_MessageListSearchResultHeaders.begin() + i);
+    }
+  }
+}
+
+void UiModel::Impl::SetSeen(const std::string& p_Folder, uint32_t p_Uid, bool p_Seen)
+{
+  // set locally and keep until the action result, as a flags response may be in flight
+  Flag::SetSeen(m_Flags[p_Folder][p_Uid], p_Seen);
+  std::pair<bool, int>& pendingSeen = m_PendingSeen[p_Folder][p_Uid];
+  pendingSeen.first = p_Seen;
+  ++pendingSeen.second;
+}
+
+void UiModel::Impl::ApplyPendingSeen(const std::string& p_Folder, const std::map<uint32_t, uint32_t>& p_NewFlags)
+{
+  auto folderIt = m_PendingSeen.find(p_Folder);
+  if (folderIt == m_PendingSeen.end()) return;
+
+  std::map<uint32_t, uint32_t>& flags = m_Flags[p_Folder];
+  for (const auto& pendingSeen : folderIt->second)
+  {
+    if (p_NewFlags.find(pendingSeen.first) != p_NewFlags.end())
+    {
+      Flag::SetSeen(flags[pendingSeen.first], pendingSeen.second.first);
+    }
+  }
+}
+
+void UiModel::Impl::ClearPendingSeen(const std::string& p_Folder, const std::set<uint32_t>& p_Uids)
+{
+  auto folderIt = m_PendingSeen.find(p_Folder);
+  if (folderIt == m_PendingSeen.end()) return;
+
+  for (const auto& uid : p_Uids)
+  {
+    auto it = folderIt->second.find(uid);
+    if ((it != folderIt->second.end()) && (--it->second.second <= 0))
+    {
+      folderIt->second.erase(it);
+    }
+  }
+
+  if (folderIt->second.empty())
+  {
+    m_PendingSeen.erase(folderIt);
+  }
 }
 
 void UiModel::Impl::InvalidateUidCache(const std::string& p_Folder)

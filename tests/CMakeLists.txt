@@ -15,6 +15,7 @@ set(NMAILTEST_SOURCES
   ../src/extutil.cpp
   ../src/fileutil.cpp
   ../src/log.cpp
+  ../src/mainconfig.cpp
   ../src/strutil.cpp
   ../src/sysutil.cpp
   ../src/textutil.cpp

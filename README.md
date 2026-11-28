@@ -339,7 +339,7 @@ Full example of a config file `~/.config/nmail/main.conf`:
     cache_encrypt=0
     cache_index_encrypt=0
     client_store_sent=0
-    copy_to_trash=
+    copy_to_trash=0
     coredump_enabled=0
     downloads_dir=
     drafts=Drafts

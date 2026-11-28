@@ -9,6 +9,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -21,7 +22,7 @@ public:
   static void Cleanup();
   static std::string GetPath();
   static const std::map<std::string, std::string>& GetDefaultConfig();
-  static std::shared_ptr<Config> GetConfig();
+  static bool Exist(const std::string& p_Param);
   static bool GetBool(const std::string& p_Param);
   static std::string GetStr(const std::string& p_Param);
   static void SetStr(const std::string& p_Param, const std::string& p_Value);
@@ -30,4 +31,5 @@ public:
 
 private:
   static std::shared_ptr<Config> m_Config;
+  static std::mutex m_Mutex;
 };

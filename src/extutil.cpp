@@ -14,30 +14,82 @@
 #include "nhtmlmd.h"
 
 #include "fileutil.h"
+#include "mainconfig.h"
 #include "strutil.h"
 #include "sysutil.h"
 
-std::string ExtUtil::m_HtmlToTextConvertCmd;
 bool ExtUtil::m_HtmlToTextLinks = false;
-std::string ExtUtil::m_TextToHtmlConvertCmd;
-std::string ExtUtil::m_PartsViewerCmd;
-std::string ExtUtil::m_HtmlPreviewCmd;
-std::string ExtUtil::m_HtmlViewerCmd;
-std::string ExtUtil::m_MsgViewerCmd;
-std::string ExtUtil::m_LinkOpenCmd;
-std::string ExtUtil::m_PagerCmd;
-std::string ExtUtil::m_EditorCmd;
-std::string ExtUtil::m_SpellCmd;
-std::string ExtUtil::m_FilePickerCmd;
+
+// settings are read from main config at first use
+static const std::string& ConfigHtmlToTextConvertCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("html_to_text_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigTextToHtmlConvertCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("text_to_html_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigPartsViewerCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("parts_viewer_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigHtmlPreviewCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("html_preview_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigHtmlViewerCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("html_viewer_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigMsgViewerCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("msg_viewer_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigLinkOpenCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("link_open_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigPagerCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("pager_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigEditorCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("editor_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigSpellCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("spell_cmd");
+  return cmd;
+}
+
+static const std::string& ConfigFilePickerCmd()
+{
+  static const std::string cmd = MainConfig::GetStr("file_picker_cmd");
+  return cmd;
+}
 
 std::string ExtUtil::GetHtmlToTextConvertCmd()
 {
-  return m_HtmlToTextConvertCmd;
-}
-
-void ExtUtil::SetHtmlToTextConvertCmd(const std::string& p_HtmlToTextConvertCmd)
-{
-  m_HtmlToTextConvertCmd = p_HtmlToTextConvertCmd;
+  return ConfigHtmlToTextConvertCmd();
 }
 
 size_t ExtUtil::GetHtmlToTextConvertCmdHash()
@@ -81,12 +133,7 @@ std::string ExtUtil::ConvertHtmlToText(const std::string& p_Html)
 
 std::string ExtUtil::GetTextToHtmlConvertCmd()
 {
-  return m_TextToHtmlConvertCmd;
-}
-
-void ExtUtil::SetTextToHtmlConvertCmd(const std::string& p_TextToHtmlConvertCmd)
-{
-  m_TextToHtmlConvertCmd = p_TextToHtmlConvertCmd;
+  return ConfigTextToHtmlConvertCmd();
 }
 
 std::string ExtUtil::ConvertTextToHtml(const std::string& p_Text)
@@ -112,16 +159,11 @@ std::string ExtUtil::ConvertTextToHtml(const std::string& p_Text)
 
 std::string ExtUtil::GetPartsViewerCmd()
 {
-  if (!m_PartsViewerCmd.empty()) return m_PartsViewerCmd;
+  if (!ConfigPartsViewerCmd().empty()) return ConfigPartsViewerCmd();
 
   static std::string defaultPartsViewerCmd = GetDefaultPartsViewerCmd();
 
   return defaultPartsViewerCmd;
-}
-
-void ExtUtil::SetPartsViewerCmd(const std::string& p_PartsViewerCmd)
-{
-  m_PartsViewerCmd = p_PartsViewerCmd;
 }
 
 std::string ExtUtil::GetDefaultPartsViewerCmd()
@@ -137,21 +179,16 @@ std::string ExtUtil::GetDefaultPartsViewerCmd()
 
 bool ExtUtil::IsDefaultPartsViewerCmd()
 {
-  return m_PartsViewerCmd.empty();
+  return ConfigPartsViewerCmd().empty();
 }
 
 std::string ExtUtil::GetHtmlViewerCmd()
 {
-  if (!m_HtmlViewerCmd.empty()) return m_HtmlViewerCmd;
+  if (!ConfigHtmlViewerCmd().empty()) return ConfigHtmlViewerCmd();
 
   static std::string defaultHtmlViewerCmd = GetDefaultHtmlViewerCmd();
 
   return defaultHtmlViewerCmd;
-}
-
-void ExtUtil::SetHtmlViewerCmd(const std::string& p_HtmlViewerCmd)
-{
-  m_HtmlViewerCmd = p_HtmlViewerCmd;
 }
 
 std::string ExtUtil::GetDefaultHtmlViewerCmd()
@@ -210,16 +247,11 @@ bool ExtUtil::IsHtmlViewerSystemOpenCmd()
 
 std::string ExtUtil::GetHtmlPreviewCmd()
 {
-  if (!m_HtmlPreviewCmd.empty()) return m_HtmlPreviewCmd;
+  if (!ConfigHtmlPreviewCmd().empty()) return ConfigHtmlPreviewCmd();
 
   static std::string defaultHtmlPreviewCmd = GetDefaultHtmlPreviewCmd();
 
   return defaultHtmlPreviewCmd;
-}
-
-void ExtUtil::SetHtmlPreviewCmd(const std::string& p_HtmlPreviewCmd)
-{
-  m_HtmlPreviewCmd = p_HtmlPreviewCmd;
 }
 
 std::string ExtUtil::GetDefaultHtmlPreviewCmd()
@@ -235,21 +267,16 @@ std::string ExtUtil::GetDefaultHtmlPreviewCmd()
 
 bool ExtUtil::IsDefaultHtmlPreviewCmd()
 {
-  return m_HtmlPreviewCmd.empty();
+  return ConfigHtmlPreviewCmd().empty();
 }
 
 std::string ExtUtil::GetMsgViewerCmd()
 {
-  if (!m_MsgViewerCmd.empty()) return m_MsgViewerCmd;
+  if (!ConfigMsgViewerCmd().empty()) return ConfigMsgViewerCmd();
 
   static std::string defaultMsgViewerCmd = GetDefaultMsgViewerCmd();
 
   return defaultMsgViewerCmd;
-}
-
-void ExtUtil::SetMsgViewerCmd(const std::string& p_MsgViewerCmd)
-{
-  m_MsgViewerCmd = p_MsgViewerCmd;
 }
 
 std::string ExtUtil::GetDefaultMsgViewerCmd()
@@ -265,21 +292,16 @@ std::string ExtUtil::GetDefaultMsgViewerCmd()
 
 bool ExtUtil::IsDefaultMsgViewerCmd()
 {
-  return m_MsgViewerCmd.empty();
+  return ConfigMsgViewerCmd().empty();
 }
 
 std::string ExtUtil::GetLinkOpenCmd()
 {
-  if (!m_LinkOpenCmd.empty()) return m_LinkOpenCmd;
+  if (!ConfigLinkOpenCmd().empty()) return ConfigLinkOpenCmd();
 
   static std::string defaultLinkOpenCmd = GetDefaultLinkOpenCmd();
 
   return defaultLinkOpenCmd;
-}
-
-void ExtUtil::SetLinkOpenCmd(const std::string& p_LinkOpenCmd)
-{
-  m_LinkOpenCmd = p_LinkOpenCmd;
 }
 
 std::string ExtUtil::GetDefaultLinkOpenCmd()
@@ -295,7 +317,7 @@ std::string ExtUtil::GetDefaultLinkOpenCmd()
 
 bool ExtUtil::IsDefaultLinkOpenCmd()
 {
-  return m_LinkOpenCmd.empty();
+  return ConfigLinkOpenCmd().empty();
 }
 
 std::string ExtUtil::MakeCmd(const std::string& p_Cmd, const std::string& p_Arg)
@@ -313,28 +335,18 @@ std::string ExtUtil::MakeCmd(const std::string& p_Cmd, const std::string& p_Arg)
   return cmd;
 }
 
-void ExtUtil::SetEditorCmd(const std::string& p_EditorCmd)
-{
-  m_EditorCmd = p_EditorCmd;
-}
-
 std::string ExtUtil::GetEditorCmd()
 {
-  if (!m_EditorCmd.empty()) return m_EditorCmd;
+  if (!ConfigEditorCmd().empty()) return ConfigEditorCmd();
 
   return std::string(getenv("EDITOR") ? getenv("EDITOR") : "nano");
-}
-
-void ExtUtil::SetSpellCmd(const std::string& p_SpellCmd)
-{
-  m_SpellCmd = p_SpellCmd;
 }
 
 std::string ExtUtil::GetSpellCmd()
 {
   static const std::string cmd = []()
   {
-    std::string spellCheckCommand = m_SpellCmd;
+    std::string spellCheckCommand = ConfigSpellCmd();
     if (spellCheckCommand.empty())
     {
       const std::string& commandOutPath = FileUtil::GetTempFilename(".txt");
@@ -367,14 +379,9 @@ std::string ExtUtil::GetSpellCmd()
   return cmd;
 }
 
-void ExtUtil::SetPagerCmd(const std::string& p_PagerCmd)
-{
-  m_PagerCmd = p_PagerCmd;
-}
-
 std::string ExtUtil::GetPagerCmd()
 {
-  if (!m_PagerCmd.empty()) return m_PagerCmd;
+  if (!ConfigPagerCmd().empty()) return ConfigPagerCmd();
 
   return std::string(getenv("PAGER") ? getenv("PAGER") : "less");
 }
@@ -386,14 +393,9 @@ void ExtUtil::SetBrowserCmd(const std::string& p_BrowserCmd)
   setenv("BROWSER", p_BrowserCmd.c_str(), 1);
 }
 
-void ExtUtil::SetFilePickerCmd(const std::string& p_FilePickerCmd)
-{
-  m_FilePickerCmd = p_FilePickerCmd;
-}
-
 std::string ExtUtil::GetFilePickerCmd()
 {
-  return m_FilePickerCmd;
+  return ConfigFilePickerCmd();
 }
 
 std::string ExtUtil::EscapeSingleQuote(const std::string& p_Str)

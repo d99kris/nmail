@@ -16,20 +16,10 @@
 #include "mailutil.h"
 #include "smtp.h"
 
-SmtpManager::SmtpManager(const std::string& p_User, const std::string& p_Pass,
-                         const std::string& p_Host, const uint16_t p_Port,
-                         const std::string& p_Name, const std::string& p_Address,
-                         const bool p_Connect, const int64_t p_Timeout,
+SmtpManager::SmtpManager(const SmtpConfig& p_Config,
                          const std::function<void(const SmtpManager::Result&)>& p_ResultHandler,
                          const std::function<void(const StatusUpdate&)>& p_StatusHandler)
-  : m_User(p_User)
-  , m_Pass(p_Pass)
-  , m_Host(p_Host)
-  , m_Port(p_Port)
-  , m_Name(p_Name)
-  , m_Address(p_Address)
-  , m_Connect(p_Connect)
-  , m_Timeout(p_Timeout)
+  : m_Config(p_Config)
   , m_ResultHandler(p_ResultHandler)
   , m_StatusHandler(p_StatusHandler)
   , m_Running(false)
@@ -68,9 +58,13 @@ void SmtpManager::Start()
 
 void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
 {
-  if (m_Connect || p_Action.m_IsCreateMessage)
+  if (m_Config.m_Connect || p_Action.m_IsCreateMessage)
   {
-    m_Actions.push_front(p_Action);
+    {
+      std::lock_guard<std::mutex> lock(m_QueueMutex);
+      m_Actions.push_front(p_Action);
+    }
+
     LOG_IF_NOT_EQUAL(write(m_Pipe[1], "1", 1), 1);
   }
   else
@@ -81,7 +75,7 @@ void SmtpManager::AsyncAction(const SmtpManager::Action& p_Action)
 
 SmtpManager::Result SmtpManager::SyncAction(const SmtpManager::Action& p_Action)
 {
-  if (m_Connect || p_Action.m_IsCreateMessage)
+  if (m_Config.m_Connect || p_Action.m_IsCreateMessage)
   {
     return PerformAction(p_Action);
   }
@@ -97,7 +91,7 @@ SmtpManager::Result SmtpManager::SyncAction(const SmtpManager::Action& p_Action)
 
 std::string SmtpManager::GetAddress()
 {
-  return m_Address;
+  return m_Config.m_Address;
 }
 
 void SmtpManager::Process()
@@ -170,7 +164,7 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   }
   else
   {
-    from = Contact(m_Address, m_Name);
+    from = Contact(m_Config.m_Address, m_Config.m_Name);
   }
 
   const std::vector<Contact> to = Contact::FromStrings(MailUtil::SplitAddrsUnquote(p_Action.m_To));
@@ -180,7 +174,7 @@ SmtpManager::Result SmtpManager::PerformAction(const SmtpManager::Action& p_Acti
   const std::vector<std::string> att = FileUtil::SplitPaths(p_Action.m_Att);
   const bool flow = p_Action.m_FormatFlowed;
 
-  Smtp smtp(m_User, m_Pass, m_Host, m_Port, m_Address, m_Timeout);
+  Smtp smtp(m_Config);
 
   if (p_Action.m_IsSendMessage)
   {

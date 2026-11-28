@@ -95,8 +95,3 @@ int UiConfig::GetNum(const std::string& p_Param)
 {
   return StrUtil::ToInteger(m_Config.Get(p_Param));
 }
-
-void UiConfig::SetNum(const std::string& p_Param, const int& p_Value)
-{
-  m_Config.Set(p_Param, std::to_string(p_Value));
-}

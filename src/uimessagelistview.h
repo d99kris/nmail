@@ -27,7 +27,7 @@ public:
   void UpdateIndexFromUid();
   void SyncCursor();
   void ClearSelection();
-  void MoveSelectedMessages(const std::string& p_To);
+  void MoveSelectedMessages(const std::string& p_To, const std::pair<std::string, int32_t>& p_FolderUid);
   std::string AutoMoveSelectFolder();
   bool DeleteMessage();
   void ToggleSeen();

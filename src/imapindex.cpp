@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "addressbook.h"
-#include "apputil.h"
 #include "body.h"
 #include "cacheutil.h"
 #include "crypto.h"
@@ -20,6 +19,7 @@
 #include "lockfile.h"
 #include "log.h"
 #include "loghelp.h"
+#include "mainconfig.h"
 #include "maphelp.h"
 #include "sethelp.h"
 
@@ -169,7 +169,7 @@ void ImapIndex::Process()
 {
   LOG_DEBUG("start process");
 
-  AddressBook::Init(AppUtil::GetAddressBookEncrypt(), m_Pass);
+  AddressBook::Init(MainConfig::GetBool("addressbook_encrypt"), m_Pass);
 
   InitCacheIndexDir();
   if (m_CacheIndexEncrypt)

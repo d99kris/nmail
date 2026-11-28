@@ -1,6 +1,6 @@
 // imapmanager.h
 //
-// Copyright (c) 2019-2025 Kristofer Berggren
+// Copyright (c) 2019-2026 Kristofer Berggren
 // All rights reserved.
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
@@ -117,25 +117,15 @@ public:
   };
 
 public:
-  ImapManager(const std::string& p_User, const std::string& p_Pass, const std::string& p_Host,
-              const uint16_t p_Port, const bool p_Connect, const int64_t p_Timeout,
-              const bool p_CacheEncrypt,
-              const bool p_CacheIndexEncrypt,
-              const uint32_t p_IdleTimeout,
-              const uint32_t p_IdleDelay,
-              const std::set<std::string>& p_FoldersExclude,
-              const bool p_SniEnabled,
+  ImapManager(const ImapConfig& p_Config,
               const std::function<void(const ImapManager::Request&, const ImapManager::Response&)>& p_ResponseHandler,
               const std::function<void(const ImapManager::Action&, const ImapManager::Result&)>& p_ResultHandler,
               const std::function<void(const StatusUpdate&)>& p_StatusHandler,
               const std::function<void(const ImapManager::SearchQuery&,
-                                       const ImapManager::SearchResult&)>& p_SearchHandler,
-              const bool p_IdleInbox,
-              const std::string& p_Inbox);
+                                       const ImapManager::SearchResult&)>& p_SearchHandler);
   virtual ~ImapManager();
 
   void Start();
-  void SetDetectSpecialFolders(bool p_DetectSpecialFolders);
 
   void AsyncRequest(const Request& p_Request);
   void PrefetchRequest(const Request& p_Request);
