@@ -20,6 +20,7 @@ public:
   static void SetClusterWidthFunc(ClusterWidthFunc p_ClusterWidthFunc);
   static void SetClusterExtendFunc(ClusterExtendFunc p_ClusterExtendFunc);
   static size_t GetClusterEnd(const std::wstring& p_Str, size_t p_Pos);
+  static size_t GetClusterStart(const std::wstring& p_Str, size_t p_Pos);
   static int GetClusterWidth(const std::wstring& p_Str, size_t p_Begin, size_t p_End);
   static int GetWidth(const std::wstring& p_Str);
   static size_t GetPosAtColumn(const std::wstring& p_Str, int p_Column);

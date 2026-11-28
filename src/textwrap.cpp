@@ -76,6 +76,23 @@ size_t TextWrap::GetClusterEnd(const std::wstring& p_Str, size_t p_Pos)
   return pos;
 }
 
+// Returns the start of the character cluster containing p_Pos.
+size_t TextWrap::GetClusterStart(const std::wstring& p_Str, size_t p_Pos)
+{
+  if (p_Pos >= p_Str.size()) return p_Str.size();
+
+  // clusters are determined scanning forward, line break is always a cluster start
+  const size_t lineStart = (p_Pos > 0) ? p_Str.rfind(L'\n', p_Pos - 1) : std::wstring::npos;
+  size_t pos = (lineStart != std::wstring::npos) ? (lineStart + 1) : 0;
+  while (true)
+  {
+    const size_t end = GetClusterEnd(p_Str, pos);
+    if (end > p_Pos) return pos;
+
+    pos = end;
+  }
+}
+
 // Returns the display width of the character cluster at [p_Begin, p_End).
 int TextWrap::GetClusterWidth(const std::wstring& p_Str, size_t p_Begin, size_t p_End)
 {

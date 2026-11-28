@@ -341,6 +341,21 @@ static void TestClusters()
   unittest::ExpectEqual(size_t, Util::GetClusterEnd(L"ab", 0), (size_t)1);
   unittest::ExpectEqual(size_t, Util::GetClusterEnd(L"ab", 2), (size_t)2);
 
+  // cluster start is found from any position within the cluster
+  const std::wstring text = L"a" + flag + biker + L"\n" + flag + L"e\u0301";
+  const size_t bikerStart = 1 + flag.size();
+  const size_t lineStart = bikerStart + biker.size() + 1;
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, 0), (size_t)0);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, 1), (size_t)1);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, 2), (size_t)1);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, bikerStart), bikerStart);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, bikerStart + biker.size() - 1), bikerStart);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, lineStart - 1), lineStart - 1);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, lineStart + 1), lineStart);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, text.size() - 1), text.size() - 2);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(text, text.size()), text.size());
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterStart(flag + flag + flag, 5), (size_t)4);
+
   // trimming never leaves a base character without its variation selector
   const int heartWidth = Util::WStringWidth(heart);
   unittest::ExpectEqual(std::wstring, Util::TrimWString(L"Bob" + heart, 3 + heartWidth), L"Bob" + heart);

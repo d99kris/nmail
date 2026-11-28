@@ -731,7 +731,7 @@ void Ui::DrawSearchDialog()
   mvwprintw(m_DialogWin, 0, 0, "   Search: %s", dispStr.c_str());
 
   leaveok(m_DialogWin, false);
-  wmove(m_DialogWin, 0, 11 + filterPos);
+  wmove(m_DialogWin, 0, 11 + TextWrap::GetWidth(filterStr.substr(0, filterPos)));
   RefreshWin(m_DialogWin);
   leaveok(m_DialogWin, true);
 }
@@ -3530,7 +3530,7 @@ void Ui::ComposeMessageKeyHandler(int p_Key)
     else if (p_Key == m_KeyTab)
     {
       DrawAll(); // redraw to update current column position (m_ComposeMessageWrapPos)
-      int tabSpaces = (m_TabSize - (m_ComposeMessageWrapPos % m_TabSize));
+      int tabSpaces = (m_TabSize - (GetComposeMessageColumn() % m_TabSize));
       for (int i = 0; i < tabSpaces; ++i)
       {
         m_ComposeMessageStr.insert(m_ComposeMessagePos++, 1, ' ');
@@ -5870,7 +5870,9 @@ bool Ui::PromptString(const std::string& p_Prompt, const std::string& p_Action,
     mvwprintw(m_DialogWin, 0, 3, "%s", dispStr.c_str());
 
     leaveok(m_DialogWin, false);
-    wmove(m_DialogWin, 0, 3 + p_Prompt.size() + m_FilenameEntryStringPos);
+    const int promptWidth = TextWrap::GetWidth(Util::ToWString(p_Prompt));
+    const int entryWidth = TextWrap::GetWidth(m_FilenameEntryString.substr(0, m_FilenameEntryStringPos));
+    wmove(m_DialogWin, 0, 3 + promptWidth + entryWidth);
     wrefresh(m_DialogWin);
     leaveok(m_DialogWin, true);
 
@@ -7821,26 +7823,34 @@ bool Ui::HandleListKey(int p_Key, int& p_Index)
 
 bool Ui::HandleLineKey(int p_Key, std::wstring& p_Str, int& p_Pos)
 {
+  // move and delete by character cluster, to not split emoji sequences or combining marks
+  p_Pos = Util::Bound(0, p_Pos, (int)p_Str.size());
   if (p_Key == m_KeyLeft)
   {
-    p_Pos = Util::Bound(0, p_Pos - 1, (int)p_Str.size());
+    if (p_Pos > 0)
+    {
+      p_Pos = (int)TextWrap::GetClusterStart(p_Str, p_Pos - 1);
+    }
   }
   else if (p_Key == m_KeyRight)
   {
-    p_Pos = Util::Bound(0, p_Pos + 1, (int)p_Str.size());
+    p_Pos = (int)TextWrap::GetClusterEnd(p_Str, p_Pos);
   }
   else if ((p_Key == m_KeyBackspace) || (p_Key == m_KeyBackspaceAlt))
   {
     if (p_Pos > 0)
     {
-      p_Str.erase(--p_Pos, 1);
+      const int startPos = (int)TextWrap::GetClusterStart(p_Str, p_Pos - 1);
+      p_Str.erase(startPos, p_Pos - startPos);
+      p_Pos = startPos;
     }
   }
   else if ((p_Key == m_KeyDeleteChar) || (p_Key == m_KeyDeleteCharAfterCursor))
   {
     if (p_Pos < (int)p_Str.size())
     {
-      p_Str.erase(p_Pos, 1);
+      const int endPos = (int)TextWrap::GetClusterEnd(p_Str, p_Pos);
+      p_Str.erase(p_Pos, endPos - p_Pos);
     }
   }
   else if (p_Key == m_KeyDeleteLineAfterCursor)
