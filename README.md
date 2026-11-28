@@ -828,6 +828,7 @@ The built-in email compose editor in nmail supports the following:
     Ctrl-X         send message
     Delete         delete
     Enter          new line
+    Esc <key>      alternative to Alt-<key>
     Page Up/Down   move the cursor page up / down
 
 The email headers `To`, `Cc` and `Attchmnt` support comma-separated values, ex:
@@ -1232,8 +1233,8 @@ This configuration file holds user interface key bindings. Default content:
     key_back=,
     key_backspace=KEY_BACKSPACE
     key_backspace_alt=KEY_BACKSPACE_ALT
-    key_backward_kill_word=
-    key_backward_word=
+    key_backward_kill_word=\33\177
+    key_backward_word=\33\133\61\73\63\104,\33\142,\33\133\61\73\71\104,\33\33\133\104,\33\33\117\104
     key_begin_line=KEY_CTRLA
     key_cancel=KEY_CTRLC
     key_compose=c
@@ -1263,13 +1264,13 @@ This configuration file holds user interface key bindings. Default content:
     key_find_next=?
     key_forward=f
     key_forward_attached=F
-    key_forward_word=
+    key_forward_word=\33\133\61\73\63\103,\33\146,\33\133\61\73\71\103,\33\33\133\103,\33\33\117\103
     key_goto_folder=g
     key_goto_inbox=i
     key_home=KEY_HOME
     key_import=z
     key_jump_to=j
-    key_kill_word=
+    key_kill_word=\33\133\63\73\63\176,\33\50,\33\33\133\63\176
     key_left=KEY_LEFT
     key_move=M
     key_next_link=KEY_TAB
@@ -1323,12 +1324,18 @@ The key bindings may be specified in the following formats:
 - Ncurses macro (ex: `KEY_CTRLK`)
 - Hex key code (ex: `0x22e`)
 - Octal key code sequence (ex: `\033\177`)
+- Comma-separated list of octal key code sequences, for binding a function to
+  the different sequences sent by different terminals
+  (ex: `\33\133\61\73\63\104,\33\142`)
 - Plain-text lower-case ASCII (ex: `r`)
 - Disable key binding (`KEY_NONE`)
 
 To determine the key code sequence for a key, one can run nmail in key code
 dump mode `nmail -k` which will output the octal code, and ncurses macro name
-(if present).
+(if present). For keys recognized by ncurses, the terminal key code sequence
+is also shown in parentheses, ex: `\4001050 (\33\133\61\73\63\104)`. Prefer
+using the sequence in parentheses when present, as the octal code preceding
+it (ex: `\4001050`) varies between terminals and ncurses versions.
 
 
 ~/.config/nmail/colors.conf

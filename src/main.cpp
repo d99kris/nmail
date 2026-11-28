@@ -1058,6 +1058,7 @@ bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
 
 static void KeyDump()
 {
+  UiKeyInput::EnableMetaSendsEsc();
   setlocale(LC_ALL, "");
   initscr();
   noecho();
@@ -1118,6 +1119,14 @@ static void KeyDump()
         {
           printw(" %s", keyName.c_str());
         }
+
+        // output terminal key code sequence, which unlike the key code above
+        // is not dependent on terminfo, and thus preferred for use in key.conf
+        std::string keySequence = UiKeyConfig::GetKeySequence(keyOk);
+        if (!keySequence.empty())
+        {
+          printw(" (%s)", keySequence.c_str());
+        }
       }
 
       printw("\n");
@@ -1128,6 +1137,7 @@ static void KeyDump()
   UiKeyConfig::Cleanup();
   wclear(stdscr);
   endwin();
+  UiKeyInput::RestoreMetaSendsEsc();
 }
 
 std::string GetDisplayPath(const std::string& p_Path)

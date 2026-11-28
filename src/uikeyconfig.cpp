@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <set>
+#include <vector>
 
 #include <ncurses.h>
 
@@ -235,15 +237,14 @@ void UiKeyConfig::Init(bool p_MapKeys)
     { "key_next_link", "KEY_TAB" },
     { "key_prev_link", "KEY_BTAB" },
     { "key_open_link", "KEY_RETURN" },
-#if defined(__APPLE__)
-    { "key_backward_word", "\\33\\142" }, // opt-left
-    { "key_forward_word", "\\33\\146" }, // opt-right
-    { "key_kill_word", "\\33\\50" }, // opt-delete
-#else // defined(__linux__)
-    { "key_backward_word", "\\4001040" }, // alt-left
-    { "key_forward_word", "\\4001057" }, // alt-right
-    { "key_kill_word", "\\4001006" }, // alt-delete
-#endif
+    // alt/opt-left: xterm (CSI 1;3D), macOS Terminal (ESC b), iTerm2 (CSI 1;9D), esc-prefixed left
+    { "key_backward_word", "\\33\\133\\61\\73\\63\\104,\\33\\142,\\33\\133\\61\\73\\71\\104,"
+      "\\33\\33\\133\\104,\\33\\33\\117\\104" },
+    // alt/opt-right: xterm (CSI 1;3C), macOS Terminal (ESC f), iTerm2 (CSI 1;9C), esc-prefixed right
+    { "key_forward_word", "\\33\\133\\61\\73\\63\\103,\\33\\146,\\33\\133\\61\\73\\71\\103,"
+      "\\33\\33\\133\\103,\\33\\33\\117\\103" },
+    // alt/opt-delete: xterm (CSI 3;3~), macOS Terminal (ESC ( ), esc-prefixed delete
+    { "key_kill_word", "\\33\\133\\63\\73\\63\\176,\\33\\50,\\33\\33\\133\\63\\176" },
     { "key_backward_kill_word", "\\33\\177" }, // alt/opt-backspace
     { "key_begin_line", "KEY_CTRLA" },
     { "key_end_line", "KEY_CTRLE" },
@@ -300,6 +301,23 @@ void UiKeyConfig::Init(bool p_MapKeys)
 
   m_Config = Config(keyConfigPath, defaultConfig);
 
+  // migrate legacy terminal-specific defaults to current portable defaults
+  static const std::map<std::string, std::set<std::string>> legacyDefaults =
+  {
+    { "key_backward_word", { "\\33\\142", "\\4001040", "\\1040" } },
+    { "key_forward_word", { "\\33\\146", "\\4001057", "\\1057" } },
+    { "key_kill_word", { "\\33\\50", "\\4001006", "\\1006" } },
+  };
+  for (const auto& legacyDefault : legacyDefaults)
+  {
+    const std::string& param = legacyDefault.first;
+    if (legacyDefault.second.count(m_Config.Get(param)))
+    {
+      LOG_INFO("migrate '%s' to new default", param.c_str());
+      m_Config.Set(param, defaultConfig.at(param));
+    }
+  }
+
   DetectConflicts();
   InitKeyCodes(p_MapKeys);
 }
@@ -347,6 +365,47 @@ std::map<std::string, std::string> UiKeyConfig::GetMap()
   return m_Config.GetMap();
 }
 
+std::string UiKeyConfig::GetKeySequence(int p_KeyCode)
+{
+  // returns the terminal key code sequence (in octal format) bound to a function key
+  const int functionKeyOffset = UiKeyConfig::GetFunctionKeyOffset();
+  if ((p_KeyCode & functionKeyOffset) == 0) return "";
+
+  char* keyStr = keybound(p_KeyCode & ~functionKeyOffset, 0);
+  if (keyStr == nullptr) return "";
+
+  std::string keySequence;
+  for (const char* ch = keyStr; *ch != '\0'; ++ch)
+  {
+    char buf[8] = { 0 };
+    snprintf(buf, sizeof(buf), "\\%o", (unsigned char)*ch);
+    keySequence += buf;
+  }
+
+  free(keyStr);
+  return keySequence;
+}
+
+std::vector<std::string> UiKeyConfig::SplitKeyList(const std::string& p_KeyList)
+{
+  // single comma is a plain-text key, not a list separator
+  if (p_KeyList.size() <= 1) return { p_KeyList };
+
+  std::vector<std::string> keyNames;
+  for (const std::string& keyStr : Util::Split(p_KeyList, ','))
+  {
+    const std::string keyName = Util::Trim(keyStr);
+    if (!keyName.empty())
+    {
+      keyNames.push_back(keyName);
+    }
+  }
+
+  if (keyNames.empty()) return { p_KeyList };
+
+  return keyNames;
+}
+
 int UiKeyConfig::GetOffsettedKeyCode(int p_KeyCode, bool p_IsFunctionKey)
 {
   static const int functionKeyOffset = UiKeyConfig::GetFunctionKeyOffset();
@@ -362,6 +421,30 @@ int UiKeyConfig::GetOffsettedKeyCode(int p_KeyCode)
 int UiKeyConfig::GetKeyCode(const std::string& p_KeyName)
 {
   int keyCode = -1;
+  const std::vector<std::string> keyNames = SplitKeyList(p_KeyName);
+  if (keyNames.size() > 1)
+  {
+    // list of key code sequences, all mapped to the same virtual key code
+    for (const std::string& keyName : keyNames)
+    {
+      if (std::count(keyName.begin(), keyName.end(), '\\') < 2)
+      {
+        LOG_WARNING("ignoring \"%s\" in key list, not a key code sequence", keyName.c_str());
+        continue;
+      }
+
+      int virtualKeyCode = GetVirtualKeyCodeFromOct(keyName, keyCode);
+      if (keyCode == -1)
+      {
+        keyCode = virtualKeyCode;
+      }
+    }
+
+    keyCode = (keyCode != -1) ? GetOffsettedKeyCode(keyCode) : -1;
+    LOG_TRACE("map '%s' to code 0x%x", p_KeyName.c_str(), keyCode);
+    return keyCode;
+  }
+
   std::map<std::string, int>::iterator it = m_KeyCodes.find(p_KeyName);
   if (it != m_KeyCodes.end())
   {
@@ -400,7 +483,7 @@ int UiKeyConfig::GetKeyCode(const std::string& p_KeyName)
   return keyCode;
 }
 
-int UiKeyConfig::GetVirtualKeyCodeFromOct(const std::string& p_KeyOct)
+int UiKeyConfig::GetVirtualKeyCodeFromOct(const std::string& p_KeyOct, int p_KeyCode /*= -1*/)
 {
   static std::map<std::string, int> reservedVirtualKeyCodes;
   auto it = reservedVirtualKeyCodes.find(p_KeyOct);
@@ -410,10 +493,18 @@ int UiKeyConfig::GetVirtualKeyCodeFromOct(const std::string& p_KeyOct)
   }
   else
   {
-    int keyCode = ReserveVirtualKeyCode();
+    // use specified key code if provided, otherwise reserve a new one
+    int keyCode = (p_KeyCode != -1) ? p_KeyCode : ReserveVirtualKeyCode();
     std::string keyStr = Util::StrFromOct(p_KeyOct);
-    define_key(keyStr.c_str(), keyCode);
-    LOG_TRACE("define '%s' code 0x%x", p_KeyOct.c_str(), keyCode);
+    if (define_key(keyStr.c_str(), keyCode) == OK)
+    {
+      LOG_TRACE("define '%s' code 0x%x", p_KeyOct.c_str(), keyCode);
+    }
+    else
+    {
+      LOG_WARNING("define '%s' code 0x%x failed", p_KeyOct.c_str(), keyCode);
+    }
+
     reservedVirtualKeyCodes[p_KeyOct] = keyCode;
     return keyCode;
   }
@@ -455,15 +546,17 @@ void UiKeyConfig::DetectConflicts()
   for (auto it = keyMap.begin(); it != keyMap.end(); ++it)
   {
     const std::string& keyFunction = it->first;
-    const std::string& keyCode = it->second;
 
     if (ignoreKeyFunctions.count(keyFunction)) continue;
 
-    std::vector<std::string>& keyMapping = keyMappings[keyCode];
-    keyMapping.push_back(keyFunction);
-    if (keyMapping.size() > 1)
+    for (const std::string& keyCode : SplitKeyList(it->second))
     {
-      dupeMappings.insert(keyCode);
+      std::vector<std::string>& keyMapping = keyMappings[keyCode];
+      keyMapping.push_back(keyFunction);
+      if (keyMapping.size() > 1)
+      {
+        dupeMappings.insert(keyCode);
+      }
     }
   }
 

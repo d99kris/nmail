@@ -113,6 +113,8 @@ void Ui::Init()
     printf("\033]0;%s\007", m_TerminalTitle.c_str());
   }
 
+  UiKeyInput::EnableMetaSendsEsc();
+
   setlocale(LC_ALL, "");
   initscr();
   noecho();
@@ -455,6 +457,8 @@ void Ui::Cleanup()
   wclear(stdscr);
   endwin();
 
+  UiKeyInput::RestoreMetaSendsEsc();
+
   if (!m_TerminalTitle.empty())
   {
     printf("\033]0;%s\007", "");
@@ -526,12 +530,16 @@ void Ui::TerminalControlPause()
 {
   m_TermLines = LINES;
   m_TermCols = COLS;
+  UiKeyInput::RestoreMetaSendsEsc();
+  fflush(stdout);
   endwin();
 }
 
 void Ui::TerminalControlResume()
 {
   refresh();
+  UiKeyInput::EnableMetaSendsEsc();
+  fflush(stdout);
   wint_t key = 0;
   while (UiKeyInput::GetWch(&key) != ERR)
   {
