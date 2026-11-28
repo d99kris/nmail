@@ -1064,7 +1064,31 @@ std::shared_ptr<ImapCache::DbConnection> ImapCache::GetDb(ImapCache::DbType p_Db
       CreateDb(p_DbType, dbPath);
     }
 
-    dbConnection = std::shared_ptr<DbConnection>(new DbConnection(dbPath));
+    try
+    {
+      dbConnection = std::shared_ptr<DbConnection>(new DbConnection(dbPath));
+      int64_t tableCount = 0;
+      *dbConnection->m_Database << "SELECT COUNT(*) FROM sqlite_master;" >> tableCount;
+    }
+    catch (const sqlite::sqlite_exception& ex)
+    {
+      const int code = ex.get_code();
+      if (Util::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB))) throw;
+
+      // discard corrupt db and start over with an empty one, cache is fetched anew from server
+      LOG_WARNING("cache db corrupt (%d: \"%s\"), recreating %s", code, ex.what(), dbPath.c_str());
+      dbConnection.reset();
+      Util::DeleteFile(dbPath);
+      Util::DeleteFile(dbPath + "-journal");
+      if (m_CacheEncrypt)
+      {
+        Util::DeleteFile(GetCacheDbDir(p_DbType) + GetDbName(p_Folder));
+      }
+
+      CreateDb(p_DbType, dbPath);
+      dbConnection = std::shared_ptr<DbConnection>(new DbConnection(dbPath));
+    }
+
     dbMap[p_Folder] = dbConnection;
   }
 

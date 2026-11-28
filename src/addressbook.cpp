@@ -54,6 +54,30 @@ void AddressBook::Init(const bool p_AddressBookEncrypt, const std::string& p_Pas
 
   try
   {
+    int64_t tableCount = 0;
+    *m_Db << "SELECT COUNT(*) FROM sqlite_master;" >> tableCount;
+  }
+  catch (const sqlite::sqlite_exception& ex)
+  {
+    const int code = ex.get_code();
+    if (Util::GetReadOnly() || ((code != SQLITE_CORRUPT) && (code != SQLITE_NOTADB)))
+    {
+      HANDLE_SQLITE_EXCEPTION(ex);
+    }
+
+    // keep corrupt db aside and start over with an empty one
+    const std::string corruptDbPath = m_DbPath + ".corrupt";
+    LOG_WARNING("addressbook db corrupt (%d: \"%s\"), renaming to %s", code, ex.what(), corruptDbPath.c_str());
+    CloseDb();
+    rename(m_DbPath.c_str(), corruptDbPath.c_str());
+    Util::DeleteFile(m_DbPath + "-journal");
+    OpenDb();
+  }
+
+  if (!m_Db) return;
+
+  try
+  {
     *m_Db << "CREATE TABLE IF NOT EXISTS msgids (msgid TEXT PRIMARY KEY NOT NULL);";
     *m_Db << "CREATE TABLE IF NOT EXISTS addresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
     *m_Db << "CREATE TABLE IF NOT EXISTS fromaddresses (address TEXT PRIMARY KEY NOT NULL, usages INT);";
