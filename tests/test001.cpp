@@ -5,6 +5,7 @@
 //
 // nmail is distributed under the MIT license, see LICENSE for details.
 
+#include <algorithm>
 #include <clocale>
 #include <iostream>
 #include <string>
@@ -162,6 +163,35 @@ static void TestWordWrapOffsets()
   unittest::ExpectEqual(int, wrapLine, 1);
   unittest::ExpectEqual(int, wrapPos, 0);
 
+  // the empty line is only present when wrapping for an editor, i.e. with position
+  const WLines fullWidthDisplay = { L"abcdefghij" };
+  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcdefghij", 10, false, false, false, 0), fullWidthDisplay);
+  const WLines twoFullWidthDisplay = { L"abcdefghij", L"klmnopqrst" };
+  unittest::ExpectEqual(WLines,
+                        Util::WordWrap(L"abcdefghijklmnopqrst", 10, false, false, false, 0), twoFullWidthDisplay);
+  const WLines emptyLinesDisplay = { L"abcdefghij", L"", L"b" };
+  unittest::ExpectEqual(WLines,
+                        Util::WordWrap(L"abcdefghij\n\nb", 10, false, false, false, 0), emptyLinesDisplay);
+
+  // carriage return of text with crlf line breaks takes up no column, and is kept with
+  // the line it ends
+  const WLines crlfDisplay = { L"abcdefghij\r", L"\r", L"after" };
+  unittest::ExpectEqual(WLines,
+                        Util::WordWrap(L"abcdefghij\r\n\r\nafter", 10, false, false, false, 0), crlfDisplay);
+  const WLines crlfSpaces = { L"abcd efgh", L"ijkl\r", L"after" };
+  unittest::ExpectEqual(WLines,
+                        Util::WordWrap(L"abcd efgh ijkl\r\nafter", 10, false, false, false, 0), crlfSpaces);
+  unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab\r"), 2);
+
+  // likewise for a line ending with the space it was wrapped at
+  const WLines trailingSpace = { L"abcd", L"" };
+  const WLines trailingSpaceDisplay = { L"abcd" };
+  unittest::ExpectEqual(WLines,
+                        Util::WordWrap(L"abcd ", 5, false, false, false, 0, 5, wrapLine, wrapPos), trailingSpace);
+  unittest::ExpectEqual(int, wrapLine, 1);
+  unittest::ExpectEqual(int, wrapPos, 0);
+  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcd ", 5, false, false, false, 0), trailingSpaceDisplay);
+
   // position after a trailing line break is on the line after the last
   const WLines trailing = { L"abc" };
   unittest::ExpectEqual(WLines,
@@ -233,6 +263,53 @@ static void TestWordWrapWide()
   }
 }
 
+static void TestWordWrapNarrow()
+{
+  // a character wider than the line, or than the room after the quote prefix, is put on
+  // a line of its own rather than wrapping forever
+  for (unsigned lineLength = 1; lineLength <= 6; ++lineLength)
+  {
+    for (const bool quoteWrap : { false, true })
+    {
+      size_t count = 0;
+      for (const std::wstring& line : Util::WordWrap(L"> 你好世界 你好", lineLength, false, false, quoteWrap, 0))
+      {
+        count += std::count(line.begin(), line.end(), L'你') + std::count(line.begin(), line.end(), L'好') +
+          std::count(line.begin(), line.end(), L'世') + std::count(line.begin(), line.end(), L'界');
+      }
+
+      unittest::ExpectEqual(size_t, count, (size_t)6);
+    }
+  }
+}
+
+static int TestClusterWidth(const std::wstring& /*p_Str*/, size_t /*p_Begin*/, size_t /*p_End*/)
+{
+  return 3;
+}
+
+static bool TestClusterExtend(wchar_t p_Char)
+{
+  return (p_Char == L'_');
+}
+
+static void TestHooks()
+{
+  // custom cluster width
+  TextWrap::SetClusterWidthFunc(TestClusterWidth);
+  unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab"), 6);
+  const WLines customWidth = { L"abc", L"def" };
+  unittest::ExpectEqual(WLines, Util::WordWrap(L"abcdef", 9, false, false, false, 0), customWidth);
+  TextWrap::SetClusterWidthFunc(nullptr);
+  unittest::ExpectEqual(int, TextWrap::GetWidth(L"ab"), 2);
+
+  // custom cluster extend
+  TextWrap::SetClusterExtendFunc(TestClusterExtend);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterEnd(L"a_b", 0), (size_t)2);
+  TextWrap::SetClusterExtendFunc(nullptr);
+  unittest::ExpectEqual(size_t, TextWrap::GetClusterEnd(L"a_b", 0), (size_t)1);
+}
+
 static void TestWidth()
 {
   // display width, and position at display column
@@ -290,11 +367,13 @@ int main()
     TestWordWrapQuoted();
     TestWordWrapPos();
     TestWordWrapOffsets();
+    TestHooks();
 
     // wide character width depends on a utf-8 capable locale being present
     if (wcwidth(L'你') == 2)
     {
       TestWordWrapWide();
+      TestWordWrapNarrow();
       TestWidth();
       TestClusters();
     }

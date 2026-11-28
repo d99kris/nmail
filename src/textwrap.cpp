@@ -14,12 +14,20 @@
 #include <wchar.h>
 
 TextWrap::ClusterWidthFunc TextWrap::m_ClusterWidthFunc = nullptr;
+TextWrap::ClusterExtendFunc TextWrap::m_ClusterExtendFunc = nullptr;
 
 // Sets a custom function for determining the display width of a character cluster,
 // for use when the terminal is known to deviate from wcwidth().
 void TextWrap::SetClusterWidthFunc(ClusterWidthFunc p_ClusterWidthFunc)
 {
   m_ClusterWidthFunc = p_ClusterWidthFunc;
+}
+
+// Sets a custom function for determining additional characters to be kept together with
+// the character preceding them.
+void TextWrap::SetClusterExtendFunc(ClusterExtendFunc p_ClusterExtendFunc)
+{
+  m_ClusterExtendFunc = p_ClusterExtendFunc;
 }
 
 // Returns the end of the character cluster starting at p_Pos, i.e. the base character
@@ -46,7 +54,9 @@ size_t TextWrap::GetClusterEnd(const std::wstring& p_Str, size_t p_Pos)
       ((wc >= 0x1F3FB) && (wc <= 0x1F3FF)) || // emoji skin tone modifiers
       (wc == 0x20E3) || // combining enclosing keycap
       ((wc >= 0xE0020) && (wc <= 0xE007F)) || // tags
-      (wcwidth(wc) == 0); // combining marks
+      (wcwidth(wc) == 0) || // combining marks
+      (wc == L'\r') || // carriage return, of text with crlf line breaks
+      ((m_ClusterExtendFunc != nullptr) && m_ClusterExtendFunc(wc)); // custom
     if (isExtend)
     {
       ++pos;
@@ -69,6 +79,13 @@ size_t TextWrap::GetClusterEnd(const std::wstring& p_Str, size_t p_Pos)
 // Returns the display width of the character cluster at [p_Begin, p_End).
 int TextWrap::GetClusterWidth(const std::wstring& p_Str, size_t p_Begin, size_t p_End)
 {
+  // carriage return takes up no column
+  p_End = std::min(p_End, p_Str.size());
+  while ((p_End > p_Begin) && (p_Str[p_End - 1] == L'\r'))
+  {
+    --p_End;
+  }
+
   if (m_ClusterWidthFunc != nullptr) return m_ClusterWidthFunc(p_Str, p_Begin, p_End);
 
   // non-printable characters are counted as taking up one column
@@ -137,26 +154,40 @@ std::vector<std::wstring> TextWrap::WordWrap(std::wstring p_Text, unsigned p_Lin
                                              bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
                                              bool p_QuoteWrap, int p_ExpandTabSize)
 {
+  const bool cursorLine = false;
   int pos = 0;
   int wrapLine = 0;
   int wrapPos = 0;
   return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, p_ExpandTabSize,
-                  pos, wrapLine, wrapPos);
+                  cursorLine, pos, wrapLine, wrapPos, nullptr);
 }
 
-// Wraps text to lines with a display width of at most p_LineLength, at spaces when possible
-// and otherwise between character clusters. Lines wrapped at a space are limited to a width
-// of p_LineLength - 1, leaving room for the cursor after the last character.
+// Wraps text for use in an editor. The position p_Pos in p_Text is output as line
+// p_WrapLine and position p_WrapPos in that line, and p_LineOffsets (optional) is set to
+// the position in p_Text of the start of each line. These refer to p_Text after format
+// flowed processing and tab expansion, and are exact when quote wrap is not used.
 //
-// The position p_Pos in p_Text is output as line p_WrapLine and position p_WrapPos in that
-// line, and p_LineOffsets (optional) is set to the position in p_Text of the start of each
-// line. These refer to p_Text after format flowed processing and tab expansion, and are
-// exact when quote wrap is not used.
+// A line filling the full width, or ending with the space it was wrapped at, is followed
+// by an empty line for the position after it.
 std::vector<std::wstring> TextWrap::WordWrap(std::wstring p_Text, unsigned p_LineLength,
                                              bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
                                              bool p_QuoteWrap, int p_ExpandTabSize,
                                              int p_Pos, int& p_WrapLine, int& p_WrapPos,
                                              std::vector<int>* p_LineOffsets /*= nullptr*/)
+{
+  const bool cursorLine = true;
+  return WordWrap(p_Text, p_LineLength, p_ProcessFormatFlowed, p_OutputFormatFlowed, p_QuoteWrap, p_ExpandTabSize,
+                  cursorLine, p_Pos, p_WrapLine, p_WrapPos, p_LineOffsets);
+}
+
+// Wraps text to lines with a display width of at most p_LineLength, at spaces when possible
+// and otherwise between character clusters. Lines wrapped at a space are limited to a width
+// of p_LineLength - 1, leaving room for the cursor after the last character.
+std::vector<std::wstring> TextWrap::WordWrap(std::wstring p_Text, unsigned p_LineLength,
+                                             bool p_ProcessFormatFlowed, bool p_OutputFormatFlowed,
+                                             bool p_QuoteWrap, int p_ExpandTabSize, bool p_CursorLine,
+                                             int p_Pos, int& p_WrapLine, int& p_WrapPos,
+                                             std::vector<int>* p_LineOffsets)
 {
   std::vector<std::wstring> lines;
   std::vector<int> lineOffsets;
@@ -343,10 +374,12 @@ std::vector<std::wstring> TextWrap::WordWrap(std::wstring p_Text, unsigned p_Lin
           }
           else
           {
-            // no space found, wrap between character clusters. at least one, to ensure progress.
-            if (overflowPos == 0)
+            // no space found, wrap between character clusters. at least one after any quote
+            // prefix, to ensure progress.
+            const size_t minPos = std::min(hasQuotePrefix ? quotePrefixLen : 0, linePart.size() - 1);
+            if (overflowPos <= minPos)
             {
-              overflowPos = GetClusterEnd(linePart, 0);
+              overflowPos = GetClusterEnd(linePart, minPos);
             }
 
             lines.push_back(linePart.substr(0, overflowPos));
@@ -355,6 +388,9 @@ std::vector<std::wstring> TextWrap::WordWrap(std::wstring p_Text, unsigned p_Lin
 
           linePart = (linePart.size() > partLen) ? linePart.substr(partLen) : std::wstring();
           linePos += partLen - std::min(partLen, addedPrefixLen);
+
+          // empty line for the position after the wrapped line, only when wrapping for editor
+          if (linePart.empty() && !p_CursorLine) break;
         }
         else
         {
