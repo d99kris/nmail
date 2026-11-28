@@ -1296,7 +1296,7 @@ void Ui::DrawFileList()
 
       int maxNameLen = maxWidth - 2 - 7; // two spaces and (dir) / 1023 KB
       std::wstring name = Util::ToWString(fileinfo.m_Name);
-      name = Util::TrimPadWString(name.substr(0, maxNameLen), maxNameLen);
+      name = Util::TrimPadWString(name, maxNameLen);
 
       if (fileinfo.IsDir())
       {

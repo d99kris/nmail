@@ -846,23 +846,87 @@ std::string Util::TrimPadString(const std::string& p_Str, int p_Len)
   return str;
 }
 
+// Returns the end of the character cluster starting at p_Pos, i.e. the base character
+// followed by any code points modifying or joined to it, which must not be separated.
+// This is a simplified subset of Unicode grapheme cluster rules (UAX #29), covering
+// combining marks, variation selectors, emoji modifiers, keycaps, tags, zero width
+// joiner sequences and regional indicator (flag) pairs.
+size_t Util::GetClusterEnd(const std::wstring& p_Str, size_t p_Pos)
+{
+  const size_t size = p_Str.size();
+  if (p_Pos >= size) return size;
+
+  auto isRegionalIndicator = [](wchar_t p_Wc) { return (p_Wc >= 0x1F1E6) && (p_Wc <= 0x1F1FF); };
+  int regionalIndicators = isRegionalIndicator(p_Str[p_Pos]) ? 1 : 0;
+  size_t pos = p_Pos + 1;
+  while (pos < size)
+  {
+    const wchar_t wc = p_Str[pos];
+    const wchar_t prev = p_Str[pos - 1];
+    const bool isExtend =
+      (prev == 0x200D) || // any code point following a zero width joiner
+      (wc == 0x200D) || // zero width joiner
+      ((wc >= 0xFE00) && (wc <= 0xFE0F)) || // variation selectors
+      ((wc >= 0x1F3FB) && (wc <= 0x1F3FF)) || // emoji skin tone modifiers
+      (wc == 0x20E3) || // combining enclosing keycap
+      ((wc >= 0xE0020) && (wc <= 0xE007F)) || // tags
+      (wcwidth(wc) == 0); // combining marks
+    if (isExtend)
+    {
+      ++pos;
+      continue;
+    }
+
+    if (isRegionalIndicator(wc) && (regionalIndicators == 1))
+    {
+      regionalIndicators = 2; // second regional indicator completes the flag
+      ++pos;
+      continue;
+    }
+
+    break;
+  }
+
+  return pos;
+}
+
+// Returns the longest prefix of p_Str with a display width of at most p_Len, never
+// splitting a character cluster. Display width may differ from character count for
+// strings containing zero-width or double-width characters.
+std::wstring Util::TrimWString(const std::wstring& p_Str, int p_Len, int* p_Width /*= nullptr*/)
+{
+  p_Len = std::max(p_Len, 0);
+  int width = 0;
+  size_t pos = 0;
+  while (pos < p_Str.size())
+  {
+    const size_t end = GetClusterEnd(p_Str, pos);
+    int clusterWidth = 0;
+    for (size_t i = pos; i < end; ++i)
+    {
+      clusterWidth += std::max(wcwidth(p_Str[i]), 0);
+    }
+
+    if ((width + clusterWidth) > p_Len) break;
+
+    width += clusterWidth;
+    pos = end;
+  }
+
+  if (p_Width != nullptr)
+  {
+    *p_Width = width;
+  }
+
+  return p_Str.substr(0, pos);
+}
+
 std::wstring Util::TrimPadWString(const std::wstring& p_Str, int p_Len)
 {
   p_Len = std::max(p_Len, 0);
 
-  // trim and pad based on display width, which may differ from character count for
-  // strings containing zero-width or double-width characters
-  std::wstring str;
   int width = 0;
-  for (wchar_t wch : p_Str)
-  {
-    const int wchWidth = std::max(wcwidth(wch), 0);
-    if ((width + wchWidth) > p_Len) break;
-
-    str += wch;
-    width += wchWidth;
-  }
-
+  std::wstring str = TrimWString(p_Str, p_Len, &width);
   if (width < p_Len)
   {
     str = str + std::wstring(p_Len - width, ' ');
@@ -879,16 +943,8 @@ std::wstring Util::TrimEllipsisWString(const std::wstring& p_Str, int p_Len)
 
   static const std::wstring ellipsis = L"...";
   const int maxWidth = std::max(p_Len - (int)ellipsis.size(), 0);
-  std::wstring str;
   int width = 0;
-  for (wchar_t wch : p_Str)
-  {
-    const int wchWidth = std::max(wcwidth(wch), 0);
-    if ((width + wchWidth) > maxWidth) break;
-
-    str += wch;
-    width += wchWidth;
-  }
+  std::wstring str = TrimWString(p_Str, maxWidth, &width);
 
   return str + ellipsis.substr(0, p_Len - width);
 }

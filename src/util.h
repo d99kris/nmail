@@ -193,6 +193,8 @@ public:
   static std::string ToString(const std::wstring& p_WStr);
   static std::wstring ToWString(const std::string& p_Str);
   static std::string TrimPadString(const std::string& p_Str, int p_Len);
+  static size_t GetClusterEnd(const std::wstring& p_Str, size_t p_Pos);
+  static std::wstring TrimWString(const std::wstring& p_Str, int p_Len, int* p_Width = nullptr);
   static std::wstring TrimPadWString(const std::wstring& p_Str, int p_Len);
   static std::wstring TrimEllipsisWString(const std::wstring& p_Str, int p_Len);
   static std::string RemoveInvisibleChars(const std::string& p_Str);
