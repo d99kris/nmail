@@ -12,6 +12,7 @@
 #include <iostream>
 #include <memory>
 
+#include <signal.h>
 #include <unistd.h>
 
 #include "apathy/path.hpp"
@@ -574,6 +575,14 @@ int main(int argc, char* argv[])
   DebugInfo::Cleanup();
 
   Log::Cleanup(isLogdumpEnabled);
+
+  if (Util::IsTerminateRequested())
+  {
+    // Re-raise so the parent sees termination by signal (shell message, exit status 128+N)
+    const int sig = Util::GetTerminateSignal();
+    signal(sig, SIG_DFL);
+    kill(getpid(), sig);
+  }
 
   return 0;
 }

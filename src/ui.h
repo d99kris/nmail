@@ -599,6 +599,7 @@ private:
   uint32_t m_ComposeBackupInterval = 0;
   std::thread m_ComposeBackupThread;
   bool m_ComposeBackupRunning = false;
+  bool m_ComposeBackupKeep = false;
   std::condition_variable m_ComposeBackupCond;
   std::mutex m_ComposeBackupMutex;
 

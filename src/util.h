@@ -233,6 +233,8 @@ public:
   static void CleanupUiSignalHandlers();
   static void SignalCrashHandler(int p_Signal, siginfo_t* p_SigInfo, void* p_Context);
   static void SignalTerminateHandler(int p_Signal);
+  static bool IsTerminateRequested();
+  static int GetTerminateSignal();
   static int GetCallstack(void** p_Callstack, int p_MaxSize, void* p_Context);
 
   static bool IsInteger(const std::string& p_Str);
@@ -357,5 +359,6 @@ private:
   static std::string m_LocalizedSubjectPrefixes;
   static bool m_GetCopyToTrash;
   static bool m_ReadOnly;
+  static volatile sig_atomic_t m_TerminateSignal;
   static bool m_AssertAbort;
 };

@@ -90,6 +90,7 @@ bool Util::m_SendIp = true;
 std::string Util::m_LocalizedSubjectPrefixes;
 bool Util::m_GetCopyToTrash = false;
 bool Util::m_ReadOnly = false;
+volatile sig_atomic_t Util::m_TerminateSignal = 0;
 bool Util::m_AssertAbort = false;
 
 bool Util::Exists(const std::string& p_Path)
@@ -1416,10 +1417,15 @@ void Util::InitAppSignalHandlers()
     sigaction(crashingSignal.first, &crashAction, nullptr);
   }
 
+  struct sigaction terminateAction;
+  memset(&terminateAction, 0, sizeof(terminateAction));
+  terminateAction.sa_handler = SignalTerminateHandler;
+  sigemptyset(&terminateAction.sa_mask);
+
   const std::map<int, std::string>& terminatingSignals = GetTerminatingSignals();
   for (const auto& terminatingSignal : terminatingSignals)
   {
-    signal(terminatingSignal.first, SignalTerminateHandler);
+    sigaction(terminatingSignal.first, &terminateAction, nullptr);
   }
 
   const std::map<int, std::string>& ignoredSignals = GetIgnoredSignals();
@@ -1662,9 +1668,23 @@ void Util::SignalCrashHandler(int p_Signal, siginfo_t* p_SigInfo, void* p_Contex
 
 void Util::SignalTerminateHandler(int p_Signal)
 {
-  const std::string& logMsg = "termination requested: " + GetSigName(p_Signal);
-  LOG_WARNING("%s", logMsg.c_str());
-  Ui::SetRunning(false);
+  // Async-signal-safe only: request ui exit, and watchdog alarm in case shutdown hangs
+  if (m_TerminateSignal == 0)
+  {
+    m_TerminateSignal = p_Signal;
+    signal(SIGALRM, SIG_DFL);
+    alarm(5);
+  }
+}
+
+bool Util::IsTerminateRequested()
+{
+  return (m_TerminateSignal != 0);
+}
+
+int Util::GetTerminateSignal()
+{
+  return m_TerminateSignal;
 }
 
 bool Util::IsInteger(const std::string& p_Str)

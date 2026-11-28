@@ -463,6 +463,8 @@ void Ui::Cleanup()
   {
     printf("\033]0;%s\007", "");
   }
+
+  fflush(stdout);
 }
 
 void Ui::InitWindows()
@@ -2328,7 +2330,7 @@ void Ui::Run()
   Util::InitUiSignalHandlers();
   raw();
 
-  while (s_Running)
+  while (s_Running && !Util::IsTerminateRequested())
   {
     fd_set fds;
     FD_ZERO(&fds);
@@ -2429,6 +2431,20 @@ void Ui::Run()
       }
     }
 
+  }
+
+  if (Util::IsTerminateRequested())
+  {
+    const int sig = Util::GetTerminateSignal();
+    LOG_WARNING("termination requested by signal %d (%s)", sig, Util::GetSigName(sig).c_str());
+    SetRunning(false);
+
+    if (m_ComposeBackupRunning)
+    {
+      // keep compose backup, for draft recovery at next start
+      m_ComposeBackupKeep = true;
+      StopComposeBackup();
+    }
   }
 
   noraw();
@@ -5754,6 +5770,8 @@ int Ui::ReadKeyBlocking()
 {
   while (true)
   {
+    if (Util::IsTerminateRequested()) return m_KeyCancel;
+
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
@@ -7020,7 +7038,10 @@ void Ui::ComposeBackupProcess()
     }
   }
 
-  OfflineQueue::PopComposeMessages();
+  if (!m_ComposeBackupKeep)
+  {
+    OfflineQueue::PopComposeMessages();
+  }
 
   LOG_DEBUG("stopping backup thread");
 }
