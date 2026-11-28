@@ -905,6 +905,10 @@ Configuration
 Aside from `main.conf` covered above, the following files can be used to
 configure nmail.
 
+Configuration files are rewritten when nmail exits. If a file has been
+modified externally while nmail is running, it is left untouched, and any
+settings changed in the user interface during that session are discarded.
+
 ~/.config/nmail/ui.conf
 -----------------------
 This configuration file controls the UI aspects of nmail. Default configuration

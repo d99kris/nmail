@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <istream>
 #include <map>
 #include <set>
@@ -39,6 +40,7 @@ private:
 private:
   std::map<std::string, std::string> m_Map;
   std::string m_Path;
+  mutable int64_t m_FileModTimeMs = -1;
   bool m_AllowUnknown = false;
   std::map<std::string, std::string> m_Renamed;
 };
