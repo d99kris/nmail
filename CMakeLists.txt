@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 message(STATUS "Using cmake ${CMAKE_VERSION}")
 
 # Modules
+include(CheckCXXSymbolExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
 
@@ -448,6 +449,12 @@ endif()
 find_library(CYRUS_SASL_LIBRARY sasl2)
 find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(sasl2 DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
+
+# Dependency nl_langinfo
+check_cxx_symbol_exists(nl_langinfo langinfo.h FOUND_NL_LANGINFO)
+if(FOUND_NL_LANGINFO)
+  target_compile_definitions(nmail PRIVATE HAVE_NL_LANGINFO=1)
+endif()
 
 # Dependency execinfo
 CHECK_INCLUDE_FILE(execinfo.h FOUND_EXECINFO)

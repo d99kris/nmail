@@ -238,6 +238,8 @@ int main(int argc, char* argv[])
     LOG_INFO("read-only mode");
   }
 
+  Util::CheckEnvironment();
+
   Util::InitTempDir();
   CacheUtil::InitCacheDir();
 
@@ -306,6 +308,7 @@ int main(int argc, char* argv[])
 
   if (keyDump)
   {
+    LOG_INFO("start keydump");
     KeyDump();
     return 0;
   }
@@ -323,6 +326,7 @@ int main(int argc, char* argv[])
 
   if (isSetup)
   {
+    LOG_INFO("start setup");
     mainConfig = std::make_shared<Config>(mainConfigPath, defaultMainConfig, false, renamedMainConfig);
 
     if (!SetupWizard::Run(setup, mainConfig, defaultMainConfig))
@@ -1068,7 +1072,7 @@ bool ChangeCachePasswords(std::shared_ptr<Config> p_MainConfig,
 static void KeyDump()
 {
   UiKeyInput::EnableMetaSendsEsc();
-  setlocale(LC_ALL, "");
+  Util::InitLocale();
   initscr();
   noecho();
   cbreak();

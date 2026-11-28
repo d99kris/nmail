@@ -24,8 +24,13 @@
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
+#ifdef HAVE_NL_LANGINFO
+#include <langinfo.h>
+#endif
 #include <libgen.h>
+#include <locale.h>
 #include <netdb.h>
+#include <strings.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -39,6 +44,7 @@
 
 #include <sys/resource.h>
 #include <sys/socket.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -2668,6 +2674,45 @@ std::string Util::GetCompiler(bool p_Verbose)
   }
 
   return Util::ToLower(compilerLibc);
+}
+
+void Util::CheckEnvironment()
+{
+  if (geteuid() == 0)
+  {
+    LOG_WARNING("running as root");
+  }
+
+  struct statvfs fsStat;
+  static const unsigned long long lowDiskSpace = 100ULL * 1024 * 1024;
+  if (statvfs(GetApplicationDir().c_str(), &fsStat) == 0)
+  {
+    const unsigned long long freeSpace = (unsigned long long)fsStat.f_bavail * fsStat.f_frsize;
+    if (freeSpace < lowDiskSpace)
+    {
+      LOG_WARNING("low disk space %s", GetPrefixedSize(freeSpace).c_str());
+    }
+  }
+}
+
+void Util::InitLocale()
+{
+  const char* locale = setlocale(LC_ALL, "");
+  if (locale == nullptr)
+  {
+    LOG_WARNING("setlocale failed");
+    return;
+  }
+
+  LOG_INFO("locale %s", locale);
+
+#ifdef HAVE_NL_LANGINFO
+  const char* codeset = nl_langinfo(CODESET);
+  if ((strcasecmp(codeset, "UTF-8") != 0) && (strcasecmp(codeset, "UTF8") != 0))
+  {
+    LOG_WARNING("non-utf8 codeset %s", codeset);
+  }
+#endif
 }
 
 std::string Util::GetOsArch(bool p_Verbose)

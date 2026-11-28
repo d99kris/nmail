@@ -115,7 +115,7 @@ void Ui::Init()
 
   UiKeyInput::EnableMetaSendsEsc();
 
-  setlocale(LC_ALL, "");
+  Util::InitLocale();
   initscr();
   noecho();
   cbreak();
