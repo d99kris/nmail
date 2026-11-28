@@ -5892,7 +5892,7 @@ void Ui::ExtEditor(const std::string& p_EditorCmd, std::wstring& p_ComposeMessag
   TerminalControlPause();
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteWFile(tempPath, p_ComposeMessageStr);
-  const std::string& cmd = p_EditorCmd + " " + tempPath;
+  const std::string& cmd = Util::MakeCmd(p_EditorCmd, tempPath);
   LOG_DEBUG("launching external editor: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -5917,7 +5917,7 @@ void Ui::ExtPager()
   const std::string& tempPath = Util::GetTempFilename(".txt");
   Util::WriteFile(tempPath, m_CurrentMessageViewText);
   const std::string& pager = Util::GetPagerCmd();
-  const std::string& cmd = pager + " " + tempPath;
+  const std::string& cmd = Util::MakeCmd(pager, tempPath);
   LOG_DEBUG("launching external pager: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -5944,9 +5944,7 @@ int Ui::ExtPartsViewer(const std::string& p_Path)
 
   const std::string& viewer = Util::GetPartsViewerCmd();
 
-  std::string escapedPath = p_Path;
-  Util::ReplaceString(escapedPath, "\"", "\\\"");
-  const std::string& cmd = viewer + " \"" + escapedPath + "\"";
+  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching external viewer: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -6009,7 +6007,7 @@ int Ui::ExtHtmlViewer(const std::string& p_Path)
   }
 
   const std::string& viewer = Util::GetHtmlViewerCmd();
-  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -6039,7 +6037,7 @@ int Ui::ExtHtmlPreview(const std::string& p_Path)
   }
 
   const std::string& viewer = Util::GetHtmlPreviewCmd();
-  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching html viewer: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -6164,9 +6162,7 @@ void Ui::OpenLink()
   }
 
   // single quoted, as url is from message
-  std::string escapedUrl = url;
-  Util::ReplaceString(escapedUrl, "'", "'\\''");
-  const std::string& cmd = Util::GetLinkOpenCmd() + " '" + escapedUrl + "'";
+  const std::string& cmd = Util::MakeCmd(Util::GetLinkOpenCmd(), url);
   LOG_DEBUG("launching link open: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)
@@ -6316,7 +6312,7 @@ int Ui::ExtMsgViewer(const std::string& p_Path)
   }
 
   const std::string& viewer = Util::GetMsgViewerCmd();
-  const std::string& cmd = viewer + " \"" + p_Path + "\"";
+  const std::string& cmd = Util::MakeCmd(viewer, p_Path);
   LOG_DEBUG("launching message viewer: %s", cmd.c_str());
   int rv = Util::System(cmd);
   if (rv == 0)

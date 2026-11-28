@@ -460,7 +460,8 @@ editing. Detected at first login if not specified.
 The field `editor_cmd` allows overriding which external editor to use when
 composing / editing an email using an external editor (`Ctrl-E`). If not
 specified, nmail will use the editor specified by the environment variable
-`$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`.
+`$EDITOR`. If `$EDITOR` is not set, nmail will use `nano`. See
+[External command arguments](#external-command-arguments).
 
 ### file_picker_cmd
 
@@ -490,8 +491,9 @@ access on server side. In Gmail web interface, navigate to "Settings",
 
 This field allows overriding the external viewer used when previewing
 messages composed using markdown. The viewer may be a terminal-based
-program, e.g. `w3m -o confirm_qq=false`. By default nmail uses `open`
-on macOS and `xdg-open >/dev/null 2>&1` on Linux.
+program, e.g. `w3m -o confirm_qq=false '%1'`. By default nmail uses
+`open '%1'` on macOS and `xdg-open '%1' >/dev/null 2>&1` on Linux. See
+[External command arguments](#external-command-arguments).
 
 ### html_to_text_cmd
 
@@ -505,7 +507,8 @@ An external command may be used instead, for example:
 - `lynx -assume_charset=utf-8 -display_charset=utf-8 -nomargins -dump`
 - `elinks -dump-charset utf-8 -dump`
 
-The command receives the HTML file path as its final argument.
+The command receives the HTML file path as its final argument, see
+[External command arguments](#external-command-arguments).
 
 ### html_viewer_cmd
 
@@ -513,10 +516,12 @@ This field allows overriding the external viewer used when viewing message
 html using `V`. If not specified, nmail checks if `w3m`, `lynx` or `elinks`
 is available on the system (in that order), with fallback to
 `xdg-open` (Linux) and `open` (macOS). The exact default commands used:
-- `LESSOPEN="|$(which lesspipe.sh lesspipe | head -1) %s" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1`
-- `lynx`
-- `elinks`
-- `xdg-open >/dev/null 2>&1` or `open`
+- `LESSOPEN="|$(which lesspipe.sh lesspipe | head -1) %s" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1 '%1'`
+- `lynx '%1'`
+- `elinks '%1'`
+- `xdg-open '%1' >/dev/null 2>&1` or `open '%1'`
+
+See [External command arguments](#external-command-arguments).
 
 Refer to [Tips](/doc/TIPS.md) for viewing attachments such as PDF in the
 terminal.
@@ -552,9 +557,9 @@ IMAP inbox folder name. Required for nmail to open the proper default folder.
 
 This field allows overriding the command used for opening links selected in
 message view, see `markdown_view_links` and `plain_view_links` (not used for
-`mailto:` links). By default nmail uses `open` on macOS and
-`xdg-open >/dev/null 2>&1` on Linux. The link is passed as a single-quoted
-argument after the command.
+`mailto:` links). By default nmail uses `open '%1'` on macOS and
+`xdg-open '%1' >/dev/null 2>&1` on Linux. See
+[External command arguments](#external-command-arguments).
 
 ### logdump_enabled
 
@@ -563,8 +568,9 @@ Specifies whether to dump warning and error log messages to stdout upon exit.
 ### msg_viewer_cmd
 
 This field allows overriding the command used for externally viewing a
-message (`.eml` file) with `W`. By default nmail uses `open` on macOS and
-`xdg-open >/dev/null 2>&1` on Linux.
+message (`.eml` file) with `W`. By default nmail uses `open '%1'` on macOS
+and `xdg-open '%1' >/dev/null 2>&1` on Linux. See
+[External command arguments](#external-command-arguments).
 
 ### name
 
@@ -582,13 +588,15 @@ out. Default 30 seconds.
 The field `pager_cmd` allows overriding which external pager / text viewer to
 use when viewing an email using an external pager (`E`). If not specified,
 nmail will use the pager specified by the environment variable `$PAGER`.
-If `$PAGER` is not set, nmail will use `less`.
+If `$PAGER` is not set, nmail will use `less`. See
+[External command arguments](#external-command-arguments).
 
 ### parts_viewer_cmd
 
 This field allows overriding the external viewer used when viewing email
-parts and attachments. By default nmail uses `open` on macOS and
-`xdg-open >/dev/null 2>&1` on Linux.
+parts and attachments. By default nmail uses `open '%1'` on macOS and
+`xdg-open '%1' >/dev/null 2>&1` on Linux. See
+[External command arguments](#external-command-arguments).
 
 ### prefetch_all_headers
 
@@ -706,6 +714,16 @@ Allows forcing nmail to enable specified logging level:
 
 For internal use only. Stores version used for last successful execution. May
 be used for debugging startup crash / hang regressions.
+
+### External command arguments
+
+The fields `editor_cmd`, `html_preview_cmd`, `html_to_text_cmd`,
+`html_viewer_cmd`, `link_open_cmd`, `msg_viewer_cmd`, `pager_cmd`,
+`parts_viewer_cmd`, `spell_cmd` and `text_to_html_cmd` specify commands which
+nmail calls with a file path (or link) argument. The placeholder `%1` in the
+command is replaced with the argument, single-quoted and escaped by nmail,
+for example `parts_viewer_cmd=xdg-open '%1' >/dev/null 2>&1`. If the command
+does not contain `%1`, the argument is added at the end of the command.
 
 
 Multiple Email Accounts

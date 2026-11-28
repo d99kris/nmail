@@ -177,6 +177,7 @@ public:
   static void SetLinkOpenCmd(const std::string& p_LinkOpenCmd);
   static std::string GetDefaultLinkOpenCmd();
   static bool IsDefaultLinkOpenCmd();
+  static std::string MakeCmd(const std::string& p_Cmd, const std::string& p_Arg);
   static void ReplaceString(std::string& p_Str, const std::string& p_Search,
                             const std::string& p_Replace);
   static size_t ReplaceStringCount(std::string& p_Str, const std::string& p_Search,
@@ -285,6 +286,8 @@ public:
   static void SetAddressBookEncrypt(bool p_AddressBookEncrypt);
   static bool GetAddressBookEncrypt();
   static std::string EscapePath(const std::string& p_Str);
+  static std::string EscapeSingleQuote(const std::string& p_Str);
+  static std::string SanitizeFilename(const std::string& p_Str);
   static std::string DecodeUrl(const std::string& p_Str);
   static std::vector<std::string> SplitAddrs(const std::string& p_Str);
   static std::vector<std::string> SplitAddrsUnquote(const std::string& p_Str);

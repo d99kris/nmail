@@ -460,7 +460,7 @@ std::string Util::ConvertHtmlToText(const std::string& p_Html)
 
   const std::string& tempPath = GetTempFilename(".html");
   Util::WriteFile(tempPath, html);
-  const std::string& cmd = htmlToTextCmd + " " + tempPath;
+  const std::string& cmd = MakeCmd(htmlToTextCmd, tempPath);
   const std::string& text = RunCommand(cmd);
   Util::DeleteFile(tempPath);
 
@@ -491,7 +491,7 @@ std::string Util::ConvertTextToHtml(const std::string& p_Text)
   ReplaceString(text, "\n", "  \n"); // prepend line-breaks with double spaces to enforce them
   const std::string& tempPath = GetTempFilename(".md");
   Util::WriteFile(tempPath, text);
-  const std::string& cmd = textToHtmlCmd + " " + tempPath;
+  const std::string& cmd = MakeCmd(textToHtmlCmd, tempPath);
   const std::string& htmlText = RunCommand(cmd);
   Util::DeleteFile(tempPath);
 
@@ -515,9 +515,9 @@ void Util::SetPartsViewerCmd(const std::string& p_PartsViewerCmd)
 std::string Util::GetDefaultPartsViewerCmd()
 {
 #if defined(__APPLE__)
-  return "open";
+  return "open '%1'";
 #elif defined(__linux__)
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #else
   return "";
 #endif
@@ -556,15 +556,15 @@ std::string Util::GetDefaultHtmlViewerCmd()
       if (output.find("/w3m") != std::string::npos)
       {
         result =
-          "LESSOPEN=\"|$(which lesspipe.sh lesspipe | head -1) %s\" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1";
+          "LESSOPEN=\"|$(which lesspipe.sh lesspipe | head -1) %s\" w3m -o confirm_qq=0 -o use_mouse=0 -o use_lessopen=1 '%1'";
       }
       else if (output.find("/lynx") != std::string::npos)
       {
-        result = "lynx";
+        result = "lynx '%1'";
       }
       else if (output.find("/elinks") != std::string::npos)
       {
-        result = "elinks";
+        result = "elinks '%1'";
       }
     }
   }
@@ -582,17 +582,17 @@ std::string Util::GetDefaultHtmlViewerCmd()
 std::string Util::GetSystemOpenCmd()
 {
 #if defined(__APPLE__)
-  return "open";
+  return "open '%1'";
 #elif defined(__linux__)
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #else
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #endif
 }
 
 bool Util::IsHtmlViewerSystemOpenCmd()
 {
-  static bool isHtmlViewerSystemOpenCmd = (GetHtmlViewerCmd() == GetSystemOpenCmd());
+  static bool isHtmlViewerSystemOpenCmd = (MakeCmd(GetHtmlViewerCmd(), "") == MakeCmd(GetSystemOpenCmd(), ""));
   return isHtmlViewerSystemOpenCmd;
 }
 
@@ -613,9 +613,9 @@ void Util::SetHtmlPreviewCmd(const std::string& p_HtmlPreviewCmd)
 std::string Util::GetDefaultHtmlPreviewCmd()
 {
 #if defined(__APPLE__)
-  return "open";
+  return "open '%1'";
 #elif defined(__linux__)
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #else
   return "";
 #endif
@@ -643,9 +643,9 @@ void Util::SetMsgViewerCmd(const std::string& p_MsgViewerCmd)
 std::string Util::GetDefaultMsgViewerCmd()
 {
 #if defined(__APPLE__)
-  return "open";
+  return "open '%1'";
 #elif defined(__linux__)
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #else
   return "";
 #endif
@@ -673,9 +673,9 @@ void Util::SetLinkOpenCmd(const std::string& p_LinkOpenCmd)
 std::string Util::GetDefaultLinkOpenCmd()
 {
 #if defined(__APPLE__)
-  return "open";
+  return "open '%1'";
 #elif defined(__linux__)
-  return "xdg-open >/dev/null 2>&1";
+  return "xdg-open '%1' >/dev/null 2>&1";
 #else
   return "";
 #endif
@@ -684,6 +684,21 @@ std::string Util::GetDefaultLinkOpenCmd()
 bool Util::IsDefaultLinkOpenCmd()
 {
   return m_LinkOpenCmd.empty();
+}
+
+std::string Util::MakeCmd(const std::string& p_Cmd, const std::string& p_Arg)
+{
+  // replace %1 with single-quoted argument, append if not present
+  std::string cmd = p_Cmd;
+  ReplaceString(cmd, "'%1'", "%1");
+  ReplaceString(cmd, "\"%1\"", "%1");
+  if (cmd.find("%1") == std::string::npos)
+  {
+    cmd += " %1";
+  }
+
+  ReplaceString(cmd, "%1", "'" + EscapeSingleQuote(p_Arg) + "'");
+  return cmd;
 }
 
 void Util::ReplaceString(std::string& p_Str, const std::string& p_Search,
@@ -2242,6 +2257,32 @@ std::string Util::EscapePath(const std::string& p_Str)
   }
 
   return text;
+}
+
+std::string Util::EscapeSingleQuote(const std::string& p_Str)
+{
+  // for use inside single-quoted shell argument
+  std::string text = p_Str;
+  ReplaceString(text, "'", "'\\''");
+  return text;
+}
+
+std::string Util::SanitizeFilename(const std::string& p_Str)
+{
+  // basename without control chars, empty if not usable
+  std::string name = p_Str;
+  const size_t lastSep = name.find_last_of("/\\");
+  if (lastSep != std::string::npos)
+  {
+    name = name.substr(lastSep + 1);
+  }
+
+  name.erase(std::remove_if(name.begin(), name.end(), [](unsigned char p_Char)
+  {
+    return (p_Char < 0x20) || (p_Char == 0x7f);
+  }), name.end());
+
+  return ((name == ".") || (name == "..")) ? "" : name;
 }
 
 // percent-decoded url component

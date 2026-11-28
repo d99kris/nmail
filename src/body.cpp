@@ -340,7 +340,7 @@ void Body::ParseMime(mailmime* p_Mime, int p_Depth)
                 subject = "unnamed";
               }
 
-              const std::string filename = subject + ".eml";
+              const std::string filename = Util::SanitizeFilename(subject + ".eml");
 
               PartInfo partInfo;
               partInfo.m_MimeType = mimeType;
@@ -382,6 +382,17 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
   bool isAttachment = false;
   ParseMimeFields(p_Mime, filename, contentId, charset, isAttachment);
 
+  // filename and content id are used in local paths
+  contentId = Util::SanitizeFilename(contentId);
+  if (!filename.empty())
+  {
+    filename = Util::SanitizeFilename(Util::MimeToUtf8(filename));
+    if (filename.empty())
+    {
+      filename = std::to_string(m_NumParts) + Util::ExtensionForMimeType(p_MimeType);
+    }
+  }
+
   mailmime_data* data = p_Mime->mm_data.mm_single;
   if (data == NULL)
   {
@@ -389,7 +400,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
     partInfo.m_Charset = charset;
     partInfo.m_MimeType = p_MimeType;
-    partInfo.m_Filename = Util::MimeToUtf8(filename);
+    partInfo.m_Filename = filename;
     partInfo.m_ContentId = contentId;
     partInfo.m_IsAttachment = isAttachment;
 
@@ -421,7 +432,7 @@ void Body::ParseMimeData(mailmime* p_Mime, std::string p_MimeType)
 
           partInfo.m_Charset = charset;
           partInfo.m_MimeType = p_MimeType;
-          partInfo.m_Filename = Util::MimeToUtf8(filename);
+          partInfo.m_Filename = filename;
           partInfo.m_ContentId = contentId;
           partInfo.m_IsAttachment = isAttachment;
           partInfo.m_Size = partData.size();
@@ -518,7 +529,7 @@ void Body::RemoveInvalidHeaders()
 size_t Body::GetCurrentParseVersion()
 {
   static size_t htmlToTextCmdHash = Util::GetHtmlToTextConvertCmdHash();
-  static size_t parseVersionOffset = 1; // bump version offset when parsing changes
+  static size_t parseVersionOffset = 2; // bump version offset when parsing changes
   static size_t parseVersion = parseVersionOffset + htmlToTextCmdHash;
   return parseVersion;
 }
