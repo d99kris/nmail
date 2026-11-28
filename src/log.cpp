@@ -65,8 +65,7 @@ void Log::SetPath(const std::string& p_Path)
     }
   }
 
-  Dump("");
-  m_LogFd = open(m_Path.c_str(), O_WRONLY | O_APPEND);
+  m_LogFd = open(m_Path.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0666);
 }
 
 void Log::Cleanup(bool p_IsLogdumpEnabled)
@@ -150,10 +149,7 @@ void Log::Error(const char* p_Filename, int p_LineNo, const char* p_Format, ...)
 void Log::Dump(const char* p_Str)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  if (m_Path.empty())
-  {
-    SetPath("log.txt");
-  }
+  if (m_Path.empty()) return;
 
   FILE* file = fopen(m_Path.c_str(), "a");
   if (file != NULL)
@@ -206,10 +202,7 @@ void Log::WriteCallstackToFd(int p_Fd, void* const* p_Callstack, int p_Size)
 void Log::Write(const char* p_Filename, int p_LineNo, const char* p_Level, const char* p_Format, va_list p_VaList)
 {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  if (m_Path.empty())
-  {
-    SetPath("log.txt");
-  }
+  if (m_Path.empty()) return;
 
   FILE* file = fopen(m_Path.c_str(), "a");
   if (file != NULL)

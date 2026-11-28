@@ -16,14 +16,12 @@
 #include <sys/time.h>
 
 #include "config.h"
-#include "log.h"
 
 #include "unittest.h"
 
 typedef std::map<std::string, std::string> ConfigMap;
 
 static const std::string s_Path = "test002.conf";
-static const std::string s_LogPath = "test002.log";
 
 static const ConfigMap s_Default =
 {
@@ -252,9 +250,6 @@ int main()
 {
   int rv = 0;
 
-  // config warnings are logged, which requires log path to be set
-  Log::SetPath(s_LogPath);
-
   try
   {
     TestCreateDefault();
@@ -274,7 +269,6 @@ int main()
   }
 
   Cleanup();
-  remove(s_LogPath.c_str());
 
   return rv;
 }
